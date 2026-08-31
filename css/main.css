@@ -276,8 +276,9 @@ body {
   gap: 6px;
 }
 
-/* Izometrická budova = tři plochy (střecha + dvě stěny) přes clip-path. */
+/* Izometrická budova = střecha (--roof) + dvě stěny (--wall) přes clip-path. */
 .iso-building {
+  --wall: #efe6c8; /* krémová omítka */
   position: relative;
   width: 84px;
   height: 84px;
@@ -291,30 +292,61 @@ body {
 .iso-building:hover { transform: translateY(-5px) scale(1.04); }
 .iso-building:active { transform: translateY(-1px); }
 
-.iso-building .face {
+.iso-building .face,
+.iso-building .facade {
   position: absolute;
   inset: 0;
-  background: var(--roof, #3f6bff);
+  pointer-events: none;
 }
+/* Střecha */
 .iso-building .top {
+  background: var(--roof, #3f6bff);
   clip-path: polygon(42px 0, 84px 21px, 42px 42px, 0 21px);
-  filter: brightness(1.15);
+  filter: brightness(1.12);
 }
+/* Levá stěna (do stínu) */
 .iso-building .left {
+  background: var(--wall);
   clip-path: polygon(0 21px, 42px 42px, 42px 84px, 0 63px);
-  filter: brightness(0.62);
+  filter: brightness(0.72);
 }
+/* Pravá (čelní) stěna */
 .iso-building .right {
+  background: var(--wall);
   clip-path: polygon(42px 42px, 84px 21px, 84px 63px, 42px 84px);
-  filter: brightness(0.82);
+  filter: brightness(0.92);
 }
-.iso-building .b-emoji {
+
+/* ---- Fasáda Poké Martu (na čelní/pravé stěně) ---- */
+/* Červená markýza pod okrajem střechy */
+.iso-b-poke-mart .awning {
+  background: var(--danger);
+  clip-path: polygon(42px 42px, 84px 21px, 84px 31px, 42px 52px);
+}
+/* Prosklená okna */
+.iso-b-poke-mart .window-l,
+.iso-b-poke-mart .window-r {
+  background: #bfe3ff;
+}
+.iso-b-poke-mart .window-l {
+  clip-path: polygon(48px 52px, 56px 48px, 56px 58px, 48px 62px);
+}
+.iso-b-poke-mart .window-r {
+  clip-path: polygon(72px 40px, 80px 36px, 80px 46px, 72px 50px);
+}
+/* Vchod */
+.iso-b-poke-mart .door {
+  background: #2a3550;
+  clip-path: polygon(59px 56px, 68px 51px, 68px 71px, 59px 75px);
+}
+/* Emoji jako štít nad vchodem */
+.iso-building .b-sign {
   position: absolute;
-  top: 8px;
+  top: 4px;
   left: 0;
   right: 0;
   text-align: center;
-  font-size: 22px;
+  font-size: 20px;
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.4));
   pointer-events: none;
 }

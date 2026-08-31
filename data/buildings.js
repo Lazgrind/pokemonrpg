@@ -21,7 +21,7 @@ export const BUILDINGS = [
   {
     id: "poke-mart",
     name: "Poké Mart",
-    icon: "🛒",
+    icon: "🏪",
     color: "#3f6bff",
     description: "Prodává Poké Bally za gold. Každé vylepšení sníží jejich cenu.",
     startLevel: 1,

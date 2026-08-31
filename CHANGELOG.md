@@ -8,6 +8,13 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.6.3] – 2026-08-31 · Poké Mart jako výloha (ne kostka)
+### Změněno
+- Budova už není jednobarevná kostka: **střecha (barva z dat) + krémové stěny** + čelní **výloha** (červená markýza, okna, vchod) – čistě CSS `clip-path`.
+- Emoji budovy `🛒` → `🏪` (obchod).
+### Přidáno
+- Fasáda je stylovaná per budova (`.iso-b-<id>`), takže každá budova může mít vlastní vzhled.
+
 ## [0.6.2] – 2026-08-31 · Izometrické 2.5D město
 ### Změněno
 - Město překresleno na **izometrické 2.5D** (čistě CSS, bez závislostí): budovy jsou prostorové domečky (střecha + 2 stěny přes `clip-path`) na travnaté ploše, volné parcely jako ploché kosočtverce.

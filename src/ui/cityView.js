@@ -37,11 +37,16 @@ function buildingCell(def) {
   const level = getLevel(def.id);
   return `
     <div class="iso-cell">
-      <button class="iso-building" data-id="${def.id}" title="${def.name}" style="--roof:${def.color}">
+      <button class="iso-building iso-b-${def.id}" data-id="${def.id}" title="${def.name}" style="--roof:${def.color}">
         <span class="face top"></span>
         <span class="face left"></span>
         <span class="face right"></span>
-        <span class="b-emoji">${def.icon}</span>
+        <!-- výloha (fasáda) – stylováno per budova v CSS -->
+        <span class="facade awning"></span>
+        <span class="facade window-l"></span>
+        <span class="facade window-r"></span>
+        <span class="facade door"></span>
+        <span class="b-sign">${def.icon}</span>
       </button>
       <div class="iso-tag">${def.name} · <span class="lvl-inline">Lv ${level}</span></div>
     </div>
