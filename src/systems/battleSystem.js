@@ -11,22 +11,33 @@
 
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
-import { getTeamPokemon } from "./team.js";
+import { getTeamPokemon, ownsSpecies, ivWouldImprove, acquirePokemon } from "./team.js";
+import { getPokeball } from "../../data/pokeballs.js";
+import { ballMultiplier } from "./pokeballSystem.js";
 import { createPokemon, computeStats } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { typeMultiplier } from "../../data/types.js";
 import { grantXp } from "./progression.js";
 import { rollLoot } from "./loot.js";
+import { rollEggDrop } from "./eggSystem.js";
 import { healPercent } from "./buildingSystem.js";
 import { AREAS } from "../../data/areas.js";
 
-/** Druhy nepřátel pro první oblast. Později se přesune do dat oblastí. */
-const ENEMY_POOL = ["pidgey", "rattata"];
+/** Záložní druhy nepřátel, kdyby oblast neměla vlastní species pool. */
+const FALLBACK_SPECIES = ["pidgey", "rattata"];
+
+/**
+ * Šance na chycení podle HP nepřítele: při plném HP CATCH_MIN, při HP→0
+ * CATCH_MAX (klasický princip – nepřítele je třeba nejdřív oslabit).
+ * Poké Ball typy a rarita druhu šanci upraví později (viz docs/BACKLOG.md).
+ */
+const CATCH_MIN = 0.15;
+const CATCH_MAX = 0.85;
 
 /** Čitelný název zdroje pro log a přehledy. */
 export function lootLabel(resource) {
-  const labels = { pokeballs: "Poké Ball", gold: "gold" };
-  return labels[resource] ?? resource;
+  if (resource === "gold") return "gold";
+  return getPokeball(resource)?.name ?? resource;
 }
 
 /** @type {any} */
@@ -64,9 +75,10 @@ export function avgDamage(attacker, defender) {
   return Math.max(1, Math.floor(base * eff * 0.925));
 }
 
-/** Vytvoří nového divokého nepřítele podle oblasti. */
+/** Vytvoří nového divokého nepřítele podle oblasti (druhy z area.species). */
 function spawnEnemy(area) {
-  const id = ENEMY_POOL[Math.floor(Math.random() * ENEMY_POOL.length)];
+  const pool = area?.species?.length ? area.species : FALLBACK_SPECIES;
+  const id = pool[Math.floor(Math.random() * pool.length)];
   const level = Math.max(1, area.recommendedLevel) + Math.floor(Math.random() * 2);
   return makeCombatant(createPokemon(id, level));
 }
@@ -96,6 +108,7 @@ export function serialize() {
     running: battle.running,
     result: battle.result,
     teamCursor: battle.teamCursor,
+    turn: battle.turn ?? 0,
     log: battle.log.slice(-30),
     playerUid: battle.player.ref.uid,
     playerHp: battle.player.hp,
@@ -139,6 +152,7 @@ export function restore(saved) {
     log: saved.log ?? [],
     area,
     teamCursor: saved.teamCursor ?? 0,
+    turn: saved.turn ?? 0,
     result: saved.result ?? null,
     player,
     enemy,
@@ -169,6 +183,29 @@ function schedule() {
 function tick() {
   if (!battle || !battle.running) return;
 
+  battle.turn = (battle.turn ?? 0) + 1; // číslo kola proti aktuálnímu nepříteli
+
+  // Autocatch: na začátku kola zkus chytit nepřítele (má-li smysl a jsou balls).
+  // Používá vybraný typ ballu. Při úspěchu je nepřítel nahrazen novým a kolo
+  // (výměna úderů) se přeskočí; při neúspěchu se normálně bojuje – hráč ho může
+  // zabít dřív, než ho chytí.
+  const ac = getState().settings?.autocatch;
+  const ballId = getSelectedBall();
+  if (
+    ac?.enabled &&
+    battle.enemy &&
+    battle.enemy.hp > 0 &&
+    ballCount(ballId) > 0 &&
+    shouldAutocatch(battle.enemy.ref, ac)
+  ) {
+    const r = doCatch(ballId);
+    if (r.caught) {
+      emit();
+      schedule();
+      return;
+    }
+  }
+
   const order =
     battle.player.stats.speed >= battle.enemy.stats.speed
       ? ["player", "enemy"]
@@ -180,8 +217,8 @@ function tick() {
     const defender = who === "player" ? battle.enemy : battle.player;
     const { dmg, eff } = calcDamage(attacker, defender);
     defender.hp = Math.max(0, defender.hp - dmg);
-    const note = eff > 1 ? " (super efektivní!)" : eff < 1 ? " (slabé)" : "";
-    pushLog(`${attacker.name} zasáhl za ${dmg}${note}`);
+    const note = eff > 1 ? " (super effective!)" : eff < 1 ? " (not very effective)" : "";
+    pushLog(`${attacker.name} hit for ${dmg}${note}`);
     if (defender.hp <= 0) {
       handleFaint(who);
       break;
@@ -203,13 +240,19 @@ function handleFaint(winner) {
     // Loot: datově řízené dropy z oblasti.
     const loot = rollLoot(battle.area);
     for (const d of loot) res[d.resource] = (res[d.resource] ?? 0) + d.amount;
+    // Vejce: malá šance najít vejce druhu z oblasti (líhne se ve Školce).
+    const egg = rollEggDrop(battle.area);
     commit();
     const lootMsg = loot.length ? `, ${loot.map((d) => `+${d.amount} ${lootLabel(d.resource)}`).join(", ")}` : "";
-    pushLog(`${enemy.name} poražen! +${xp} XP, +${gold} gold${lootMsg}`);
+    pushLog(`${enemy.name} defeated! +${xp} XP, +${gold} gold${lootMsg}`);
+    if (egg) {
+      const eggName = getSpecies(egg.speciesId)?.name ?? egg.speciesId;
+      pushLog(`🥚 You found a ${eggName} Egg! Hatch it at the Day Care.`);
+    }
     if (leveled) {
       battle.player.stats = computeStats(battle.player.ref);
       battle.player.hp = battle.player.stats.maxHp;
-      pushLog(`${battle.player.name} postoupil na Lv ${battle.player.ref.level}!`);
+      pushLog(`${battle.player.name} reached Lv ${battle.player.ref.level}!`);
     } else {
       // Pokémon Centrum: doléčení části max HP po vítězství.
       const pct = healPercent();
@@ -219,25 +262,161 @@ function handleFaint(winner) {
           const before = battle.player.hp;
           battle.player.hp = Math.min(battle.player.stats.maxHp, battle.player.hp + heal);
           const gained = battle.player.hp - before;
-          if (gained > 0) pushLog(`Centrum doléčilo ${battle.player.name} o ${gained} HP`);
+          if (gained > 0) pushLog(`Center healed ${battle.player.name} for ${gained} HP`);
         }
       }
     }
     battle.enemy = spawnEnemy(battle.area);
-    pushLog(`Objevil se divoký ${battle.enemy.name} (Lv ${battle.enemy.ref.level})`);
+    battle.turn = 0; // nové setkání (kvůli Quick/Timer Ball)
+    pushLog(`A wild ${battle.enemy.name} appeared (Lv ${battle.enemy.ref.level})`);
   } else {
-    pushLog(`${battle.player.name} byl vyřazen!`);
+    pushLog(`${battle.player.name} fainted!`);
     battle.teamCursor += 1;
     const team = getTeamPokemon();
     if (battle.teamCursor < team.length) {
       battle.player = makeCombatant(team[battle.teamCursor]);
-      pushLog(`Nastupuje ${battle.player.name}`);
+      pushLog(`${battle.player.name} steps in`);
     } else {
       battle.result = "defeat";
       battle.running = false;
-      pushLog("Celý tým je vyřazen. Prohra.");
+      pushLog("Your whole team has fainted. Defeat.");
     }
   }
+}
+
+/* ----------------------------- Chytání ----------------------------- */
+
+/** Základní šance na chycení bojovníka jen podle jeho aktuálního HP. */
+function catchChanceFor(combatant) {
+  const frac = Math.max(0, Math.min(1, combatant.hp / combatant.stats.maxHp));
+  return CATCH_MIN + (CATCH_MAX - CATCH_MIN) * (1 - frac);
+}
+
+/** Kontext souboje pro vyhodnocení bonusů ballů. */
+function catchContext() {
+  return {
+    enemy: battle.enemy,
+    player: battle.player,
+    turn: battle.turn ?? 1,
+    owns: ownsSpecies(battle.enemy.ref.speciesId),
+  };
+}
+
+/** Kolik kusů daného typu ballu má hráč. */
+function ballCount(ballId) {
+  return getState().resources.balls?.[ballId] ?? 0;
+}
+
+/** Aktuálně vybraný typ ballu (výchozí „poke"). */
+export function getSelectedBall() {
+  return getState().settings?.selectedBall ?? "poke";
+}
+
+/** Nastaví vybraný typ ballu (pro chytání) a překreslí UI souboje. */
+export function setSelectedBall(ballId) {
+  const s = getState();
+  if (!s.settings) s.settings = {};
+  s.settings.selectedBall = ballId;
+  commit();
+  bus.emit(EVENTS.BATTLE_UPDATE);
+}
+
+/**
+ * Finální šance (0–1) na chycení AKTUÁLNÍHO nepřítele daným typem ballu
+ * (základ dle HP × násobek ballu). Pro UI. 0 když není koho chytat.
+ * @param {string} [ballId]  výchozí = vybraný ball
+ */
+export function getCatchChance(ballId = getSelectedBall()) {
+  if (!battle || !battle.enemy || battle.enemy.hp <= 0) return 0;
+  const ball = getPokeball(ballId);
+  if (!ball) return 0;
+  if (ball.guaranteed) return 1;
+  return Math.min(1, catchChanceFor(battle.enemy) * ballMultiplier(ball, catchContext()));
+}
+
+/** Nastavení autocatch z herního stavu (s bezpečným výchozím). */
+export function getAutocatch() {
+  return (
+    getState().settings?.autocatch ?? {
+      enabled: false,
+      newSpecies: true,
+      betterIvs: true,
+      shiny: true,
+    }
+  );
+}
+
+/** Změní nastavení autocatch (částečný patch), uloží a překreslí UI souboje. */
+export function setAutocatch(patch) {
+  const s = getState();
+  if (!s.settings) s.settings = { autoBattle: true };
+  s.settings.autocatch = { ...getAutocatch(), ...patch };
+  commit();
+  bus.emit(EVENTS.BATTLE_UPDATE);
+  return s.settings.autocatch;
+}
+
+/** Splňuje daný nepřítel autocatch filtry (má se o něj hra pokusit)? */
+function shouldAutocatch(ref, ac) {
+  const isNew = !ownsSpecies(ref.speciesId);
+  if (ac.newSpecies && isNew) return true;
+  if (ac.shiny && ref.shiny) return true;
+  if (ac.betterIvs && !isNew && ivWouldImprove(ref)) return true;
+  return false;
+}
+
+/**
+ * Provede jeden pokus o chycení aktuálního nepřítele daným ballem. Spotřebuje
+ * 1 kus. Předpoklad: běží souboj, nepřítel žije, je aspoň 1 ball daného typu.
+ * NEEMITuje událost (to řeší volající). Úspěch = nepřítel je získán (přes
+ * acquirePokemon) a nahrazen novým; žádné XP/gold.
+ * @param {string} ballId
+ * @returns {{ caught: boolean, outcome?: any }}
+ */
+function doCatch(ballId) {
+  const res = getState().resources;
+  if (!res.balls) res.balls = {};
+  res.balls[ballId] = (res.balls[ballId] ?? 0) - 1;
+  const ball = getPokeball(ballId);
+  const enemy = battle.enemy;
+  const chance = ball?.guaranteed
+    ? 1
+    : Math.min(1, catchChanceFor(enemy) * ballMultiplier(ball, catchContext()));
+  if (Math.random() >= chance) {
+    commit(); // ulož spotřebovaný ball
+    pushLog(`${enemy.name} broke free!`);
+    return { caught: false };
+  }
+
+  const shinyTag = enemy.ref.shiny ? " ✨" : "";
+  const outcome = acquirePokemon(enemy.ref); // volá commit() (uloží i ball)
+  if (outcome.added) {
+    pushLog(`Caught ${enemy.name}${shinyTag}!`);
+  } else if (outcome.improvements.length) {
+    pushLog(`Caught a better ${enemy.name}${shinyTag} — improved ${outcome.improvements.join(", ")} (released)`);
+  } else {
+    pushLog(`Caught ${enemy.name}, but your own was better — released`);
+  }
+  battle.enemy = spawnEnemy(battle.area);
+  battle.turn = 0; // nové setkání – další kolo bude 1. (kvůli Quick/Timer Ball)
+  pushLog(`A wild ${battle.enemy.name} appeared (Lv ${battle.enemy.ref.level})`);
+  return { caught: true, outcome };
+}
+
+/**
+ * Ruční pokus o chycení aktuálního nepřítele vybraným ballem (tlačítko v Battle Area).
+ * @param {string} [ballId]  výchozí = vybraný ball
+ * @returns {{ ok: boolean, reason?: string, caught?: boolean, outcome?: any }}
+ */
+export function attemptCatch(ballId = getSelectedBall()) {
+  if (!battle || battle.result) return { ok: false, reason: "No active battle." };
+  if (!battle.enemy || battle.enemy.hp <= 0) return { ok: false, reason: "No enemy to catch." };
+  if (ballCount(ballId) <= 0) {
+    return { ok: false, reason: `No ${getPokeball(ballId)?.name ?? "balls"} left` };
+  }
+  const r = doCatch(ballId);
+  emit();
+  return { ok: true, ...r };
 }
 
 /**
@@ -246,7 +425,7 @@ function handleFaint(winner) {
  */
 export function startBattle() {
   const team = getTeamPokemon();
-  if (team.length === 0) return { ok: false, reason: "Nemáš žádného Pokémona v týmu." };
+  if (team.length === 0) return { ok: false, reason: "You have no Pokémon in your team." };
 
   battle = {
     running: true,
@@ -254,12 +433,13 @@ export function startBattle() {
     log: [],
     area: AREAS[0],
     teamCursor: 0,
+    turn: 0,
     result: null,
     player: makeCombatant(team[0]),
     enemy: null,
   };
   battle.enemy = spawnEnemy(battle.area);
-  pushLog(`Souboj na ${battle.area.name}: ${battle.player.name} vs ${battle.enemy.name}`);
+  pushLog(`Battle at ${battle.area.name}: ${battle.player.name} vs ${battle.enemy.name}`);
   emit();
   schedule();
   return { ok: true };

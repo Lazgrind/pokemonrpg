@@ -14,9 +14,18 @@
  * @property {number} startLevel        počáteční úroveň (budova existuje od začátku)
  * @property {number} maxLevel
  * @property {{ baseCost: number, growth: number }} upgrade  cena vylepšení budovy (gold)
- * @property {{ basePrice: number, discountPerLevel: number, minPrice: number }} [ball]  cena Poké Ballu (Poké Mart)
+ * @property {{ discountPerLevel: number, maxDiscount: number }} [ball]  sleva na Poké Bally v % (Poké Mart); ceny jsou v data/pokeballs.js
  * @property {{ basePercent: number, perLevel: number, maxPercent: number }} [heal]  doléčení po vítězství v % max HP (Pokémon Centrum)
  * @property {{ xpPerMinute: number, perLevel: number }} [daycare]  pasivní XP za minutu (Školka)
+ * @property {Record<string, TrackDef>} [tracks]  samostatné upgrade linie budovy (vlastní úroveň i cena)
+ *
+ * @typedef {Object} TrackDef
+ * @property {string} name          zobrazovaný název linie
+ * @property {string} icon
+ * @property {number} startLevel     počáteční úroveň linie
+ * @property {number} maxLevel
+ * @property {number} baseCost       cena prvního vylepšení (gold)
+ * @property {number} growth         násobitel ceny za úroveň
  */
 
 /** @type {BuildingDef[]} */
@@ -27,19 +36,19 @@ export const BUILDINGS = [
     icon: "🏪",
     color: "#3f6bff",
     sprite: "assets/buildings/poke-mart.png",
-    description: "Prodává Poké Bally za gold. Každé vylepšení sníží jejich cenu.",
+    description: "Sells Poké Balls for gold. Each upgrade lowers their prices. New ball types unlock as you explore.",
     startLevel: 1,
     maxLevel: 10,
     upgrade: { baseCost: 60, growth: 1.6 },
-    ball: { basePrice: 30, discountPerLevel: 3, minPrice: 6 },
+    ball: { discountPerLevel: 3, maxDiscount: 40 },
   },
   {
     id: "poke-center",
-    name: "Pokémon Centrum",
+    name: "Pokémon Center",
     icon: "🏥",
     color: "#e0524e",
     sprite: "assets/buildings/poke-center.png",
-    description: "Po každém vítězství doléčí aktivnímu Pokémonovi část max HP. Vylepšení doléčí víc.",
+    description: "After each victory, heals part of the active Pokémon's max HP. Upgrades heal more.",
     startLevel: 1,
     maxLevel: 50,
     upgrade: { baseCost: 50, growth: 1.12 },
@@ -47,14 +56,21 @@ export const BUILDINGS = [
   },
   {
     id: "day-care",
-    name: "Školka",
+    name: "Day Care",
     icon: "🐣",
     color: "#7fc97f",
-    description: "Necháš tu Pokémona (mimo tým) a pasivně získává XP – i když nehraješ.",
+    sprite: "assets/buildings/day-care.png",
+    description: "Leave a Pokémon here (outside your team) and it passively gains XP — even while you're away. Also incubates eggs.",
     startLevel: 1,
     maxLevel: 10,
     upgrade: { baseCost: 100, growth: 1.6 },
     daycare: { xpPerMinute: 3, perLevel: 3 },
+    // Samostatné upgrade linie: rychlost líhnutí (1 %→50 % za 50 úrovní) a počet
+    // slotů na inkubaci vajec (1→10). Efekty se počítají v buildingSystem.js.
+    tracks: {
+      hatchSpeed: { name: "Hatch speed", icon: "⏩", startLevel: 1, maxLevel: 50, baseCost: 50, growth: 1.12 },
+      eggSlots: { name: "Egg slots", icon: "🥚", startLevel: 1, maxLevel: 10, baseCost: 300, growth: 1.7 },
+    },
   },
 ];
 

@@ -6,10 +6,7 @@
  */
 
 import { getState, commit, MAX_TEAM_SIZE } from "../core/state.js";
-import { createPokemon } from "./pokemonSystem.js";
-
-/** Druhy, které lze potkat "ve volné přírodě" (Krok 2, ukázka získávání). */
-const WILD_POOL = ["pidgey", "rattata"];
+import { createPokemon, STAT_KEYS, emptyEvs } from "./pokemonSystem.js";
 
 /**
  * Výběr startovního Pokémona – jen dokud je kolekce prázdná.
@@ -26,20 +23,62 @@ export function chooseStarter(speciesId) {
   return true;
 }
 
+/** Máš už tento druh v kolekci? (Každý druh lze vlastnit jen 1×.) */
+export function ownsSpecies(speciesId) {
+  return getState().collection.some((p) => p.speciesId === speciesId);
+}
+
 /**
- * Chytí náhodného divokého Pokémona za 1 Poké Ball.
- * @returns {{ ok: boolean, reason?: string, pokemon?: import("../core/state.js").OwnedPokemon }}
+ * Zlepšil by tento (nově získaný) jedinec IV existujícího jedince téhož druhu?
+ * Používá autocatch filtr „lepší IV" i UI. Nemutuje. Když druh nemáš, vrací
+ * false (to je „nový druh", řeší se zvlášť).
+ * @param {import("../core/state.js").OwnedPokemon} pokemon
+ * @returns {boolean}
  */
-export function catchWild() {
+export function ivWouldImprove(pokemon) {
+  const existing = getState().collection.find((p) => p.speciesId === pokemon.speciesId);
+  if (!existing) return false;
+  return STAT_KEYS.some((k) => (pokemon.ivs?.[k] ?? 0) > (existing.ivs?.[k] ?? 0));
+}
+
+/**
+ * Získá jedince do kolekce podle pravidla „1 kus na druh, sluč lepší hodnoty":
+ *  - když druh ještě nemáš → přidá se do kolekce,
+ *  - když už ho máš → do stávajícího jedince se přepíšou LEPŠÍ hodnoty
+ *    (per-stat vyšší IV/EV, shiny), level a XP zůstávají stávajícímu; nově
+ *    získaný jedinec se „pustí" (nepřidává se). Zdroj: rozhodnutí R-018.
+ * @param {import("../core/state.js").OwnedPokemon} pokemon nově získaný jedinec
+ * @returns {{ added: boolean, released: boolean, pokemon: import("../core/state.js").OwnedPokemon, improvements: string[] }}
+ */
+export function acquirePokemon(pokemon) {
   const s = getState();
-  if (s.resources.pokeballs <= 0) return { ok: false, reason: "Došly Poké Balls" };
-  s.resources.pokeballs--;
-  const speciesId = WILD_POOL[Math.floor(Math.random() * WILD_POOL.length)];
-  const level = 2 + Math.floor(Math.random() * 3); // 2–4
-  const pokemon = createPokemon(speciesId, level);
-  s.collection.push(pokemon);
+  const existing = s.collection.find((p) => p.speciesId === pokemon.speciesId);
+  if (!existing) {
+    s.collection.push(pokemon);
+    commit();
+    return { added: true, released: false, pokemon, improvements: [] };
+  }
+
+  // Merge: přenes jen lepší hodnoty do stávajícího jedince.
+  if (!existing.ivs) existing.ivs = { ...(pokemon.ivs ?? {}) };
+  if (!existing.evs) existing.evs = emptyEvs();
+  const improvements = [];
+  if (pokemon.shiny && !existing.shiny) {
+    existing.shiny = true;
+    improvements.push("shiny");
+  }
+  for (const k of STAT_KEYS) {
+    if ((pokemon.ivs?.[k] ?? 0) > (existing.ivs[k] ?? 0)) {
+      existing.ivs[k] = pokemon.ivs[k];
+      improvements.push(`IV ${k}`);
+    }
+    if ((pokemon.evs?.[k] ?? 0) > (existing.evs[k] ?? 0)) {
+      existing.evs[k] = pokemon.evs[k];
+      improvements.push(`EV ${k}`);
+    }
+  }
   commit();
-  return { ok: true, pokemon };
+  return { added: false, released: true, pokemon: existing, improvements };
 }
 
 /**

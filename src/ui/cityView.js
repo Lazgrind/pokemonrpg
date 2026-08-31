@@ -21,8 +21,8 @@ export function renderCity(root, onStatus = () => {}) {
   const emptyCount = Math.max(0, CITY_PLOTS - BUILDINGS.length);
 
   root.innerHTML = `
-    <h2 class="panel-title">Město</h2>
-    <p class="placeholder">Klikni na budovu a otevřou se její možnosti.</p>
+    <h2 class="panel-title">City</h2>
+    <p class="placeholder">Click a building to open its options.</p>
     <div class="iso-city">
       ${BUILDINGS.map(buildingCell).join("")}
       ${Array.from({ length: emptyCount }, emptyCell).join("")}
@@ -62,10 +62,10 @@ function buildingCell(def) {
 function emptyCell() {
   return `
     <div class="iso-cell">
-      <div class="iso-plot" title="Volná parcela – další budovy přijdou">
+      <div class="iso-plot" title="Empty lot — more buildings coming">
         <span class="plot-hint">🏗️</span>
       </div>
-      <div class="iso-tag muted">Volná parcela</div>
+      <div class="iso-tag muted">Empty lot</div>
     </div>
   `;
 }

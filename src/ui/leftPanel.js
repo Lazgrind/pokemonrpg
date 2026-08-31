@@ -7,9 +7,9 @@ import { renderCity } from "./cityView.js";
 import { renderTeamTab, renderCollectionTab } from "./teamView.js";
 
 const TABS = [
-  { id: "team", label: "Tým" },
-  { id: "collection", label: "Kolekce" },
-  { id: "city", label: "Město" },
+  { id: "team", label: "Team" },
+  { id: "collection", label: "Collection" },
+  { id: "city", label: "City" },
 ];
 
 /** Aktivní záložka přežívá překreslení (modulová proměnná). */

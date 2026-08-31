@@ -13,6 +13,226 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Breeding podle egg groups (v0.20.0)
+
+### Zpětná vazba uživatele
+- „Egg groups pojďme dořešit, má to být na stejném principu jako ve franchise:
+  každý má egg group a stejné egg group (popřípadě žolíci) spolu udělají vajíčko,
+  které může mít lepší IVs nebo být shiny, tentokrát s odds 1/4096."
+- Na doplňující otázky: **přidat Ditto teď** (žolík); **dědění 3 IV / 3 random**
+  s tím, že později přibude item Destiny Knot (pak 5 dědí).
+- Následně: „Ditto nedávej na Route 1, dej mi ho prozatím jako startera."
+
+### Co jsme udělali
+- `data/pokemon.js`: přidán **Ditto** (dexNo 132, egg group `ditto`).
+- `data/breeding.js` (nové): laditelná data + čistá pravidla nad druhy –
+  `BREED_MINUTES=30`, `INHERIT_IV_COUNT=3`, `BREED_SHINY_CHANCE=1/4096`,
+  `areCompatible()` (sdílená egg group / žolík; dva Ditti ne; `no-eggs` ne),
+  `chooseChildSpeciesId()` (žolík → druhý rodič, jinak náhodně jeden).
+- `pokemonSystem.js`: `inheritIvs(parents, count)` – zdědí `count` náhodných
+  statů po náhodném rodiči, zbytek random (losuje se až při vylíhnutí).
+- `buildingSystem.js`: breeding slot `city.daycare.breeding = { a, b, buffer }` +
+  `get/setBreedingParent`, `clearBreedingParent`, `getBreedingParents`. Výcvik a
+  breeding se navzájem vylučují.
+- `breedingSystem.js` (nové): `breedingStatus`, `accrueBreeding` (produkce vejce
+  aktivně i offline, více najednou), smyčka + `applyBreedingOffline`. Vejce vzniká
+  přes `makeBredEgg` v `eggSystem.js` a nese `breed = { parents, inherit, shinyChance }`.
+- `eggSystem.js`: při vylíhnutí breeding vejce použije `inheritIvs` + `shinyChance`.
+- `buildingView.js`: okno **„💞 Breeding"** (dva rodičovské sloty, kompatibilita,
+  progress). Výběr Pokémona sjednocen do obecného `openPokemonPicker` (sdílí
+  Školka i breeding).
+- `main.js` + `offlineView.js`: offline breeding + hláška `EVENTS.EGG_BRED`.
+- Ditto **dočasně jako starter** (`teamView.js`), ať jde breeding vyzkoušet.
+- Save **v7 → v8** (breeding slot lazy).
+
+### Rozhodnutí
+- **R-022 🟢 Breeding podle egg groups.** Sdílená egg group nebo žolík Ditto →
+  vejce po `BREED_MINUTES`; dědí 3 IV (laditelné, budoucí Destiny Knot = 5), shiny
+  1/4096. Druh i genetika skryté do vylíhnutí (drží R-021). (schváleno 2026-08-31)
+
+### K ověření uživatelem v prohlížeči (tvrdý refresh!)
+- Nová hra → jako startera lze vybrat **Ditto**. Chyť/měj druhý druh (např.
+  bulbasaur), oba dej do Školky → „💞 Breeding" → Parent A/B.
+- Ditto + cokoli = kompatibilní; dva stejné egg groupy = kompatibilní; nekompatibilní
+  pár to hlásí. Progress bar roste; po čase (i offline) přibude 🥚 v inventáři.
+- Vylíhni breeding vejce → potomek má část IV po rodičích, shiny šance vyšší.
+
+### Otevřené / další v plánu
+- ⚪ Ditto ze starterů → běžný úlovek; Destiny Knot item (5 IV); rychlost
+  breedingu jako upgrade; potomek = základní forma po evolucích. (viz BACKLOG)
+
+### Pracujeme LOKÁLNĚ
+- Nic nepushováno – commit/push jen na výslovný pokyn.
+
+---
+
+## 2026-08-31 – Market okno v Poké Martu (v0.19.0)
+
+### Zpětná vazba uživatele
+- „V rámci Poké Martu bych chtěl tlačítko Market, pod kterým by se schovávaly
+  itemy rozdělené do sekcí. Zatím udělej sekci pro pokebally."
+
+### Co jsme udělali
+- `buildingView.js`: `openMarket()` je **rozcestník sekcí** (departments) jako
+  karty (`.dept-card`); `openBallShop()` je samostatné okno sekce Poké Balls,
+  kde jsou jednotlivé bally přehledné **bary** (řádky `.ball-row`).
+- **Zamčené / neodemčené věci se v obchodě neukazují** vůbec – seznam ballů
+  filtruje `ball.price != null && isBallUnlocked(ball)`, takže je vidět jen to,
+  co jde teď koupit. Připraveno na další sekce (items, kameny).
+- `css/main.css`: `.market-depts / .dept-card` (rozcestník karty) +
+  `.ball-shop / .ball-row / .ball-buy` (bary); `.ball-card*` odstraněny.
+
+### Poznámka
+- Doladění dle uživatele: rozcestník sekcí = okna (karty), jednotlivé bally =
+  bary (přehlednost), a zamčené věci schované. Stejný vzor jako „Upgrades" –
+  hlavní okno budovy zůstává čisté, detail je za klikacími okny.
+
+---
+
+## 2026-08-31 – Filtry v pickerech (v0.18.0)
+
+### Zpětná vazba uživatele
+- „Chtěl bych filtry jak u Day Care, tak u Hatch an egg – rarity, jméno atd."
+
+### Rozhodnutí
+- 🟢 Day Care picker: hledání jménem + přepínače **rarita**, **typ**, **jen
+  shiny** + **řazení** (level ↓ / jméno / dex). Nabídky se staví z toho, co hráč
+  vlastní.
+- 🟢 Egg picker: **respektovat skrytí druhu** (R-021) – filtr jen podle rarity
+  a řazení podle doby líhnutí (↑/↓). Žádné jméno/druh/typ (byl by to spoiler).
+
+### Co jsme udělali
+- `buildingView.js`: `openDaycarePicker` a `openEggPicker` přepsány na
+  filtrovací panel (`.filter-bar`, chips `.filter-chip`, `renderGrid()` řadí a
+  filtruje client-side, bez commitu). Dlaždice Pokémona ukazují i raritu/typ.
+- `css/main.css`: styly `.filter-bar / .filter-row / .filter-chip / .filter-sort`.
+- Na přání: celý filtrovací panel je schovaný pod tlačítkem **„🔎 Filters"**
+  (`.filter-bar[hidden]` + toggle), aby picker zůstal čistý.
+
+### Zpětná vazba uživatele
+- „Hatch an egg chci mít vizuálně tak, že se ukáže max 10 egg breederů, tolik
+  kolik mám odemčeno; zamčené budou zamčené. Pod nimi čudlík Hatch an egg."
+- „Chci všude mít upgrade taky za klikacím menu… celé zpřehlednit."
+- „Vajíčka nemáš vědět, co tam je za druh, dokud se nevylíhne."
+
+### Rozhodnutí (výběr)
+- 🟢 Upgrady: **podnabídka v okně** – tlačítko „Upgrades" otevře samostatné okno
+  se všemi liniemi (budova + tracks). Platí pro všechny budovy.
+- 🟢 Zamčené egg sloty: **jen ikona zámku** 🔒 (odemyká se v Upgrades menu).
+- 🟢 Vejce: **skrýt druh, nechat čas** – ukazuje se jen „Egg" + postup/čas.
+
+### Co jsme udělali
+- `buildingView.js` přepsán: hlavní okno budovy = stav + akce (obchod / školka /
+  breederi). Nová funkce `openUpgrades()` (společné okno upgradů).
+- **Egg Breeders okno**: v Day Care jeden čudlík „🥚 Hatch an egg" otevře okno
+  s mřížkou hatcherů (`.breeder-grid`, max = `eggSlots.maxLevel`). Odemčená
+  prázdná hatchery = vlastní tlačítko „Hatch an egg" (výběr vejce), obsazená =
+  🥚 + progress + čas + „Take out", zamčená = „Locked" 🔒.
+- Druh vejce **skryt** v breederech i v pickeru – jen „Egg #N" + odhad `~X min`
+  (čas dle rarity ponechán jako jediná nápověda).
+- `css/main.css`: styly `.breeder-*` a `.upgrade-*` (staré `.egg-incubator*`
+  nahrazeny).
+
+---
+
+## 2026-08-31 – Upgrady Školky: rychlost líhnutí + sloty (v0.16.0)
+
+### Zpětná vazba uživatele
+- „Ještě bych v rámci daycare chtěl vylepšení na rychlost líhnutí od 1 %–50 %
+  a pak sloty hatchování 1–10 slotů pro vajíčka."
+- Rozhodnutí přes výběr: **dvě oddělené upgrade linie** (každá s vlastní úrovní
+  i cenou).
+- Oprava: „A rychlost jsem chtěl na 50 lvl ne 10." → 🟢 Hatch speed má **50
+  úrovní** (+1 %/lvl = +50 %), Egg slots zůstávají 10 úrovní (1→10 vajec).
+
+### Co jsme udělali
+- `data/buildings.js`: obecný `tracks` (typedef `TrackDef`) na Školce –
+  `hatchSpeed` (Lv 1→50, baseCost 50, growth 1,12) a `eggSlots`
+  (Lv 1→10, baseCost 300, growth 1,7).
+- `buildingSystem.js`: obecné funkce linií (`getTrackLevel`, `trackUpgradeCost`,
+  `upgradeTrack`, …) + `hatchSpeedPercent()` a `eggSlotCount()`. Úroveň žije v
+  `city.buildings[id].tracks[key]`.
+- `eggSystem.js`: inkubace přešla ze single slotu (`city.daycare.egg`) na **pole
+  slotů** (`city.daycare.eggs`) s lazy migrací (bez bumpu save verze).
+  `accrueIncubation`/`applyEggOffline` vrací **pole** vylíhnutých vajec;
+  `speedMultiplier()` zrychluje dle `hatchSpeedPercent`.
+- UI (`buildingView.js`): řádek pro každé inkubované vejce s vlastním „Take out",
+  staty „⏩ Hatch speed / 🥚 Egg slots used/max", dvě upgrade tlačítka.
+  `offlineView.js` + `main.js` zpracují pole vylíhnutých vajec.
+
+### Poznámka
+- Mechanismus `tracks` je obecný – použitelný pro budoucí upgrade linie jiných
+  budov (data → logika → UI beze změny základní budovy).
+
+---
+
+## 2026-08-31 – Vajíčka a líhnutí (v0.15.0)
+
+### Zpětná vazba uživatele
+- „Tak pojďme na ta vajíčka." + připomněl vazbu na `acquirePokemon`.
+- Rozhodnutí přes výběr: druh ve vejci = **náhodný druh z oblasti**; genetika
+  (IV/shiny) se losuje **až při vylíhnutí**; doba líhnutí **podle rarity druhu**.
+
+### Co jsme udělali
+- `data/eggs.js` (nový): rarity → doba líhnutí (min), `EGG_DROP_CHANCE = 0,03`,
+  rozsah levelu vylíhnutí 1–5.
+- `data/areas.js`: přidán `species` pool oblasti (Route 1: pidgey/rattata).
+  `battleSystem.spawnEnemy` losuje odtud (dřív natvrdo `ENEMY_POOL`).
+- `src/systems/eggSystem.js` (nový): `rollEggDrop(area)` (drop po výhře),
+  inventář `state.eggs`, inkubace ve druhém slotu Školky
+  (`city.daycare.egg`), `accrueIncubation` (aktivní smyčka + offline dopočet,
+  bez nerfu, strop `OFFLINE_CAP_HOURS`), po dosažení doby vylíhne přes
+  `acquirePokemon()` (R-018) – genetika se rolluje teprve tady.
+- `battleSystem.handleFaint`: po výhře losuje vejce + píše do logu.
+- `buildingView`: Školka má sekci inkubace (progress bar) + výběr vejce
+  (`openEggPicker`), tlačítka „Incubate an egg" / „Take egg out".
+- `offlineView`: sekce „vejce se vylíhlo" v přehledu „Welcome back".
+- `main.js`: `applyEggOffline`, `startEggLoop`, 🥚 počet vajec v liště,
+  hláška při vylíhnutí za běhu (`EVENTS.EGG_HATCHED`).
+- Save **v6 → v7** (`eggs: []`; slot inkubace lazy).
+
+### Rozhodnutí
+- **R-021 🟢 Vajíčka + líhnutí.** Drop po výhře (druh z oblasti), genetika až při
+  vylíhnutí, doba líhnutí dle rarity, líhnutí přes `acquirePokemon`. (schváleno
+  2026-08-31)
+
+### K ověření uživatelem v prohlížeči (tvrdý refresh!)
+- Vyhrávej souboje → občas „🥚 You found a … Egg!"; v liště roste 🥚.
+- Školka → „Incubate an egg" → progress bar; po čase (i po návratu offline) se
+  vylíhne a objeví v kolekci (nebo zlepší IV, když druh už máš).
+
+### Otevřené / další v plánu
+- ⚪ Breeding podle egg groups (staví na tomto systému).
+- ⚪ Shiny-boost u vajec (Masuda), egg chance/doba per oblast.
+
+### Pracujeme LOKÁLNĚ
+- Nic nepushováno – commit/push jen na výslovný pokyn.
+
+---
+
+## 2026-08-31 – Unikátní druhy + výběr do školky jako boxy (v0.10.0)
+
+### Zpětná vazba uživatele
+- „Každého pokemona můžeš mít jenom 1." + „vybírání pokemonů v daycare bych rád měl jako boxes / bar… když má člověk 1100 pokemonů, tak tam nevybere ani prd."
+
+### Co jsme udělali
+- `team.js`: `ownsSpecies()` + `catchWild` chytá jen nevlastněné druhy; při vyčerpání nekonzumuje Poké Ball.
+- `buildingView.js`: výběr do školky = tlačítko v detailu → samostatné okno `openDaycarePicker` s mřížkou dlaždic (`.daycare-grid`) + hledáním podle jména (`#daycare-search`, filtruje viditelnost dlaždic bez re-renderu). Klik na dlaždici uloží a zavře. Nahradilo `<select>`.
+- CSS `.daycare-picker/.daycare-search/.daycare-grid/.daycare-tile`.
+
+### Rozhodnutí
+- **R-017 🟢 Každý druh Pokémona jen 1× (unikátní kolekce = de facto Pokédex).** (schváleno 2026-08-31)
+- **R-018 🟢 Výběr Pokémona (školka) jako mřížka dlaždic s hledáním, ne rozbalovací seznam.** (škáluje na stovky+)
+
+### Otevřené
+- ⚪ Starší duplikáty v existujícím save se nemažou automaticky (nevratné) – pročistit jen na vyžádání.
+- ⚪ Stejný „box" picker se hodí i jinam (např. správa týmu/kolekce), až bude druhů víc.
+
+### Pracujeme LOKÁLNĚ
+- Od v0.9.0 nic nepushováno na GitHub (viz zpětná vazba uživatele) – commit/push jen na výslovný pokyn.
+
+---
+
 ## 2026-08-31 – Školka (Day Care) + vyvážení Centra (v0.9.0)
 
 ### Zpětná vazba uživatele

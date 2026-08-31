@@ -14,9 +14,12 @@ import { renderBattle } from "./ui/battleView.js";
 import { restore as restoreBattle } from "./systems/battleSystem.js";
 import { applyOfflineProgress } from "./systems/idle.js";
 import { applyDaycareOffline, startDaycareLoop } from "./systems/daycare.js";
+import { applyEggOffline, startEggLoop } from "./systems/eggSystem.js";
+import { applyBreedingOffline, startBreedingLoop } from "./systems/breedingSystem.js";
 import { showOfflineSummary } from "./ui/offlineView.js";
 import { renderMap } from "./ui/mapView.js";
 import { renderSaveControls } from "./ui/saveControls.js";
+import { openChangelog } from "./ui/changelogView.js";
 
 /** Interval automatického ukládání (ms). */
 const AUTOSAVE_MS = 30_000;
@@ -36,10 +39,12 @@ function setStatus(msg) {
 /** Vykreslí zdrojovou lištu z reálného herního stavu. */
 function renderResourceBar(root) {
   const s = getState();
+  const totalBalls = Object.values(s.resources.balls ?? {}).reduce((a, b) => a + b, 0);
   const items = [
     { icon: "💰", label: "Gold", value: s.resources.gold },
-    { icon: "🔴", label: "Poké Balls", value: s.resources.pokeballs },
-    { icon: "📦", label: "Pokémoni", value: s.collection.length },
+    { icon: "🔴", label: "Poké Balls", value: totalBalls },
+    { icon: "📦", label: "Pokémon", value: s.collection.length },
+    { icon: "🥚", label: "Eggs", value: (s.eggs ?? []).length },
   ];
   root.innerHTML = items
     .map(
@@ -57,10 +62,10 @@ function init() {
   let loaded = false;
   if (!loadGame()) {
     newGame();
-    setStatus("Nová hra");
+    setStatus("New game");
   } else {
     loaded = true;
-    setStatus("Hra načtena");
+    setStatus("Game loaded");
   }
 
   // 1b) Offline (idle) progres – POČÍTÁ SE Z ULOŽENÉHO SNÍMKU souboje,
@@ -69,11 +74,17 @@ function init() {
   let elapsedSec = 0;
   let offlineBattle = null;
   let offlineDaycare = null;
+  let offlineEgg = null;
+  let offlineBred = null;
   if (loaded) {
     const elapsedMs = Date.now() - getState().meta.lastSaved;
     elapsedSec = Math.floor(elapsedMs / 1000);
     offlineBattle = applyOfflineProgress(getState().battle, elapsedMs);
     offlineDaycare = applyDaycareOffline(elapsedMs);
+    // Breeding vyprodukuje vejce PŘED inkubací, ať se čerstvá vejce mohou hned
+    // dál dopočítat (nezačnou inkubovat sama, ale ať je pořadí předvídatelné).
+    offlineBred = applyBreedingOffline(elapsedMs);
+    offlineEgg = applyEggOffline(elapsedMs);
   }
 
   // 2) Vykreslit panely.
@@ -100,18 +111,42 @@ function init() {
   setInterval(saveGame, AUTOSAVE_MS);
   window.addEventListener("beforeunload", saveGame);
   startDaycareLoop();
+  startEggLoop();
+  startBreedingLoop();
+
+  // Vejce vylíhnuté při běžící hře: krátká hláška v liště.
+  bus.on(EVENTS.EGG_HATCHED, (r) => {
+    setStatus(`🥚 Egg hatched: ${r.name}${r.shiny ? " ✨" : ""} (Lv ${r.level})`);
+  });
+
+  // Vejce vyprodukované breedingem při běžící hře: krátká hláška (druh skrytý).
+  bus.on(EVENTS.EGG_BRED, () => {
+    setStatus("💞 The Day Care couple produced an egg!");
+  });
 
   // 6) Přehled offline zisků + hned uložit (reset lastSaved → žádné dvojí počítání).
-  if (offlineBattle || offlineDaycare) {
+  if (offlineBattle || offlineDaycare || offlineEgg || offlineBred) {
     saveGame();
-    showOfflineSummary({ elapsedSec, battle: offlineBattle, daycare: offlineDaycare });
+    showOfflineSummary({
+      elapsedSec,
+      battle: offlineBattle,
+      daycare: offlineDaycare,
+      egg: offlineEgg,
+      bred: offlineBred,
+    });
     const parts = [];
-    if (offlineBattle) parts.push(`souboj +${offlineBattle.xp} XP, +${offlineBattle.gold} gold`);
-    if (offlineDaycare) parts.push(`školka +${offlineDaycare.xp} XP`);
+    if (offlineBattle) parts.push(`battle +${offlineBattle.xp} XP, +${offlineBattle.gold} gold`);
+    if (offlineDaycare) parts.push(`day care +${offlineDaycare.xp} XP`);
+    if (offlineEgg) parts.push(`hatched ${offlineEgg.length} egg${offlineEgg.length > 1 ? "s" : ""}`);
+    if (offlineBred) parts.push(`bred ${offlineBred.length} egg${offlineBred.length > 1 ? "s" : ""}`);
     setStatus(`Offline: ${parts.join(" · ")}`);
   }
 
-  el("version-tag").textContent = `Pokémon Idle RPG · v${VERSION}`;
+  const versionTag = el("version-tag");
+  versionTag.textContent = `Pokémon Idle RPG · v${VERSION}`;
+  versionTag.title = "Show changelog";
+  versionTag.classList.add("clickable");
+  versionTag.addEventListener("click", openChangelog);
   console.log(`[Pokémon Idle RPG] v${VERSION} – inicializováno.`);
 }
 

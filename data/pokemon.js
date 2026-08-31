@@ -10,12 +10,18 @@
  * @property {number} spDefense
  * @property {number} speed
  *
+ * @typedef {"common"|"uncommon"|"rare"|"epic"|"legendary"} Rarity
+ *
  * @typedef {Object} Species
  * @property {string} id            unikátní klíč (malými písmeny)
  * @property {number} dexNo         číslo v Pokédexu
  * @property {string} name          zobrazované jméno
  * @property {string[]} types       jeden nebo dva typy
  * @property {BaseStats} baseStats  základní staty druhu
+ * @property {string[]} eggGroups   egg groups (kebab-case) pro breeding; sdílená
+ *                                  skupina = kompatibilní pár. "no-eggs" = nelze.
+ * @property {Rarity} rarity        vzácnost druhu; řídí šanci na drop vajíčka
+ *                                  a dobu líhnutí (přes tabulku v systému).
  */
 
 /** @type {Species[]} */
@@ -26,6 +32,8 @@ export const POKEMON_SPECIES = [
     name: "Bulbasaur",
     types: ["Grass", "Poison"],
     baseStats: { hp: 45, attack: 49, defense: 49, spAttack: 65, spDefense: 65, speed: 45 },
+    eggGroups: ["monster", "grass"],
+    rarity: "uncommon",
   },
   {
     id: "charmander",
@@ -33,6 +41,8 @@ export const POKEMON_SPECIES = [
     name: "Charmander",
     types: ["Fire"],
     baseStats: { hp: 39, attack: 52, defense: 43, spAttack: 60, spDefense: 50, speed: 65 },
+    eggGroups: ["monster", "dragon"],
+    rarity: "uncommon",
   },
   {
     id: "squirtle",
@@ -40,6 +50,8 @@ export const POKEMON_SPECIES = [
     name: "Squirtle",
     types: ["Water"],
     baseStats: { hp: 44, attack: 48, defense: 65, spAttack: 50, spDefense: 64, speed: 43 },
+    eggGroups: ["monster", "water-1"],
+    rarity: "uncommon",
   },
   {
     id: "pidgey",
@@ -47,6 +59,8 @@ export const POKEMON_SPECIES = [
     name: "Pidgey",
     types: ["Normal", "Flying"],
     baseStats: { hp: 40, attack: 45, defense: 40, spAttack: 35, spDefense: 35, speed: 56 },
+    eggGroups: ["flying"],
+    rarity: "common",
   },
   {
     id: "rattata",
@@ -54,6 +68,19 @@ export const POKEMON_SPECIES = [
     name: "Rattata",
     types: ["Normal"],
     baseStats: { hp: 30, attack: 56, defense: 35, spAttack: 25, spDefense: 35, speed: 72 },
+    eggGroups: ["field"],
+    rarity: "common",
+  },
+  {
+    // Žolík pro breeding (R-022): egg group "ditto" se páří s čímkoli, co může
+    // mít vejce. Potomkem je vždy ten druhý rodič (Ditto sám se z vejce nelíhne).
+    id: "ditto",
+    dexNo: 132,
+    name: "Ditto",
+    types: ["Normal"],
+    baseStats: { hp: 48, attack: 48, defense: 48, spAttack: 48, spDefense: 48, speed: 48 },
+    eggGroups: ["ditto"],
+    rarity: "rare",
   },
 ];
 

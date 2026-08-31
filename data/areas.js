@@ -13,6 +13,8 @@
  * @property {string} region
  * @property {number} recommendedLevel
  * @property {string} description
+ * @property {string[]} species  druhy Pokémonů, kteří se v oblasti vyskytují
+ *                               (nepřátelé v souboji i druh nalezeného vajíčka)
  * @property {Drop[]} drops     loot tabulka oblasti (zadání, sekce 6)
  */
 
@@ -23,7 +25,10 @@ export const AREAS = [
     name: "Route 1",
     region: "Kanto",
     recommendedLevel: 1,
-    description: "Klidná travnatá cesta hned za městem. Ideální pro první výpravu.",
-    drops: [{ resource: "pokeballs", chance: 0.12, amount: 1 }],
+    description: "A calm grassy path just outside town. Perfect for your first expedition.",
+    species: ["pidgey", "rattata"],
+    // Poké Bally se nedropují – kupují se v Poké Martu. Loot tabulka zůstává
+    // připravená pro budoucí kořist (např. gold, materiály).
+    drops: [],
   },
 ];

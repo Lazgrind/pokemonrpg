@@ -14,10 +14,10 @@ import { getState } from "../core/state.js";
  */
 export function renderSaveControls(root, onStatus = () => {}) {
   root.innerHTML = `
-    <button class="btn" data-act="save">💾 Uložit</button>
+    <button class="btn" data-act="save">💾 Save</button>
     <button class="btn" data-act="export">⬇️ Export</button>
     <button class="btn" data-act="import">⬆️ Import</button>
-    <button class="btn btn-danger" data-act="new">🆕 Nová hra</button>
+    <button class="btn btn-danger" data-act="new">🆕 New Game</button>
     <input type="file" accept=".txt,text/plain" hidden />
   `;
 
@@ -25,21 +25,21 @@ export function renderSaveControls(root, onStatus = () => {}) {
 
   root.querySelector('[data-act="save"]').addEventListener("click", () => {
     saveGame();
-    onStatus("Uloženo ✓");
+    onStatus("Saved ✓");
   });
 
   root.querySelector('[data-act="export"]').addEventListener("click", () => {
     exportSave();
-    onStatus("Save vyexportován do .txt");
+    onStatus("Save exported to .txt");
   });
 
   root.querySelector('[data-act="import"]').addEventListener("click", () => fileInput.click());
 
   root.querySelector('[data-act="new"]').addEventListener("click", () => {
-    if (confirm("Opravdu založit novou hru? Neuložený postup se ztratí.")) {
+    if (confirm("Really start a new game? Unsaved progress will be lost.")) {
       stopBattle();
       newGame();
-      onStatus("Nová hra založena");
+      onStatus("New game started");
     }
   });
 
@@ -49,7 +49,7 @@ export function renderSaveControls(root, onStatus = () => {}) {
     stopBattle();
     const ok = await importSave(file);
     if (ok) restoreBattle(getState().battle);
-    onStatus(ok ? "Import proběhl ✓" : "Import selhal – neplatný soubor");
+    onStatus(ok ? "Import successful ✓" : "Import failed — invalid file");
     fileInput.value = "";
   });
 }
