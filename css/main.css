@@ -254,28 +254,102 @@ body {
   overflow: auto;
 }
 
-/* ---- Budovy města ---- */
-.building-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
+/* ---- Město (mapa s budovami) ---- */
+.city-map {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+  background:
+    linear-gradient(180deg, #16233a 0%, #12331f 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
 }
-.building-head .lvl {
+.plot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  min-height: 92px;
+  padding: 10px 8px;
+  border-radius: 10px;
+  text-align: center;
+}
+.plot.building {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.12s, background 0.12s;
+}
+.plot.building:hover {
+  border-color: var(--accent);
+  background: #2c395a;
+  transform: translateY(-2px);
+}
+.plot.building:active { transform: translateY(0); }
+.plot.empty {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed var(--border);
+  color: var(--text-dim);
+  font-style: italic;
+}
+.plot-icon { font-size: 30px; line-height: 1; }
+.plot-name { font-size: 12px; }
+.plot-lvl {
+  font-size: 11px;
+  color: var(--accent);
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 8px;
+}
+
+/* ---- Detail budovy (modal) ---- */
+.lvl {
   font-size: 12px;
   color: var(--accent);
   background: var(--bg-panel);
   border: 1px solid var(--border);
   border-radius: 999px;
   padding: 1px 8px;
+  white-space: nowrap;
 }
 .building-desc {
   font-size: 12px;
   color: var(--text-dim);
   line-height: 1.5;
-  margin-bottom: 8px;
 }
-.building .row-actions { flex-wrap: wrap; }
+.building-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.building-modal-head .b-icon { font-size: 40px; line-height: 1; }
+.building-modal-head .lvl { margin-left: auto; }
+.building-stats {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+.building-actions {
+  display: grid;
+  gap: 8px;
+}
+.building-actions .btn { padding: 10px; font-size: 14px; }
+.btn-close {
+  margin-top: 14px;
+  width: 100%;
+}
 .btn:disabled {
   opacity: 0.45;
   cursor: not-allowed;

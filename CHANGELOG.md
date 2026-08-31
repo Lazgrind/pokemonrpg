@@ -8,6 +8,13 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.6.1] – 2026-08-31 · Město jako klikatelná mapa
+### Změněno
+- Záložka **Město** už není seznam karet, ale **vizuální město**: budovy jsou dlaždice v mapě + volné parcely pro budoucí budovy.
+- **Klik na budovu otevře její detail** (modal) s možnostmi (Koupit Poké Ball / Vylepšit); čísla se v něm živě aktualizují, zavření tlačítkem / Esc / klikem mimo.
+### Přidáno
+- `src/ui/buildingView.js` (detail budovy) + styly mapy města a detailu.
+
 ## [0.6.0] – 2026-08-31 · Krok 5 (město + building) → MVP hotovo
 ### Přidáno
 - Koncept **City → Building**: datová definice `data/buildings.js` + logika `src/systems/buildingSystem.js`.

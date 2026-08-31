@@ -13,6 +13,27 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Město jako klikatelná mapa (v0.6.1)
+
+### Zpětná vazba uživatele
+- Budovy nechtěl jako seznam, ale jako **skutečné město**, kde se klikne na jednotlivou budovu a otevře se její menu s možnostmi.
+
+### Co jsme udělali
+- `cityView.js` přepsán na **mapu města**: budovy = klikatelné dlaždice (ikona, název, úroveň) + volné parcely (🏗️) naznačující růst města.
+- Nový `src/ui/buildingView.js`: **detail budovy jako modal** – po kliknutí na budovu; možnosti (Koupit Poké Ball / Vylepšit), živě aktualizovaná čísla (přes STATE_CHANGED), zavření tlačítkem / Esc / klikem mimo.
+- Styly mapy města (`.city-map`, `.plot`…) a detailu budovy.
+- Bez zásahu do herní logiky/dat (jen UI) – `buildingSystem.js` a `data/buildings.js` beze změny.
+- Otestováno v local buildu (moduly HTTP 200).
+
+### Rozhodnutí
+- **R-011 🟢 Město jako vizuální klikatelná mapa; možnosti budovy v detailu (modal).** (schváleno 2026-08-31)
+  - Rozšiřitelné: přidání budovy = jen data; volné parcely dají prostor pro růst.
+
+### K ověření uživatelem v prohlížeči
+- Záložka Město ukáže mapu; klik na Poké Mart otevře detail s nákupem/vylepšením; zavření funguje; po akci se čísla i úroveň dlaždice aktualizují.
+
+---
+
 ## 2026-08-31 – Krok 5: město + building → MVP hotovo (v0.6.0)
 
 ### Co jsme udělali
