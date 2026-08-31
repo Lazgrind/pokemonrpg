@@ -69,7 +69,30 @@ body {
 .resource .icon { font-size: 15px; }
 .resource .value { font-weight: 700; }
 
-.status { font-size: 13px; color: var(--text-dim); }
+.save-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.btn {
+  background: var(--bg-panel-2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.btn:hover { background: #2c395a; border-color: var(--accent-2); }
+.btn:active { transform: translateY(1px); }
+.btn-danger:hover { border-color: var(--danger); }
+
+.status {
+  font-size: 13px;
+  color: var(--text-dim);
+  min-width: 90px;
+}
 
 /* ---- Hlavní rozvržení (grid) ---- */
 #layout {

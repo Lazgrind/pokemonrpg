@@ -3,11 +3,30 @@
 Chronologický záznam všeho, o čem se bavíme: diskuze, rozhodnutí, otázky, nápady.
 Nejnovější nahoře. Slouží k tomu, abychom vše zpětně dohledali.
 
+> **Stav nasazení:** GitHub Pages zapnuto a funkční na https://lazgrind.github.io/pokemonrpg/ (repo je veřejné → Pages zdarma). Ověřeno 2026-08-31.
+
 Legenda stavů rozhodnutí:
 - 🟡 **NÁVRH** – navrženo, čeká na potvrzení
 - 🟢 **SCHVÁLENO** – odsouhlaseno, platí
 - 🔴 **ZAMÍTNUTO** – neschváleno / opuštěno
 - ⚪ **OTEVŘENO** – k dořešení později
+
+---
+
+## 2026-08-31 – Krok 1: perzistentní základ (v0.2.0)
+
+### Co jsme udělali
+- Rozhodnutí uživatele: pokračovat ve vývoji lokálně (local build), verze posílat na GitHub po každém hotovém kroku.
+- Postaven základ perzistence: event sběrnice, jádro stavu, save systém, datová vrstva Pokémonů, UI pro save.
+- Implementováno: `src/core/events.js`, `src/core/state.js`, `src/systems/save.js`, `data/pokemon.js`, `src/ui/saveControls.js`; upraven `src/main.js`; zdrojová lišta čte reálný stav.
+- Save je verzovaný (`saveVersion`) s připraveným migračním bodem; export/import přes .txt dle zadání (sekce 7, 15).
+- Otestováno v local buildu (všechny moduly HTTP 200).
+
+### K ověření uživatelem v prohlížeči
+- Tlačítka Uložit / Export / Import / Nová hra fungují, stav přežije refresh (localStorage), export stáhne .txt, import ho načte zpět.
+
+### Další na řadě
+- ⚪ Krok 2: tým (max 6) + získání startovních Pokémonů.
 
 ---
 

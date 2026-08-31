@@ -1,15 +1,21 @@
 /**
- * main.js – vstupní bod aplikace (Krok 0).
+ * main.js – vstupní bod aplikace.
  *
- * Úkolem bootstrapu je najít cílové elementy v DOM a nechat jednotlivé
- * UI moduly vykreslit svoji část. Herní logika (systems/) se sem bude
- * napojovat v dalších krocích – zatím jde jen o vizuální kostru.
+ * Bootstrap: načte/založí herní stav, vykreslí UI moduly a napojí je na
+ * změny stavu přes event sběrnici. Herní logika žije v systems/, data v data/.
  */
 
 import { VERSION } from "./core/version.js";
+import { bus, EVENTS } from "./core/events.js";
+import { getState } from "./core/state.js";
+import { loadGame, newGame, saveGame } from "./systems/save.js";
 import { renderCity } from "./ui/cityView.js";
 import { renderBattle } from "./ui/battleView.js";
 import { renderMap } from "./ui/mapView.js";
+import { renderSaveControls } from "./ui/saveControls.js";
+
+/** Interval automatického ukládání (ms). */
+const AUTOSAVE_MS = 30_000;
 
 /** Bezpečně najde element podle id, jinak vyhodí srozumitelnou chybu. */
 function el(id) {
@@ -18,14 +24,20 @@ function el(id) {
   return node;
 }
 
-/** Dočasná zdrojová lišta (placeholder), reálné hodnoty přijdou z herního stavu. */
+/** Krátká stavová hláška v horní liště. */
+function setStatus(msg) {
+  el("status").textContent = msg;
+}
+
+/** Vykreslí zdrojovou lištu z reálného herního stavu. */
 function renderResourceBar(root) {
-  const resources = [
-    { icon: "💰", label: "Gold", value: 0 },
-    { icon: "✨", label: "XP", value: 0 },
-    { icon: "🔴", label: "Poké Balls", value: 0 },
+  const s = getState();
+  const items = [
+    { icon: "💰", label: "Gold", value: s.resources.gold },
+    { icon: "🔴", label: "Poké Balls", value: s.resources.pokeballs },
+    { icon: "📦", label: "Pokémoni", value: s.collection.length },
   ];
-  root.innerHTML = resources
+  root.innerHTML = items
     .map(
       (r) => `<span class="resource" title="${r.label}">
                 <span class="icon">${r.icon}</span>
@@ -37,18 +49,34 @@ function renderResourceBar(root) {
 
 /** Inicializace hry. */
 function init() {
-  renderResourceBar(el("resource-bar"));
+  // 1) Načíst uloženou hru, jinak založit novou.
+  if (!loadGame()) {
+    newGame();
+    setStatus("Nová hra");
+  } else {
+    setStatus("Hra načtena");
+  }
+
+  // 2) Vykreslit statické panely (Krok 0).
   renderCity(el("city-panel"));
   renderBattle(el("battle-panel"));
   renderMap(el("map-panel"));
 
-  el("version-tag").textContent = `Pokémon Idle RPG · v${VERSION}`;
-  el("status").textContent = "Připraveno";
+  // 3) Ovládání save + zdrojová lišta.
+  renderSaveControls(el("save-controls"), setStatus);
+  renderResourceBar(el("resource-bar"));
 
-  console.log(`[Pokémon Idle RPG] v${VERSION} – kostra načtena.`);
+  // 4) UI reaguje na změny stavu (oddělení logiky od UI).
+  bus.on(EVENTS.STATE_CHANGED, () => renderResourceBar(el("resource-bar")));
+
+  // 5) Automatické ukládání a uložení při zavření karty.
+  setInterval(saveGame, AUTOSAVE_MS);
+  window.addEventListener("beforeunload", saveGame);
+
+  el("version-tag").textContent = `Pokémon Idle RPG · v${VERSION}`;
+  console.log(`[Pokémon Idle RPG] v${VERSION} – inicializováno.`);
 }
 
-// Spustíme až po načtení DOM.
 if (document.readyState === "loading") {
   document.addEventListener("DOMContentLoaded", init);
 } else {

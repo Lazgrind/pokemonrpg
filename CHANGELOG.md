@@ -8,6 +8,17 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.2.0] – 2026-08-31 · Krok 1 (perzistentní základ)
+### Přidáno
+- Event sběrnice `src/core/events.js` (oddělení logiky od UI).
+- Jádro herního stavu `src/core/state.js` (`GameState`, `createNewGame`, verzování `saveVersion`, `MAX_TEAM_SIZE`).
+- Save systém `src/systems/save.js`: localStorage, autosave, verzovaný save s migrací, **export/import do .txt**.
+- Datová vrstva `data/pokemon.js` (5 druhů: Bulbasaur, Charmander, Squirtle, Pidgey, Rattata + `getSpecies`).
+- UI `src/ui/saveControls.js`: tlačítka Uložit / Export / Import / Nová hra.
+- Zdrojová lišta napojená na reálný stav (Gold, Poké Balls, počet Pokémonů).
+### Změněno
+- `src/main.js`: bootstrap načítá/zakládá hru, napojuje UI na `STATE_CHANGED`, autosave à 30 s + při zavření karty.
+
 ## [0.1.0] – 2026-08-31 · Krok 0 (kostra projektu)
 ### Přidáno
 - Projektová dokumentace: `docs/NOTES.md` (deník) a `CHANGELOG.md` (tento soubor).
