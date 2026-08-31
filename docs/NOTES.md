@@ -13,6 +13,29 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Krok 3: Battle Area (v0.4.0)
+
+### Co jsme udělali
+- Datová tabulka typové efektivity `data/types.js` + `typeMultiplier`.
+- `computeStats` v `pokemonSystem.js` (staty z base + level).
+- Progression `src/systems/progression.js` (XP křivka, level-up).
+- Battle systém `src/systems/battleSystem.js`: automatický souboj, kola dle rychlosti, damage s typovou efektivitou, XP+level, gold odměna, střídání týmu, prohra; start/pauza/rychlost; `stopBattle`.
+- Vizuální `src/ui/battleView.js`: HP bary, VS layout, ovládání, log.
+- `stopBattle` napojen na Nová hra / Import v `saveControls.js`.
+- Otestováno v local buildu (moduly HTTP 200).
+
+### Rozhodnutí
+- **R-007 🟢 Battle MVP: damage s typovou efektivitou (datová tabulka) + auto režim se start/pauzou a rychlostí 1/2/4×.** (schváleno 2026-08-31)
+  - Manuální výběr útoků a Move systém přijdou později. Souboj je transient (neukládá se), do save jde jen výsledek (XP/level/gold). Mezi souboji se Pokémon léčí na plné HP (zjednodušení MVP).
+
+### K ověření uživatelem v prohlížeči
+- Battle Area → Start: HP bary klesají, log běží, super efektivní/slabé zásahy; přepínání rychlosti; po výhře další nepřítel; gold v liště roste; level-up při dostatku XP; prohra při vyřazení celého týmu.
+
+### Další na řadě
+- ⚪ Krok 4: jedna oblast + idle/offline progres + základní loot.
+
+---
+
 ## 2026-08-31 – Krok 2: tým a získávání Pokémonů (v0.3.0)
 
 ### Co jsme udělali

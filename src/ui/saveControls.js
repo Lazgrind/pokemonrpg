@@ -4,6 +4,7 @@
  */
 
 import { newGame, saveGame, exportSave, importSave } from "../systems/save.js";
+import { stopBattle } from "../systems/battleSystem.js";
 
 /**
  * Vykreslí tlačítka do kontejneru.
@@ -35,6 +36,7 @@ export function renderSaveControls(root, onStatus = () => {}) {
 
   root.querySelector('[data-act="new"]').addEventListener("click", () => {
     if (confirm("Opravdu založit novou hru? Neuložený postup se ztratí.")) {
+      stopBattle();
       newGame();
       onStatus("Nová hra založena");
     }
@@ -43,6 +45,7 @@ export function renderSaveControls(root, onStatus = () => {}) {
   fileInput.addEventListener("change", async () => {
     const file = fileInput.files?.[0];
     if (!file) return;
+    stopBattle();
     const ok = await importSave(file);
     onStatus(ok ? "Import proběhl ✓" : "Import selhal – neplatný soubor");
     fileInput.value = "";

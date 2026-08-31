@@ -8,6 +8,19 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.4.0] – 2026-08-31 · Krok 3 (Battle Area)
+### Přidáno
+- Typová efektivita `data/types.js` (`typeMultiplier`).
+- Progression `src/systems/progression.js` (`xpForNextLevel`, `grantXp`).
+- `computeStats` v `src/systems/pokemonSystem.js`.
+- Battle systém `src/systems/battleSystem.js`: auto souboj, damage s typy, XP/level, gold, start/pauza, rychlost 1/2/4×, `stopBattle`.
+- Vizuální `src/ui/battleView.js`: HP bary, ovládání, log.
+- Událost `BATTLE_UPDATE`; styly Battle Area.
+### Změněno
+- `saveControls.js` volá `stopBattle` při Nové hře / Importu.
+### Rozhodnutí
+- R-007: battle MVP = typová efektivita + auto režim se start/pauzou a rychlostí.
+
 ## [0.3.0] – 2026-08-31 · Krok 2 (tým a získávání Pokémonů)
 ### Přidáno
 - Pokémon systém `src/systems/pokemonSystem.js` (`createPokemon`).

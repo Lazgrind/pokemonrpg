@@ -196,6 +196,64 @@ body {
   margin-left: 4px;
 }
 
+/* ---- Battle Area ---- */
+.battle-field {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.combatant {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.combatant.enemy { border-left: 3px solid var(--danger); }
+.combatant.player { border-left: 3px solid var(--accent-2); }
+.c-head { margin-bottom: 6px; font-size: 14px; }
+.vs {
+  text-align: center;
+  color: var(--text-dim);
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 2px;
+}
+.hpbar {
+  height: 12px;
+  background: #0c1120;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.hpfill {
+  height: 100%;
+  background: linear-gradient(90deg, #3ad07a, #2fae65);
+  transition: width 0.25s ease;
+}
+.hpfill.low { background: linear-gradient(90deg, #e5533c, #c53a26); }
+.hptext { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+
+.battle-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.speed-group { display: flex; gap: 4px; }
+.spd.active { border-color: var(--accent); color: var(--accent); }
+
+.battle-log {
+  background: #0c1120;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  max-height: 130px;
+  overflow: auto;
+}
+
 /* ---- Patička ---- */
 #footer {
   padding: 6px 18px;

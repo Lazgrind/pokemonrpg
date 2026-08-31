@@ -30,3 +30,25 @@ export function createPokemon(speciesId, level = 5) {
     xp: 0,
   };
 }
+
+/**
+ * Spočítá aktuální bojové staty jedince z base statů druhu a levelu.
+ * (Zjednodušený vzorec inspirovaný Pokémon hrami.)
+ * @param {import("../core/state.js").OwnedPokemon} pokemon
+ * @returns {{ maxHp:number, attack:number, defense:number, spAttack:number, spDefense:number, speed:number }}
+ */
+export function computeStats(pokemon) {
+  const species = getSpecies(pokemon.speciesId);
+  if (!species) throw new Error(`Neznámý druh Pokémona: ${pokemon.speciesId}`);
+  const b = species.baseStats;
+  const lvl = pokemon.level;
+  const stat = (base) => Math.floor((2 * base * lvl) / 100) + 5;
+  return {
+    maxHp: Math.floor((2 * b.hp * lvl) / 100) + lvl + 10,
+    attack: stat(b.attack),
+    defense: stat(b.defense),
+    spAttack: stat(b.spAttack),
+    spDefense: stat(b.spDefense),
+    speed: stat(b.speed),
+  };
+}

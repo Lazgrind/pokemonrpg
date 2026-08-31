@@ -39,4 +39,5 @@ export const bus = createEventBus();
 /** Názvy událostí na jednom místě, ať se nepřepisují stringy. */
 export const EVENTS = {
   STATE_CHANGED: "state:changed",
+  BATTLE_UPDATE: "battle:update",
 };
