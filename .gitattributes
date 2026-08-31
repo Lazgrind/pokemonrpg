@@ -1,0 +1,10 @@
+# Sjednocení konců řádků: v repu LF, ať se needitují zbytečné rozdíly
+# a nezobrazují se CRLF/LF varování.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.mp3 binary
+*.wav binary
