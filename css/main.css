@@ -254,6 +254,39 @@ body {
   overflow: auto;
 }
 
+/* ---- Modal (přehled offline zisků) ---- */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 9, 16, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.modal {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px 24px;
+  width: min(420px, 90vw);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+.offline-gains {
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 16px;
+  display: grid;
+  gap: 6px;
+  font-size: 15px;
+}
+.offline-gains li {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
 /* ---- Patička ---- */
 #footer {
   padding: 6px 18px;

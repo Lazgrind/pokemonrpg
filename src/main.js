@@ -12,6 +12,8 @@ import { loadGame, newGame, saveGame } from "./systems/save.js";
 import { renderLeftPanel } from "./ui/leftPanel.js";
 import { renderBattle } from "./ui/battleView.js";
 import { restore as restoreBattle } from "./systems/battleSystem.js";
+import { applyOfflineProgress } from "./systems/idle.js";
+import { showOfflineSummary } from "./ui/offlineView.js";
 import { renderMap } from "./ui/mapView.js";
 import { renderSaveControls } from "./ui/saveControls.js";
 
@@ -51,11 +53,22 @@ function renderResourceBar(root) {
 /** Inicializace hry. */
 function init() {
   // 1) Načíst uloženou hru, jinak založit novou.
+  let loaded = false;
   if (!loadGame()) {
     newGame();
     setStatus("Nová hra");
   } else {
+    loaded = true;
     setStatus("Hra načtena");
+  }
+
+  // 1b) Offline (idle) progres – POČÍTÁ SE Z ULOŽENÉHO SNÍMKU souboje,
+  // proto ještě před restore (ten by běh souboje přepsal na pauzu).
+  let offline = null;
+  if (loaded) {
+    const savedBattle = getState().battle;
+    const elapsedMs = Date.now() - getState().meta.lastSaved;
+    offline = applyOfflineProgress(savedBattle, elapsedMs);
   }
 
   // 2) Vykreslit panely.
@@ -65,6 +78,7 @@ function init() {
 
   // 2b) Obnovit rozehraný souboj ze save (pozastavený) – „přímý save“:
   // po F5 zůstane HP i nepřítel zachovaný, souboj se jen pozastaví.
+  // (Case offline: hráč už má případný level-up z idle, restore ho zohlední.)
   restoreBattle(getState().battle);
 
   // 3) Ovládání save + zdrojová lišta.
@@ -80,6 +94,13 @@ function init() {
   // 5) Automatické ukládání a uložení při zavření karty.
   setInterval(saveGame, AUTOSAVE_MS);
   window.addEventListener("beforeunload", saveGame);
+
+  // 6) Přehled offline zisků + hned uložit (reset lastSaved → žádné dvojí počítání).
+  if (offline) {
+    saveGame();
+    showOfflineSummary(offline);
+    setStatus(`Offline: +${offline.xp} XP, +${offline.gold} gold`);
+  }
 
   el("version-tag").textContent = `Pokémon Idle RPG · v${VERSION}`;
   console.log(`[Pokémon Idle RPG] v${VERSION} – inicializováno.`);

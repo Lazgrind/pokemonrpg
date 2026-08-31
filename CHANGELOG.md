@@ -8,6 +8,19 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.5.0] – 2026-08-31 · Krok 4 (idle/offline progres + loot)
+### Přidáno
+- **Offline (idle) progres** `src/systems/idle.js`: po návratu dopočítá odměnu za dobu pryč (odhad podle síly), se stropem 8 h. Počítá se jen z běžícího souboje.
+- Konstanta `OFFLINE_EFFICIENCY = 0.1` – offline je záměrně 10× slabší než aktivní hraní (laditelné jedním číslem).
+- **Loot** `src/systems/loot.js` (`rollLoot`, `expectedLoot`) + datová drop tabulka v `data/areas.js` (Route 1: šance na Poké Ball).
+- Přehledový panel po návratu `src/ui/offlineView.js` (kolik času pryč, poražení, XP, gold, loot) + styly modalu.
+- Sdílené vzorce v `battleSystem.js`: `battleRewards`, `avgDamage`, `makeCombatant`, `lootLabel` (jeden zdroj pravdy pro souboj i idle).
+### Změněno
+- `handleFaint` losuje loot z oblasti a přičítá ho do zdrojů (+ zápis do logu).
+- `src/main.js`: po načtení aplikuje offline progres (před obnovou souboje) a zobrazí přehled; hned uloží (reset `lastSaved`).
+### Rozhodnutí
+- R-008 (v0.4.1), R-009: idle model = odhad podle síly, offline účinnost 1/10, loot minimální (drop Poké Ball).
+
 ## [0.4.1] – 2026-08-31 · Přímý save souboje
 ### Opraveno
 - **F5 už „neoživuje“ Pokémony.** Rozehraný souboj (HP hráče i nepřítele, log, oblast, rychlost, pořadí týmu) se ukládá do save a po načtení se obnoví – pozastavený, hráč ho znovu rozběhne tlačítkem.

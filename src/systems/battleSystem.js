@@ -16,10 +16,17 @@ import { createPokemon, computeStats } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { typeMultiplier } from "../../data/types.js";
 import { grantXp } from "./progression.js";
+import { rollLoot } from "./loot.js";
 import { AREAS } from "../../data/areas.js";
 
 /** Druhy nepřátel pro první oblast. Později se přesune do dat oblastí. */
 const ENEMY_POOL = ["pidgey", "rattata"];
+
+/** Čitelný název zdroje pro log a přehledy. */
+export function lootLabel(resource) {
+  const labels = { pokeballs: "Poké Ball", gold: "gold" };
+  return labels[resource] ?? resource;
+}
 
 /** @type {any} */
 let battle = null;
@@ -31,10 +38,29 @@ export function getBattle() {
 }
 
 /** Sestaví bojovníka z jedince (staty + plné HP). */
-function makeCombatant(owned) {
+export function makeCombatant(owned) {
   const species = getSpecies(owned.speciesId);
   const stats = computeStats(owned);
   return { ref: owned, name: species.name, types: species.types, stats, hp: stats.maxHp };
+}
+
+/** Odměna za poražení nepřítele daného levelu (sdíleno s idle systémem). */
+export function battleRewards(level) {
+  return { xp: 10 + level * 5, gold: 3 + level * 2 };
+}
+
+/**
+ * Deterministický průměrný damage (bez náhody) – pro odhad rychlosti
+ * zabíjení v idle systému. Používá stejný vzorec jako calcDamage,
+ * ale se středem náhodného rozptylu (0.925).
+ */
+export function avgDamage(attacker, defender) {
+  const eff = typeMultiplier(attacker.types[0], defender.types);
+  const power = 40;
+  const lvl = attacker.ref.level;
+  const base =
+    Math.floor(((2 * lvl) / 5 + 2) * power * (attacker.stats.attack / defender.stats.defense) / 50) + 2;
+  return Math.max(1, Math.floor(base * eff * 0.925));
 }
 
 /** Vytvoří nového divokého nepřítele podle oblasti. */
@@ -169,12 +195,16 @@ function tick() {
 function handleFaint(winner) {
   if (winner === "player") {
     const enemy = battle.enemy;
-    const xp = 10 + enemy.ref.level * 5;
-    const gold = 3 + enemy.ref.level * 2;
+    const { xp, gold } = battleRewards(enemy.ref.level);
     const leveled = grantXp(battle.player.ref, xp);
-    getState().resources.gold += gold;
+    const res = getState().resources;
+    res.gold += gold;
+    // Loot: datově řízené dropy z oblasti.
+    const loot = rollLoot(battle.area);
+    for (const d of loot) res[d.resource] = (res[d.resource] ?? 0) + d.amount;
     commit();
-    pushLog(`${enemy.name} poražen! +${xp} XP, +${gold} gold`);
+    const lootMsg = loot.length ? `, ${loot.map((d) => `+${d.amount} ${lootLabel(d.resource)}`).join(", ")}` : "";
+    pushLog(`${enemy.name} poražen! +${xp} XP, +${gold} gold${lootMsg}`);
     if (leveled) {
       battle.player.stats = computeStats(battle.player.ref);
       battle.player.hp = battle.player.stats.maxHp;

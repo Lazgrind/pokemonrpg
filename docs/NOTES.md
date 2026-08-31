@@ -13,6 +13,33 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Krok 4: idle/offline progres + loot (v0.5.0)
+
+### Co jsme udělali
+- **Idle systém** `src/systems/idle.js`: `applyOfflineProgress(savedBattle, elapsedMs)` – z uloženého souboje odhadne rychlost zabíjení (průměrný damage vs HP nepřítele), spočítá počet poražených za čas pryč × `OFFLINE_EFFICIENCY`, aplikuje XP/gold/loot. Počítá se jen z **běžícího** uloženého souboje; strop `OFFLINE_CAP_HOURS = 8`; ignoruje pauzy < 60 s.
+- **Loot systém** `src/systems/loot.js`: `rollLoot(area)` (aktivní souboj) a `expectedLoot(area, kills)` (offline průměr). Drop tabulka je v datech oblasti (`data/areas.js` → Route 1: 12% šance na Poké Ball).
+- Sdílené vzorce vytaženy z `battleSystem.js`: `battleRewards`, `avgDamage`, `makeCombatant`, `lootLabel` (jeden zdroj pravdy).
+- `handleFaint` nově losuje a připisuje loot + píše ho do logu.
+- `main.js`: offline se počítá ze snímku PŘED `restore` (jinak by běh přepsal na pauzu), pak přehled `src/ui/offlineView.js` a okamžité uložení (reset `lastSaved` → žádné dvojí počítání).
+- Otestováno v local buildu (moduly HTTP 200).
+
+### Rozhodnutí
+- **R-009 🟢 Idle model = odhad podle síly; offline účinnost 1/10; loot minimální.** (schváleno 2026-08-31)
+  - Uživatel chtěl offline záměrně slabší, aby návrat po 8 h nebyl jako 8 h aktivní hry. Zvoleno `OFFLINE_EFFICIENCY = 0.1` (jedna laditelná konstanta – Claude mírně preferuje ~1/4, doladíme podle reálných čísel).
+  - Progres se počítá jen když hráč nechal souboj běžet (pauza/stop = neidluje) – intuitivní a čisté.
+  - Loot zatím bez Item/Inventory systému: dropy jsou datově řízené a jdou přímo do `resources` (zatím Poké Ball). Plný inventář přijde později.
+
+### K ověření uživatelem v prohlížeči
+- Spusť souboj, nech ho **běžet**, zavři/refresh a vrať se za chvíli → po návratu se ukáže panel „Vítej zpět!“ s XP/gold/lootem (řádově 1/10 aktivního zisku).
+- Kontrola nerfu: srovnej zisk za X minut aktivního hraní vs X minut offline – offline má být výrazně nižší.
+- Loot: v aktivním souboji občas v logu přibude „+1 Poké Ball“ a počet Poké Balls v liště roste.
+- Pauznutý/ukončený souboj = po návratu žádný offline zisk.
+
+### Další na řadě
+- ⚪ Krok 5: malé město + jeden building upgrade → dokončení MVP.
+
+---
+
 ## 2026-08-31 – Oprava: přímý save souboje (v0.4.1)
 
 ### Zpětná vazba uživatele
