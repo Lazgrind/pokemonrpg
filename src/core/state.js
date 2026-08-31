@@ -18,12 +18,13 @@
  * @property {OwnedPokemon[]} collection
  * @property {string[]} team         uid jedinců v týmu (max 6)
  * @property {{ autoBattle: boolean }} settings
+ * @property {{ buildings: Record<string, { level: number }> }} city  budovy města
  */
 
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 2;
+export const CURRENT_SAVE_VERSION = 3;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
@@ -46,6 +47,7 @@ export function createNewGame() {
     team: [],
     settings: { autoBattle: true },
     battle: null, // uložený běhový stav souboje (viz battleSystem.serialize)
+    city: { buildings: {} }, // úrovně budov (viz buildingSystem)
   };
 }
 

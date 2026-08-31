@@ -40,5 +40,5 @@ export function renderLeftPanel(root, onStatus = () => {}) {
   const content = root.querySelector("#tab-content");
   if (activeTab === "team") renderTeamTab(content, onStatus);
   else if (activeTab === "collection") renderCollectionTab(content, onStatus);
-  else renderCity(content);
+  else renderCity(content, onStatus);
 }

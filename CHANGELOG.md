@@ -8,6 +8,17 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.6.0] – 2026-08-31 · Krok 5 (město + building) → MVP hotovo
+### Přidáno
+- Koncept **City → Building**: datová definice `data/buildings.js` + logika `src/systems/buildingSystem.js`.
+- První budova **Poké Mart**: nákup Poké Ballů za gold; **upgrade budovy snižuje cenu** (úrovně 1–10, cena vylepšení roste ×1,6).
+- Funkční záložka **Město** `src/ui/cityView.js` (karta budovy, tlačítka Koupit / Vylepšit s disabled stavem) + styly budov.
+- Stav rozšířen o `city.buildings`; migrace save **v2 → v3**.
+### Změněno
+- `CURRENT_SAVE_VERSION` = 3; `leftPanel` předává `onStatus` do města.
+### Rozhodnutí
+- R-010: první building = Poké Mart (nákup Poké Ballů, upgrade snižuje cenu). Tímto krokem je **MVP (Kroky 0–5) hotové**.
+
 ## [0.5.1] – 2026-08-31 · Oprava citlivosti offline progresu
 ### Opraveno
 - Krátká nepřítomnost (~1 min) nezobrazovala žádný offline zisk. Příčiny: minimální práh 60 s a zaokrouhlení počtu poražených dolů (za krátkou dobu → 0).

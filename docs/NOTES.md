@@ -13,6 +13,31 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Krok 5: město + building → MVP hotovo (v0.6.0)
+
+### Co jsme udělali
+- Zaveden koncept **City → Building**: `data/buildings.js` (definice, cenové křivky) + `src/systems/buildingSystem.js` (`getLevel`, `upgradeCost`, `upgradeBuilding`, `ballPrice`, `buyPokeballs`).
+- První budova **Poké Mart**: nákup Poké Ballů za gold; vylepšení budovy (Lv 1–10) postupně snižuje cenu Poké Ballu (z 30 na min. 6). Cena vylepšení roste ×1,6.
+- Funkční záložka **Město** `src/ui/cityView.js` (karta budovy, tlačítka Koupit / Vylepšit, disabled při nedostatku goldu). Styly budov + disabled tlačítek.
+- Stav rozšířen o `city.buildings`, `CURRENT_SAVE_VERSION = 3`, migrace v2 → v3.
+- Otestováno v local buildu (moduly HTTP 200).
+
+### Rozhodnutí
+- **R-010 🟢 První building = Poké Mart (nákup Poké Ballů, upgrade snižuje cenu).** (schváleno 2026-08-31)
+  - Uzavírá ekonomickou smyčku: gold z bojů/idle → Poké Bally → víc chytání → větší tým.
+  - Budovy jsou datově řízené; další budovy (bonus gold/XP, léčení…) půjdou přidat jen do dat.
+
+### 🎉 MVP hotové
+- Tímto krokem jsou splněné **Kroky 0–5** z roadmapy (R-003): kostra → save → tým → souboj → idle/loot → město. Hra má kompletní základní smyčku.
+
+### K ověření uživatelem v prohlížeči
+- Záložka **Město**: kup Poké Ball (ubere gold, přidá Poké Ball v liště); vylepši Poké Mart (ubere gold, zvýší Lv, klesne cena Poké Ballu); tlačítka se samy zablokují při nedostatku goldu; vše přežije refresh; starý save se načte (migrace na v3).
+
+### Další na řadě (po MVP)
+- ⚪ Rozšíření obsahu: víc oblastí, víc druhů Pokémonů, další budovy, Move systém, questy – vše převážně přidáváním dat.
+
+---
+
 ## 2026-08-31 – Krok 4: idle/offline progres + loot (v0.5.0)
 
 ### Co jsme udělali

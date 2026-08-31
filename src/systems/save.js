@@ -66,6 +66,11 @@ function migrate(data) {
     if (data.battle === undefined) data.battle = null;
     data.saveVersion = 2;
   }
+  // v2 → v3: přidány budovy města.
+  if (data.saveVersion < 3) {
+    if (!data.city) data.city = { buildings: {} };
+    data.saveVersion = 3;
+  }
   return data;
 }
 
