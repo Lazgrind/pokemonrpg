@@ -13,6 +13,32 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Druhá budova: Pokémon Centrum (v0.8.0)
+
+### Zpětná vazba uživatele
+- „Uděláme další budovy, chci mít město tak nějak hotové." Nabídl jsem přehled budov (Centrum, Školka, Banka, PC, Gym) s jejich herní funkcí a doporučil začít třemi idle pilíři; uživatel vybral **Pokémon Centrum**.
+
+### Co jsme udělali
+- `data/buildings.js`: nová budova `poke-center` s polem `heal { basePercent: 10, perLevel: 5 }`. `ball` je nyní volitelné pole.
+- `buildingSystem.js`: `healPercent()` (10 % + 5 % za úroveň).
+- `battleSystem.js`: po vítězství (mimo level-up, kde se HP plní na max) Centrum doléčí hráče o % max HP a zapíše to do logu. Import ze `buildingSystem`.
+- `buildingView.js` přepsán na **datově obecný** detail: stat sekce i akce se skládají podle schopností budovy (`ball`/`heal`), upgrade společný.
+- CSS `.iso-b-poke-center` fasáda (bílá klinika) jako fallback bez obrázku; `color` střechy `#e0524e`.
+- Otestováno v local buildu.
+
+### Rozhodnutí
+- **R-014 🟢 Druhá budova = Pokémon Centrum; efekt „doléčení po vítězství" (% max HP, škáluje s upgradem).** (schváleno 2026-08-31)
+  - Zvolen model „heal po výhře" místo plynulé regenerace: celá čísla HP, tematické, žádná změna save verze.
+
+### K ověření uživatelem v prohlížeči (tvrdý refresh!)
+- Ve městě přibyla budova Pokémon Centrum (fallback domeček s červenou střechou), klik otevře detail s doléčením a upgradem. V logu souboje se po výhře objeví „Centrum doléčilo …".
+
+### Otevřené / další v plánu
+- ⚪ Další budovy dle přehledu: 🐣 Školka (idle XP), 🏦 Banka (idle gold), 💻 PC/Box, 🏋️ Gym.
+- ⚪ Vlastní obrázkové sprity pro nové budovy (zatím CSS fallback).
+
+---
+
 ## 2026-08-31 – Obrázkový sprite budovy (v0.7.0)
 
 ### Zpětná vazba uživatele

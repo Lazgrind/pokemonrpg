@@ -1,6 +1,7 @@
 /**
  * UI: detail budovy – otevře se po kliknutí na budovu ve městě.
- * Zobrazí možnosti dané budovy (u Poké Martu nákup Poké Ballů a vylepšení).
+ * Zobrazí možnosti dané budovy podle jejích dat (Poké Mart: nákup Poké Ballů;
+ * Pokémon Centrum: doléčení HP po výhře). Upgrade budovy je společný.
  * Čísla se živě aktualizují přes STATE_CHANGED, dokud je detail otevřený.
  */
 
@@ -12,6 +13,7 @@ import {
   upgradeBuilding,
   ballPrice,
   buyPokeballs,
+  healPercent,
 } from "../systems/buildingSystem.js";
 import { getState } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
@@ -51,8 +53,37 @@ export function openBuilding(id, onStatus = () => {}) {
     const maxed = isMaxed(id);
     const upCost = upgradeCost(id);
     const canUpgrade = !maxed && gold >= upCost;
-    const price = ballPrice(id);
-    const canBuy = gold >= price;
+
+    // Datové sekce podle schopností budovy.
+    const stats = [`<span>💰 Tvůj gold: <strong>${gold}</strong></span>`];
+    const actions = [];
+    let note = "";
+
+    // Poké Mart: nákup Poké Ballů, upgrade snižuje cenu.
+    if (def.ball) {
+      const price = ballPrice(id);
+      const canBuy = gold >= price;
+      stats.push(`<span>🔴 Cena Poké Ballu: <strong>${price}</strong></span>`);
+      actions.push(
+        `<button class="btn" data-act="buy" ${canBuy ? "" : "disabled"}>Koupit Poké Ball · ${price} 💰</button>`
+      );
+      if (!maxed) note = "Vylepšení sníží cenu Poké Ballu.";
+    }
+
+    // Pokémon Centrum: doléčení HP po výhře, upgrade zvýší doléčení.
+    if (def.heal) {
+      const pct = healPercent(id);
+      const next = maxed ? null : pct + def.heal.perLevel;
+      stats.push(`<span>🏥 Doléčení po výhře: <strong>${pct} %</strong> max HP</span>`);
+      if (!maxed) note = `Vylepšení zvýší doléčení na ${next} % max HP po každém vítězství.`;
+    }
+
+    // Společné vylepšení budovy.
+    actions.push(
+      `<button class="btn" data-act="upgrade" ${canUpgrade ? "" : "disabled"}>${
+        maxed ? "Budova na maximu" : `Vylepšit budovu · ${upCost} 💰`
+      }</button>`
+    );
 
     overlay.innerHTML = `
       <div class="modal building-modal">
@@ -66,23 +97,13 @@ export function openBuilding(id, onStatus = () => {}) {
         </div>
 
         <div class="building-stats">
-          <span>💰 Tvůj gold: <strong>${gold}</strong></span>
-          <span>🔴 Cena Poké Ballu: <strong>${price}</strong></span>
+          ${stats.join("\n          ")}
         </div>
 
         <div class="building-actions">
-          <button class="btn" data-act="buy" ${canBuy ? "" : "disabled"}>
-            Koupit Poké Ball · ${price} 💰
-          </button>
-          <button class="btn" data-act="upgrade" ${canUpgrade ? "" : "disabled"}>
-            ${maxed ? "Budova na maximu" : `Vylepšit budovu · ${upCost} 💰`}
-          </button>
+          ${actions.join("\n          ")}
         </div>
-        ${
-          maxed
-            ? ""
-            : `<p class="placeholder" style="margin-top:8px">Vylepšení sníží cenu Poké Ballu.</p>`
-        }
+        ${note ? `<p class="placeholder" style="margin-top:8px">${note}</p>` : ""}
 
         <button class="btn btn-close" data-act="close">Zavřít</button>
       </div>

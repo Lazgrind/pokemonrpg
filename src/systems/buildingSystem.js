@@ -58,6 +58,18 @@ export function ballPrice(id = "poke-mart") {
 }
 
 /**
+ * Kolik % max HP doléčí Pokémon Centrum po každém vítězství (0 = žádné léčení).
+ * @param {string} id
+ * @returns {number}
+ */
+export function healPercent(id = "poke-center") {
+  const def = getBuilding(id);
+  if (!def || !def.heal) return 0;
+  const level = getLevel(id);
+  return def.heal.basePercent + (level - 1) * def.heal.perLevel;
+}
+
+/**
  * Koupí Poké Bally za gold.
  * @param {number} qty
  * @param {string} id

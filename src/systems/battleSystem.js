@@ -17,6 +17,7 @@ import { getSpecies } from "../../data/pokemon.js";
 import { typeMultiplier } from "../../data/types.js";
 import { grantXp } from "./progression.js";
 import { rollLoot } from "./loot.js";
+import { healPercent } from "./buildingSystem.js";
 import { AREAS } from "../../data/areas.js";
 
 /** Druhy nepřátel pro první oblast. Později se přesune do dat oblastí. */
@@ -209,6 +210,18 @@ function handleFaint(winner) {
       battle.player.stats = computeStats(battle.player.ref);
       battle.player.hp = battle.player.stats.maxHp;
       pushLog(`${battle.player.name} postoupil na Lv ${battle.player.ref.level}!`);
+    } else {
+      // Pokémon Centrum: doléčení části max HP po vítězství.
+      const pct = healPercent();
+      if (pct > 0 && battle.player.hp < battle.player.stats.maxHp) {
+        const heal = Math.floor((battle.player.stats.maxHp * pct) / 100);
+        if (heal > 0) {
+          const before = battle.player.hp;
+          battle.player.hp = Math.min(battle.player.stats.maxHp, battle.player.hp + heal);
+          const gained = battle.player.hp - before;
+          if (gained > 0) pushLog(`Centrum doléčilo ${battle.player.name} o ${gained} HP`);
+        }
+      }
     }
     battle.enemy = spawnEnemy(battle.area);
     pushLog(`Objevil se divoký ${battle.enemy.name} (Lv ${battle.enemy.ref.level})`);

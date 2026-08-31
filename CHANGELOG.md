@@ -8,6 +8,15 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.8.0] – 2026-08-31 · Druhá budova: Pokémon Centrum
+### Přidáno
+- Nová budova **Pokémon Centrum** (`data/buildings.js`): po každém vítězství doléčí aktivnímu Pokémonovi část max HP (Lv 1 = 10 %, +5 % za úroveň). Existuje od začátku, upgrade zvyšuje doléčení.
+- `healPercent()` v `buildingSystem.js`; `battleSystem` doléčí hráče po výhře (mimo level-up, kde se HP plní na max) a zapíše to do logu.
+- Detail budovy (`buildingView.js`) je nyní **datově obecný**: sekce a akce se skládají podle schopností budovy (`ball` = nákup Poké Ballů, `heal` = doléčení). Upgrade je společný.
+- CSS fasáda Pokémon Centra (bílá klinika) jako fallback, když budova nemá obrázek.
+### Rozhodnutí
+- R-014: druhá budova = Pokémon Centrum; efekt „doléčení po vítězství" (celá čísla HP, škáluje s upgradem i max HP). Bez změny verze save – jen nový záznam v `city.buildings`.
+
 ## [0.7.0] – 2026-08-31 · Obrázkový sprite budovy (Poké Mart)
 ### Přidáno
 - Grafické assety: složka `assets/buildings/` + pixel-art sprite Poké Martu (dodal uživatel).
