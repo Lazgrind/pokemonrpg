@@ -18,7 +18,7 @@
  * @property {OwnedPokemon[]} collection
  * @property {string[]} team         uid jedinců v týmu (max 6)
  * @property {{ autoBattle: boolean }} settings
- * @property {{ buildings: Record<string, { level: number }> }} city  budovy města
+ * @property {{ buildings: Record<string, { level: number }>, daycare?: { uid: string|null, buffer: number } }} city  budovy města + slot školky
  */
 
 import { bus, EVENTS } from "./events.js";

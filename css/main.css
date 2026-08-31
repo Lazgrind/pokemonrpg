@@ -360,6 +360,26 @@ body {
   clip-path: polygon(59px 56px, 68px 51px, 68px 71px, 59px 75px);
 }
 
+/* ---- Fasáda Školky (dřevěná, okna, vchod) ---- */
+.iso-b-day-care .awning {
+  background: #c98a3a;
+  clip-path: polygon(42px 42px, 84px 21px, 84px 30px, 42px 51px);
+}
+.iso-b-day-care .window-l,
+.iso-b-day-care .window-r {
+  background: #ffe9a8;
+}
+.iso-b-day-care .window-l {
+  clip-path: polygon(48px 52px, 56px 48px, 56px 58px, 48px 62px);
+}
+.iso-b-day-care .window-r {
+  clip-path: polygon(72px 40px, 80px 36px, 80px 46px, 72px 50px);
+}
+.iso-b-day-care .door {
+  background: #6b4a2b;
+  clip-path: polygon(59px 56px, 68px 51px, 68px 71px, 59px 75px);
+}
+
 /* Emoji jako štít nad vchodem */
 .iso-building .b-sign {
   position: absolute;

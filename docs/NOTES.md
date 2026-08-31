@@ -13,6 +13,36 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Školka (Day Care) + vyvážení Centra (v0.9.0)
+
+### Zpětná vazba uživatele
+- „Udělejme daycare, jako školku." + „snížení healingu v rámci pokecenter na 1 % za level s max 50 %".
+
+### Co jsme udělali
+- **Školka** `data/buildings.js` (`day-care`, `daycare { xpPerMinute:3, perLevel:3 }`) + `src/systems/daycare.js`.
+  - Slot svěřence v `city.daycare { uid, buffer }` (zlomkový XP buffer, nic se neztrácí).
+  - Aktivní smyčka `startDaycareLoop` (tik 15 s, commit jen když padne aspoň 1 XP) + offline `applyDaycareOffline` (plná rychlost, strop 8 h – NENÍ nerfováno ×0,1 jako bojový idle, protože pasivní výcvik je smysl budovy).
+  - Do školky lze dát jen Pokémona mimo tým (zabrání dvojímu XP a rozladění statů bojovníka).
+  - `buildingView` rozšířen o sekci školky (výběr/vyzvednutí), `offlineView` je sekcový (souboj + školka).
+- **Centrum vyváženo** dle přání: `heal { basePercent:1, perLevel:1, maxPercent:50 }`, `healPercent()` respektuje strop.
+  - Aby šel strop 50 % reálně dosáhnout při 1 %/úroveň, Centrum má `maxLevel:50` a mírnější křivku `upgrade { baseCost:50, growth:1.12 }`. **K rozhodnutí:** jestli je 50 úrovní OK, nebo raději méně úrovní / jiná křivka.
+- Bez změny verze save – slot školky se doplňuje lazy (jako budovy).
+
+### Rozhodnutí
+- **R-015 🟢 Třetí budova = Školka (pasivní idle XP, offline v plné rychlosti, strop 8 h).** (schváleno 2026-08-31)
+- **R-016 🟢 Léčení Centra = 1 %/úroveň, strop 50 %.** (schváleno 2026-08-31; dosažitelnost stropu řešena zvýšením max. úrovně na 50 – k případnému doladění)
+
+### K ověření uživatelem v prohlížeči (tvrdý refresh!)
+- Ve městě přibyla Školka; klik → výběr Pokémona mimo tým → „Dát do školky"; svěřenec pomalu levuje (i po návratu se ukáže v přehledu „Vítej zpět").
+- Centrum: doléčení po výhře je teď mnohem nižší (1 % na Lv 1).
+
+### Otevřené / další v plánu
+- ⚪ Doladit křivku/úrovně Centra podle pocitu z 1 %/úroveň.
+- ⚪ Vlastní obrázkové sprity pro Školku.
+- ⚪ Další budovy: 🏦 Banka (idle gold), 💻 PC/Box, 🏋️ Gym.
+
+---
+
 ## 2026-08-31 – Druhá budova: Pokémon Centrum (v0.8.0)
 
 ### Zpětná vazba uživatele

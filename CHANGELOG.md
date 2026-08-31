@@ -8,6 +8,20 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.9.0] – 2026-08-31 · Třetí budova: Školka (Day Care) + vyvážení Centra
+### Přidáno
+- Nová budova **Školka** (`data/buildings.js`, `src/systems/daycare.js`): vložíš Pokémona (mimo tým) a pasivně získává XP – při hře i **offline** (plná rychlost, strop 8 h; není nerfovaná jako bojový idle, protože pasivní výcvik je smysl budovy).
+- `daycareXpPerMinute()`, slot svěřence `city.daycare` (uid + zlomkový XP buffer), `setDaycareOccupant`/`clearDaycareOccupant` v `buildingSystem.js`.
+- Aktivní smyčka výcviku (`startDaycareLoop`, tik à 15 s) + offline dopočet (`applyDaycareOffline`).
+- Detail školky v `buildingView.js`: výběr Pokémona (mimo tým), vyzvednutí, zobrazení rychlosti a XP svěřence.
+- Přehled po návratu (`offlineView.js`) je nyní **sekcový** – ukáže bojový idle i školku dohromady.
+- CSS fasáda Školky jako fallback.
+### Změněno
+- **Pokémon Centrum vyváženo:** doléčení nyní **1 % za úroveň se stropem 50 %** (dřív 10 % + 5 %/úroveň). Aby byl strop dosažitelný, Centrum má max. úroveň 50 a mírnější cenovou křivku upgradu (laditelné v datech).
+- `healPercent()` respektuje strop `maxPercent`.
+### Rozhodnutí
+- R-015: třetí budova = Školka (pasivní idle XP, offline v plné rychlosti). R-016: léčení Centra 1 %/úroveň, strop 50 %.
+
 ## [0.8.1] – 2026-08-31 · Obrázkový sprite Pokémon Centra
 ### Přidáno
 - Pixel-art sprite Pokémon Centra (dodal uživatel) → `sprite` v `data/buildings.js`. CSS fasáda zůstává fallback.

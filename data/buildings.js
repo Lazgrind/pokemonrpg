@@ -15,7 +15,8 @@
  * @property {number} maxLevel
  * @property {{ baseCost: number, growth: number }} upgrade  cena vylepšení budovy (gold)
  * @property {{ basePrice: number, discountPerLevel: number, minPrice: number }} [ball]  cena Poké Ballu (Poké Mart)
- * @property {{ basePercent: number, perLevel: number }} [heal]  doléčení po vítězství v % max HP (Pokémon Centrum)
+ * @property {{ basePercent: number, perLevel: number, maxPercent: number }} [heal]  doléčení po vítězství v % max HP (Pokémon Centrum)
+ * @property {{ xpPerMinute: number, perLevel: number }} [daycare]  pasivní XP za minutu (Školka)
  */
 
 /** @type {BuildingDef[]} */
@@ -40,9 +41,20 @@ export const BUILDINGS = [
     sprite: "assets/buildings/poke-center.png",
     description: "Po každém vítězství doléčí aktivnímu Pokémonovi část max HP. Vylepšení doléčí víc.",
     startLevel: 1,
+    maxLevel: 50,
+    upgrade: { baseCost: 50, growth: 1.12 },
+    heal: { basePercent: 1, perLevel: 1, maxPercent: 50 },
+  },
+  {
+    id: "day-care",
+    name: "Školka",
+    icon: "🐣",
+    color: "#7fc97f",
+    description: "Necháš tu Pokémona (mimo tým) a pasivně získává XP – i když nehraješ.",
+    startLevel: 1,
     maxLevel: 10,
-    upgrade: { baseCost: 80, growth: 1.55 },
-    heal: { basePercent: 10, perLevel: 5 },
+    upgrade: { baseCost: 100, growth: 1.6 },
+    daycare: { xpPerMinute: 3, perLevel: 3 },
   },
 ];
 

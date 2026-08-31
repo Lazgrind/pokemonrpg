@@ -14,9 +14,21 @@ import {
   ballPrice,
   buyPokeballs,
   healPercent,
+  daycareXpPerMinute,
+  getDaycareOccupant,
+  setDaycareOccupant,
+  clearDaycareOccupant,
 } from "../systems/buildingSystem.js";
 import { getState } from "../core/state.js";
+import { getSpecies } from "../../data/pokemon.js";
+import { xpForNextLevel } from "../systems/progression.js";
+import { isInTeam } from "../systems/team.js";
 import { bus, EVENTS } from "../core/events.js";
+
+/** Jméno druhu Pokémona. */
+function speciesName(p) {
+  return getSpecies(p.speciesId)?.name ?? p.speciesId;
+}
 
 /**
  * Otevře detail budovy jako modal.
@@ -57,6 +69,7 @@ export function openBuilding(id, onStatus = () => {}) {
     // Datové sekce podle schopností budovy.
     const stats = [`<span>💰 Tvůj gold: <strong>${gold}</strong></span>`];
     const actions = [];
+    let extraHtml = ""; // vlastní blok (např. výběr Pokémona do školky)
     let note = "";
 
     // Poké Mart: nákup Poké Ballů, upgrade snižuje cenu.
@@ -70,12 +83,44 @@ export function openBuilding(id, onStatus = () => {}) {
       if (!maxed) note = "Vylepšení sníží cenu Poké Ballu.";
     }
 
-    // Pokémon Centrum: doléčení HP po výhře, upgrade zvýší doléčení.
+    // Pokémon Centrum: doléčení HP po výhře, upgrade zvýší doléčení (se stropem).
     if (def.heal) {
       const pct = healPercent(id);
-      const next = maxed ? null : pct + def.heal.perLevel;
-      stats.push(`<span>🏥 Doléčení po výhře: <strong>${pct} %</strong> max HP</span>`);
-      if (!maxed) note = `Vylepšení zvýší doléčení na ${next} % max HP po každém vítězství.`;
+      const cap = def.heal.maxPercent ?? Infinity;
+      const atCap = pct >= cap;
+      const next = Math.min(cap, pct + def.heal.perLevel);
+      stats.push(
+        `<span>🏥 Doléčení po výhře: <strong>${pct} %</strong> max HP${atCap ? " (strop)" : ""}</span>`
+      );
+      if (!maxed && next > pct) note = `Vylepšení zvýší doléčení na ${next} % max HP po každém vítězství.`;
+    }
+
+    // Školka: pasivní XP pro svěřence; výběr/vyzvednutí Pokémona.
+    if (def.daycare) {
+      const rate = daycareXpPerMinute(id);
+      const occ = getDaycareOccupant();
+      stats.push(`<span>🐣 Rychlost výcviku: <strong>${rate} XP/min</strong></span>`);
+      if (occ) {
+        stats.push(
+          `<span>👶 V péči: <strong>${speciesName(occ)}</strong> · Lv ${occ.level} (${occ.xp}/${xpForNextLevel(occ.level)} XP)</span>`
+        );
+        actions.push(`<button class="btn" data-act="daycare-remove">Vyzvednout ${speciesName(occ)}</button>`);
+      } else {
+        const avail = getState().collection.filter((p) => !isInTeam(p.uid));
+        if (avail.length === 0) {
+          extraHtml = `<p class="placeholder" style="margin-top:8px">Nemáš volného Pokémona mimo tým, kterého bys dal do školky.</p>`;
+        } else {
+          const opts = avail
+            .map((p) => `<option value="${p.uid}">${speciesName(p)} · Lv ${p.level}</option>`)
+            .join("");
+          extraHtml = `
+            <div class="building-actions" style="margin-top:8px">
+              <select class="btn" id="daycare-pick" style="flex:1">${opts}</select>
+              <button class="btn" data-act="daycare-add">Dát do školky</button>
+            </div>`;
+        }
+      }
+      if (!maxed) note = `Vylepšení zrychlí výcvik na ${rate + def.daycare.perLevel} XP/min.`;
     }
 
     // Společné vylepšení budovy.
@@ -99,6 +144,7 @@ export function openBuilding(id, onStatus = () => {}) {
         <div class="building-stats">
           ${stats.join("\n          ")}
         </div>
+        ${extraHtml}
 
         <div class="building-actions">
           ${actions.join("\n          ")}
@@ -121,6 +167,22 @@ export function openBuilding(id, onStatus = () => {}) {
       up.addEventListener("click", () => {
         const r = upgradeBuilding(id);
         onStatus(r.ok ? "Budova vylepšena ✓" : r.reason);
+      });
+
+    const dcAdd = overlay.querySelector('[data-act="daycare-add"]');
+    if (dcAdd)
+      dcAdd.addEventListener("click", () => {
+        const sel = overlay.querySelector("#daycare-pick");
+        if (!sel) return;
+        const r = setDaycareOccupant(sel.value);
+        onStatus(r.ok ? "Pokémon dán do školky ✓" : r.reason);
+      });
+
+    const dcRem = overlay.querySelector('[data-act="daycare-remove"]');
+    if (dcRem)
+      dcRem.addEventListener("click", () => {
+        clearDaycareOccupant();
+        onStatus("Pokémon vyzvednut ze školky");
       });
 
     overlay.querySelector('[data-act="close"]').addEventListener("click", close);

@@ -13,6 +13,7 @@ import { renderLeftPanel } from "./ui/leftPanel.js";
 import { renderBattle } from "./ui/battleView.js";
 import { restore as restoreBattle } from "./systems/battleSystem.js";
 import { applyOfflineProgress } from "./systems/idle.js";
+import { applyDaycareOffline, startDaycareLoop } from "./systems/daycare.js";
 import { showOfflineSummary } from "./ui/offlineView.js";
 import { renderMap } from "./ui/mapView.js";
 import { renderSaveControls } from "./ui/saveControls.js";
@@ -64,11 +65,15 @@ function init() {
 
   // 1b) Offline (idle) progres – POČÍTÁ SE Z ULOŽENÉHO SNÍMKU souboje,
   // proto ještě před restore (ten by běh souboje přepsal na pauzu).
-  let offline = null;
+  // Elapsed čteme jednou (saveGame níže resetne lastSaved).
+  let elapsedSec = 0;
+  let offlineBattle = null;
+  let offlineDaycare = null;
   if (loaded) {
-    const savedBattle = getState().battle;
     const elapsedMs = Date.now() - getState().meta.lastSaved;
-    offline = applyOfflineProgress(savedBattle, elapsedMs);
+    elapsedSec = Math.floor(elapsedMs / 1000);
+    offlineBattle = applyOfflineProgress(getState().battle, elapsedMs);
+    offlineDaycare = applyDaycareOffline(elapsedMs);
   }
 
   // 2) Vykreslit panely.
@@ -91,15 +96,19 @@ function init() {
     renderLeftPanel(el("city-panel"), setStatus);
   });
 
-  // 5) Automatické ukládání a uložení při zavření karty.
+  // 5) Automatické ukládání a uložení při zavření karty + pasivní výcvik ve školce.
   setInterval(saveGame, AUTOSAVE_MS);
   window.addEventListener("beforeunload", saveGame);
+  startDaycareLoop();
 
   // 6) Přehled offline zisků + hned uložit (reset lastSaved → žádné dvojí počítání).
-  if (offline) {
+  if (offlineBattle || offlineDaycare) {
     saveGame();
-    showOfflineSummary(offline);
-    setStatus(`Offline: +${offline.xp} XP, +${offline.gold} gold`);
+    showOfflineSummary({ elapsedSec, battle: offlineBattle, daycare: offlineDaycare });
+    const parts = [];
+    if (offlineBattle) parts.push(`souboj +${offlineBattle.xp} XP, +${offlineBattle.gold} gold`);
+    if (offlineDaycare) parts.push(`školka +${offlineDaycare.xp} XP`);
+    setStatus(`Offline: ${parts.join(" · ")}`);
   }
 
   el("version-tag").textContent = `Pokémon Idle RPG · v${VERSION}`;

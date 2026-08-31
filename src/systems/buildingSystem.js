@@ -66,7 +66,52 @@ export function healPercent(id = "poke-center") {
   const def = getBuilding(id);
   if (!def || !def.heal) return 0;
   const level = getLevel(id);
-  return def.heal.basePercent + (level - 1) * def.heal.perLevel;
+  const pct = def.heal.basePercent + (level - 1) * def.heal.perLevel;
+  const cap = def.heal.maxPercent ?? Infinity;
+  return Math.min(cap, pct);
+}
+
+/** Kolik XP za minutu dává Školka na aktuální úrovni (0 = není školka). */
+export function daycareXpPerMinute(id = "day-care") {
+  const def = getBuilding(id);
+  if (!def || !def.daycare) return 0;
+  const level = getLevel(id);
+  return def.daycare.xpPerMinute + (level - 1) * def.daycare.perLevel;
+}
+
+/** Slot Školky ve stavu (uid svěřence + zbytkový XP buffer) – lazy default. */
+export function getDaycareSlot() {
+  const state = getState();
+  if (!state.city) state.city = { buildings: {} };
+  if (!state.city.daycare) state.city.daycare = { uid: null, buffer: 0 };
+  return state.city.daycare;
+}
+
+/** Pokémon aktuálně ve Školce (nebo null). */
+export function getDaycareOccupant() {
+  const uid = getDaycareSlot().uid;
+  if (!uid) return null;
+  return getState().collection.find((p) => p.uid === uid) ?? null;
+}
+
+/** Dá Pokémona do Školky (podle uid). */
+export function setDaycareOccupant(uid) {
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false, reason: "Neznámý Pokémon." };
+  const slot = getDaycareSlot();
+  slot.uid = uid;
+  slot.buffer = 0;
+  commit();
+  return { ok: true };
+}
+
+/** Vyzvedne Pokémona ze Školky. */
+export function clearDaycareOccupant() {
+  const slot = getDaycareSlot();
+  slot.uid = null;
+  slot.buffer = 0;
+  commit();
+  return { ok: true };
 }
 
 /**
