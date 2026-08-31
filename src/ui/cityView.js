@@ -1,14 +1,15 @@
 /**
- * UI: panel Města – vizuální město s klikatelnými budovami (Krok 5+).
- * Budovy jsou dlaždice v „mapě“ města; klik otevře detail budovy s možnostmi.
- * Volné parcely naznačují, že město poroste (další budovy = jen data).
+ * UI: panel Města – izometrické 2.5D město (čistě CSS, bez závislostí).
+ * Budovy jsou prostorové domečky (střecha + dvě stěny) na zelené ploše;
+ * klik na budovu otevře její detail s možnostmi. Volné parcely = prázdné
+ * pozemky, které naznačují růst města (další budovy = jen data).
  */
 
 import { BUILDINGS } from "../../data/buildings.js";
 import { getLevel } from "../systems/buildingSystem.js";
 import { openBuilding } from "./buildingView.js";
 
-/** Kolik dlaždic (parcel) město celkem ukazuje – zbytek jsou volné parcely. */
+/** Celkový počet pozemků ve městě (zbytek nad počtem budov = volné parcely). */
 const CITY_PLOTS = 6;
 
 /**
@@ -22,39 +23,45 @@ export function renderCity(root, onStatus = () => {}) {
   root.innerHTML = `
     <h2 class="panel-title">Město</h2>
     <p class="placeholder">Klikni na budovu a otevřou se její možnosti.</p>
-    <div class="city-map">
-      ${BUILDINGS.map(buildingTile).join("")}
-      ${Array.from({ length: emptyCount }, emptyTile).join("")}
+    <div class="iso-city">
+      ${BUILDINGS.map(buildingCell).join("")}
+      ${Array.from({ length: emptyCount }, emptyCell).join("")}
     </div>
   `;
 
   wire(root, onStatus);
 }
 
-/** Dlaždice existující budovy. */
-function buildingTile(def) {
+/** Buňka s izometrickou budovou. */
+function buildingCell(def) {
   const level = getLevel(def.id);
   return `
-    <button class="plot building" data-id="${def.id}" title="${def.name}">
-      <span class="plot-icon">${def.icon}</span>
-      <span class="plot-name">${def.name}</span>
-      <span class="plot-lvl">Lv ${level}</span>
-    </button>
+    <div class="iso-cell">
+      <button class="iso-building" data-id="${def.id}" title="${def.name}" style="--roof:${def.color}">
+        <span class="face top"></span>
+        <span class="face left"></span>
+        <span class="face right"></span>
+        <span class="b-emoji">${def.icon}</span>
+      </button>
+      <div class="iso-tag">${def.name} · <span class="lvl-inline">Lv ${level}</span></div>
+    </div>
   `;
 }
 
-/** Volná parcela pro budoucí budovu. */
-function emptyTile() {
+/** Buňka s volnou parcelou. */
+function emptyCell() {
   return `
-    <div class="plot empty" title="Volná parcela – další budovy přijdou">
-      <span class="plot-icon">🏗️</span>
-      <span class="plot-name">Volná parcela</span>
+    <div class="iso-cell">
+      <div class="iso-plot" title="Volná parcela – další budovy přijdou">
+        <span class="plot-hint">🏗️</span>
+      </div>
+      <div class="iso-tag muted">Volná parcela</div>
     </div>
   `;
 }
 
 function wire(root, onStatus) {
-  root.querySelectorAll(".plot.building").forEach((tile) =>
+  root.querySelectorAll(".iso-building").forEach((tile) =>
     tile.addEventListener("click", () => openBuilding(tile.dataset.id, onStatus))
   );
 }

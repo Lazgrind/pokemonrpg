@@ -8,6 +8,7 @@
  * @property {string} id
  * @property {string} name
  * @property {string} icon
+ * @property {string} color        barva střechy v izometrickém městě
  * @property {string} description
  * @property {number} startLevel        počáteční úroveň (budova existuje od začátku)
  * @property {number} maxLevel
@@ -21,6 +22,7 @@ export const BUILDINGS = [
     id: "poke-mart",
     name: "Poké Mart",
     icon: "🛒",
+    color: "#3f6bff",
     description: "Prodává Poké Bally za gold. Každé vylepšení sníží jejich cenu.",
     startLevel: 1,
     maxLevel: 10,

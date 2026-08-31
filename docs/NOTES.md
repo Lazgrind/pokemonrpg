@@ -13,6 +13,28 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Izometrické 2.5D město (v0.6.2)
+
+### Zpětná vazba uživatele
+- Mřížka čtverců mu nestačila, chtěl **3D vizualizaci města**.
+
+### Rozhodnutí (probráno jako větší feature)
+- Nabídnuty 3 cesty: A) izometrické 2.5D (CSS), B) skutečné 3D (Three.js/WebGL), C) 2D ilustrované.
+- Upozornění: skutečné 3D přidává externí závislost, výrazně složitější kód, potřebuje víc prostoru než úzký levý panel, a vzhled je dle zadání nejnižší priorita.
+- **R-012 🟢 Vizualizace města = izometrické 2.5D (CSS).** (schváleno 2026-08-31)
+  - WebGL 3D odloženo jako pozdější volitelný upgrade (klidně v celoobrazovkovém režimu města).
+
+### Co jsme udělali
+- `cityView.js` + CSS: izometrické domečky (střecha + 2 stěny přes `clip-path`, stínování přes `brightness`), travnatá plocha, volné parcely jako ploché kosočtverce, hover „nadzvednutí“.
+- Barva střechy je datová (`color` v `data/buildings.js`).
+- Detail budovy (modal z v0.6.1) beze změny.
+- Otestováno v local buildu (moduly HTTP 200).
+
+### K ověření uživatelem v prohlížeči (tvrdý refresh!)
+- Záložka Město ukáže izometrické domky na trávě; Poké Mart je klikatelný a otevře detail; volné parcely jsou naznačené.
+
+---
+
 ## 2026-08-31 – Město jako klikatelná mapa (v0.6.1)
 
 ### Zpětná vazba uživatele

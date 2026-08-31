@@ -8,6 +8,13 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.6.2] – 2026-08-31 · Izometrické 2.5D město
+### Změněno
+- Město překresleno na **izometrické 2.5D** (čistě CSS, bez závislostí): budovy jsou prostorové domečky (střecha + 2 stěny přes `clip-path`) na travnaté ploše, volné parcely jako ploché kosočtverce.
+- Barva střechy budovy je datová (`color` v `data/buildings.js`).
+### Rozhodnutí
+- R-012: vizualizace města = izometrické CSS (skutečné WebGL 3D odloženo jako pozdější volitelný upgrade – přidávalo by závislost a je to nejnižší priorita dle zadání).
+
 ## [0.6.1] – 2026-08-31 · Město jako klikatelná mapa
 ### Změněno
 - Záložka **Město** už není seznam karet, ale **vizuální město**: budovy jsou dlaždice v mapě + volné parcely pro budoucí budovy.
