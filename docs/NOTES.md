@@ -13,6 +13,27 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Obrázkový sprite budovy (v0.7.0)
+
+### Zpětná vazba uživatele
+- CSS budova vypadala jako modrá kostka; uživatel dodal vlastní pixel-art obrázek Poké Martu.
+
+### Co jsme udělali
+- Vytvořena složka `assets/buildings/`; uživatel nahrál `pokemart.png` (447×447, čelní pixel-art se světle modrým pozadím).
+- Pillow skript odstranil pozadí (flood fill z rohů, thresh 40) a ořízl → `poke-mart.png` (271×263, průhledné).
+- `data/buildings.js`: nové pole `sprite`; `cityView.js` zobrazí budovu jako `<img>` (CSS domeček zůstává fallback). `image-rendering: pixelated`.
+- Klik na sprite dál otevírá detail budovy.
+- Otestováno v local buildu (HTTP 200).
+
+### Rozhodnutí
+- **R-013 🟢 Budovy jako obrázkové sprity (lokální assety, bez závislostí), vzhled řízený daty.** (schváleno 2026-08-31)
+  - Původní obrázek `pokemart.png` ponechán jako zdroj; hra používá zpracovaný `poke-mart.png`.
+
+### K ověření uživatelem v prohlížeči (tvrdý refresh!)
+- Záložka Město ukáže pixel-art Poké Mart (bez modrého čtverce kolem); klik otevře detail; volné parcely zůstávají.
+
+---
+
 ## 2026-08-31 – Izometrické 2.5D město (v0.6.2)
 
 ### Zpětná vazba uživatele

@@ -8,6 +8,16 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.7.0] – 2026-08-31 · Obrázkový sprite budovy (Poké Mart)
+### Přidáno
+- Grafické assety: složka `assets/buildings/` + pixel-art sprite Poké Martu (dodal uživatel).
+- Budova se ve městě zobrazuje jako **obrázek** (pole `sprite` v `data/buildings.js`); CSS domeček zůstává jako fallback, když sprite chybí.
+- `image-rendering: pixelated` pro ostrý pixel-art.
+### Změněno
+- Pozadí spritu odstraněno (flood fill z rohů přes Pillow) a ořezáno → průhledná budova na trávě.
+### Rozhodnutí
+- R-013: budovy mohou být obrázkové sprity (lokální assety, žádná závislost); vzhled řízený daty.
+
 ## [0.6.3] – 2026-08-31 · Poké Mart jako výloha (ne kostka)
 ### Změněno
 - Budova už není jednobarevná kostka: **střecha (barva z dat) + krémové stěny** + čelní **výloha** (červená markýza, okna, vchod) – čistě CSS `clip-path`.

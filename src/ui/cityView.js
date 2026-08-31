@@ -32,22 +32,27 @@ export function renderCity(root, onStatus = () => {}) {
   wire(root, onStatus);
 }
 
-/** Buňka s izometrickou budovou. */
+/** Buňka s budovou – buď obrázkový sprite, nebo CSS domeček (fallback). */
 function buildingCell(def) {
   const level = getLevel(def.id);
+  const visual = def.sprite
+    ? `<button class="iso-building has-sprite" data-id="${def.id}" title="${def.name}">
+         <img class="b-sprite" src="${def.sprite}" alt="${def.name}" draggable="false">
+       </button>`
+    : `<button class="iso-building iso-b-${def.id}" data-id="${def.id}" title="${def.name}" style="--roof:${def.color}">
+         <span class="face top"></span>
+         <span class="face left"></span>
+         <span class="face right"></span>
+         <span class="facade awning"></span>
+         <span class="facade window-l"></span>
+         <span class="facade window-r"></span>
+         <span class="facade door"></span>
+         <span class="b-sign">${def.icon}</span>
+       </button>`;
+
   return `
     <div class="iso-cell">
-      <button class="iso-building iso-b-${def.id}" data-id="${def.id}" title="${def.name}" style="--roof:${def.color}">
-        <span class="face top"></span>
-        <span class="face left"></span>
-        <span class="face right"></span>
-        <!-- výloha (fasáda) – stylováno per budova v CSS -->
-        <span class="facade awning"></span>
-        <span class="facade window-l"></span>
-        <span class="facade window-r"></span>
-        <span class="facade door"></span>
-        <span class="b-sign">${def.icon}</span>
-      </button>
+      ${visual}
       <div class="iso-tag">${def.name} · <span class="lvl-inline">Lv ${level}</span></div>
     </div>
   `;

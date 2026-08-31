@@ -351,6 +351,19 @@ body {
   pointer-events: none;
 }
 
+/* Budova jako obrázkový sprite (má přednost před CSS domečkem). */
+.iso-building.has-sprite {
+  width: auto;
+  height: auto;
+  filter: drop-shadow(0 8px 5px rgba(0, 0, 0, 0.4));
+}
+.iso-building.has-sprite .b-sprite {
+  display: block;
+  width: 116px;
+  height: auto;
+  image-rendering: pixelated; /* ostrý pixel-art i po zvětšení */
+}
+
 /* Volná parcela = plochý izometrický kosočtverec. */
 .iso-plot {
   position: relative;
