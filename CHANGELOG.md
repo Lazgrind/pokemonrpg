@@ -8,6 +8,16 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.4.1] – 2026-08-31 · Přímý save souboje
+### Opraveno
+- **F5 už „neoživuje“ Pokémony.** Rozehraný souboj (HP hráče i nepřítele, log, oblast, rychlost, pořadí týmu) se ukládá do save a po načtení se obnoví – pozastavený, hráč ho znovu rozběhne tlačítkem.
+### Přidáno
+- `serialize()` / `restore()` v `src/systems/battleSystem.js`; `persist()` volaný v `emit()` promítá souboj do herního stavu.
+- Pole `battle` v herním stavu (`createNewGame`); migrace save **v1 → v2** doplní `battle: null`.
+### Změněno
+- `CURRENT_SAVE_VERSION` = 2.
+- `src/main.js` po načtení/založení hry volá `restore(getState().battle)`.
+
 ## [0.4.0] – 2026-08-31 · Krok 3 (Battle Area)
 ### Přidáno
 - Typová efektivita `data/types.js` (`typeMultiplier`).

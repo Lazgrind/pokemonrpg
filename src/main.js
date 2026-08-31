@@ -11,6 +11,7 @@ import { getState } from "./core/state.js";
 import { loadGame, newGame, saveGame } from "./systems/save.js";
 import { renderLeftPanel } from "./ui/leftPanel.js";
 import { renderBattle } from "./ui/battleView.js";
+import { restore as restoreBattle } from "./systems/battleSystem.js";
 import { renderMap } from "./ui/mapView.js";
 import { renderSaveControls } from "./ui/saveControls.js";
 
@@ -61,6 +62,10 @@ function init() {
   renderLeftPanel(el("city-panel"), setStatus);
   renderBattle(el("battle-panel"));
   renderMap(el("map-panel"));
+
+  // 2b) Obnovit rozehraný souboj ze save (pozastavený) – „přímý save“:
+  // po F5 zůstane HP i nepřítel zachovaný, souboj se jen pozastaví.
+  restoreBattle(getState().battle);
 
   // 3) Ovládání save + zdrojová lišta.
   renderSaveControls(el("save-controls"), setStatus);

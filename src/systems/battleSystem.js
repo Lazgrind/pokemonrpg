@@ -50,8 +50,74 @@ function pushLog(msg) {
   if (battle.log.length > 30) battle.log.shift();
 }
 
+/** Uloží aktuální souboj do herního stavu (aby přežil refresh). */
+function persist() {
+  getState().battle = serialize();
+}
+
 function emit() {
+  persist();
   bus.emit(EVENTS.BATTLE_UPDATE);
+}
+
+/** Serializuje běhový souboj do prostého objektu (nebo null). */
+export function serialize() {
+  if (!battle) return null;
+  return {
+    areaId: battle.area.id,
+    speed: battle.speed,
+    running: battle.running,
+    result: battle.result,
+    teamCursor: battle.teamCursor,
+    log: battle.log.slice(-30),
+    playerUid: battle.player.ref.uid,
+    playerHp: battle.player.hp,
+    enemy: {
+      speciesId: battle.enemy.ref.speciesId,
+      level: battle.enemy.ref.level,
+      hp: battle.enemy.hp,
+    },
+  };
+}
+
+/**
+ * Obnoví souboj z uloženého stavu (po načtení hry). Souboj se obnoví
+ * v pauze – hráč ho znovu rozběhne tlačítkem. Vrací true při úspěchu.
+ * @param {*} saved
+ * @returns {boolean}
+ */
+export function restore(saved) {
+  clearTimeout(timer);
+  if (!saved) {
+    battle = null;
+    return false;
+  }
+  const owned = getState().collection.find((p) => p.uid === saved.playerUid);
+  if (!owned) {
+    battle = null;
+    return false;
+  }
+  const area = AREAS.find((a) => a.id === saved.areaId) ?? AREAS[0];
+
+  const player = makeCombatant(owned);
+  player.hp = Math.min(saved.playerHp ?? player.stats.maxHp, player.stats.maxHp);
+
+  const enemyOwned = createPokemon(saved.enemy.speciesId, saved.enemy.level);
+  const enemy = makeCombatant(enemyOwned);
+  enemy.hp = Math.min(saved.enemy.hp ?? enemy.stats.maxHp, enemy.stats.maxHp);
+
+  battle = {
+    running: false, // po načtení pozastaveno
+    speed: saved.speed ?? 1,
+    log: saved.log ?? [],
+    area,
+    teamCursor: saved.teamCursor ?? 0,
+    result: saved.result ?? null,
+    player,
+    enemy,
+  };
+  emit();
+  return true;
 }
 
 /** Výpočet poškození vč. typové efektivity. */

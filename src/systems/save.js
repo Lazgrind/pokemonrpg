@@ -60,9 +60,12 @@ function migrate(data) {
   if (typeof data !== "object" || data === null) {
     throw new Error("Neplatná struktura save.");
   }
-  if (!data.saveVersion) data.saveVersion = CURRENT_SAVE_VERSION;
-  // Budoucí kroky migrace:
-  // if (data.saveVersion < 2) { ...; data.saveVersion = 2; }
+  if (!data.saveVersion) data.saveVersion = 1;
+  // v1 → v2: přidán uložený stav souboje.
+  if (data.saveVersion < 2) {
+    if (data.battle === undefined) data.battle = null;
+    data.saveVersion = 2;
+  }
   return data;
 }
 

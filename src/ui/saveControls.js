@@ -4,7 +4,8 @@
  */
 
 import { newGame, saveGame, exportSave, importSave } from "../systems/save.js";
-import { stopBattle } from "../systems/battleSystem.js";
+import { stopBattle, restore as restoreBattle } from "../systems/battleSystem.js";
+import { getState } from "../core/state.js";
 
 /**
  * Vykreslí tlačítka do kontejneru.
@@ -47,6 +48,7 @@ export function renderSaveControls(root, onStatus = () => {}) {
     if (!file) return;
     stopBattle();
     const ok = await importSave(file);
+    if (ok) restoreBattle(getState().battle);
     onStatus(ok ? "Import proběhl ✓" : "Import selhal – neplatný soubor");
     fileInput.value = "";
   });

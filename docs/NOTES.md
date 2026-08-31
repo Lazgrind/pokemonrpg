@@ -13,6 +13,32 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Oprava: přímý save souboje (v0.4.1)
+
+### Zpětná vazba uživatele
+- Po testu Kroku 3: „Vše vypadá super, akorát F5 mi oživý pokemony, takže to jakoby není ‚přímý save‘.“
+- V R-007 byl souboj záměrně transient (mezi souboji i po refreshi plné HP). Uživatel to považuje za chybu – chce, aby refresh zachoval stav.
+
+### Co jsme udělali
+- Souboj se nyní **ukládá do save** a po načtení obnoví (pozastavený).
+- `battleSystem.js`: `serialize()` (snapshot: oblast, rychlost, běží/výsledek, teamCursor, log, hráč uid+HP, nepřítel druh+level+HP), `restore(saved)` (znovu sestaví bojovníky, souboj `running=false`), `persist()` volaný v `emit()`.
+- `state.js`: pole `battle` v `createNewGame`, `CURRENT_SAVE_VERSION = 2`.
+- `save.js`: migrace v1 → v2 doplní `battle: null`.
+- `main.js`: po načtení/založení volá `restore(getState().battle)`.
+- Otestováno v local buildu (moduly HTTP 200).
+
+### Rozhodnutí
+- **R-008 🟢 „Přímý save“ souboje.** Rozehraný souboj přežije refresh a obnoví se pozastavený. (schváleno 2026-08-31)
+  - Upřesňuje R-007: souboj už není čistě transient. Připravuje půdu pro Krok 4 (idle/offline progres).
+
+### K ověření uživatelem v prohlížeči
+- Spustit souboj → F5: HP hráče i nepřítele, log a nepřítel zůstanou; souboj je pozastavený a tlačítkem se znovu rozběhne (žádné „oživení“ na plné HP).
+
+### Další na řadě
+- ⚪ Krok 4: jedna oblast + idle/offline progres + základní loot.
+
+---
+
 ## 2026-08-31 – Krok 3: Battle Area (v0.4.0)
 
 ### Co jsme udělali
