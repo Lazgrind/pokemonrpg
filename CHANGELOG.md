@@ -8,6 +8,13 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.5.1] – 2026-08-31 · Oprava citlivosti offline progresu
+### Opraveno
+- Krátká nepřítomnost (~1 min) nezobrazovala žádný offline zisk. Příčiny: minimální práh 60 s a zaokrouhlení počtu poražených dolů (za krátkou dobu → 0).
+### Změněno
+- `MIN_OFFLINE_SECONDS` sníženo 60 → 15 s.
+- Offline se počítá ze **zlomkového** počtu poražených (žádný ztracený progres); odměny se zaokrouhlují až nakonec. Přehled se ukáže, jakmile vyjde aspoň nějaké XP/gold/loot.
+
 ## [0.5.0] – 2026-08-31 · Krok 4 (idle/offline progres + loot)
 ### Přidáno
 - **Offline (idle) progres** `src/systems/idle.js`: po návratu dopočítá odměnu za dobu pryč (odhad podle síly), se stropem 8 h. Počítá se jen z běžícího souboje.

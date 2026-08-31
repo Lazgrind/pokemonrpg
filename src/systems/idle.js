@@ -25,7 +25,7 @@ export const OFFLINE_EFFICIENCY = 0.1; // 1/10 – aktivní hraní je jasně vý
 export const OFFLINE_CAP_HOURS = 8;
 
 /** Kratší nepřítomnost než tohle ignorujeme (běžný refresh). */
-const MIN_OFFLINE_SECONDS = 60;
+const MIN_OFFLINE_SECONDS = 15;
 
 /**
  * Spočítá a rovnou aplikuje offline progres. Vrací přehled pro UI, nebo null,
@@ -57,15 +57,19 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
   const roundsToKill = Math.max(1, Math.ceil(enemy.stats.maxHp / dmg));
   const secondsPerKill = roundsToKill; // 1 kolo ≈ 1 s při rychlosti 1×
 
-  const kills = Math.floor((usableSec / secondsPerKill) * OFFLINE_EFFICIENCY);
-  if (kills < 1) return null;
+  // Zlomkový počet poražených (žádný ztracený progres) × účinnost offline.
+  const effectiveKills = (usableSec / secondsPerKill) * OFFLINE_EFFICIENCY;
 
-  // Odměny (loot je už odvozen z počtu poražených, tedy taky ponížen).
+  // Odměny počítáme ze zlomku a teprve pak zaokrouhlíme dolů.
   const { xp, gold } = battleRewards(enemyLevel);
-  const totalXp = kills * xp;
-  const totalGold = kills * gold;
+  const totalXp = Math.floor(effectiveKills * xp);
+  const totalGold = Math.floor(effectiveKills * gold);
   const area = AREAS.find((a) => a.id === savedBattle.areaId) ?? AREAS[0];
-  const loot = expectedLoot(area, kills);
+  const loot = expectedLoot(area, effectiveKills);
+
+  // Když by výsledek zaokrouhlil na úplnou nulu, nemá cenu nic hlásit.
+  const anyLoot = Object.keys(loot).length > 0;
+  if (totalXp <= 0 && totalGold <= 0 && !anyLoot) return null;
 
   // Aplikace na stav.
   grantXp(owned, totalXp);
@@ -79,7 +83,7 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
   return {
     elapsedSec,
     capped: elapsedSec > capSec,
-    kills,
+    kills: Math.round(effectiveKills),
     xp: totalXp,
     gold: totalGold,
     loot,
