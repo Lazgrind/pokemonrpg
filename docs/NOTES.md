@@ -13,6 +13,28 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-08-31 – Krok 2: tým a získávání Pokémonů (v0.3.0)
+
+### Co jsme udělali
+- Pokémon systém (`src/systems/pokemonSystem.js`) – tvorba jedinců z druhů.
+- Team systém (`src/systems/team.js`) – výběr startéra, chytání divokých (za Poké Ball), přidání/odebrání/řazení v týmu (max 6), pomocné funkce.
+- UI: levý panel má záložky Tým / Kolekce / Město (`src/ui/leftPanel.js`, `src/ui/teamView.js`).
+- Napojeno v `main.js` (překreslení levého panelu na změnu stavu).
+- Otestováno v local buildu (moduly HTTP 200).
+
+### Rozhodnutí
+- **R-006 🟢 Levý panel se záložkami (Tým / Kolekce / Město).** (schváleno 2026-08-31)
+  - Proč: tým i správa Pokémonů potřebují místo; zachováváme tři panely dle zadání a jen zpřehledňujeme levý sloupec. Zadání layout povoluje měnit (sekce 16).
+
+### K ověření uživatelem v prohlížeči
+- Nová hra → záložka Kolekce nabídne startéra; po výběru je v týmu.
+- Chytání divokých ubírá Poké Balls a plní kolekci; přidání do týmu respektuje max 6; řazení a odebírání funguje; vše přežije refresh.
+
+### Další na řadě
+- ⚪ Krok 3: vizuální Battle Area + automatický souboj + XP/level.
+
+---
+
 ## 2026-08-31 – Krok 1: perzistentní základ (v0.2.0)
 
 ### Co jsme udělali

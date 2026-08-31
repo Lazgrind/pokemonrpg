@@ -9,7 +9,7 @@ import { VERSION } from "./core/version.js";
 import { bus, EVENTS } from "./core/events.js";
 import { getState } from "./core/state.js";
 import { loadGame, newGame, saveGame } from "./systems/save.js";
-import { renderCity } from "./ui/cityView.js";
+import { renderLeftPanel } from "./ui/leftPanel.js";
 import { renderBattle } from "./ui/battleView.js";
 import { renderMap } from "./ui/mapView.js";
 import { renderSaveControls } from "./ui/saveControls.js";
@@ -57,8 +57,8 @@ function init() {
     setStatus("Hra načtena");
   }
 
-  // 2) Vykreslit statické panely (Krok 0).
-  renderCity(el("city-panel"));
+  // 2) Vykreslit panely.
+  renderLeftPanel(el("city-panel"), setStatus);
   renderBattle(el("battle-panel"));
   renderMap(el("map-panel"));
 
@@ -67,7 +67,10 @@ function init() {
   renderResourceBar(el("resource-bar"));
 
   // 4) UI reaguje na změny stavu (oddělení logiky od UI).
-  bus.on(EVENTS.STATE_CHANGED, () => renderResourceBar(el("resource-bar")));
+  bus.on(EVENTS.STATE_CHANGED, () => {
+    renderResourceBar(el("resource-bar"));
+    renderLeftPanel(el("city-panel"), setStatus);
+  });
 
   // 5) Automatické ukládání a uložení při zavření karty.
   setInterval(saveGame, AUTOSAVE_MS);

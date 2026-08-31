@@ -8,6 +8,17 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.3.0] – 2026-08-31 · Krok 2 (tým a získávání Pokémonů)
+### Přidáno
+- Pokémon systém `src/systems/pokemonSystem.js` (`createPokemon`).
+- Team systém `src/systems/team.js`: `chooseStarter`, `catchWild`, `addToTeam`, `removeFromTeam`, `moveInTeam`, `getTeamPokemon`, `isInTeam`.
+- UI záložky levého panelu Tým / Kolekce / Město: `src/ui/leftPanel.js`, `src/ui/teamView.js`.
+- Styly záložek, odznaků typů a prvků týmu.
+### Změněno
+- `src/main.js` používá `renderLeftPanel` a překresluje ho při změně stavu.
+### Rozhodnutí
+- R-006: levý panel se záložkami (zachovává tři panely dle zadání).
+
 ## [0.2.0] – 2026-08-31 · Krok 1 (perzistentní základ)
 ### Přidáno
 - Event sběrnice `src/core/events.js` (oddělení logiky od UI).
