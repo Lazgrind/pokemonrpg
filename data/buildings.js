@@ -37,6 +37,7 @@ export const BUILDINGS = [
     name: "Pokémon Centrum",
     icon: "🏥",
     color: "#e0524e",
+    sprite: "assets/buildings/poke-center.png",
     description: "Po každém vítězství doléčí aktivnímu Pokémonovi část max HP. Vylepšení doléčí víc.",
     startLevel: 1,
     maxLevel: 10,

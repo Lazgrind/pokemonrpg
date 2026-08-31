@@ -8,6 +8,12 @@ Podrobnosti k diskuzím a rozhodnutím viz [docs/NOTES.md](docs/NOTES.md).
 
 ## [Nevydáno]
 
+## [0.8.1] – 2026-08-31 · Obrázkový sprite Pokémon Centra
+### Přidáno
+- Pixel-art sprite Pokémon Centra (dodal uživatel) → `sprite` v `data/buildings.js`. CSS fasáda zůstává fallback.
+### Změněno
+- Travnaté pozadí spritu odstraněno klíčováním podle zelené (Pillow) a ořezáno → průhledná budova. Zdroj `pokecenter.png` ponechán.
+
 ## [0.8.0] – 2026-08-31 · Druhá budova: Pokémon Centrum
 ### Přidáno
 - Nová budova **Pokémon Centrum** (`data/buildings.js`): po každém vítězství doléčí aktivnímu Pokémonovi část max HP (Lv 1 = 10 %, +5 % za úroveň). Existuje od začátku, upgrade zvyšuje doléčení.
