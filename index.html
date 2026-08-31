@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pokémon Idle RPG</title>
+  <link rel="stylesheet" href="css/main.css" />
+</head>
+<body>
+  <!-- Horní lišta: název + zdroje + (později) save tlačítka -->
+  <header id="topbar">
+    <h1 class="logo">Pokémon <span>Idle RPG</span></h1>
+    <div id="resource-bar" class="resource-bar" aria-label="Zdroje hráče">
+      <!-- Zdroje doplní UI systém za běhu -->
+    </div>
+    <div id="status" class="status"></div>
+  </header>
+
+  <!-- Hlavní rozvržení: vlevo město, vpravo nahoře battle, vpravo dole mapa -->
+  <main id="layout">
+    <section id="city-panel" class="panel" aria-label="Město"></section>
+    <section id="battle-panel" class="panel" aria-label="Battle Area"></section>
+    <section id="map-panel" class="panel" aria-label="Mapa"></section>
+  </main>
+
+  <footer id="footer">
+    <span id="version-tag"></span>
+  </footer>
+
+  <!-- Vstupní bod aplikace (ES modul) -->
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

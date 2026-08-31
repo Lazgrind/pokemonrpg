@@ -1,0 +1,133 @@
+/* ---------------------------------------------------------------------------
+   Pokémon Idle RPG – základní styly (Krok 0)
+   Tmavé téma, tři panely. Rozvržení se může v dalších krocích měnit.
+--------------------------------------------------------------------------- */
+
+:root {
+  --bg: #0f1420;
+  --bg-panel: #1a2233;
+  --bg-panel-2: #222c42;
+  --border: #2d3a56;
+  --text: #e6ecf7;
+  --text-dim: #9aa8c4;
+  --accent: #ffcb05;      /* Pokémon žlutá */
+  --accent-2: #3b6cff;    /* modrá */
+  --danger: #e5533c;
+  --radius: 10px;
+  --gap: 12px;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, sans-serif;
+  overflow: hidden;
+}
+
+/* ---- Horní lišta ---- */
+#topbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 10px 18px;
+  background: var(--bg-panel);
+  border-bottom: 2px solid var(--border);
+}
+
+.logo {
+  margin: 0;
+  font-size: 20px;
+  letter-spacing: 0.5px;
+  color: var(--accent);
+}
+.logo span { color: var(--text); font-weight: 400; }
+
+.resource-bar {
+  display: flex;
+  gap: 16px;
+  margin-left: auto;
+}
+.resource {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 14px;
+}
+.resource .icon { font-size: 15px; }
+.resource .value { font-weight: 700; }
+
+.status { font-size: 13px; color: var(--text-dim); }
+
+/* ---- Hlavní rozvržení (grid) ---- */
+#layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1.4fr;
+  grid-template-rows: 1.3fr 1fr;
+  grid-template-areas:
+    "city battle"
+    "city map";
+  gap: var(--gap);
+  padding: var(--gap);
+  min-height: 0;
+}
+
+#city-panel   { grid-area: city; }
+#battle-panel { grid-area: battle; }
+#map-panel    { grid-area: map; }
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  overflow: auto;
+  min-height: 0;
+}
+
+.panel-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.placeholder {
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.card {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+
+/* ---- Patička ---- */
+#footer {
+  padding: 6px 18px;
+  background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: right;
+}
