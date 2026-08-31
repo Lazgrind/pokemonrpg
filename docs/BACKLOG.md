@@ -7,6 +7,9 @@ ještě nejsou hotové. Ať na ně nezapomeneme. Detaily rozhodnutí viz
 Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v kódu) · 🔵 částečně · ✅ hotovo (ponecháno kvůli navazující práci)
 
 ---
+## Hatching
+
+Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.539999999999964 s
 
 ## Pokémoni – hodnoty jedince
 
