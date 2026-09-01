@@ -13,6 +13,650 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-09-01 – Krok 5: manuální souboj (menu) + popup nahrazení tahu (v0.35.0)
+
+### Zadání (uživatel)
+- Manuální mód jako v klasických hrách: **4 tlačítka Battle / Run / Items / Switch**,
+  pod „Battle" útoky. Items = batoh s míčky (chytání), Switch = prohození, Run = útěk.
+- Když se jedinec učí **5. tah a má plné 4 sloty** → **vyskakovací volba nahrazení**.
+
+### Hotovo teď
+- **Manuální menu** (battleView): při vypnutém Auto battle spodní ovládání = root
+  menu (Battle/Run/Items/Switch) + podmenu fight (tahy) / bag (míčky + hod) /
+  switch (dlaždice týmu). Akce v battleSystem: `playerMove` / `playerSwitch` /
+  `playerCatch` / `playerRun`; společný `runActions()` vytažený z `tick()`
+  (null akce hráče = kolo, kde útočí jen nepřítel – po switchi/hodu/chybě).
+- **Popup nahrazení tahu.** `learnLevelUpMoves` už tah nezahazuje – při plných
+  slotech ho dá do fronty **`state.moveLearnQueue`** (`{uid, moveId}`). Nový
+  `moveLearnView.js` frontu sleduje přes `STATE_CHANGED` a postupně nabízí modal:
+  ukáže nový tah vedle čtyř stávajících, klik na slot = přepsání, „Don't learn" =
+  zahodit. `resolveMoveLearn(uid, moveId, replaceIndex|null)` v pokemonSystem
+  mutuje kolekci (nekomituje – commit dělá UI). Funguje i pro tahy z offline
+  (fronta je součástí save → **migrace v14**). Auto-vyřeší nesmyslné položky
+  (jedinec puštěn / už tah umí / mezitím se uvolnil slot).
+
+### Rozhodnutí
+- 🟢 Fronta je **v herním stavu** (ne modul-level), aby přežila reload a pokryla
+  offline level-upy. `queueMoveLearn` deduplikuje.
+- 🟢 Modal se nezavírá klikem do prázdna – rozhodnutí je záměrné (Escape = skip).
+
+## 2026-09-01 – Rychlý heal na obrazovce prohry + doladění PP regen (v0.34.0)
+
+### Zadání (uživatel)
+- PP regen zpět na **1 %/level až 100 %**, ať to chvíli trvá nasbírat.
+- Na obrazovce „Defeated" chci **rychlý proklik na Heal team** – překlikávat
+  celé město je otravné.
+
+### Hotovo teď
+- **PP regen retune:** track `ppRegen` na `poke-center` → `maxLevel 100`,
+  `perLevel 1`, `baseCost 120`, `growth 1.1` (bylo 20×5 %). 0 % dokud nekoupeno.
+- **Heal team na obrazovce prohry:** overlay `.battle-over` má teď `🏥 Heal team`
+  (jen když je co léčit – `teamNeedsHeal()` v battleSystem: chybí HP nebo PP).
+  Klik → `healTeam()` → redraw → tlačítko vystřídá „✓ Team healed — ready to go"
+  vedle „New battle". Bez chození do Poké Centra.
+
+## 2026-09-01 – Plovoucí damage + PP regen upgrade (v0.33.0)
+
+### Zadání (uživatel)
+- Chci, aby damage „lítal" na vizuálu – červené „-7", „-3" apod.
+- PP problém vyřešit **PP regenem jako upgradem v Poké Centru**.
+
+### Hotovo teď
+- **Plovoucí čísla poškození.** Nový event `BATTLE_HIT` (`{ side, dmg }`).
+  `useMove` teď vrací způsobené poškození; `tick()` posbírá zásahy kola a vydá
+  je **až po `emit()` (překreslení scény)**, aby float přežil redraw. `battleView`
+  na `BATTLE_HIT` spawne `<span class="dmg-float">-N` do `.battle-sprite`
+  zasaženého bojovníka (kotva `position:relative`), animace `dmgFloat` (vylétne
+  nahoru + fade), po `animationend`/pojistce se odstraní. Minutí = žádný float.
+- **PP regen upgrade v Poké Centru.** Nová linie (track) `ppRegen` na `poke-center`
+  (`data/buildings.js`): `startLevel 0` (výchozí 0 %, tj. nekoupeno), `maxLevel 20`,
+  `perLevel 5` → 0–100 %, `baseCost 150`, `growth 1.18`. `ppRegenPercent()` v
+  buildingSystem. Po výhře **v auto battle** `battleSystem.restorePpAfterWin()`
+  doplní každému neplnému tahu `floor(maxPp*pct/100)` (aspoň 1) PP. Manuál PP
+  neobnovuje – jen ruční **Heal team**. UI: řádek statu v detailu Centra +
+  položka v okně Upgrades (`trackUpgradeEffect` case `ppRegen`).
+
+## 2026-09-01 – Krok 4: damage/turn engine přes tahy (v0.32.0)
+
+### Rozhodnutí (🟢 SCHVÁLENO)
+- Výběr tahu (auto i nepřítel): **nejvyšší očekávaný damage** – placeholder
+  politika, dokud nebude skutečné auto-AI (krok 6, odloženo).
+- Když dojdou PP na všech tazích: **Struggle** – slabý typeless útok
+  (power 40, bez STAB i typové efektivity). Recoil (zpětné poškození) později.
+
+### Hotovo teď (`src/systems/battleSystem.js`)
+- **`calcMoveDamage(attacker, defender, move, avg)`** – damage dle tahu:
+  kategorie physical/special (Attack/Defense vs. Sp.Atk/Sp.Def), **STAB ×1.5**
+  (shoduje-li se typ tahu s typem útočníka), **typová efektivita**, rozptyl
+  0.85–1.0 (nebo střed 0.925 pro `avg`). Status/power 0 → dmg 0.
+- **`chooseAction(attacker, defender)`** – z tahů s PP>0 vybere ten s nejvyšším
+  očekávaným damage; bez použitelného tahu vrátí **Struggle**.
+- **`useMove(attacker, defender, action)`** – spotřebuje 1 PP, hodí na
+  **accuracy** (minutí), odečte damage, zaloguje (vč. super/not effective).
+- **`turnOrder(actions)`** – pořadí: **priority tahu** (Quick Attack +1) → Speed
+  → náhoda. `tick()` teď volí akce obou, seřadí je a odehraje `useMove`
+  (padne-li útočník v první půlce kola, druhou už neodehraje).
+- **`avgDamage`** (pro idle) teď počítá přes nejlepší tah (`chooseAction` +
+  `calcMoveDamage(avg)`) – idle dál ignoruje HP/PP (čistá abstrakce).
+- Starý `calcDamage` (fixní power 40) odstraněn.
+
+### Pozn. / backlog
+- V auto battle módu Poké Centrum po výhře doléčí **HP, ne PP** → po delším
+  běhu tahy dojdou a Pokémon spadne na Struggle. Případné doplnění PP
+  (nebo jeho regenerace) zvážit později (viz R-029).
+
+## 2026-09-01 – Krok 3: jedinci mají tahy + PP (v0.31.0)
+
+### Rozhodnutí (🟢 SCHVÁLENO)
+- Tvar slotu tahu: **`{ id, pp, maxPp }`** (per-jedinec max kvůli budoucím PP Up).
+- Level-up: **auto-naučit nový tah do volného slotu** (max 4); když jsou plné,
+  přeskočit (výběr/nahrazování až v manuálním UI, krok 5).
+
+### Hotovo teď
+- **`owned.moves`** (≤4 sloty `{id, pp, maxPp}`), přiřazení v `createPokemon`
+  přes `defaultMovesFor(speciesId, level)` (z learnsetu, plné PP).
+- **Migrace save v12 → v13** – stávajícím doplní tahy z learnsetu dle levelu.
+- **Učení při level-upu**: `learnLevelUpMoves(pokemon, prevLevel)` v pokemonSystem,
+  volané z `grantXp` (pokryje boj i offline idle). Přidává jen do volných slotů.
+- **`healTeam` obnovuje i PP** (plné vyléčení = i plné PP). PP se zatím
+  nespotřebovává (přijde s turn enginem, krok 4).
+- **Karta Pokémona**: nová sekce **Moves** (jméno, typ, kategorie, PP x/max),
+  ať jsou tahy vidět a jde krok 3 ověřit.
+
+### Další
+- Krok 4: **damage/turn engine přes tahy** (kategorie physical/special, STAB,
+  typy, accuracy, spotřeba PP; `performTurn`). Krok 5: manuální UI (Fight/Run/Switch).
+
+---
+
+## 2026-09-01 – Trvalé HP + základy battle reworku (v0.30.0)
+
+### Zpětná vazba / zadání uživatele
+- Bug: „Při souboji pokémoni snižují HP i v týmu, ale poté co pokémon padne, má
+  v týmu zase plné HP – to být nemá. Bude problém při battle módu se swapem."
+- K modelu HP: „Super, první možnost (trvalé HP), s tím, že by se musel člověk
+  vyléčit v Poké Centru." 🟢
+- Zpřesnění módů: „Když dá člověk auto battle a padne mu to, je to jeho chyba.
+  V kompletním Idle by se HP neřešilo vůbec. V manuálním módu člověk fakt ztrácí
+  HP, pokémoni umírají a musí se vyléčit v Poké Centru. Vylepšené Centrum by
+  v auto battle módu regenerovalo HP na nějaká procenta – to neplatí pro manuál." 🟢
+
+### Rozhodnutí – model HP (🟢 SCHVÁLENO)
+- **Kompletní/background idle** (`idle.js`): HP se neřeší, zůstává abstrakce
+  (odhad rychlosti zabíjení ze statů).
+- **Auto battle mód**: HP je trvalé; Poké Centrum po výhře doléčí aktivního
+  pokémona o % dle levelu Centra (strop `maxPercent`). Wipe = chyba hráče.
+- **Manuální mód** (staví se): HP se fakt ztrácí, pokémoni padají; léčení jen
+  ručně v Poké Centru.
+- Level-up dál léčí na plno (oba módy).
+
+### Hotovo teď
+- **Trvalé HP na jedinci** (`owned.hp`) – přežije faint, swap i konec souboje.
+  Migrace save **v11 → v12** (stávajícím doplní plné HP). `createPokemon` dává
+  nově vzniklým plné HP.
+- **`makeCombatant`** napojen na `owned.hp` přes accessor (`combatant.hp` čte/píše
+  jedince; clamp do [0, aktuální maxHp], respektuje level-up). Pomocník `hpOf()`.
+- **Oprava bugu**: `teamView` čte HP přímo z `owned.hp` (zrušen speciál přes
+  `getBattle()`), vyřazený se ukáže s šedým HP barem (`.hpfill.fainted`).
+- **Swap na dalšího ŽIVÉHO** člena při faintu; `startBattle` začíná prvním živým
+  (celý padlý tým → hláška „heal at the Poké Center“).
+- **Doléčení po výhře** v `handleFaint` je nově jen v **auto battle** módu.
+- **`healTeam()`** v battleSystem + tlačítko **Heal team** v Poké Centru
+  (`buildingView`). Popisek Centra upřesněn: auto-heal po výhře platí pro Auto battle.
+- **Battle rework krok 1–2**: `data/moves.js` (8 tahů, model physical/special +
+  accuracy + PP) a `data/learnsets.js` (level-up learnsety 6 druhů + `movesAtLevel`).
+  Zatím jen data, nezapojeno do hry.
+
+### Další kroky (roadmap battle reworku)
+- Krok 3: jedinci mají i **tahy + PP** (`owned.moves`), přiřazení z learnsetu v
+  `createPokemon`, migrace save. (Discutovat před implementací.)
+- Krok 4: **damage/turn engine přes tahy** (kategorie, STAB, typy, accuracy, PP).
+- Krok 5: **manuální UI** (Fight menu, Run, Switch) + ruční heal v Centru.
+- Krok 6 (později): auto-battle politika (výběr tahu). ⚪
+
+---
+
+## 2026-09-01 – Battle Area: ovládání část 2 (v0.29.0)
+
+### Zpětná vazba / zadání uživatele
+- „Pause dej taky nahoru vedle Auto battle."
+- „Tlačítko Catch předěláme úplně s celým dalším krokem interface." → teď needit,
+  jen zachovat funkční. ⚪
+- „Resume a Auto battle budou 2 jiné entity: resume/pause pozastavuje souboj,
+  Auto battle zapíná auto-battle mód (pokémoni bojují sami; opak = manuál později)."
+- „Informace o souboji potřebujeme mít taky v okně souboje, jako v normální
+  pokémon hře." (textbox)
+- „Nastavení Auto catch módu: vedle Auto catch volit, zda chytat všechny pokémony,
+  nebo jen shiny (Better IVs zatím zrušíme)." 🟢
+
+### Hotovo teď
+- **Pause/Resume přesunuto nahoru** do `.battle-toggles` (vedle přepínačů); řádek
+  `.battle-controls` pod scénou zrušen. Tlačítko `#battle-toggle` = pauza/resume
+  (nebo Start, když souboj neběží).
+- **Oddělení Pause vs Auto battle.** `running` (pauza) a `settings.autoBattle`
+  (mód) jsou nezávislé. `schedule()` naplánuje automatické kolo jen když
+  `running && getAutoBattle()`. `setAutoBattle` už NEpauzuje – jen (ne)spouští
+  tiky (`schedule()` / `clearTimeout`). `restore()` drží `running` ze save
+  (pauza přežije refresh); tiky se rozběhnou jen v auto módu. Manuální boj
+  (hráč spouští kola) = TODO později.
+- **Battle info „textbox"** (`.battle-info`, dřív `.battle-log`) – rámovaný panel
+  pod scénou, auto-scroll na nejnovější hlášku (ta výrazněji). Bere zbylé místo,
+  posouvá se jen on (okno zůstává fixní).
+- **Auto catch mód** – `settings.autocatch = { enabled, mode }`, `mode: "all" |
+  "shiny"`. Vedle přepínače Auto catch je `<select>` (All / Shiny only), aktivní
+  jen když je Auto catch zapnutý. `shouldAutocatch` = mód "shiny" → jen shiny,
+  jinak vše. **Better IVs a New species filtry zrušeny** (`ivWouldImprove` už se
+  v souboji nepoužívá). Starý tvar autocatch v save se normalizuje v
+  `getAutocatch()` (default `mode:"all"`).
+- **Catch tlačítko:** ponecháno funkční beze změny – předělá se s dalším krokem
+  interface (⚪ TODO).
+
+---
+
+## 2026-09-01 – Battle Area: fixní okno + přesun ovládání (v0.28.0)
+
+### Zpětná vazba / zadání uživatele
+- „Okno musí být fixní, nesmí tam být nikdy posuvník u battle areny."
+- „Odebereme možnost rychlosti – nebude se ovládat v tomto menu, ale vytvoříme
+  celkové nastavení někde nahoře (viz backlog: lock max level, nuzlocke… – ty
+  zatím ne)."
+- „Když člověk prohraje (umřou všichni pokémoni), ukáže se v okénku *Defeated* a
+  tlačítko *New battle* přímo v okně boje."
+- „Nahoře vpravo v okně 2 přepínače (checkbox): 1. Auto battle mód, 2. Auto Catch
+  mód. Zatím tohle, zbytek potom." 🟢
+
+### Hotovo teď
+- **Fixní okno bez scrollbaru.** `#battle-panel` je flex sloupec `overflow:hidden`;
+  `.battle-field` má ohraničenou výšku (`clamp(150px,34vh,300px)`, šířka se dopočítá
+  z výšky přes `aspect-ratio` → celý obrázek, žádný ořez); posouvá se jen `.battle-log`
+  uvnitř. 🟢
+- **Rychlost = GLOBÁLNÍ nastavení.** Přesunuta z okna souboje do `⚙` v horní liště
+  (`src/ui/settingsView.js`, kontejner `#settings-controls`). Stav v
+  `settings.speed` (default 1), čte `getSpeed()`, mění `setSpeed()` (přeplánuje
+  běžící souboj). `battle.speed` zrušeno (serialize/restore/startBattle). 🟢
+- **Přepínače vpravo nahoře v okně** (`.battle-toggles` v `.battle-head`):
+  - *Auto battle* → `settings.autoBattle` (`getAutoBattle`/`setAutoBattle`). Zapnutí
+    spustí/pokračuje souboj, vypnutí pauzne. `restore()` po načtení souboj rozběhne
+    jen když je Auto battle zapnuté (jinak pauza + ruční Resume).
+  - *Auto catch* → přesunutý dřívější `autocatch.enabled` (filtry New/Better/Shiny
+    zůstaly dole pod tlačítkem Catch). Zrušen samostatný checkbox „Autocatch".
+- **Defeat overlay** (`.battle-over`) přes celou scénu při `result==="defeat"`:
+  nápis *Defeated* + tlačítko *New battle* (volá `toggleBattle` → `startBattle`,
+  který tým doléčí na plné HP).
+- **Poznámka k rozšíření:** celé okno souboje se ještě bude předělávat („zbytek
+  potom") – tohle je mezikrok. Globální nastavení je připravené na další volby
+  (Lock max level, Nuzlocke…).
+
+---
+
+## 2026-09-01 – Přepracování souboje: návrh (R-029) + sprity a pozadí do Battle Area
+
+### Zpětná vazba / zadání uživatele
+- „Soubojový systém předěláme úplně celý, nevím, zda to dělat teď."
+- „Pojďme to celé připravit; zatím ti dám do assets nějaké battlegrounds /
+  backgrounds pro souboje."
+- Rozhodnutí: **velký přepis teď nekódit**, jen připravit půdu (assety, seam,
+  návrh). Malé vizuální kroky, které přežijí přepis, ale nechat.
+
+### Hotovo teď (přežije přepis)
+- **Sprity v Battle Area** (`battleView.js`): soupeř zepředu (`front`), náš
+  Pokémon zezadu (`back`), vedle info karty. Respektuje shiny i `-f` samice.
+  Logika souboje (`battleSystem.js`) **netknuta**. 🟢
+- **Pozadí souboje – SDÍLENÁ přes prostředí (biome), ne per route.** Zpětná vazba
+  uživatele: „cesty nebudou vázané na route – route-01 může mít stejné pozadí jako
+  route-03; pojit v area s obrázky, ne naopak." → přepsáno:
+  - Obrázky žijí **naplocho** v `assets/backgrounds/` s popisnými názvy
+    (`grass-forest.png`, `grass-path.png`, `grass-field.png`).
+  - `data/backgrounds.js` (`BACKGROUND_BIOMES`) mapuje **biome → [soubory]**;
+    helper `biomeBackgrounds(biome)`.
+  - Oblast se odkazuje přes `area.biome` (Route 1 = `"grassland"`). Víc oblastí
+    stejného biome sdílí stejný pool.
+  - `battleSystem.pickBackground(area)` losuje z `biomeBackgrounds(area.biome)`,
+    uloží do `battle.background` (serializuje/restoruje). **Přehazuje se při každém
+    novém setkání** (po výhře i po chycení) → pozadí se mění souboj od souboje;
+    během jednoho střetu stabilní (nebliká při tiku).
+  - Statický web neumí vylistovat složku → seznam obrázků musí být v datech.
+  - Testovací sada rozřezaná z `battlegrounds.png` (714×158 → 3× 238×158).
+- **Oprava vizuálu Battle Area – scéna místo karet.** Zpětná vazba: „pozadí vypadá
+  strašně, ukazuje se 1/10." Příčina: pole bylo vysoké (dvě neprůhledné karty pod
+  sebou), `cover` ze širokého obrázku ukázal proužek a karty ho zakrývaly. →
+  `.battle-field` má teď `aspect-ratio: 3/2` (poměr = poměr obrázku, `cover` ukáže
+  celý obrázek), pozadí se renderuje **hladce** (`image-rendering: auto`, ne
+  pixelated – malované), bojovníci jsou **overlay**: soupeř nahoře (sprite vpravo),
+  náš dole (sprite vlevo), jméno + HP/XP v malém průsvitném panelu. Sprity zůstávají
+  ostré (pixelated z `.mon-sprite img`). Standard pozadí = **3:2**. `battleView` kreslí vrstvu
+  `.battle-field .bg`; chybí-li soubor, prosvítá fallback gradient (CSS 404 nic
+  nerozbije). Statický web neumí vylistovat složku → varianty **musí** být v
+  datech. Konvence: `assets/backgrounds/README.md`.
+  - **Proč v datech, ne autodetekcí:** GitHub Pages nevrací výpis složky; JS by
+    musel „hádat" názvy. Pole `backgrounds` v oblasti je jednoznačný zdroj pravdy.
+- 🟡 **Čeká na uživatele:** nahrát varianty pozadí do
+  `assets/backgrounds/route-01/` (`1.png`, `2.png`; registrováno v `data/areas.js`)
+  a chybějící `back`/`front` sprity dalších druhů.
+
+### Návrh celého přepisu (R-029) – SCHVÁLIT PO ČÁSTECH
+Cíl: z „textového" auto-souboje udělat plnohodnotnou bojovou obrazovku se sprity,
+volbou Auto/Manual a reálnými útoky. Stavíme **fázově**, každá fáze samostatně
+funkční (MVP filozofie):
+
+- **Fáze 1 – vizuál (rozpracováno).** Pozadí + sprity (hotovo výše). Zbývá:
+  animace útoku (drobný posun/záblesk spritu při zásahu), „faint" animace
+  (zprůhlednění/propad), lepší rozvržení (sprity „stojí" ve scéně, HP/XP boxy
+  jako overlay v rozích jako v klasických hrách). Čistě UI nad stávající logikou.
+- **Fáze 2 – Auto / Manual.** Přepínač režimu (`state.settings.battleMode`).
+  - *Auto*: jako teď (tik = výměna úderů, rychlost 1/2/4×).
+  - *Manual*: souboj čeká na hráče; hráč klika **útok** (viz fáze 3), pak
+    proběhne kolo. Bez Moves zatím jen „Attack" (současný damage vzorec).
+  - Řídí se v `battleSystem.tick`/`schedule` (v Manualu se neplánuje autotik).
+- **Fáze 3 – Move systém (velký kus, samostatné sezení).**
+  - `data/moves.js`: `{ id, name, type, category: "physical"|"special", power,
+    accuracy, pp, priority, effect? }`. Napřed pár základních útoků.
+  - **Movepool / learnset** na druhu (`data/pokemon.js`): které útoky a od
+    kterého levelu se učí; jedinec drží aktivní 4 útoky (`OwnedPokemon.moves` +
+    aktuální PP). Save migrace (dorovnat existující jedince výchozím útokem).
+  - Damage vzorec rozšířit o `move.power`, kategorii (Attack/Defense vs.
+    SpAtk/SpDef), STAB (×1.5 při shodě typu), typovou efektivitu (už máme
+    `typeMultiplier`), accuracy (šance na minutí), PP (spotřeba, „Struggle" při 0).
+  - UI: v Manualu 4 tlačítka útoků (typ, PP), v Autu volí jednoduchá heuristika.
+- **Fáze 4 (později) – statusy a další** (spánek/paralýza/jed…, priority, criticals,
+  víc oblastí). Až po fázi 3.
+
+### Datové/technické poznámky k přepisu
+- Souboj zůstává **transient** (`battleSystem.js`), do save jen výsledek + nutné
+  minimum pro obnovu (už existuje `serialize/restore`). Moves/PP jedince ale
+  patří do save (jsou to trvalé vlastnosti jedince, ne stav souboje).
+- Držet oddělení DATA (`data/moves.js`, learnsety) → SYSTEMS (výpočet, engine) →
+  UI (`battleView.js`). Vzorec damage je už v `battleSystem.calcDamage` – rozšířit,
+  ne přepisovat od nuly.
+- Pozadí oblasti (`assets/backgrounds/<id>.png`) se hodí i pro obrazovku **mapy**
+  (R-028/R-032) – jeden asset, dvě využití.
+
+## 2026-09-01 – HP a EXP bary v týmu, EXP bar v Battle Area (v0.27.0)
+
+### Zpětná vazba / zadání uživatele
+- „V rámci team bych prosil o přidání health bar a experience bar. Experience bar
+  přidat zatím i pro battle area."
+
+### Co jsem udělal
+- **Team tab** (`teamView.js`): každý slot má nově **HP bar** a **EXP bar**.
+  - HP bar ukazuje **živé HP jen u toho, kdo zrovna bojuje** (match přes
+    `getBattle().player.ref.uid`); ostatní jsou mimo boj → plné max HP. Souboj
+    drží aktuální HP jen pro aktivního bojovníka (`battle.player.hp`), jinde se
+    HP per-jedinec neukládá, takže „plné mimo boj" je korektní default.
+  - EXP bar = `p.xp / xpForNextLevel(p.level)`.
+- **Battle Area** (`battleView.js`): pod HP barem hráčova Pokémona přibyl **EXP
+  bar** (`combatantHtml(..., showXp=true)`). Nepřítel EXP bar nemá – divoký
+  Pokémon XP nesbírá.
+- **CSS**: nové `.xpbar`/`.xpfill` (modrá výplň, sdílí track s `.hpbar`) a
+  rozvržení `.slot-bars`/`.bar-line` (popisek HP/XP · bar · hodnota).
+
+### Konvence samičích spritů (`-f`) – dořešeno
+- Rattata má jiný sprite samice (jen **záda**). Zavedena volitelná přípona `-f`:
+  samice zkusí `<view>-f.png`, při chybějícím souboru spadne na výchozí (samčí)
+  sprite (mechanismus `data-fb` v `spriteImg`). `-f` se přidává **jen tam, kde se
+  sprit liší** – u rattaty tedy jen `back-f.png` a `shiny-back-f.png`.
+  Zdokumentováno v `assets/pokemon/README.md`.
+
+## 2026-09-01 – Pipeline na sprity: odstranění pozadí, sjednocení velikosti, stažení z pokemondb
+
+### Zpětná vazba / zadání uživatele
+- „Dokážeš odebrat bílé pozadí u snímku?" → ano, flood fill od okrajů.
+- „Zkus udělat stejným stylem i front a udělat postavičky stejně velké vždy."
+- „Tímhle toolem budeme prohánět všechny obrázky všech pokemonů, až je nahraju."
+- „Mohl bych ti poslat `<a><img src=…pokemondb…></a>` a ty z toho vytáhneš sprite."
+
+### Nástroje (v `tools/`)
+- **`tools/remove_bg.py`** – jen odstranění pozadí (flood fill od okrajů, světlé/
+  bílé/šedé pixely spojené s okrajem → alpha 0; vnitřní světlá místa zůstanou).
+- **`tools/prep_sprite.py`** – plná příprava do standardu: odstraní pozadí →
+  ořízne na postavu → zmenší (delší strana = **232 px**) → vycentruje na plátno
+  **256×256**. Zvětšování `NEAREST` (ostrý pixel-art), zmenšování `LANCZOS`.
+  - Dávka: `python tools/prep_sprite.py assets/pokemon` (rekurzivně, přeskočí už
+    hotové 256×256 s průhledností; `--force` přepracuje vše).
+
+### Standard spritu (🟢 rozhodnuto)
+- Plátno **256×256**, průhledné pozadí, postava **232 px** delší stranou, vycentrovaná
+  → všechny postavičky „stejně velké".
+- **Názvy (🟢 volba uživatele): `shiny-front` / `shiny-back`** (ne `front-shiny`).
+  Kód `src/ui/sprites.js` upraven: shiny varianta = `shiny-${view}`. Sada 4 souborů:
+  `front.png`, `back.png`, `shiny-front.png`, `shiny-back.png`.
+
+### Workflow „pošlu HTML, ty vytáhneš sprite" (ověřeno)
+- Z `<img src="…">` vezmu URL, stáhnu `curl -sS --ssl-no-revoke -o …` (Windows
+  schannel jinak padá na kontrole revokace certifikátu), proženu `prep_sprite.py`,
+  uložím do `assets/pokemon/<id>/<view>.png`.
+- **Mapování pokemondb (black-white) → náš název:**
+  - `…/normal/<id>.png` → `front.png`
+  - `…/back-normal/<id>.png` → `back.png`
+  - `…/shiny/<id>.png` → `shiny-front.png`
+  - `…/back-shiny/<id>.png` → `shiny-back.png`
+- Demo: charmander `back-normal` stažen a uložen jako `back.png` (96×96 → 256×256,
+  ostrý). Charmander teď má `front.png`, `back.png`, `shiny-front.png`
+  (chybí už jen `shiny-back.png`).
+
+## 2026-09-01 – Příprava spritů Pokémonů (bez vkládání obrázků)
+
+### Zpětná vazba uživatele
+- „Sprite u pokemonů můžeme zatím připravit a vše, ale zatím je tam nebudu vkládat."
+- „Asi budeme potřebovat 4 sprite… front normal, back normal, front shiny a back
+  shiny (back pro budoucí boje)."
+
+### Rozhodnutí a stav
+- 🟢 **Sada = 4 sprity na druh:** `front.png`, `back.png`, `front-shiny.png`,
+  `back-shiny.png`. `back*` je pro budoucí souboj se sprity (R-029).
+- **Kód je už hotový** – `src/ui/sprites.js` (`spriteUrl`/`spriteImg`/
+  `silhouetteHtml`) skládá cestu `assets/pokemon/<id>/<view>.png` (u shiny přidá
+  `-shiny`) a kreslí `<img>` s fallbackem na glyf „?". Zapojeno v Pokédexu a na
+  kartě Pokémona; souboj se sprity je samostatný krok (R-029).
+- Složky všech 6 druhů připravené; **jediný zbývající krok = nahrát obrázky**,
+  žádná změna kódu. README v `assets/pokemon/` aktualizováno na 4 sprity + „kód
+  hotový".
+- Bez změny verze (jen dokumentace + potvrzení; kód se neměnil).
+
+## 2026-09-01 – Pohlaví jedince ♂/♀ (v0.25.0)
+
+### Zpětná vazba uživatele
+- Na otázku „co dál na pořadu dne?" vybráno: **Pohlaví jedince ♂/♀.**
+
+### Co jsme udělali
+- **Per-jedinec pohlaví:** každý jedinec má `gender` (`"m"|"f"|"genderless"`).
+  `rollGender(species)` v `pokemonSystem.js` losuje z `genderRatio` druhu;
+  `createPokemon` ho nastaví (nebo přebere z `opts.gender`). Bezpohlavní druhy
+  (Ditto) = `"genderless"`.
+- **Save v11:** migrace v10→v11 dorovná stávající jedince (rozlosuje pohlaví
+  jednorázově z poměru druhu). `CURRENT_SAVE_VERSION = 11`, typedef `OwnedPokemon`.
+- **UI:** helper `src/ui/gender.js` (`genderSymbolHtml`) – ♂ modrá / ♀ růžová,
+  genderless nekreslí nic (prázdný span). Zapojeno na kartě Pokémona (jméno +
+  řádek „Gender" vedle poměru druhu), na chycených kartách Pokédexu a ve slotech
+  Týmu. CSS `.gender.male/.female`.
+
+### Sprity ballů – dodáno + rezervace budoucích
+- Uživatel dodal **26 spritů ballů** do `assets/pokeballs/` (konvence `<id>-ball.png`).
+  Všech **13 ballů, které hra používá**, tím má obrázek (naskočí samo, emoji fallback
+  zmizí). Navíc dorazily sprity pro **13 budoucích** ballů.
+- **Rezervace místa (na přání uživatele):** budoucích 13 ballů přidáno do
+  `data/pokeballs.js` s `comingSoon: true`, `tier:null`, `price:null` – drží si id
+  → napojený sprite, ale NEobjevují se v obchodě ani v souboji. Zapojení později =
+  doplnit tier/price/bonus + mechaniku.
+- **Beast Ball** – jediný chybějící z kánonu (nemá sprite ani data). Rozhodnuto:
+  🟢 **řešit až s Ultra Beasts**, teď záměrně vynecháno (zapsáno v BACKLOGu).
+
+### Otevřené / navazující
+- ⚪ **Love ball** má datový základ (pohlaví existuje) – chybí už jen mechanika
+  bonusu proti opačnému pohlaví stejného druhu (zapsáno v BACKLOGu).
+
+## 2026-09-01 – Startéři „seen", ikony ballů, caughtBall (v0.24.0)
+
+### Zpětná vazba uživatele
+- „Jako seen musíme vždy mít všechny starter pokemony, protože jsme je reálně viděli."
+- „Nikde nevidím ikonku pokeballu, ve kterém byl chycen, navíc nevidím ikonku
+  pokeballu, kterou jsem ti dával do assetu a má být nahoře jako ikonka i u pokeballu."
+
+### Co jsme udělali
+- **Startéři vždy „seen":** `STARTER_IDS` jako jeden zdroj pravdy v `data/pokemon.js`.
+  `pokedex.ensureStartersSeen()` je označí; volá se v `chooseStarter` i v `init`
+  (dorovná starší save). `pokedexView` a `teamView` už berou startéry odsud.
+- **Ikony ballů z assetu:** `src/ui/ballIcon.js` (`ballIconHtml`) – PNG z
+  `assets/pokeballs/<id>-ball.png` s emoji fallbackem. Zapojeno v horní liště
+  (Poké Balls), ve výběru ballu v souboji a v Poké Martu. Konvence `<id>-ball.png`
+  (id „poke" → `poke-ball.png`), jak je v assets/pokeballs/README.md.
+- **`caughtBall`:** nové pole na `OwnedPokemon`. Zaznamená se v `doCatch`
+  (vybraný ball), startér = „poke", vylíhnutí/dar = null. Save **v10** + migrace
+  (staré jedince dorovná na „poke"). Karta ukazuje „Caught in" = ikona + název.
+
+### Rozhodnutí
+- Migrace dorovnává staré úlovky na „poke" – ball se dřív nezaznamenával, „poke"
+  je nejčastější raný ball; poctivější default než nic. U vylíhnutých/darovaných
+  ball nedává smysl → null a karta píše „— (gift / hatched)".
+
+## 2026-09-01 – Karta Pokémona (v0.23.0)
+
+### Zpětná vazba uživatele
+- „Pojďme na ty karty pokemonů. Tam bychom viděli všechny informace o pokemonovi
+  a i to, kde se dá chytit."
+- Připomínka: „Nezapomeň se koukat do backlogu, zda jsi tam ode mě neměl nějaké
+  nápady, jak co udělat." → zkontrolováno R-025 (sekce Karta Pokémona).
+
+### Co jsme udělali
+- `src/ui/pokemonCard.js` (`openPokemonCard({ uid | speciesId })`): modal se
+  všemi informacemi. Chycený jedinec = sprite, level + EXP bar, tabulka statů
+  (base / hodnota / IV bar / EV bar) + IV %/total + EV total, poměr pohlaví,
+  egg groups, generace, shiny. Viděný druh = silueta + base staty (bez IV/EV).
+- „Kde chytit" z `areasForSpecies` (jen skutečné oblasti; jinak „Not found in the
+  wild"). Otevírá se klikem na slot v Týmu i kartu v Pokédexu (neznámé druhy ne).
+
+### Rozhodnutí z backlogu
+- **Pohlaví:** per-jedinec pohlaví se zatím neukládá → na kartě ukazuji jen
+  **poměr pohlaví druhu**, nic si nevymýšlím. Per-jedinec pohlaví = nová ⚪ položka.
+- **Ball, ve kterém byl chycen:** pole `caughtBall` v datech neexistuje → na kartě
+  zatím není. Přidáno jako ⚪ položka (zaznamenat při chycení + migrace).
+- **Vizualizace IV/EV:** zvolil jsem jednoduché bary. Hezčí **hexagonový radar**
+  necháváme na později – backlog říká **před grafem načíst skill `dataviz`**.
+
+## 2026-09-01 – Pokédex místo Kolekce (v0.22.0)
+
+### Zpětná vazba uživatele
+- „Ano udělejme kartu pokemona, ale předtím vytvoř ten pokedex místo collection."
+
+### Co jsme udělali
+- Nová záložka **Pokédex** nahradila Kolekci (`src/ui/pokedexView.js`,
+  `renderPokedexTab`). Všechny druhy řazené dle `dexNo`, ukazatel „chyceno X / z Y".
+- Tři stavy: **caught** (sprite + akce Team) / **seen** (silueta + jméno + tag
+  Seen) / **unseen** (silueta + „???"). Logika v `src/systems/pokedex.js`
+  (`markSeen`, `dexStatus`, `dexCounts`, `isCaught`, `areasForSpecies`).
+- Nový stav `state.pokedex = { seen: [] }` (chycené se odvozují z kolekce, R-018),
+  **save v9** + migrace. `markSeen(id)` se volá v `battleSystem.spawnEnemy`.
+- Sprity: `src/ui/sprites.js` (`spriteImg` s fallback glyphem „?", `silhouetteHtml`).
+  Hra funguje i bez nahraných obrázků. Cesty `assets/pokemon/<id>/<view>.png`.
+- Hledání + filtry (stav All/Caught/Seen/Missing, typ). Neobjevené druhy nejdou
+  hledat podle jména (jen dle dex čísla), ať se neprozrazují.
+- Výběr startéra a přidání do týmu se přesunuly z bývalé Kolekce do Pokédexu;
+  `teamView.js` očištěn (zbyl jen `renderTeamTab`).
+- **Sbalitelný changelog** (na žádost uživatele): okno „What's new" ukazuje verze
+  jako klik-rozbal (`<details>`), nejnovější rozbalená. Konec scrollování celým
+  seznamem. `changelogView.js` teď markdown dělí po `## ` verzích do `<details>`.
+
+### Poznámka
+- Levý panel se překresluje na každý `commit` (i v souboji), proto Pokédex po
+  re-renderu obnovuje fokus/caret vyhledávání a scroll mřížky.
+- `areasForSpecies` je připravené pro budoucí „detail druhu = kde ho chytit"
+  (zůstává ⚪ v BACKLOGu) a pro chystanou **Kartu Pokémona** (další krok).
+
+## 2026-09-01 – Schéma druhu: gen + genderRatio (v0.21.0)
+
+### Zpětná vazba uživatele
+- „Pojďme možná první na 1. Schéma druhu – přidat `genderRatio` a `gen`. Čistě
+  data, nulové riziko, žádný bump save. Základ pro kartu, Pokédex i mapy."
+
+### Co jsme udělali
+- `data/pokemon.js`: ke všem druhům přidány `gen` (všichni gen 1) a `genderRatio`
+  (startéři 87,5/12,5 ♂/♀, Pidgey/Rattata 50/50, Ditto `"genderless"`). Rozšířeny
+  typedefy (`GenderRatio`; `gen`/`genderRatio` na `Species`), poznámka že `id` =
+  slug jména = i název složky spritů.
+- `gen` řídí, na které mapě se druh chytá (R-032), NEovlivňuje cestu ke spritu
+  (sprity zůstávají naplocho podle `id`).
+
+### Poznámka
+- Čistě data – **bez save bumpu**, žádná viditelná změna chování (pole se zatím
+  nikde nevykreslují, využije je až Karta/Pokédex/mapy). Verze 0.20.1 → 0.21.0.
+
+### Dotaz uživatele: „co když je Pokémon ve víc gen? Víc záznamů?"
+- **Ne – jeden záznam na druh.** Vyjasněn rozdíl (zapsáno i do BACKLOG R-032):
+  - `species.gen` = generace, kde byl druh *představen* (identita, jedna hodnota).
+  - „Kde se dá chytit" = `area.species` (druh může být ve víc oblastech, pořád
+    jeden záznam).
+  - „Na mapě jen Pokémoni dané generace" = konvence při psaní dat oblastí
+    (volitelně helper filtrující `area.species` na `area.gen`), ne napevno přes
+    `gen`.
+  - Nové evoluce/baby = vlastní druh s vlastním `gen`; regionální formy přes
+    samostatné `id`/„formu", ne přes `gen`.
+
+### Otevřené
+- ⚪ Volitelná dex pole (`height`/`weight`/`category`/`dexEntry`) doplnit, až je
+  bude Karta/Pokédex potřebovat.
+
+### Pracujeme LOKÁLNĚ
+- Nic nepushováno – commit/push jen na výslovný pokyn.
+
+---
+
+## 2026-09-01 – Oprava: jedinec v breedingu šel přidat do týmu (v0.20.1)
+
+### Zpětná vazba uživatele
+- „Našel jsem ještě chybku, jde do teamu vložit pokemony, kteří jsou již v
+  breedingu."
+
+### Co jsme udělali
+- `buildingSystem.js`: nový sdílený helper `pokemonEngagement(uid)` →
+  `null | "day-care" | "breeding"` (kde je jedinec zaměstnaný mimo tým).
+- `team.js`: `addToTeam` nově odmítne jedince, který je ve Školce nebo breedingu
+  (guard přes `pokemonEngagement`).
+- `teamView.js` (Kolekce): pro takové jedince místo tlačítka „Add to team" ukáže
+  „in Day Care" / „in breeding" (stejný vzor jako stávající „in team").
+- Pravidlo „jedinec může být jen na jednom místě" je uzavřené v obou směrech –
+  pickery Školky/breedingu tým vylučovaly už od 0.20.0.
+
+### Poznámka
+- Bez zásahu do save (jen čtení stavu). Verze 0.20.0 → 0.20.1 (patch).
+- Vychází z už zaznamenané položky v BACKLOG („Rodič v breedingu vs. tým").
+
+### Pracujeme LOKÁLNĚ
+- Nic nepushováno – commit/push jen na výslovný pokyn.
+
+---
+
+## 2026-09-01 – Brainstorm: sprity, karta, Pokédex, boxy, mapa, souboj
+
+### Zpětná vazba uživatele (seznam nápadů z předchozího dne)
+1. Předělat strukturu Pokémonů – složka per druh se sprity + info (egg groups,
+   male/female %…), ať to není roztroušené a „nepíše se to u každé route".
+2. Karta Pokémona (klik na jedince v kolekci/týmu) – IV, EV, staty, EXP bar,
+   obrázek, info. + jak dělat sprity (složka per druh, 2 sprity front/back, nebo
+   rychlejší metoda?). IV 1–31 v 6 doménách, EV číselně + graf.
+3. Pokédex jako záložka u City – chyceno X/Y (Y = počet druhů ve hře), karty
+   (sprite + dex číslo + jméno) řazené dle ID, search + filtry, klik = kde se
+   druh vyskytuje (jen když objeven).
+4. Kolekce → Boxy (PC): boxy po 30 místech, drag & drop, sprity jedinců.
+5. Hráč by neviděl, kteří Pokémoni na cestě jsou – jen kolik jich může potkat.
+6. Mapa vpravo dole – reálný obrázek oblasti + pozice postavy; kam jít = bar;
+   klasická progress pravidla; první svět Kanto.
+7. Ball na kartě týmu jako vizuál; uživatel dodá sprity ballů → použít všude.
+8. Horní ikonu „počet Pokémonů" změnit na ikonu Pokédexu.
+9. Sprite vajíčka per druh (Rattata = bílé s červenými puntíky…), random
+   generované každou novou hru na daný průchod.
+10. Přepracovat souboj – reálné sprity, animace útoků; přepínač Auto/Manual;
+    potřeba front (soupeř) + back (náš) sprite; front i do Pokédexu.
+11. Nastavení hry – Nuzlocke, level cap (dle gymu dalšího města), no items,
+    no potions…
+12. Responzivní layout dle rozlišení (zúžit levý, roztáhnout pravý; úzké Město
+    domek pod domkem).
+
+### Co jsme udělali
+- Vše zapsáno do `docs/BACKLOG.md`: rozšířeny sekce Chytání (skryté druhy),
+  Vajíčka (egg sprity), Poké Bally (ikony všude + ball na kartě); nové sekce
+  Sprity + struktura dat, Karta Pokémona, Pokédex, Boxy, Mapa světa, Souboj –
+  přepracování, Nastavení hry, Responzivní layout. Nová R-čísla R-023…R-031
+  jako **návrhy** (⚪, čekají na potvrzení).
+
+### Moje doporučení (návrhy k potvrzení)
+- 🟡 **R-024 Sprity:** konvence `assets/pokemon/<id>/front.png` + `back.png`
+  (+ shiny varianty později), cesty se **odvozují z `id`** → nic se neregistruje
+  ani nepíše per druh (to je ta rychlejší metoda). Front se recykluje na
+  souboj-soupeř, Pokédex i kartu; back jen náš Pokémon v souboji.
+- 🟡 **Struktura dat:** DATA nechat centrálně v `data/pokemon.js` (jen rozšířit
+  schéma o `genderRatio` ap.), složku per druh použít **jen na assety**. Pozn.:
+  info o druzích už teď NENÍ u routes (oblast drží jen `species: [...]`), takže
+  ta bolest je z větší části vyřešená.
+- 🟡 **R-021/egg sprity:** procedurální vzor z druhu; k rozhodnutí deterministicky
+  (přenosná znalost) vs. seedované per-průchod (`runSeed` do save).
+- 🟡 **R-029 Souboj:** fázově – (1) sprity + animace, (2) Auto/Manual přepínač,
+  (3) reálné Moves (nový `data/moves.js`, velký kus).
+
+### Upřesnění uživatele (2026-09-01, 2. kolo)
+- **Mapy per generace:** bude mapa pro každou generaci a na dané mapě jdou chytit
+  jen Pokémoni té generace. → nové R-032; přidáno pole `gen` na druh; data i
+  sprity členit per generace.
+- **Sprity podle jména, ne čísla** (u 1000+ je číslo nepoužitelné). Vyjasněno:
+  `species.id` už JE slug jména (`pikachu`). Konvence `assets/pokemon/<id>/front.png`.
+  Slug (ne `name`) kvůli mezerám/diakritice/apostrofům v cestách.
+- **Složka spritů naplocho** – uživatel NEchce dělit po generacích, všechny druhy
+  vedle sebe v `assets/pokemon/`. `gen` na druhu zůstává, ale jen pro mapy/spawn
+  (R-032), na cestu ke spritu nemá vliv.
+- Požádáno o **2–3 nejlevnější položky** → doporučeno: (1) rozšíření schématu
+  druhu `genderRatio`+`gen` (data-only), (2) responzivní layout (CSS-only),
+  (3) `caughtBall` seam + `ballIcon()` helper.
+
+### Otevřené / k rozhodnutí příště
+- ⚪ Čím začít z nabídnuté trojice (doporučeno #1 jako základ).
+- ⚪ Egg sprity: deterministicky vs. per-průchod.
+- ⚪ Pořadí větších milníků: **sprite konvence + Karta Pokémona** → **Pokédex**
+  → **Boxy** → **Mapa (per generace)** → souboj + nastavení.
+
+### Pracujeme LOKÁLNĚ
+- Nic nepushováno – jen dokumentace (BACKLOG/NOTES). Commit/push na pokyn.
+
+---
+
 ## 2026-08-31 – Breeding podle egg groups (v0.20.0)
 
 ### Zpětná vazba uživatele

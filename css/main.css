@@ -69,9 +69,75 @@ body {
 .resource .icon { font-size: 15px; }
 .resource .value { font-weight: 700; }
 
+/* Zdroj s rozpisem po najetí myší (Poké Bally: kolik a jakých mám). */
+.resource.has-tooltip { position: relative; cursor: default; }
+.resource .ball-tooltip {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 50;
+  min-width: 180px;
+  display: none;
+  flex-direction: column;
+  gap: 5px;
+  padding: 9px 11px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  font-size: 13px;
+  text-align: left;
+}
+.resource.has-tooltip:hover .ball-tooltip { display: flex; }
+.ball-tooltip .ball-tooltip-title {
+  font-weight: 700;
+  color: var(--text-dim);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.ball-tooltip .ball-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.ball-tooltip .ball-row-name { flex: 1 1 auto; }
+.ball-tooltip .ball-row-count { font-weight: 700; }
+
 .save-controls {
   display: flex;
   gap: 6px;
+}
+
+/* Globální nastavení hry (⚙ v horní liště + rozbalovací menu). */
+.settings-controls { position: relative; }
+.settings-btn { font-size: 16px; line-height: 1; padding: 6px 9px; }
+.settings-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 50;
+  min-width: 220px;
+  padding: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.settings-menu.open { display: block; }
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.settings-label { font-size: 13px; color: var(--text); }
+.settings-note {
+  margin-top: 10px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.5;
 }
 
 .btn {
@@ -109,7 +175,9 @@ body {
 }
 
 #city-panel   { grid-area: city; }
-#battle-panel { grid-area: battle; }
+/* Battle Area má FIXNÍ okno – nikdy scrollbar. Panel je flex sloupec, který se
+   vejde do své buňky; posouvat se smí jen log uvnitř (viz .battle-log). */
+#battle-panel { grid-area: battle; display: flex; flex-direction: column; overflow: hidden; }
 #map-panel    { grid-area: map; }
 
 .panel {
@@ -195,22 +263,291 @@ body {
   color: var(--text-dim);
   margin-left: 4px;
 }
+/* Barevná varianta odznaku typu (barvu nese CSS proměnná --tc, viz typeColors.js). */
+.type-colored {
+  background: var(--tc);
+  border-color: transparent;
+  color: #fff;
+  font-weight: 600;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+}
+/* Ve flex seznamech typů řídí rozestup gap – zrušíme vrozený margin odznaku. */
+.starter-types .type,
+.cmd-enemy-types .type { margin-left: 0; }
 
 /* ---- Battle Area ---- */
-.battle-field {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
+/* Hlavička okna: nadpis vlevo, ovládání vpravo nahoře (Pause + Auto battle /
+   Auto catch + výběr auto-catch módu). */
+.battle-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
 }
-.combatant {
+.battle-head .panel-title {
+  margin: 0;
+  padding: 0;
+  border: none;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.battle-toggles {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px 12px;
+  flex: 0 1 auto;
+}
+.battle-toggles .head-btn { padding: 4px 10px; font-size: 12px; }
+.ac-mode {
   background: var(--bg-panel-2);
+  color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 10px 12px;
+  border-radius: 6px;
+  padding: 3px 6px;
+  font-size: 12px;
+  cursor: pointer;
 }
-.combatant.enemy { border-left: 3px solid var(--danger); }
-.combatant.player { border-left: 3px solid var(--accent-2); }
-.c-head { margin-bottom: 6px; font-size: 14px; }
+.ac-mode:disabled { opacity: 0.45; cursor: not-allowed; }
+.battle-toggles .tg {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.battle-toggles .tg input { cursor: pointer; }
+
+/* Bojová scéna: pozadí vyplní CELÉ okno (poměr scény = poměr obrázku 3:2, takže
+   `cover` ukáže celý obrázek bez ošklivého ořezu). Bojovníci jsou overlay nad ním. */
+/* Tělo battle area: scéna (roste přes celý prostor) + boční panel s logem. */
+.battle-body {
+  display: flex;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+/* Boční panel: log souboje nahoře (roste), ovládání/hláška dole. */
+.battle-side {
+  flex: 0 0 210px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.battle-field {
+  position: relative;
+  /* Scéna vyplní celý prostor battle area (roste na šířku i výšku). */
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  /* Fallback, když prostředí ještě nemá obrázky pozadí. */
+  background: linear-gradient(180deg, #1a2740, #0e1526);
+}
+/* Vrstva s obrázkem pozadí. Chybí-li, prosvítá fallback gradient výše. */
+.battle-field .bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  image-rendering: auto; /* malované pozadí, ne pixel-art */
+  z-index: 0;
+}
+.battle-field .vs { display: none; } /* ve scéně netřeba */
+
+/* Prohra: tmavý overlay přes celou scénu s nápisem a tlačítkem New battle. */
+.battle-field .battle-over {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  background: rgba(6, 9, 18, 0.72);
+  backdrop-filter: blur(2px);
+}
+.battle-over .over-title {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--danger);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.battle-over .over-sub { margin: 0; font-size: 12px; color: var(--text-dim); }
+.battle-over .over-btn { margin-top: 4px; }
+.battle-over .over-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+}
+.battle-over .over-healed {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-2, #7fc97f);
+}
+
+/* Výherní / chytací okno mezi souboji (jen manuální mód). */
+.battle-field .battle-result {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  text-align: center;
+  padding: 10px;
+  background: rgba(6, 9, 18, 0.78);
+  backdrop-filter: blur(2px);
+  animation: resultIn 0.22s ease-out;
+}
+@keyframes resultIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to { opacity: 1; transform: scale(1); }
+}
+.battle-result .result-title {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--accent-2, #7fc97f);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+.battle-result .result-name { font-size: 14px; font-weight: 700; }
+.battle-result .result-sub { margin: 0; font-size: 12px; color: var(--text-dim); max-width: 320px; }
+.battle-result .over-btn { margin-top: 6px; }
+
+/* Výhra: soupeř + seznam odměn. */
+.battle-result .result-enemy {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.battle-result .result-enemy .mon-sprite { width: 56px; height: 56px; }
+.battle-result .result-rewards {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 8px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 13px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  min-width: 160px;
+}
+.battle-result .result-rewards .lvl-up { color: var(--accent-2, #7fc97f); font-weight: 700; }
+
+/* Chycení: „hozený" ball s Pokémonem uvnitř. */
+.battle-result .catch-visual {
+  position: relative;
+  height: 112px;
+  width: 112px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.battle-result .catch-ball {
+  display: inline-flex;
+  transform-origin: 50% 80%;
+  animation: ballWiggle 0.85s ease-in-out 0.55s 2;
+}
+.battle-result .catch-mon {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  animation: catchIn 0.55s ease-out forwards;
+}
+.battle-result .catch-mon .mon-sprite { width: 64px; height: 64px; }
+@keyframes catchIn {
+  0% { transform: translate(-50%, -18px) scale(1); opacity: 1; }
+  70% { transform: translate(-50%, 30px) scale(0.42); opacity: 0.9; }
+  100% { transform: translate(-50%, 30px) scale(0.42); opacity: 0.82; }
+}
+@keyframes ballWiggle {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-15deg); }
+  75% { transform: rotate(15deg); }
+}
+
+/* Bojovník = průhledný pruh přes scénu: soupeř nahoře, náš dole. */
+.battle-field .combatant {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  z-index: 1;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  padding: 0;
+}
+.battle-field .combatant.enemy { top: 8px; align-items: flex-start; flex-direction: row-reverse; }
+.battle-field .combatant.player { bottom: 8px; align-items: flex-end; }
+/* Info panel (jméno + HP/XP) – průsvitný, ať prosvítá scéna. */
+.battle-field .c-info {
+  min-width: 0;
+  max-width: 60%;
+  background: rgba(8, 12, 24, 0.62);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 9px;
+  color: var(--text);
+}
+.battle-field .combatant.enemy .c-info { border-left: 3px solid var(--danger); }
+.battle-field .combatant.player .c-info { border-left: 3px solid var(--accent-2); }
+/* Sprite „stojí" ve scéně (větší, čtvercový, ostrý pixel-art z .mon-sprite img). */
+.battle-field .battle-sprite {
+  position: relative; /* kotva pro plovoucí damage čísla */
+  width: 34%;
+  max-width: 128px;
+  height: auto;
+  aspect-ratio: 1 / 1;
+  flex: 0 0 auto;
+}
+
+/* Plovoucí poškození: červené „-N", které vylétne nad spritem a zmizí. */
+.dmg-float {
+  position: absolute;
+  left: 50%;
+  top: 8%;
+  z-index: 4;
+  pointer-events: none;
+  font-weight: 800;
+  font-size: 20px;
+  line-height: 1;
+  color: #ff5964;
+  text-shadow: 0 1px 2px #000, 0 0 5px rgba(0, 0, 0, 0.9);
+  white-space: nowrap;
+  animation: dmgFloat 0.95s ease-out forwards;
+}
+@keyframes dmgFloat {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(0.7); }
+  18% { opacity: 1; transform: translate(-50%, 0) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -30px) scale(1); }
+}
+.c-head { margin-bottom: 6px; font-size: 13px; }
 .vs {
   text-align: center;
   color: var(--text-dim);
@@ -231,7 +568,31 @@ body {
   transition: width 0.25s ease;
 }
 .hpfill.low { background: linear-gradient(90deg, #e5533c, #c53a26); }
+.hpfill.fainted { background: linear-gradient(90deg, #555c6b, #444a57); }
 .hptext { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+
+/* EXP bar (souboj i tým) – sdílí track .hpbar, jen jiná výplň. */
+.xpbar {
+  height: 8px;
+  background: #0c1120;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+.xpfill {
+  height: 100%;
+  background: linear-gradient(90deg, #56b0ff, #3a8fe0);
+  transition: width 0.25s ease;
+}
+
+/* HP + EXP bary ve slotu týmu. */
+.slot-bars { margin-top: 8px; display: grid; gap: 5px; }
+.bar-line { display: grid; grid-template-columns: 22px 1fr auto; align-items: center; gap: 6px; }
+.bar-line .bar-cap { font-size: 10px; font-weight: 700; color: var(--text-dim); }
+.bar-line .bar-val { font-size: 10px; color: var(--text-dim); white-space: nowrap; }
+.bar-line .hpbar { height: 9px; }
+.bar-line .hpbar > span { display: block; height: 100%; }
 
 .battle-controls {
   display: flex;
@@ -289,6 +650,140 @@ body {
 .ball-chip:hover { border-color: var(--accent); }
 .ball-chip.active { border-color: var(--accent); color: var(--accent); }
 
+/* --- Manuální bojové menu (Battle / Run / Items / Switch + podmenu) --- */
+/* Menu je překryté přímo ve scéně. Kořen = lišta 4 dlaždic vedle sebe dole;
+   podmenu = plovoucí okno (cmd-panel) vystředěné nad lištou. */
+.battle-field .battle-cmd { position: absolute; z-index: 3; }
+
+/* Kořenová lišta: 4 dlaždice přes celou šířku scény. */
+.battle-cmd.cmd-root {
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+/* Plovoucí okno podmenu (útoky / batoh / prohození). */
+.battle-cmd.cmd-panel {
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  width: min(94%, 470px);
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
+  padding: 10px;
+  background: rgba(8, 12, 24, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 12px;
+  box-shadow: 0 8px 26px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(2px);
+}
+
+/* Panel soupeře nad útoky (jméno, typ, base staty). */
+.cmd-enemy { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+.cmd-enemy .cmd-enemy-sprite { width: 64px; height: 64px; flex: 0 0 auto; }
+.cmd-enemy-info { min-width: 0; }
+.cmd-enemy-head { font-size: 13px; margin-bottom: 5px; }
+.cmd-enemy-types { display: flex; gap: 4px; margin-bottom: 6px; }
+.cmd-enemy-note { margin: 0; font-size: 11px; }
+.cmd-bstats {
+  display: grid;
+  grid-template-columns: repeat(3, auto);
+  justify-content: start;
+  gap: 3px 14px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.cmd-bstats .bs { display: flex; gap: 5px; }
+.cmd-bstats .bs-v { color: var(--text); font-weight: 600; }
+
+/* Když je menu ve scéně, hráčův řádek (sprite + HP) se posune nad lištu,
+   ať ho tlačítka nepřekrývají. */
+.battle-field.has-cmd .combatant.player { bottom: 60px; }
+
+.battle-menu {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+.menu-btn {
+  padding: 12px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+}
+/* Klasické barvy povelů (jako v Pokémon hrách): Battle červeně, Run modře,
+   Items oranžově, Switch zeleně. Plná výplň + velké tučné bílé písmo. */
+.cmd-root .menu-btn {
+  color: #fff;
+  border: none;
+  text-align: center;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  padding: 14px 10px;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.5);
+}
+.cmd-root [data-menu="fight"]  { background: #d3413e; }
+.cmd-root [data-menu="run"]    { background: #3c78c8; }
+.cmd-root [data-menu="bag"]    { background: #e0902e; }
+.cmd-root [data-menu="switch"] { background: #3fa45b; }
+.cmd-root [data-menu="fight"]:hover  { background: #e2544f; border-color: transparent; }
+.cmd-root [data-menu="run"]:hover    { background: #4c8bde; border-color: transparent; }
+.cmd-root [data-menu="bag"]:hover    { background: #f0a341; border-color: transparent; }
+.cmd-root [data-menu="switch"]:hover { background: #4bb96b; border-color: transparent; }
+/* Mřížka útoků (2×2 jako v klasické hře). */
+.move-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.move-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px 10px;
+  text-align: left;
+}
+.move-btn .move-name { font-weight: 600; font-size: 13px; }
+.move-btn .move-sub { font-size: 11px; color: var(--text-dim); text-transform: capitalize; }
+.move-btn.struggle { grid-column: 1 / -1; }
+/* Tah obarvený dle typu: tónované pozadí + výrazný levý pruh v barvě typu. */
+.move-typed {
+  border: 1px solid color-mix(in srgb, var(--tc) 45%, var(--border));
+  border-left: 5px solid var(--tc);
+  background: color-mix(in srgb, var(--tc) 20%, var(--bg-panel-2));
+}
+.move-typed:hover {
+  border-color: var(--tc);
+  background: color-mix(in srgb, var(--tc) 34%, var(--bg-panel-2));
+}
+.menu-back { margin-top: 2px; }
+
+/* Seznam týmu pro prohození. */
+.switch-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.switch-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 4px;
+  padding: 8px 10px;
+  text-align: left;
+}
+.switch-tile.active { border-color: var(--accent-2); }
+.switch-tile .sw-name { font-size: 13px; font-weight: 600; }
+.switch-tile .sw-hp { font-size: 11px; color: var(--text-dim); }
+.switch-tile .hpbar { height: 8px; }
+
 /* Obchod (Market): rozcestník sekcí (departments) jako karty. */
 .market-depts {
   display: grid;
@@ -337,17 +832,27 @@ body {
 .ball-buy { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .btn-sm { padding: 3px 8px; font-size: 12px; }
 
-.battle-log {
-  background: #0c1120;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  font-size: 12px;
+/* Battle info – „textbox" jako v klasické Pokémon hře: rámovaný panel s
+   průběžným popisem souboje (nejnovější hláška dole, výrazněji). */
+.battle-info {
+  background: #0d152b;
+  border: 2px solid var(--accent-2);
+  border-radius: 10px;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.4);
+  padding: 9px 12px;
+  font-size: 13px;
   color: var(--text-dim);
-  line-height: 1.6;
-  max-height: 130px;
+  line-height: 1.7;
+  /* Log je v bočním panelu: bere zbylou výšku a posouvá se jen on. */
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
 }
+.battle-info > div:last-child { color: var(--text); font-weight: 600; }
+/* Barevné rozlišení řádků logu: naše akce zeleně, soupeřovy červeně
+   (specificita 0,3,0 přebije i pravidlo pro poslední řádek výše). */
+.battle-info .log-line.log-player { color: #6fcf72; }
+.battle-info .log-line.log-enemy { color: #e57373; }
 
 /* ---- Izometrické město (2.5D, čistě CSS) ---- */
 .iso-city {
@@ -663,6 +1168,107 @@ body {
   font-weight: 600;
 }
 
+/* ---- Pokédex (záložka místo Kolekce) ---- */
+.dex-count {
+  font-size: 13px;
+  font-weight: normal;
+  opacity: 0.7;
+  margin-left: 4px;
+}
+.dex-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 8px;
+  max-height: 62vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.dex-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
+.dex-card[data-status="unseen"] { opacity: 0.55; }
+.dex-no {
+  font-size: 10px;
+  opacity: 0.6;
+  align-self: flex-start;
+}
+.dex-name {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.dex-foot { margin-top: 2px; }
+.dex-tag {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  opacity: 0.85;
+}
+.dex-tag.team {
+  background: var(--accent, #7fc97f);
+  color: #10240f;
+  border-color: var(--accent, #7fc97f);
+  opacity: 1;
+}
+.dex-add { padding: 3px 10px; font-size: 11px; }
+
+/* Sprite Pokémona (sdílené pro Pokédex, kartu i budoucí souboj). */
+.mon-sprite {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+}
+.mon-sprite img {
+  max-width: 100%;
+  max-height: 100%;
+  image-rendering: pixelated;
+}
+.mon-sprite .ph {
+  font-size: 24px;
+  font-weight: 700;
+  opacity: 0.4;
+}
+.mon-sprite.silhouette .ph {
+  color: var(--text);
+  opacity: 0.25;
+}
+
+/* Ikona Poké Ballu (PNG z assetu s emoji fallbackem). */
+.ball-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--ball-size, 20px);
+  height: var(--ball-size, 20px);
+  vertical-align: middle;
+  line-height: 1;
+}
+.ball-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.ball-icon .ph { font-size: calc(var(--ball-size, 20px) * 0.9); line-height: 1; }
+
+/* Symbol pohlaví jedince (♂/♀). Genderless nic nekreslí (prázdný span). */
+.gender { font-weight: 700; line-height: 1; }
+.gender.male { color: #5aa9ff; }
+.gender.female { color: #ff7fb0; }
+
 /* Řádek s IV kvalitou / EV součtem u jedince v Kolekci a Týmu. */
 .iv-ev { font-size: 11px; }
 
@@ -685,6 +1291,36 @@ body {
 .changelog-body li { margin: 2px 0; font-size: 13px; }
 .changelog-body p { font-size: 12px; opacity: 0.8; margin: 4px 0; }
 .changelog-body code { font-size: 12px; padding: 1px 4px; border-radius: 4px; }
+
+/* Sbalitelné verze v changelogu (klik na verzi = rozbalí obsah). */
+.changelog-ver {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin: 6px 0;
+  background: var(--bg-panel-2);
+}
+.changelog-ver > summary {
+  cursor: pointer;
+  padding: 8px 12px;
+  font-size: 14px;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  user-select: none;
+}
+.changelog-ver > summary::-webkit-details-marker { display: none; }
+.changelog-ver > summary::before {
+  content: "▸";
+  opacity: 0.6;
+  transition: transform 0.1s ease;
+}
+.changelog-ver[open] > summary::before { transform: rotate(90deg); }
+.changelog-ver > summary:hover { color: var(--accent, #7fc97f); }
+.changelog-ver-body { padding: 0 12px 8px 24px; }
+.changelog-ver-body h3 { margin-top: 8px; }
+.cl-empty { font-weight: normal; opacity: 0.5; font-size: 12px; }
 .btn-close {
   margin-top: 14px;
   width: 100%;
@@ -713,6 +1349,133 @@ body {
   width: min(420px, 90vw);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
+/* ---- Karta Pokémona (modal) ---- */
+.mon-card { width: min(460px, 94vw); }
+.mon-card-body {
+  max-height: 72vh;
+  overflow-y: auto;
+  text-align: left;
+  padding-right: 4px;
+}
+.mc-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.mc-sprite { width: 72px; height: 72px; flex: 0 0 auto; }
+.mc-name { font-size: 18px; font-weight: 700; }
+.mc-dex { font-size: 12px; opacity: 0.6; font-weight: normal; }
+.mc-types { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.mc-rarity { font-size: 11px; opacity: 0.7; text-transform: capitalize; }
+.mc-lvl { font-size: 13px; opacity: 0.85; }
+.mc-xp { margin: 4px 0 12px; }
+.mc-xp-label { font-size: 11px; opacity: 0.7; display: flex; justify-content: space-between; margin-bottom: 2px; }
+.mc-bar {
+  display: inline-block;
+  width: 100%;
+  height: 6px;
+  background: var(--bg-panel-2);
+  border-radius: 999px;
+  overflow: hidden;
+  vertical-align: middle;
+}
+.mc-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--accent, #7fc97f); }
+.mc-bar.xp > span { background: #56b0ff; }
+.mc-bar.iv > span { background: #7fc97f; }
+.mc-bar.ev > span { background: #ffcb05; }
+.mc-bar.base > span { background: #b48ce6; }
+.mc-stats {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.mc-stats th {
+  text-align: left;
+  font-weight: 600;
+  opacity: 0.6;
+  padding: 2px 6px;
+  font-size: 11px;
+}
+.mc-stats td { padding: 3px 6px; border-top: 1px solid var(--border); }
+.mc-stat-name { font-weight: 600; white-space: nowrap; }
+.mc-base { opacity: 0.6; }
+.mc-value { font-weight: 700; }
+.mc-iv, .mc-ev { white-space: nowrap; }
+.mc-iv .mc-bar, .mc-ev .mc-bar { width: 44px; margin-left: 6px; }
+.mc-stats tfoot td { font-weight: 600; opacity: 0.85; }
+.mc-meta {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  font-size: 12px;
+  margin: 8px 0 4px;
+}
+.mc-meta dt { opacity: 0.6; }
+.mc-meta dd { margin: 0; }
+.mc-section { font-size: 13px; margin: 12px 0 4px; opacity: 0.85; }
+.mc-areas { margin: 2px 0; padding-left: 18px; font-size: 13px; }
+.mc-areas li { margin: 2px 0; }
+.mc-moves { list-style: none; margin: 2px 0; padding: 0; display: grid; gap: 4px; }
+.mc-move {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 8px;
+  background: #0d152b;
+  border: 1px solid var(--border, #2a3550);
+  border-radius: 8px;
+  font-size: 13px;
+}
+.mc-move-main { display: flex; align-items: center; gap: 6px; }
+.mc-move-pp { white-space: nowrap; }
+
+/* ---- Volba nahrazení tahu (movelearn modal) ---- */
+.movelearn-modal { width: min(440px, 92vw); text-align: left; }
+.ml-intro { font-size: 13px; margin: 4px 0 12px; line-height: 1.4; }
+.ml-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.6; margin: 10px 0 4px; }
+.ml-newwrap { margin-bottom: 6px; }
+.ml-new { background: #10233a; border-color: var(--accent, #7fc97f); }
+.ml-slots { display: grid; gap: 5px; }
+.ml-slot { width: 100%; cursor: pointer; font: inherit; color: inherit; text-align: left; transition: border-color 0.12s, background 0.12s; }
+.ml-slot:hover { border-color: var(--accent-2, #ff6b6b); background: #241021; }
+.ml-move-side { display: flex; align-items: center; gap: 10px; white-space: nowrap; }
+.ml-pow { font-size: 12px; opacity: 0.75; }
+.movelearn-modal .btn-close { margin-top: 14px; width: 100%; }
+
+/* ---- Výběr startéra (starter modal) ---- */
+.starter-modal { width: min(560px, 94vw); text-align: center; }
+.starter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+.starter-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 10px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  font: inherit;
+  color: inherit;
+  transition: transform 0.08s ease, border-color 0.08s ease;
+}
+.starter-card:hover { transform: translateY(-3px); border-color: var(--accent, #7fc97f); }
+.starter-card .starter-sprite { width: 84px; height: 84px; }
+.starter-name { font-size: 15px; font-weight: 700; }
+.starter-types { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+/* Klikací karty/sloty vedoucí na kartu Pokémona. */
+.team-slot.clickable, .dex-card[data-status="caught"], .dex-card[data-status="seen"] { cursor: pointer; }
+.team-slot.clickable:hover { border-color: var(--accent, #7fc97f); }
+.dex-card[data-status="caught"]:hover, .dex-card[data-status="seen"]:hover { border-color: var(--accent, #7fc97f); }
+
 .offline-gains {
   list-style: none;
   padding: 0;

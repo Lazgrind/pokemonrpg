@@ -137,6 +137,19 @@ export function upgradeTrack(id, key) {
   return { ok: true };
 }
 
+/**
+ * Kolik % PP tahů doplní Pokémon Centrum po výhře (linie „ppRegen"). 0 = linie
+ * nekoupená / neexistuje. Cap 100 %. Aplikuje se jen v auto battle módu.
+ * @param {string} id
+ * @returns {number}
+ */
+export function ppRegenPercent(id = "poke-center") {
+  const def = getTrackDef(id, "ppRegen");
+  if (!def) return 0;
+  const level = getTrackLevel(id, "ppRegen");
+  return Math.min(100, level * (def.perLevel ?? 0));
+}
+
 /** Bonus rychlosti líhnutí v % (0–50) podle linie „hatchSpeed" Školky. */
 export function hatchSpeedPercent(id = "day-care") {
   const def = getTrackDef(id, "hatchSpeed");
@@ -234,6 +247,20 @@ export function setBreedingParent(which, uid) {
   slot.buffer = 0; // změna páru = nový odpočet
   commit();
   return { ok: true };
+}
+
+/**
+ * Kde je jedinec „zaměstnaný" mimo tým: výcvik ve Školce nebo breeding. Slouží
+ * pravidlu „jedinec může být jen na jednom místě" (viz addToTeam / pickery).
+ * @param {string} uid
+ * @returns {null | "day-care" | "breeding"} null = volný
+ */
+export function pokemonEngagement(uid) {
+  if (!uid) return null;
+  if (getDaycareSlot().uid === uid) return "day-care";
+  const br = getBreedingSlot();
+  if (br.a === uid || br.b === uid) return "breeding";
+  return null;
 }
 
 /** Vyndá rodiče z breeding slotu a resetuje průběh. */
