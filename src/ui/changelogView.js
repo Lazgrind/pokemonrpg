@@ -66,8 +66,9 @@ function renderBlock(lines) {
 /**
  * Velmi lehký převod našeho CHANGELOG.md na HTML. Každá verze (nadpis "## ") se
  * vykreslí jako sbalitelný blok (<details>), ať se nemusí scrollovat – vidíš
- * seznam verzí a obsah se ukáže až po kliknutí. První verze s obsahem je
- * rozbalená. Text před první verzí (titul + úvod) se vykreslí normálně nahoře.
+ * seznam verzí a obsah se ukáže až po kliknutí. Všechny verze jsou sbalené
+ * (žádná není rozbalená). Text před první verzí (titul + úvod) se vykreslí
+ * normálně nahoře.
  * @param {string} md
  * @returns {string}
  */
@@ -94,16 +95,12 @@ function renderMarkdown(md) {
   const pre = renderBlock(preamble).trim();
   if (pre) out.push(pre);
 
-  // První verze, která má nějaký obsah, bude rozbalená.
-  const hasBody = (s) => s.body.some((l) => l.trim() !== "");
-  let firstWithBody = sections.findIndex(hasBody);
-
-  sections.forEach((s, i) => {
+  // Všechny verze jsou sbalené – žádná se nerozbaluje automaticky.
+  sections.forEach((s) => {
     const body = renderBlock(s.body).trim();
     const empty = body === "";
-    const open = i === firstWithBody ? " open" : "";
     out.push(
-      `<details class="changelog-ver"${open}>
+      `<details class="changelog-ver">
         <summary>${inline(esc(s.title))}${empty ? ' <span class="cl-empty">(nothing yet)</span>' : ""}</summary>
         <div class="changelog-ver-body">${body}</div>
       </details>`

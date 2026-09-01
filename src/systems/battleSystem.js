@@ -22,6 +22,8 @@ import { grantXp } from "./progression.js";
 import { rollLoot } from "./loot.js";
 import { rollEggDrop } from "./eggSystem.js";
 import { healPercent, ppRegenPercent } from "./buildingSystem.js";
+import { useItem, canUseItem, itemCount } from "./itemSystem.js";
+import { getItem } from "../../data/items.js";
 import { markSeen } from "./pokedex.js";
 import { AREAS } from "../../data/areas.js";
 import { biomeBackgrounds } from "../../data/backgrounds.js";
@@ -46,6 +48,8 @@ export function lootLabel(resource) {
 /** @type {any} */
 let battle = null;
 let timer = null;
+/** Timer pro krokové (sekvenční) odehrání manuálního kola – útoky po sobě. */
+let stepTimer = null;
 
 /** Aktuální běhový stav souboje (nebo null). */
 export function getBattle() {
@@ -75,6 +79,20 @@ export function makeCombatant(owned) {
     set(v) {
       // clamp vůči AKTUÁLNÍM statům bojovníka (po level-upu se c.stats mění)
       owned.hp = Math.max(0, Math.min(c.stats.maxHp, v));
+    },
+    enumerable: true,
+    configurable: true,
+  });
+  // Status je TRVALÝ na jedinci (`owned.status`) – bojovník ho jen zpřístupní,
+  // takže otrava/popálení/paralýza přežije výměnu i konec souboje (čistí ji
+  // až léčení). U divokého nepřítele je `owned` běhový, proto se stav zvlášť
+  // (de)serializuje v serialize()/restore().
+  Object.defineProperty(c, "status", {
+    get() {
+      return owned.status ?? null;
+    },
+    set(v) {
+      owned.status = v;
     },
     enumerable: true,
     configurable: true,
@@ -152,10 +170,12 @@ export function serialize() {
     log: battle.log.slice(-30),
     playerUid: battle.player.ref.uid,
     playerHp: battle.player.hp,
+    playerStatus: battle.player.status ?? null, // status hráče (redundantní se save collection, ale robustní)
     enemy: {
       speciesId: battle.enemy.ref.speciesId,
       level: battle.enemy.ref.level,
       hp: battle.enemy.hp,
+      status: battle.enemy.status ?? null, // nepřítel není v kolekci → jeho status uložíme sem
     },
   };
 }
@@ -168,6 +188,7 @@ export function serialize() {
  */
 export function restore(saved) {
   clearTimeout(timer);
+  clearTimeout(stepTimer);
   if (!saved) {
     battle = null;
     return false;
@@ -181,10 +202,12 @@ export function restore(saved) {
 
   const player = makeCombatant(owned);
   player.hp = Math.min(saved.playerHp ?? player.stats.maxHp, player.stats.maxHp);
+  if (saved.playerStatus !== undefined) player.status = saved.playerStatus; // obnov status hráče
 
   const enemyOwned = createPokemon(saved.enemy.speciesId, saved.enemy.level);
   const enemy = makeCombatant(enemyOwned);
   enemy.hp = Math.min(saved.enemy.hp ?? enemy.stats.maxHp, enemy.stats.maxHp);
+  enemy.status = saved.enemy.status ?? null; // obnov status nepřítele (není v kolekci)
 
   battle = {
     // Zachovej stav běhu ze save (pauza přežije refresh). Automatické tiky se
@@ -230,23 +253,43 @@ function moveTypeMult(move, defender) {
   return typeMultiplier(move.type, defender.types);
 }
 
+/** Šance na kritický zásah (~1/16) a jeho násobek poškození. */
+const CRIT_CHANCE = 1 / 16;
+const CRIT_MULT = 1.5;
+
+/** Paralýza: šance, že tah v daném kole úplně vypadne, a násobek Speed. */
+const PARALYSIS_FIZZLE = 0.25;
+const PARALYSIS_SPEED_MULT = 0.5;
+
+/** Efektivní rychlost bojovníka (paralýza půlí Speed – pro pořadí tahů). */
+function effSpeed(c) {
+  const base = c.stats.speed;
+  return c.status?.kind === "paralysis" ? base * PARALYSIS_SPEED_MULT : base;
+}
+
 /**
  * Poškození daným tahem vč. kategorie (physical/special), STAB a typové
  * efektivity. `avg=true` použije střed rozptylu (0.925) pro deterministický
- * odhad; jinak náhodu 0.85–1.0. Status tah (power 0) vrací dmg 0.
- * @returns {{ dmg: number, eff: number }}
+ * odhad (a NEkritizuje – slouží auto-politice); jinak náhodu 0.85–1.0 a šanci
+ * na kritický zásah. Popálený útočník dává jen poloviční FYZICKÝ damage.
+ * Status tah (power 0) vrací dmg 0.
+ * @returns {{ dmg: number, eff: number, crit: boolean }}
  */
 function calcMoveDamage(attacker, defender, move, avg = false) {
-  if (!move.power) return { dmg: 0, eff: 1 };
+  if (!move.power) return { dmg: 0, eff: 1, crit: false };
   const eff = moveTypeMult(move, defender);
   const lvl = attacker.ref.level;
   const special = move.category === "special";
   const atk = special ? attacker.stats.spAttack : attacker.stats.attack;
   const def = special ? defender.stats.spDefense : defender.stats.defense;
   const stab = move.type && attacker.types.includes(move.type) ? 1.5 : 1;
+  // Popálenina půlí fyzický útok (klasika); speciální tahy neovlivňuje.
+  const burn = !special && attacker.status?.kind === "burn" ? 0.5 : 1;
   const base = Math.floor((((2 * lvl) / 5 + 2) * move.power * (atk / def)) / 50) + 2;
   const rand = avg ? 0.925 : 0.85 + Math.random() * 0.15;
-  return { dmg: Math.max(1, Math.floor(base * eff * stab * rand)), eff };
+  const crit = !avg && Math.random() < CRIT_CHANCE;
+  const critMult = crit ? CRIT_MULT : 1;
+  return { dmg: Math.max(1, Math.floor(base * eff * stab * rand * burn * critMult)), eff, crit };
 }
 
 /**
@@ -277,28 +320,74 @@ function chooseAction(attacker, defender) {
  * @param {*} attacker  bojovník
  * @param {*} defender  bojovník
  * @param {{ slot: object|null, move: object }} action
- * @returns {number} skutečně způsobené poškození (0 při minutí / bez efektu)
+ * @returns {{ dmg: number, crit: boolean }} způsobené poškození a zda šlo o krit
  */
 function useMove(attacker, defender, action) {
   const move = action.move;
   const side = attacker === battle.player ? "player" : "enemy"; // naše zeleně, soupeř červeně
+
+  // Paralýza: tah může v tomto kole úplně vypadnout (PP se přitom NEspotřebuje).
+  if (attacker.status?.kind === "paralysis" && Math.random() < PARALYSIS_FIZZLE) {
+    pushLog(`${attacker.name} is paralyzed! It can't move!`, side);
+    return { dmg: 0, crit: false };
+  }
+
   if (action.slot) action.slot.pp = Math.max(0, (action.slot.pp ?? 0) - 1); // spotřeba PP
 
   // Accuracy → minutí.
   if (move.accuracy != null && Math.random() * 100 >= move.accuracy) {
     pushLog(`${attacker.name} used ${move.name} — but it missed!`, side);
-    return 0;
+    return { dmg: 0, crit: false };
   }
 
-  const { dmg, eff } = calcMoveDamage(attacker, defender, move);
-  if (dmg <= 0) {
-    pushLog(`${attacker.name} used ${move.name} — but nothing happened.`, side);
-    return 0;
+  // Status tah bez přímého poškození (power 0, např. Thunder Wave) – nedělá
+  // damage, jen se pokusí navěsit svůj efekt (paralýza apod.).
+  if (!move.power) {
+    if (move.ailment) {
+      pushLog(`${attacker.name} used ${move.name}!`, side);
+      maybeInflict(move, defender, side);
+    } else {
+      pushLog(`${attacker.name} used ${move.name} — but nothing happened.`, side);
+    }
+    return { dmg: 0, crit: false };
   }
+
+  const { dmg, eff, crit } = calcMoveDamage(attacker, defender, move);
   defender.hp = Math.max(0, defender.hp - dmg);
   const note = eff > 1 ? " (super effective!)" : eff < 1 ? " (not very effective)" : "";
-  pushLog(`${attacker.name} used ${move.name}! ${defender.name} took ${dmg}${note}`, side);
-  return dmg;
+  const critNote = crit ? " A critical hit!" : "";
+  pushLog(`${attacker.name} used ${move.name}! ${defender.name} took ${dmg}${note}${critNote}`, side);
+  // Status: zásah může způsobit otravu/popálení (pokud obránce žije a je vnímavý).
+  maybeInflict(move, defender, side);
+  return { dmg, crit };
+}
+
+/** DoT frakce max HP za kolo podle statusu. */
+const STATUS_DOT = { poison: 1 / 8, burn: 1 / 16 };
+
+/** Je obránce imunní vůči danému statusu? (typová imunita jako v klasice) */
+function isImmuneTo(status, defender) {
+  const t = defender.types ?? [];
+  if (status === "burn") return t.includes("Fire");
+  if (status === "poison") return t.includes("Poison") || t.includes("Steel");
+  if (status === "paralysis") return t.includes("Electric");
+  return false;
+}
+
+/** Hláška do logu při navěšení statusu. */
+const AILMENT_VERB = { burn: "was burned", poison: "was poisoned", paralysis: "was paralyzed" };
+
+/**
+ * Zkusí navěsit status z tahu na obránce. Jen když tah status má, obránce žije,
+ * ještě žádný status nemá a není imunní. Status je trvalý (`owned.status` přes
+ * accessor bojovníka) – přežije výměnu i refresh, čistí ho až léčení.
+ */
+function maybeInflict(move, defender, attackerSide) {
+  if (!move.ailment || defender.hp <= 0 || defender.status) return;
+  if (isImmuneTo(move.ailment, defender)) return;
+  if (Math.random() * 100 >= (move.ailmentChance ?? 100)) return;
+  defender.status = { kind: move.ailment };
+  pushLog(`${defender.name} ${AILMENT_VERB[move.ailment] ?? "was afflicted"}!`, attackerSide);
 }
 
 /**
@@ -311,8 +400,8 @@ function turnOrder(actions) {
   const pPri = actions.player.move.priority ?? 0;
   const ePri = actions.enemy.move.priority ?? 0;
   if (pPri !== ePri) return pPri > ePri ? ["player", "enemy"] : ["enemy", "player"];
-  const pSpd = battle.player.stats.speed;
-  const eSpd = battle.enemy.stats.speed;
+  const pSpd = effSpeed(battle.player); // paralýza půlí Speed
+  const eSpd = effSpeed(battle.enemy);
   if (pSpd !== eSpd) return pSpd > eSpd ? ["player", "enemy"] : ["enemy", "player"];
   return Math.random() < 0.5 ? ["player", "enemy"] : ["enemy", "player"];
 }
@@ -361,9 +450,34 @@ function tick() {
     enemy: chooseAction(battle.enemy, battle.player),
   });
 
+  // Konec kola: otrava/popálení uberou HP (v auto módu synchronně, bez animace).
+  applyStatusDotAuto();
+
   emit();
   flushHits(hits);
   schedule();
+}
+
+/**
+ * Auto mód: na konci kola ubere HP bojovníkům se statusem (poison/burn). Když
+ * někdo padne, rovnou to vyřeší (další soupeř / nástup dalšího / porážka).
+ * Nový soupeř nasazený během kola (po chycení/faintu) status nemá, takže se
+ * nezasáhne omylem.
+ */
+function applyStatusDotAuto() {
+  if (!battle || battle.result) return;
+  for (const who of ["player", "enemy"]) {
+    const c = who === "player" ? battle.player : battle.enemy;
+    const frac = c && c.status ? STATUS_DOT[c.status.kind] : 0;
+    if (!c || c.hp <= 0 || !frac) continue;
+    const dmg = Math.max(1, Math.floor(c.stats.maxHp * frac));
+    c.hp = Math.max(0, c.hp - dmg);
+    pushLog(`${c.name} is hurt by ${c.status.kind}! (-${dmg})`, who === "player" ? "enemy" : "player");
+    if (c.hp <= 0) {
+      handleFaint(who === "player" ? "enemy" : "player");
+      break;
+    }
+  }
 }
 
 /**
@@ -389,8 +503,14 @@ function runActions(actions) {
     const attacker = who === "player" ? battle.player : battle.enemy;
     const defender = who === "player" ? battle.enemy : battle.player;
     if (attacker.hp <= 0) continue; // padl v první půlce kola – druhou už neodehraje
-    const dmg = useMove(attacker, defender, actions[who]);
-    if (dmg > 0) hits.push({ side: who === "player" ? "enemy" : "player", dmg });
+    const { dmg, crit } = useMove(attacker, defender, actions[who]);
+    if (dmg > 0)
+      hits.push({
+        side: who === "player" ? "enemy" : "player",
+        dmg,
+        crit,
+        category: actions[who].move?.category ?? "physical",
+      });
     if (defender.hp <= 0) {
       handleFaint(who);
       break;
@@ -402,6 +522,148 @@ function runActions(actions) {
 /** Vydá posbírané zásahy kola jako BATTLE_HIT (po překreslení scény). */
 function flushHits(hits) {
   for (const h of hits) bus.emit(EVENTS.BATTLE_HIT, h);
+}
+
+/* --- Sekvenční (krokové) odehrání manuálního kola --------------------------
+ * Na rozdíl od auto tiku, kde obě strany udeří naráz, chceme v manuálu vidět
+ * nejdřív tah rychlejšího (dle turnOrder) i s jeho animací, po pauze teprve
+ * druhého. Faint řešíme AŽ po animaci úderu, aby zabíjecí rána stihla doskok,
+ * než scéna přejde na výsledkové okno. Po dobu odehrávání je `battle.resolving`
+ * true, takže hráč nemůže vpálit další akci doprostřed kola. */
+
+/** Pauza (ms) po úderu, ať doběhne animace útoku/zásahu, než přijde druhý tah. */
+const MANUAL_STEP_HIT_MS = 650;
+/** Kratší pauza, když se nic netrefilo (minutí / bez efektu). */
+const MANUAL_STEP_MISS_MS = 350;
+/** Doba faint animace (padlý klesne a zmizí), než se scéna přepne dál. */
+const FAINT_ANIM_MS = 620;
+
+/**
+ * Spustí krokové odehrání manuálního kola z hotových akcí obou stran.
+ * @param {{ player: object|null, enemy: object|null }} actions
+ */
+function resolveManualRound(actions) {
+  const order =
+    actions.player && actions.enemy
+      ? turnOrder(actions)
+      : actions.player
+        ? ["player"]
+        : ["enemy"];
+  battle.resolving = true;
+  runManualStep(order, 0, actions);
+}
+
+/**
+ * Odehraje jeden tah v pořadí a naplánuje další (rekurzivně přes setTimeout).
+ * @param {("player"|"enemy")[]} order
+ * @param {number} i
+ * @param {{ player: object|null, enemy: object|null }} actions
+ */
+function runManualStep(order, i, actions) {
+  if (!battle) return;
+  if (battle.result || battle.interlude) {
+    battle.resolving = false;
+    emit();
+    return;
+  }
+  if (i >= order.length) {
+    // Oba tahy odehrány – ještě konec kola (otrava/popálení), pak dořeš.
+    runEndOfRound();
+    return;
+  }
+  const who = order[i];
+  if (!actions[who]) return runManualStep(order, i + 1, actions);
+  const attacker = who === "player" ? battle.player : battle.enemy;
+  const defender = who === "player" ? battle.enemy : battle.player;
+  if (attacker.hp <= 0) return runManualStep(order, i + 1, actions); // padl v první půlce kola
+
+  const { dmg, crit } = useMove(attacker, defender, actions[who]);
+  const hit =
+    dmg > 0
+      ? {
+          side: who === "player" ? "enemy" : "player",
+          dmg,
+          crit,
+          category: actions[who].move?.category ?? "physical",
+        }
+      : null;
+  emit(); // překreslí HP – sprity jsou pořád ve scéně
+  if (hit) flushHits([hit]); // animace útoku/zásahu na čerstvém DOM
+
+  clearTimeout(stepTimer);
+  stepTimer = setTimeout(() => {
+    if (!battle) return;
+    if (defender.hp <= 0) {
+      // Padlý ještě je ve scéně – nejdřív přehraj faint animaci, teprve pak
+      // vyhodnoť následek (výherní okno / nástup dalšího / porážka).
+      const faintSide = who === "player" ? "enemy" : "player"; // strana obránce
+      bus.emit(EVENTS.BATTLE_FAINT, { side: faintSide });
+      clearTimeout(stepTimer);
+      stepTimer = setTimeout(() => {
+        if (!battle) return;
+        handleFaint(who); // manuál → nastaví interlude / nasadí dalšího / porážka
+        battle.resolving = false;
+        emit(); // teď se přepne scéna (výherní okno / nový bojovník)
+      }, FAINT_ANIM_MS);
+      return;
+    }
+    runManualStep(order, i + 1, actions);
+  }, hit ? MANUAL_STEP_HIT_MS : MANUAL_STEP_MISS_MS);
+}
+
+/**
+ * Konec manuálního kola: bojovníci se statusem (otrava/popálení) dostanou DoT.
+ * Řeší se krokově (s plovoucím číslem a případnou faint animací), pak se kolo
+ * uzavře (`resolving=false`).
+ */
+function runEndOfRound() {
+  if (!battle) return;
+  const victims = ["player", "enemy"].filter((who) => {
+    const c = who === "player" ? battle.player : battle.enemy;
+    return c && c.hp > 0 && c.status && STATUS_DOT[c.status.kind];
+  });
+  processDot(victims, 0);
+}
+
+/**
+ * Ubere DoT jednomu zasaženému, přehraje číslo, a když padne, faint animaci +
+ * následek. Pak pokračuje na dalšího; po vyřešení všech kolo uzavře.
+ * @param {("player"|"enemy")[]} victims
+ * @param {number} k
+ */
+function processDot(victims, k) {
+  if (!battle) return;
+  if (k >= victims.length || battle.result || battle.interlude) {
+    battle.resolving = false;
+    emit();
+    return;
+  }
+  const who = victims[k];
+  const c = who === "player" ? battle.player : battle.enemy;
+  if (!c || c.hp <= 0 || !c.status) return processDot(victims, k + 1);
+
+  const dmg = Math.max(1, Math.floor(c.stats.maxHp * STATUS_DOT[c.status.kind]));
+  c.hp = Math.max(0, c.hp - dmg);
+  pushLog(`${c.name} is hurt by ${c.status.kind}! (-${dmg})`, who === "player" ? "enemy" : "player");
+  emit();
+  bus.emit(EVENTS.BATTLE_HIT, { side: who, dmg, category: "status", status: c.status.kind });
+
+  clearTimeout(stepTimer);
+  stepTimer = setTimeout(() => {
+    if (!battle) return;
+    if (c.hp <= 0) {
+      bus.emit(EVENTS.BATTLE_FAINT, { side: who });
+      clearTimeout(stepTimer);
+      stepTimer = setTimeout(() => {
+        if (!battle) return;
+        handleFaint(who === "player" ? "enemy" : "player"); // vítěz = druhá strana
+        battle.resolving = false;
+        emit();
+      }, FAINT_ANIM_MS);
+      return;
+    }
+    processDot(victims, k + 1);
+  }, MANUAL_STEP_HIT_MS);
 }
 
 /**
@@ -528,10 +790,24 @@ function handleFaint(winner) {
 
 /* ----------------------------- Chytání ----------------------------- */
 
-/** Základní šance na chycení bojovníka jen podle jeho aktuálního HP. */
+/** Násobek base šance na chycení podle vzácnosti druhu (vzácnější = těžší). */
+const RARITY_CATCH_MULT = {
+  common: 1,
+  uncommon: 0.85,
+  rare: 0.6,
+  epic: 0.45,
+  legendary: 0.3,
+};
+
+/**
+ * Základní šance na chycení bojovníka: podle jeho aktuálního HP (čím míň HP,
+ * tím snazší) a zeslabená podle vzácnosti druhu (rare/epic/legendary hůř).
+ */
 function catchChanceFor(combatant) {
   const frac = Math.max(0, Math.min(1, combatant.hp / combatant.stats.maxHp));
-  return CATCH_MIN + (CATCH_MAX - CATCH_MIN) * (1 - frac);
+  const byHp = CATCH_MIN + (CATCH_MAX - CATCH_MIN) * (1 - frac);
+  const rarity = getSpecies(combatant.ref.speciesId)?.rarity ?? "common";
+  return byHp * (RARITY_CATCH_MULT[rarity] ?? 1);
 }
 
 /** Kontext souboje pro vyhodnocení bonusů ballů. */
@@ -689,6 +965,7 @@ export function startBattle() {
     result: null,
     background: pickBackground(AREAS[0]),
     interlude: null,
+    resolving: false, // právě se krokově odehrává manuální kolo?
     player: makeCombatant(team[firstAlive]),
     enemy: null,
   };
@@ -702,7 +979,9 @@ export function startBattle() {
 export function pauseBattle() {
   if (battle) {
     battle.running = false;
+    battle.resolving = false;
     clearTimeout(timer);
+    clearTimeout(stepTimer);
     emit();
   }
 }
@@ -730,6 +1009,7 @@ function canManualAct() {
   if (getAutoBattle()) return { ok: false, reason: "Turn off Auto battle to fight manually." };
   if (!battle || battle.result) return { ok: false, reason: "No active battle." };
   if (!battle.running) return { ok: false, reason: "The battle is paused." };
+  if (battle.resolving) return { ok: false, reason: "Hold on — the round is still playing out." };
   if (!battle.enemy || battle.enemy.hp <= 0) return { ok: false, reason: "No enemy to act on." };
   return { ok: true };
 }
@@ -759,9 +1039,7 @@ export function playerMove(index) {
   }
 
   battle.turn = (battle.turn ?? 0) + 1;
-  const hits = runActions({ player: playerAction, enemy: chooseAction(battle.enemy, battle.player) });
-  emit();
-  flushHits(hits);
+  resolveManualRound({ player: playerAction, enemy: chooseAction(battle.enemy, battle.player) });
   return { ok: true };
 }
 
@@ -786,9 +1064,7 @@ export function playerSwitch(uid) {
   pushLog(`${battle.player.name}, go!`, "player");
 
   battle.turn = (battle.turn ?? 0) + 1;
-  const hits = runActions({ player: null, enemy: chooseAction(battle.enemy, battle.player) });
-  emit();
-  flushHits(hits);
+  resolveManualRound({ player: null, enemy: chooseAction(battle.enemy, battle.player) });
   return { ok: true };
 }
 
@@ -806,15 +1082,42 @@ export function playerCatch(ballId = getSelectedBall()) {
   }
 
   battle.turn = (battle.turn ?? 0) + 1;
-  const r = doCatch(ballId); // spotřebuje ball; při úspěchu nahradí soupeře
-  let hits = [];
-  if (!r.caught) {
-    // Neúspěšný hod = soupeř dostane volný útok.
-    hits = runActions({ player: null, enemy: chooseAction(battle.enemy, battle.player) });
+  const r = doCatch(ballId); // spotřebuje ball; při úspěchu nastaví interlude / nahradí soupeře
+  if (r.caught) {
+    emit(); // úspěch: rovnou překreslit (chytací okno / další soupeř)
+  } else {
+    // Neúspěšný hod = soupeř dostane volný útok (krokově, s animací).
+    resolveManualRound({ player: null, enemy: chooseAction(battle.enemy, battle.player) });
   }
-  emit();
-  flushHits(hits);
   return { ok: true, ...r };
+}
+
+/**
+ * Hráč použije léčivý item z batohu na aktivního Pokémona (HP potion / léčení
+ * statusu). Spotřebuje kolo – soupeř dostane volný útok. Revive se v souboji
+ * neřeší (aktivní bojovník není vyřazený); ten je jen v batohu mimo souboj.
+ * @param {string} itemId
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function playerUseItem(itemId) {
+  const guard = canManualAct();
+  if (!guard.ok) return guard;
+
+  const target = battle.player.ref;
+  const def = getItem(itemId);
+  if (!def) return { ok: false, reason: "Unknown item." };
+  if (itemCount(itemId) <= 0) return { ok: false, reason: `No ${def.name} left.` };
+  const check = canUseItem(itemId, target);
+  if (!check.ok) return check;
+
+  const r = useItem(target.uid, itemId); // spotřebuje item, commit + emit
+  if (!r.ok) return r;
+  pushLog(`Used ${def.name} on ${battle.player.name}. ${r.msg}.`, "player");
+
+  battle.turn = (battle.turn ?? 0) + 1;
+  // Použití itemu = kolo hráče: soupeř zaútočí (krokově, s animací).
+  resolveManualRound({ player: null, enemy: chooseAction(battle.enemy, battle.player) });
+  return { ok: true };
 }
 
 /**
@@ -897,6 +1200,11 @@ export function healTeam() {
       p.hp = max;
       changed = true;
     }
+    // Plné doléčení sundá i stavový efekt (otrava/popálení/paralýza).
+    if (p.status) {
+      p.status = null;
+      changed = true;
+    }
     // Doléčení obnoví i PP všech tahů na maximum.
     if (Array.isArray(p.moves)) {
       for (const m of p.moves) {
@@ -916,19 +1224,36 @@ export function healTeam() {
   return healed;
 }
 
-/** Potřebuje aspoň jeden člen týmu vyléčit (chybí HP nebo PP)? Pro UI. */
+/** Potřebuje aspoň jeden člen týmu vyléčit (chybí HP nebo PP, nebo má status)? Pro UI. */
 export function teamNeedsHeal() {
   return getTeamPokemon().some((p) => {
     const max = computeStats(p).maxHp;
     if ((p.hp ?? max) < max) return true;
+    if (p.status) return true;
     if (Array.isArray(p.moves)) return p.moves.some((m) => m.pp < (m.maxPp ?? m.pp));
     return false;
   });
+}
+
+/**
+ * Vyléčí POUZE stavový efekt jednoho jedince (otrava/popálení/paralýza), bez
+ * doplnění HP/PP. Slouží jako „léčivý předmět proti statusu" (tlačítko Cure
+ * v týmu). Vrací true, když se něco vyléčilo.
+ * @param {string} uid
+ */
+export function healStatus(uid) {
+  const p = getState().collection.find((x) => x.uid === uid);
+  if (!p || !p.status) return false;
+  p.status = null;
+  commit();
+  bus.emit(EVENTS.BATTLE_UPDATE); // může jít o právě nasazeného bojovníka → překresli i souboj
+  return true;
 }
 
 /** Úplně ukončí souboj (např. při nové hře / importu). */
 export function stopBattle() {
   battle = null;
   clearTimeout(timer);
+  clearTimeout(stepTimer);
   emit();
 }

@@ -25,11 +25,13 @@ import {
   ivPercent,
   evTotal,
 } from "../systems/pokemonSystem.js";
+import { getNature, isNeutralNature } from "../../data/natures.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { areasForSpecies } from "../systems/pokedex.js";
 import { spriteImg, silhouetteHtml } from "./sprites.js";
 import { ballIconHtml } from "./ballIcon.js";
 import { genderSymbolHtml } from "./gender.js";
+import { statusBadge } from "./statusBadge.js";
 
 /** Čitelné popisky statů (v pořadí STAT_KEYS). */
 const STAT_LABELS = {
@@ -83,6 +85,79 @@ function whereToCatch(speciesId) {
       )
       .join("")}
   </ul>`;
+}
+
+/** Krátký popisek povahy: „Adamant (+Atk / −SpA)" nebo „Hardy (neutral)". */
+function natureLabel(natureId) {
+  const n = getNature(natureId);
+  if (isNeutralNature(natureId)) return `${n.name} <span class="placeholder">(neutral)</span>`;
+  const up = STAT_LABELS[n.up] ?? n.up;
+  const down = STAT_LABELS[n.down] ?? n.down;
+  return `${n.name} <span class="nat-up">+${up}</span> <span class="nat-down">−${down}</span>`;
+}
+
+/**
+ * Hexagonální radar staty (Value) jedince. Jedna „série" (jeden Pokémon) → jedna
+ * barva, bez legendy (titul karty ji pojmenovává). Hodnoty se normalizují na
+ * nejsilnější stat jedince, aby byl vidět relativní tvar bez ohledu na level.
+ * Osy v pořadí STAT_KEYS; povahou zvednutý/snížený stat se barevně odliší.
+ * @param {import("../core/state.js").OwnedPokemon} owned
+ */
+function statRadar(owned) {
+  const stats = computeStats(owned);
+  const values = STAT_KEYS.map((k) => (k === "hp" ? stats.maxHp : stats[k]));
+  const maxVal = Math.max(1, ...values);
+  const nat = getNature(owned.nature);
+
+  const cx = 100;
+  const cy = 100;
+  const R = 62; // poloměr vnějšího hexagonu
+  const n = STAT_KEYS.length;
+  // Vrchol i: úhel od -90° (HP nahoře) po směru hodinových ručiček.
+  const angle = (i) => (-90 + (360 / n) * i) * (Math.PI / 180);
+  const pointAt = (i, r) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
+
+  // Mřížka: dva soustředné hexagony (0.5 a 1.0) + osy z centra.
+  const ring = (frac) =>
+    STAT_KEYS.map((_, i) => pointAt(i, R * frac).map((v) => v.toFixed(1)).join(","))
+      .join(" ");
+  const axes = STAT_KEYS.map((_, i) => {
+    const [x, y] = pointAt(i, R);
+    return `<line class="mc-radar-axis" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" />`;
+  }).join("");
+
+  // Datový polygon (Value normalizovaný na nejsilnější stat).
+  const dataPts = STAT_KEYS.map((k, i) => {
+    const frac = values[i] / maxVal;
+    return pointAt(i, R * frac).map((v) => v.toFixed(1)).join(",");
+  }).join(" ");
+
+  // Popisky statů na vrcholech (název + hodnota); povaha barevně odliší.
+  const labels = STAT_KEYS.map((k, i) => {
+    const [x, y] = pointAt(i, R + 13);
+    const anchor = x < cx - 5 ? "end" : x > cx + 5 ? "start" : "middle";
+    let cls = "mc-radar-label";
+    if (nat.up === k && nat.down !== k) cls += " nat-up";
+    else if (nat.down === k && nat.up !== k) cls += " nat-down";
+    return `<text class="${cls}" x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="${anchor}">
+      <tspan>${STAT_LABELS[k]}</tspan><tspan class="mc-radar-val" x="${x.toFixed(1)}" dy="11">${values[i]}</tspan>
+    </text>`;
+  }).join("");
+
+  return `<div class="mc-radar-wrap">
+    <svg class="mc-radar" viewBox="0 0 200 200" role="img" aria-label="Stat radar">
+      <polygon class="mc-radar-grid" points="${ring(1)}" />
+      <polygon class="mc-radar-grid" points="${ring(0.5)}" />
+      ${axes}
+      <polygon class="mc-radar-area" points="${dataPts}" />
+      ${STAT_KEYS.map((k, i) => {
+        const frac = values[i] / maxVal;
+        const [x, y] = pointAt(i, R * frac);
+        return `<circle class="mc-radar-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" />`;
+      }).join("")}
+      ${labels}
+    </svg>
+  </div>`;
 }
 
 /** Tabulka statů chyceného jedince (base / hodnota / IV / EV s grafem). */
@@ -164,7 +239,7 @@ function ownedBody(owned) {
     <div class="mc-head">
       ${spriteImg(species.id, { shiny: !!owned.shiny, gender: owned.gender, alt: species.name, extraClass: "mc-sprite" })}
       <div class="mc-title">
-        <div class="mc-name">${esc(name)} ${genderSymbolHtml(owned.gender, { size: 18 })} <span class="mc-dex">${dexNo}</span></div>
+        <div class="mc-name">${esc(name)} ${genderSymbolHtml(owned.gender, { size: 18 })}${statusBadge(owned.status)} <span class="mc-dex">${dexNo}</span></div>
         <div class="mc-types">${typeBadges(species)}<span class="mc-rarity">${esc(species.rarity)}</span></div>
         <div class="mc-lvl">Lv ${owned.level}</div>
       </div>
@@ -173,6 +248,8 @@ function ownedBody(owned) {
       <div class="mc-xp-label">EXP <span>${owned.xp} / ${need}</span></div>
       <span class="mc-bar xp"><span style="width:${xpPctW}%"></span></span>
     </div>
+    <h4 class="mc-section">Stats</h4>
+    ${statRadar(owned)}
     ${ownedStatsTable(owned, species)}
     <h4 class="mc-section">Moves</h4>
     ${movesList(owned)}
@@ -187,6 +264,7 @@ function ownedBody(owned) {
           ? `<span class="placeholder">Genderless</span>`
           : `${genderSymbolHtml(owned.gender)} ${owned.gender === "m" ? "Samec" : "Samice"}`
       }</dd>
+      <dt>Nature</dt><dd>${natureLabel(owned.nature)}</dd>
       <dt>Gender ratio</dt><dd>${genderRatioLabel(species)}</dd>
       <dt>Egg groups</dt><dd>${species.eggGroups.map(esc).join(", ")}</dd>
       <dt>Generation</dt><dd>Gen ${species.gen}</dd>

@@ -16,6 +16,7 @@
 import { getSpecies } from "../../data/pokemon.js";
 import { getLearnset, movesAtLevel } from "../../data/learnsets.js";
 import { getMove } from "../../data/moves.js";
+import { NATURES, getNature, NATURE_UP_MULT, NATURE_DOWN_MULT } from "../../data/natures.js";
 import { getState } from "../core/state.js";
 
 let counter = 0;
@@ -130,6 +131,25 @@ function makeUid(speciesId) {
   return `${speciesId}-${Date.now().toString(36)}-${(counter++).toString(36)}`;
 }
 
+/** Náhodně vybere povahu jedince (id z data/natures.js). */
+export function randomNature() {
+  return NATURES[Math.floor(Math.random() * NATURES.length)].id;
+}
+
+/**
+ * Násobitel statu daný povahou: 1.1 pro zvednutý, 0.9 pro snížený, jinak 1.
+ * HP povaha neovlivňuje nikdy (žádná povaha nemá up/down = "hp").
+ * @param {string} natureId
+ * @param {string} key  klíč statu (viz STAT_KEYS)
+ * @returns {number}
+ */
+export function natureMultiplier(natureId, key) {
+  const n = getNature(natureId);
+  if (n.up === key && n.down !== key) return NATURE_UP_MULT;
+  if (n.down === key && n.up !== key) return NATURE_DOWN_MULT;
+  return 1;
+}
+
 /** Náhodné IV (0–31) pro každý stat. */
 export function randomIvs() {
   const ivs = {};
@@ -189,11 +209,12 @@ export function rollGender(species) {
  * Vytvoří nového jedince daného druhu.
  * @param {string} speciesId
  * @param {number} [level=5]
- * @param {{ ivs?: object, evs?: object, shiny?: boolean, shinyChance?: number, caughtBall?: string, gender?: "m"|"f"|"genderless" }} [opts]
+ * @param {{ ivs?: object, evs?: object, shiny?: boolean, shinyChance?: number, caughtBall?: string, gender?: "m"|"f"|"genderless", nature?: string }} [opts]
  *        volitelné přepsání (využijí líhnutí/breeding pro lepší IV apod.);
  *        caughtBall = id ballu, ve kterém byl chycen (u startéra „poke",
  *        u divokých se doplní až při chycení, u vylíhnutých zůstane prázdné);
- *        gender = pohlaví (jinak se rozlosuje z genderRatio druhu)
+ *        gender = pohlaví (jinak se rozlosuje z genderRatio druhu);
+ *        nature = povaha (jinak se rozlosuje náhodně)
  * @returns {import("../core/state.js").OwnedPokemon}
  */
 export function createPokemon(speciesId, level = 5, opts = {}) {
@@ -206,6 +227,7 @@ export function createPokemon(speciesId, level = 5, opts = {}) {
     xp: 0,
     ivs: opts.ivs ?? randomIvs(),
     evs: opts.evs ?? emptyEvs(),
+    nature: opts.nature ?? randomNature(),
     shiny: opts.shiny ?? rollShiny(opts.shinyChance),
     caughtBall: opts.caughtBall ?? null,
     gender: opts.gender ?? rollGender(species),
@@ -217,8 +239,9 @@ export function createPokemon(speciesId, level = 5, opts = {}) {
 }
 
 /**
- * Spočítá aktuální bojové staty jedince z base statů druhu, levelu, IV a EV.
- * (Zjednodušený vzorec inspirovaný Pokémon hrami, bez povah.)
+ * Spočítá aktuální bojové staty jedince z base statů druhu, levelu, IV, EV a povahy.
+ * (Zjednodušený vzorec inspirovaný Pokémon hrami; povaha ±10 % na jeden stat,
+ * HP nikdy neovlivňuje – přesně jako v kanonu.)
  * @param {import("../core/state.js").OwnedPokemon} pokemon
  * @returns {{ maxHp:number, attack:number, defense:number, spAttack:number, spDefense:number, speed:number }}
  */
@@ -229,9 +252,13 @@ export function computeStats(pokemon) {
   const lvl = pokemon.level;
   const iv = pokemon.ivs ?? {};
   const ev = pokemon.evs ?? {};
+  const nat = pokemon.nature ?? "hardy";
   // Efektivní základ pro daný stat = 2*base + IV + floor(EV/4).
   const eff = (base, key) => 2 * base + (iv[key] ?? 0) + Math.floor((ev[key] ?? 0) / 4);
-  const stat = (base, key) => Math.floor((eff(base, key) * lvl) / 100) + 5;
+  // Non-HP stat = floor((základ * povaha)); povaha se aplikuje až na hotový stat
+  // (klasické pořadí: nejdřív base výpočet, pak zaokrouhlené ×0.9/×1.1).
+  const stat = (base, key) =>
+    Math.floor((Math.floor((eff(base, key) * lvl) / 100) + 5) * natureMultiplier(nat, key));
   return {
     maxHp: Math.floor((eff(b.hp, "hp") * lvl) / 100) + lvl + 10,
     attack: stat(b.attack, "attack"),

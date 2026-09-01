@@ -6,7 +6,75 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
-## [Unreleased]
+## [0.45.0] – 2026-09-01 · Healing items · Poké Mart Items section · Bag (in & out of battle)
+### Added
+- **Healing items.** A full line of consumables you can buy and use: **Potions** (Potion / Super / Hyper / Max Potion — restore 20 / 60 / 120 / full HP), **status heals** (Antidote, Burn Heal, Paralyze Heal, and Full Heal for any condition), and **Revives** (Revive → half HP, Max Revive → full HP) that bring back a fainted Pokémon. Items are data-driven (`data/items.js`), so adding more later is just a new entry.
+- **Poké Mart — Items section.** The market now has an **Items** department next to Poké Balls, grouped by category (Potions / Status Heals / Revives) with live prices and your current stock.
+- **Bag (outside battle).** A new **🎒 Bag** button on the Team tab opens your inventory: pick an item, then pick a valid target from your whole collection (only Pokémon the item can actually help are offered — e.g. Revive only lists fainted ones). This is the main way to heal HP, cure status, and revive between battles.
+- **Items in battle.** The battle **Items** menu now lists healing items usable on your active Pokémon (HP potions and status cures) in addition to Poké Balls. Using one costs your turn — the enemy gets a free attack, as in the classic games.
+- Save migrates to **v17** (adds the item inventory `resources.items`).
+
+### Notes
+- Revive is bag-only (outside battle) for now, since the active Pokémon can't be fainted mid-battle.
+
+## [0.44.0] – 2026-09-01 · Natures · EV training (Training Grounds) · stat radar
+### Added
+- **Natures.** Every Pokémon now has one of the 25 classic natures. A nature raises one stat by **+10%** and lowers another by **−10%** (HP is never affected); five natures are neutral. Natures are rolled at creation (caught, gifted, hatched) and shown on the Pokémon card, with the boosted/lowered stat colour-coded (green/red). Existing Pokémon get a random nature via save migration to **v16** — their stats shift slightly to match.
+- **Training Grounds (new building).** A new building in the city where you spend gold to add **Effort Values (EV)** to a stat of your choice. Pick a Pokémon, pick a stat, and each paid session adds EV (respecting the classic caps: **252 per stat, 510 total**). Upgrading the building raises the EV gained per session; gold isn't spent if a stat is already maxed.
+- **Stat radar.** The Pokémon card now shows a hexagonal **radar chart** of the six stats above the stat table, so a Pokémon's shape (its strengths and weaknesses) is readable at a glance. The nature's boosted/lowered axes are highlighted.
+
+### Notes
+- EV training is active (gold-for-EV) for now; a passive/idle EV track can come later.
+- Natures are rolled randomly on hatched Pokémon — nature inheritance (Everstone) is a future addition.
+
+## [0.43.0] – 2026-09-01 · Status effects persist · paralysis · cure status
+### Added
+- **Status effects now persist.** Poison, burn (and the new paralysis) stay on a Pokémon through switching out **and** page refreshes — they no longer clear on their own. They last until you heal, for **both** your Pokémon and the enemy. Save migrates to **v15**.
+- **Status is shown everywhere.** The PSN/BRN/PAR badge now appears not just in the Battle Area (for both sides) but also on each Pokémon in the **Team** tab and on its **card** (modal).
+- **Paralysis.** A new status: a paralyzed Pokémon has a **25% chance to lose its turn** and moves at **half Speed** (affecting who acts first). It's inflicted by the new move **Body Slam** (Normal, 30% chance), which Rattata and Pidgey learn as they level up. Electric-types are immune.
+- **Cure status.** A **💊 Cure** button appears on any team member with a status effect — it removes the status without restoring HP/PP (a full **Heal team** at the Poké Center still clears status too).
+
+### Notes
+- Status moves with no direct damage (power 0) are now supported by the engine, laying the groundwork for pure status moves (Thunder Wave, Stun Spore) later.
+
+## [0.42.0] – 2026-09-01 · Critical hits · status effects · rarity affects catch rate
+### Added
+- **Critical hits.** Every attack has a ~1 in 16 chance to land a critical hit for 1.5× damage, called out in the log ("A critical hit!") and shown as a bigger, golden damage number.
+- **Status effects — poison & burn.** Some moves can now inflict a status: **Poison Sting** may poison (30%), **Ember** may burn (10%). Poison drains 1/8 of max HP each round, burn drains 1/16 **and** halves the victim's physical damage. Immunities apply (Fire can't be burned; Poison/Steel can't be poisoned). A small **PSN/BRN badge** shows next to the affected Pokémon, and end-of-round damage floats up in the status colour.
+- **Rarity now affects catch rate.** Rarer species are harder to catch — the base catch chance is scaled down by rarity (common 100% → uncommon 85% → rare 60% → epic 45% → legendary 30%), on top of the existing HP-based chance.
+
+### Notes
+- Status is tracked per battle for now (it clears if you switch that Pokémon out or on a page refresh). Paralysis and status persistence will come later.
+### Added
+- **A fainted Pokémon now drops and fades out.** When a Pokémon goes down (in a manual battle), it tilts, sinks and disappears before the scene moves on — the victory/catch window or the next team member only appears once the faint animation has played.
+
+## [0.40.0] – 2026-09-01 · Manual battles play out turn by turn
+### Changed
+- **A manual round now resolves one attack at a time.** The faster Pokémon (by priority, then Speed) strikes first — its attack animation plays — and only after a short pause does the second Pokémon act, instead of both hitting at the same instant.
+- **A knockout blow now shows its animation before the result window.** Fainting is handled after the attack animation finishes, so the finishing hit is always visible (previously the scene could switch to the victory/catch window before the animation played, which made the leap look like it "randomly" didn't happen).
+
+### Fixed
+- **You can no longer squeeze in another move mid-round.** Input is locked while the round is playing out (`resolving`), preventing overlapping turns from double-clicks.
+
+## [0.39.2] – 2026-09-01 · Physical leap now actually reaches the target
+### Fixed
+- **The physical-attack leap now lands on the opponent.** The jump distance is measured from the sprites' real positions on screen instead of a fixed offset, so the attacker reaches the enemy sprite regardless of the battle area's size.
+
+## [0.39.1] – 2026-09-01 · Physical vs. special attack animation · changelog tidy-up
+### Added
+- **Physical attacks now leap onto the target.** When a Pokémon uses a **physical** move, it jumps across and lands right on its opponent (a bigger arcing lunge), while **special** moves keep the previous short lunge for now.
+
+### Changed
+- **The in-game changelog opens fully collapsed.** No version is expanded by default anymore — click any version to read its entry.
+
+### Removed
+- **Dropped the empty "Unreleased" section** from the changelog.
+
+## [0.39.0] – 2026-09-01 · Battle animations: attack lunge & hit reaction
+### Added
+- **Attack animation.** When a Pokémon lands a hit, the attacker now lunges toward its opponent and springs back — the enemy from the top, your Pokémon from the bottom.
+- **Hit reaction.** The Pokémon that gets hit shakes and briefly flashes red (alongside the floating damage number), so exchanges read at a glance.
+- *(Next: a faint animation when a Pokémon goes down.)*
 
 ## [0.38.5] – 2026-09-01 · "No Poké Balls" hint moved into the Catch button
 ### Changed

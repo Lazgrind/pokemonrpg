@@ -547,6 +547,93 @@ body {
   18% { opacity: 1; transform: translate(-50%, 0) scale(1.15); }
   100% { opacity: 0; transform: translate(-50%, -30px) scale(1); }
 }
+/* Kritický zásah: větší a žluté číslo. */
+.dmg-float.is-crit {
+  font-size: 28px;
+  color: #ffd23f;
+  text-shadow: 0 1px 2px #000, 0 0 8px rgba(255, 170, 0, 0.9);
+}
+/* DoT: otrava fialově, popálení oranžově. */
+.dmg-float.is-poison { color: #c58cf0; }
+.dmg-float.is-burn { color: #ff9f43; }
+
+/* Odznak stavu (otrava/popálení) v hlavičce bojovníka. */
+.status-badge {
+  display: inline-block;
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #0c1120;
+  vertical-align: middle;
+}
+.status-badge.status-poison { background: #c58cf0; }
+.status-badge.status-burn { background: #ff9f43; }
+.status-badge.status-paralysis { background: #f4d03f; }
+
+/* Útok (special): útočník krátce vyrazí směrem k soupeři a vrátí se (soupeř
+   shora dolů, náš Pokémon zdola nahoru). Třídu navěšuje/odebírá battleView na
+   BATTLE_HIT. */
+.battle-field .combatant.enemy .battle-sprite.is-attacking { animation: atkLungeDown 0.34s ease-in-out; }
+.battle-field .combatant.player .battle-sprite.is-attacking { animation: atkLungeUp 0.34s ease-in-out; }
+@keyframes atkLungeDown {
+  0% { transform: translate(0, 0); }
+  45% { transform: translate(-8px, 18px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes atkLungeUp {
+  0% { transform: translate(0, 0); }
+  45% { transform: translate(8px, -18px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* Útok (physical): útočník vyskočí a doskočí až na soupeře. Cílová vzdálenost
+   (--jx/--jy) se počítá z DOM v battleView (sprity jsou v protilehlých rozích),
+   takže doskok trefí soupeře nezávisle na velikosti scény. Uprostřed letu je
+   mírný oblouček (náskok), na cíli krátká pauza (náraz), pak návrat. */
+.battle-field .battle-sprite.is-attacking-physical {
+  --jx: 0px;
+  --jy: 0px;
+  animation: atkPounce 0.5s cubic-bezier(0.4, 0, 0.5, 1);
+  z-index: 4; /* při doskoku útočník nad soupeřem */
+}
+@keyframes atkPounce {
+  0% { transform: translate(0, 0) scale(1); }
+  30% { transform: translate(calc(var(--jx) * 0.5), calc(var(--jy) * 0.5 - 26px)) scale(1.06); }
+  55% { transform: translate(var(--jx), var(--jy)) scale(1.12); }
+  68% { transform: translate(var(--jx), var(--jy)) scale(1.12); }
+  100% { transform: translate(0, 0) scale(1); }
+}
+
+/* Zásah: zasažený se otřese a jeho sprite krátce zabliká doruda. */
+.battle-field .battle-sprite.is-hit { animation: hitShake 0.34s ease-in-out; }
+.battle-field .battle-sprite.is-hit img { animation: hitFlash 0.34s ease-in-out; }
+@keyframes hitShake {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-6px, 0); }
+  35% { transform: translate(6px, 0); }
+  55% { transform: translate(-4px, 0); }
+  75% { transform: translate(4px, 0); }
+  90% { transform: translate(-2px, 0); }
+}
+@keyframes hitFlash {
+  0%, 100% { filter: none; opacity: 1; }
+  30% { filter: brightness(1.9) drop-shadow(0 0 6px #ff5964); opacity: 0.7; }
+}
+
+/* Faint: padlý Pokémon se nakloní, klesne dolů a vybledne. `forwards` drží
+   koncový stav (zmizelý), než battleSystem po FAINT_ANIM_MS překreslí scénu.
+   Navěšuje battleView.playFaint na BATTLE_FAINT. */
+.battle-field .battle-sprite.is-fainting {
+  animation: faintDrop 0.55s ease-in forwards;
+  transform-origin: 50% 100%;
+}
+@keyframes faintDrop {
+  0% { transform: translateY(0) rotate(0); opacity: 1; }
+  25% { transform: translateY(-6px) rotate(-6deg); opacity: 1; }
+  100% { transform: translateY(46px) rotate(-14deg); opacity: 0; }
+}
 .c-head { margin-bottom: 6px; font-size: 13px; }
 .vs {
   text-align: center;
@@ -1615,6 +1702,79 @@ body {
   border-radius: 6px;
   transition: width 0.3s ease;
 }
+
+/* ---- Radar statů na kartě jedince ---- */
+.mc-radar-wrap { display: flex; justify-content: center; margin: 2px 0 8px; }
+.mc-radar { width: 260px; max-width: 100%; height: auto; overflow: visible; }
+.mc-radar-grid { fill: none; stroke: var(--border, #2d3a56); stroke-width: 1; }
+.mc-radar-axis { stroke: var(--border, #2d3a56); stroke-width: 1; opacity: 0.6; }
+.mc-radar-area {
+  fill: rgba(86, 176, 255, 0.28);   /* jedna série → sekvenční modrá */
+  stroke: #56b0ff;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+.mc-radar-dot { fill: #56b0ff; }
+.mc-radar-label { font-size: 9px; fill: var(--text-dim, #9aa8c4); }
+.mc-radar-label .mc-radar-val { font-size: 9px; font-weight: 700; fill: var(--text, #e6ecf7); }
+.mc-radar-label.nat-up { fill: #7fc97f; }
+.mc-radar-label.nat-up .mc-radar-val { fill: #7fc97f; }
+.mc-radar-label.nat-down { fill: var(--danger, #e5533c); }
+.mc-radar-label.nat-down .mc-radar-val { fill: var(--danger, #e5533c); }
+
+/* Povaha (nature) – zvýraznění zvednutého/sníženého statu */
+.nat-up { color: #7fc97f; font-weight: 600; }
+.nat-down { color: var(--danger, #e5533c); font-weight: 600; }
+
+/* ---- Training Grounds: okno tréninku EV ---- */
+.train-list { display: grid; gap: 6px; margin: 8px 0; }
+.train-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 8px;
+  background: #0d152b;
+  border: 1px solid var(--border, #2a3550);
+  border-radius: 8px;
+}
+.train-info { flex: 1; min-width: 0; }
+.train-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+
+/* ---- Itemy & batoh (v0.45.0) ---- */
+/* Hlavička týmu s tlačítkem batohu vpravo. */
+.team-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+/* Nadpis kategorie v obchodě / batohu. */
+.shop-cat {
+  margin: 10px 0 4px;
+  font-size: 12px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.shop-cat:first-child { margin-top: 0; }
+/* Seznam itemů v batohu (řádky jako tlačítka). */
+.bag-list { display: grid; gap: 6px; max-height: 380px; overflow-y: auto; }
+.bag-item-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px;
+  background: #0c1120;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+.bag-item-row:hover { border-color: var(--accent, #7fc97f); }
+.bag-count { font-weight: 700; white-space: nowrap; }
+/* Léčivé itemy v bojovém batohu + poznámka. */
+.bag-items { display: grid; gap: 6px; margin-bottom: 8px; }
+.item-use { text-align: left; }
+.bag-note { margin: 4px 0 8px; }
 
 /* ---- Patička ---- */
 #footer {

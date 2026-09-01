@@ -10,11 +10,18 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 
 ## Pokémoni – hodnoty jedince
 
-- 🟡 **EV (Effort Values) – získávání.** Pole EV, příspěvek do statů i funkce
-  `addEv(pokemon, stat, amount)` (se stropy 252/stat, 510 celkem) hotové v
-  `pokemonSystem.js`. **Chybí zdroj EV = budova „Training Grounds"** (speciální
-  trénink). EV se NEzískávají ze soubojů (R-017).
-- ⚪ **Povahy (natures)** – zatím se ve vzorci statů nepočítají (schválně vynecháno).
+- ✅ **EV (Effort Values) – získávání (v0.44.0).** Zdroj EV = nová budova
+  **Training Grounds** (`data/buildings.js` `training-grounds`, logika
+  `buildingSystem.trainEv/trainingEvPerSession/trainingCost`, UI
+  `buildingView.openTrainingStats`): za gold přidá EV do zvoleného statu přes
+  `addEv` (stropy 252/stat, 510 celkem); upgrade budovy zvyšuje EV/lekci. EV se
+  dál NEzískávají ze soubojů (R-017). **Zbývá:** pasivní/idle EV track; sprite
+  budovy (`assets/buildings/training-grounds.png` – teď CSS fallback domeček).
+- ✅ **Povahy (natures) (v0.44.0).** 25 povah v `data/natures.js`; `computeStats`
+  aplikuje ±10 % na jeden non-HP stat (`natureMultiplier`), losuje se ve
+  `createPokemon` (`randomNature`), save v16 dorovná staré jedince. Zobrazení na
+  kartě (řádek Nature + barevné osy radaru). **Zbývá:** dědičnost povahy
+  (Everstone) u vylíhnutých – teď se losuje náhodně.
 
 ## Získávání Pokémonů – pravidlo duplikátů
 
@@ -35,8 +42,9 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
   „tlačítko catch předěláme úplně s celým dalším krokem interface." Teď je Catch
   ponechán funkční beze změny. Přijde s dalším krokem přepracování okna (spolu s
   volbou ballu, layoutem menu à la klasická hra atd.). Souvisí s R-029.
-- ⚪ **Rarita druhu ovlivní catch rate** – teď šance závisí jen na HP nepřítele.
-  Vzácnější druhy (`rarity`) by měly být těžší na chycení (nižší base šance).
+- ✅ **Rarita druhu ovlivní catch rate** (v0.42.0) – `catchChanceFor` násobí HP
+  base šanci koeficientem `RARITY_CATCH_MULT` (common 1 → uncommon .85 → rare .6
+  → epic .45 → legendary .3).
 - ✅ **Nepřátelé podle oblasti** – hotovo v 0.15.0: `ENEMY_POOL` přesunut do dat
   oblasti (`data/areas.js` → `species`), `spawnEnemy` losuje odtud. Zbývá přidat
   další oblasti a případně rarity/váhy výskytu per oblast.
@@ -149,9 +157,23 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 ## Obchod (Market)
 
 - 🔵 **Sekce Marketu.** Hotovo v 0.19.0: okno „🛒 Market" s obchodem po sekcích
-  (`buildingView.js` → `openMarket`, `.market-section`). Zatím jen **Poké Balls**.
-  Přidat další sekce: **items** (léčení/statusy), **evoluční kameny**, případně
-  **hromadný nákup** (×5/×10/max). Data pro itemy zatím neexistují.
+  (`buildingView.js` → `openMarket`, dept-cards). ✅ **Items** (léčení/statusy/revive)
+  přidány v **0.45.0** (`openItemShop`, data `data/items.js`). Zbývá: **evoluční
+  kameny**, **hromadný nákup** (×5/×10/max).
+
+## Itemy & léčení
+
+- ✅ **Léčivé itemy (v0.45.0).** DATA `data/items.js` (potiony HP, léčení statusů,
+  revive) + `itemSystem.js` (`buyItem`, `useItem`, `canUseItem`). Sekce **Items**
+  v Poké Martu, **🎒 Bag** na záložce Tým (výběr itemu → cíl z kolekce), a itemy
+  v bojovém batohu (na aktivního, spotřebují kolo). Save v17 (`resources.items`).
+- ⚪ **Revive v souboji.** Teď je revive jen v batohu mimo souboj (aktivní bojovník
+  nemůže být vyřazený). Chtělo by povolit revive i v boji přes výběr vyřazeného
+  člena týmu (mini-picker v bag menu, spotřebuje kolo).
+- ⚪ **Hromadný nákup / prodej itemů**, batch use, řazení batohu.
+- ⚪ **Held items** (item nesený jedincem) – samostatný systém, později.
+- ⚪ **Ekonomika léčení.** Zvážit, jestli má Poké Centrum „Heal team" a Cure zůstat
+  zdarma, když teď existují placené itemy (potenciální paywall/balance).
 
 ## Sprity Pokémonů + struktura dat
 
@@ -203,9 +225,11 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
   (`rollGender`). Save v11 (migrace dorovná staré jedince). ♂/♀ se ukazuje na
   kartě (jméno + řádek Gender), na chycených kartách Pokédexu a ve slotech Týmu.
   Helper `src/ui/gender.js` (`genderSymbolHtml`), CSS `.gender.male/.female`.
-- ⚪ **Hezčí vizualizace IV/EV (radar).** Teď jsou to jednoduché bary. Cíl:
-  hexagonový radar statů. **Před stavbou grafu načíst skill `dataviz`**
-  (konzistentní barvy/altitude). EV graf se stropy (252/stat, 510 celkem).
+- ✅ **Hezčí vizualizace statů (radar) (v0.44.0).** Hexagonový SVG radar 6 statů
+  (Value) na kartě jedince nad tabulkou (`pokemonCard.statRadar`); jedna série →
+  jedna sekvenční modrá, bez legendy (dataviz), osy povahou barevně odlišené
+  (+zelená / −červená). Normalizace na nejsilnější stat jedince (tvar nezávislý
+  na levelu). **Zbývá volitelně:** hover/tooltip na osách, EV-only radar se stropy.
 
 ## Pokédex
 
@@ -279,9 +303,16 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
     panelu; respektuje shiny + `-f`). ✅ **Pozadí sdílená přes biome** (obrázky
     naplocho v `assets/backgrounds/`, `data/backgrounds.js` `BACKGROUND_BIOMES`,
     oblast → `area.biome`; výběr `battleSystem.pickBackground`, přehazuje se každé
-    nové setkání, drží se v `battle.background`). **Zbývá:** útok-animace
-    (posun/záblesk), faint animace, dodat další pozadí/biome + chybějící
-    `back`/`front` sprity druhů.
+    nové setkání, drží se v `battle.background`). ✅ **Útok-animace + reakce na
+    zásah** (v0.39.0): útočník vyrazí vpřed (`is-attacking` → `atkLungeDown/Up`),
+    zasažený se otřese a zabliká doruda (`is-hit` → `hitShake`/`hitFlash`);
+    navěšuje `battleView.playHit` na `BATTLE_HIT`. Physical útok = doskok NA
+    soupeře (`jumpAttack` počítá vzdálenost z DOM → `--jx/--jy`, `atkPounce`,
+    v0.39.1–2). ✅ **Faint animace** (v0.41.0): padlý klesne, nakloní se a
+    vybledne (`is-fainting` → `faintDrop`, `forwards`), event `BATTLE_FAINT`,
+    faint se vyhodnotí až po animaci (jen manuál – krokové kolo). **Zbývá:**
+    dodat další pozadí/biome + chybějící `back`/`front` sprity druhů; (faint
+    animace v auto módu – teď jen manuál).
   - **Fáze 2 – Auto / Manual:** ⚙ částečně (v0.28–0.29): **Auto battle**
     (`settings.autoBattle`) je samostatný přepínač MÓDU, oddělený od Pause/Resume
     (`running`). V auto módu běží automatická kola (`schedule()` je pustí jen když
@@ -304,8 +335,30 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
     akce `playerMove/Switch/Catch/Run` sdílí `runActions()` s `tick()`; ruční
     léčení přes Heal team. ✅ **popup nahrazení tahu** při plných 4 slotech
     (`moveLearnQueue` v save v14, `moveLearnView.js`, `resolveMoveLearn`).
-  - **Fáze 4 (později):** statusy, criticals, víc oblastí; auto-battle politika
-    (auto-AI výběr tahu, ⚪ zatím odloženo); Struggle recoil.
+  - **Fáze 4 (později):** víc oblastí; auto-battle politika (auto-AI výběr tahu,
+    ⚪ zatím odloženo); Struggle recoil.
+    ✅ **Kritické zásahy** (v0.42.0): ~1/16 šance, ×1.5 (`CRIT_CHANCE`/`CRIT_MULT`
+    v `calcMoveDamage`), hláška „A critical hit!", větší žluté číslo (`.dmg-float.is-crit`).
+    ✅ **Statusy poison/burn** (v0.42.0): data `ailment`/`ailmentChance` na tazích
+    (poison-sting 30 %, ember 10 %); `maybeInflict` (typová imunita Fire/Poison/Steel);
+    DoT na konci kola (`STATUS_DOT` 1/8, 1/16) – manuál krokově (`runEndOfRound`/
+    `processDot` s číslem a faint animací), auto synchronně (`applyStatusDotAuto`);
+    burn půlí fyzický damage; badge PSN/BRN (`statusBadge`).
+    ✅ **Perzistence + zobrazení + paralýza + léčení statusu** (v0.43.0, save v15):
+    status přesunut z běhového combatantu na **trvalý `owned.status`** (accessor v
+    `makeCombatant`, jako `hp`) → přežije switch i refresh, čistí ho až léčení.
+    Status nepřítele (mimo kolekci) se (de)serializuje v `serialize`/`restore`
+    (`enemy.status`, `playerStatus`). Migrace v15 dorovná `status:null`. **Paralýza:**
+    `PARALYSIS_FIZZLE=0.25` (šance vypadnutí tahu, bez spotřeby PP, kontrola v `useMove`),
+    `PARALYSIS_SPEED_MULT=0.5` (přes `effSpeed` v `turnOrder`), imunita Electric, zdroj
+    nový tah **Body Slam** (Normal, power 60, `ailment:"paralysis"` 30 %) v learnsetu
+    rattata L9 / pidgey L11. `useMove` nově zvládá **status tahy power 0** (jen navěsí
+    efekt) – seam pro Thunder Wave/Stun Spore. **Zobrazení:** sdílený `src/ui/statusBadge.js`
+    (PSN/BRN/PAR) v Battle Areně (oba), Teamu i kartě Pokémona. **Léčení:** `healTeam`
+    čistí i status; `healStatus(uid)` (tlačítko 💊 Cure v Teamu) sundá jen status bez HP/PP.
+    ✅ **Itemy proti statusu s cenou** (v0.45.0): Antidote/Burn Heal/Paralyze Heal/Full Heal
+    (viz sekce „Itemy & léčení"). **Zbývá:** další non-DoT statusy (spánek/zmrznutí),
+    čistě status tahy (Thunder Wave).
     ✅ **Doplňování PP v auto módu** (v0.33.0): linie **PP regen** v Poké Centru
     doplní % PP tahů po každé výhře (jen auto battle; 0 % dokud se nekoupí).
     ✅ **Plovoucí damage čísla** (v0.33.0): červené „-N" nad zasaženým bojovníkem

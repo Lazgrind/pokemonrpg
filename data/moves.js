@@ -22,6 +22,10 @@
  * @property {number} accuracy    šance na zásah v % (100 = skoro jistota; 101+/null = vždy)
  * @property {number} pp          maximální PP (počet použití)
  * @property {number} [priority]  vyšší jde dřív (výchozí 0) – zatím nevyužito
+ * @property {"poison"|"burn"|"paralysis"} [ailment]  status, který tah může způsobit
+ *                                     (poison/burn = poškození za kolo; paralysis =
+ *                                     šance přeskočit tah + poloviční Speed)
+ * @property {number} [ailmentChance]     šance (%) na způsobení statusu (výchozí 100)
  */
 
 /** @type {Move[]} */
@@ -32,9 +36,11 @@ export const MOVES = [
   // Quick Attack má v hrách prioritu (+1) – pole `priority` doplníme, až zapneme
   // pořadí podle priority; zatím se chová jako běžný tah.
   { id: "quick-attack", name: "Quick Attack", type: "Normal", category: "physical", power: 40, accuracy: 100, pp: 30, priority: 1 },
+  // Body Slam: silnější Normal útok se šancí na paralýzu (klasický zdroj PAR).
+  { id: "body-slam", name: "Body Slam", type: "Normal", category: "physical", power: 60, accuracy: 100, pp: 15, ailment: "paralysis", ailmentChance: 30 },
 
   // --- Fire ---
-  { id: "ember", name: "Ember", type: "Fire", category: "special", power: 40, accuracy: 100, pp: 25 },
+  { id: "ember", name: "Ember", type: "Fire", category: "special", power: 40, accuracy: 100, pp: 25, ailment: "burn", ailmentChance: 10 },
 
   // --- Water ---
   { id: "water-gun", name: "Water Gun", type: "Water", category: "special", power: 40, accuracy: 100, pp: 25 },
@@ -46,7 +52,7 @@ export const MOVES = [
   { id: "gust", name: "Gust", type: "Flying", category: "special", power: 40, accuracy: 100, pp: 35 },
 
   // --- Poison ---
-  { id: "poison-sting", name: "Poison Sting", type: "Poison", category: "physical", power: 15, accuracy: 100, pp: 35 },
+  { id: "poison-sting", name: "Poison Sting", type: "Poison", category: "physical", power: 15, accuracy: 100, pp: 35, ailment: "poison", ailmentChance: 30 },
 ];
 
 /** Rychlé vyhledání tahu podle id. */
