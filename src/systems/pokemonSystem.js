@@ -14,6 +14,9 @@
  */
 
 import { getSpecies } from "../../data/pokemon.js";
+import { getLearnset, movesAtLevel } from "../../data/learnsets.js";
+import { getMove } from "../../data/moves.js";
+import { getState } from "../core/state.js";
 
 let counter = 0;
 
@@ -28,6 +31,99 @@ export const EV_MAX_PER_STAT = 252;
 export const EV_MAX_TOTAL = 510;
 /** Šance na shiny při vzniku jedince (laditelné). Klasická hodnota z her. */
 export const SHINY_CHANCE = 1 / 8192;
+
+/** Maximální počet tahů, které může jedinec současně znát. */
+export const MAX_MOVES = 4;
+
+/**
+ * Výchozí tahy jedince daného druhu na daném levelu (z learnsetu, plné PP).
+ * Vrací pole slotů `{ id, pp, maxPp }` (0–4). Sdíleno vznikem i migrací save.
+ * @param {string} speciesId
+ * @param {number} level
+ * @returns {Array<{ id: string, pp: number, maxPp: number }>}
+ */
+export function defaultMovesFor(speciesId, level) {
+  return movesAtLevel(speciesId, level).map((id) => {
+    const mv = getMove(id);
+    const pp = mv?.pp ?? 0;
+    return { id, pp, maxPp: pp };
+  });
+}
+
+/**
+ * Naučí jedince tahy, které se jeho druh učí v rozsahu levelů (prevLevel, level].
+ * Přidává do VOLNÝCH slotů (max 4); když jsou plné, tah se NEzahazuje – zařadí se
+ * do fronty `moveLearnQueue` a hráč později zvolí nahrazení (viz moveLearnView).
+ * Mutuje jedince, vrací nově naučené id (jen ty rovnou přidané do volných slotů).
+ * @param {import("../core/state.js").OwnedPokemon} pokemon
+ * @param {number} prevLevel  level PŘED level-upem
+ * @returns {string[]} id tahů, které se nově naučil
+ */
+export function learnLevelUpMoves(pokemon, prevLevel) {
+  if (!Array.isArray(pokemon.moves)) pokemon.moves = [];
+  const learned = [];
+  for (const entry of getLearnset(pokemon.speciesId)) {
+    if (entry.level <= prevLevel || entry.level > pokemon.level) continue; // mimo rozsah
+    if (pokemon.moves.some((m) => m.id === entry.id)) continue; // už umí
+    const mv = getMove(entry.id);
+    if (!mv) continue;
+    if (pokemon.moves.length >= MAX_MOVES) {
+      queueMoveLearn(pokemon.uid, entry.id); // plné sloty → nabídnout nahrazení později
+      continue;
+    }
+    pokemon.moves.push({ id: entry.id, pp: mv.pp, maxPp: mv.pp });
+    learned.push(entry.id);
+  }
+  return learned;
+}
+
+/**
+ * Vrátí frontu čekajících nabídek naučení tahu (lazy inicializace na stavu).
+ * @returns {Array<{ uid: string, moveId: string }>}
+ */
+export function getMoveLearnQueue() {
+  const s = getState();
+  if (!Array.isArray(s.moveLearnQueue)) s.moveLearnQueue = [];
+  return s.moveLearnQueue;
+}
+
+/**
+ * Zařadí nabídku „jedinec chce nový tah, ale má plno" do fronty (bez duplikátů).
+ * Nekomituje – persistne ji až commit() volajícího kontextu (souboj/idle/load).
+ * @param {string} uid
+ * @param {string} moveId
+ */
+export function queueMoveLearn(uid, moveId) {
+  const q = getMoveLearnQueue();
+  if (q.some((e) => e.uid === uid && e.moveId === moveId)) return; // už čeká
+  q.push({ uid, moveId });
+}
+
+/**
+ * Vyřeší jednu nabídku z fronty: buď nahradí tah na `replaceIndex`, nebo
+ * (replaceIndex == null / -1) se hráč tahu vzdá. Vždy nabídku z fronty odebere.
+ * Nekomituje – volající (UI) po výsledku zavolá commit().
+ * @param {string} uid
+ * @param {string} moveId
+ * @param {number|null} [replaceIndex]  index slotu 0–3 k přepsání, nebo null/-1 = zahodit
+ * @returns {{ ok: boolean, replaced?: boolean }}
+ */
+export function resolveMoveLearn(uid, moveId, replaceIndex = null) {
+  const q = getMoveLearnQueue();
+  const i = q.findIndex((e) => e.uid === uid && e.moveId === moveId);
+  if (i >= 0) q.splice(i, 1); // odeber nabídku ať už dopadne jakkoli
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false };
+  if (replaceIndex == null || replaceIndex < 0) return { ok: true, replaced: false }; // vzdal se
+  const mv = getMove(moveId);
+  if (!mv) return { ok: false };
+  if (!Array.isArray(owned.moves)) owned.moves = [];
+  if (owned.moves.some((m) => m.id === moveId)) return { ok: true, replaced: false }; // mezitím už umí
+  const slot = { id: moveId, pp: mv.pp, maxPp: mv.pp };
+  if (replaceIndex >= owned.moves.length) owned.moves.push(slot);
+  else owned.moves[replaceIndex] = slot;
+  return { ok: true, replaced: true };
+}
 
 /** Vygeneruje rozumně unikátní uid pro jedince. */
 function makeUid(speciesId) {
@@ -79,17 +175,31 @@ export function rollShiny(chance = SHINY_CHANCE) {
 }
 
 /**
+ * Rozlosuje pohlaví jedince podle poměru pohlaví druhu (`genderRatio`).
+ * @param {import("../../data/pokemon.js").Species} species
+ * @returns {"m"|"f"|"genderless"}
+ */
+export function rollGender(species) {
+  const g = species?.genderRatio;
+  if (!g || g === "genderless") return "genderless";
+  return Math.random() < g.m ? "m" : "f";
+}
+
+/**
  * Vytvoří nového jedince daného druhu.
  * @param {string} speciesId
  * @param {number} [level=5]
- * @param {{ ivs?: object, evs?: object, shiny?: boolean, shinyChance?: number }} [opts]
- *        volitelné přepsání (využijí líhnutí/breeding pro lepší IV apod.)
+ * @param {{ ivs?: object, evs?: object, shiny?: boolean, shinyChance?: number, caughtBall?: string, gender?: "m"|"f"|"genderless" }} [opts]
+ *        volitelné přepsání (využijí líhnutí/breeding pro lepší IV apod.);
+ *        caughtBall = id ballu, ve kterém byl chycen (u startéra „poke",
+ *        u divokých se doplní až při chycení, u vylíhnutých zůstane prázdné);
+ *        gender = pohlaví (jinak se rozlosuje z genderRatio druhu)
  * @returns {import("../core/state.js").OwnedPokemon}
  */
 export function createPokemon(speciesId, level = 5, opts = {}) {
   const species = getSpecies(speciesId);
   if (!species) throw new Error(`Neznámý druh Pokémona: ${speciesId}`);
-  return {
+  const p = {
     uid: makeUid(speciesId),
     speciesId,
     level,
@@ -97,7 +207,13 @@ export function createPokemon(speciesId, level = 5, opts = {}) {
     ivs: opts.ivs ?? randomIvs(),
     evs: opts.evs ?? emptyEvs(),
     shiny: opts.shiny ?? rollShiny(opts.shinyChance),
+    caughtBall: opts.caughtBall ?? null,
+    gender: opts.gender ?? rollGender(species),
+    hp: 0, // doplní se níž na plné max HP
+    moves: defaultMovesFor(speciesId, level), // tahy z learnsetu (plné PP)
   };
+  p.hp = computeStats(p).maxHp; // nový jedinec začíná s plným HP
+  return p;
 }
 
 /**

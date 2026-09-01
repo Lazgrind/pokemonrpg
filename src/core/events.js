@@ -40,6 +40,7 @@ export const bus = createEventBus();
 export const EVENTS = {
   STATE_CHANGED: "state:changed",
   BATTLE_UPDATE: "battle:update",
+  BATTLE_HIT: "battle:hit",
   EGG_HATCHED: "egg:hatched",
   EGG_BRED: "egg:bred",
 };

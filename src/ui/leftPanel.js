@@ -1,14 +1,15 @@
 /**
- * leftPanel.js – levý panel se záložkami Tým / Kolekce / Město.
+ * leftPanel.js – levý panel se záložkami Tým / Pokédex / Město.
  * Rozvržení tří panelů zůstává; jen levý sloupec zpřehledňujeme záložkami.
  */
 
 import { renderCity } from "./cityView.js";
-import { renderTeamTab, renderCollectionTab } from "./teamView.js";
+import { renderTeamTab } from "./teamView.js";
+import { renderPokedexTab } from "./pokedexView.js";
 
 const TABS = [
   { id: "team", label: "Team" },
-  { id: "collection", label: "Collection" },
+  { id: "pokedex", label: "Pokédex" },
   { id: "city", label: "City" },
 ];
 
@@ -39,6 +40,6 @@ export function renderLeftPanel(root, onStatus = () => {}) {
 
   const content = root.querySelector("#tab-content");
   if (activeTab === "team") renderTeamTab(content, onStatus);
-  else if (activeTab === "collection") renderCollectionTab(content, onStatus);
+  else if (activeTab === "pokedex") renderPokedexTab(content, onStatus);
   else renderCity(content, onStatus);
 }

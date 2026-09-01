@@ -12,7 +12,8 @@ import {
   createNewGame,
   CURRENT_SAVE_VERSION,
 } from "../core/state.js";
-import { randomIvs, emptyEvs } from "./pokemonSystem.js";
+import { randomIvs, emptyEvs, rollGender, computeStats, defaultMovesFor } from "./pokemonSystem.js";
+import { getSpecies } from "../../data/pokemon.js";
 
 /** Klíč v localStorage. */
 const SAVE_KEY = "pokemonIdleRpg.save";
@@ -117,6 +118,54 @@ function migrate(data) {
   // takže tu jen posuneme verzi – staré save fungují beze změny chování.
   if (data.saveVersion < 8) {
     data.saveVersion = 8;
+  }
+  // v8 → v9: Pokédex (R-026). Přidáme prázdný seznam viděných druhů; chycené
+  // se odvozují z kolekce, takže staré save rovnou ukážou vše vlastněné jako
+  // „chyceno" a nic dalšího jako „viděno".
+  if (data.saveVersion < 9) {
+    if (!data.pokedex || typeof data.pokedex !== "object") data.pokedex = { seen: [] };
+    if (!Array.isArray(data.pokedex.seen)) data.pokedex.seen = [];
+    data.saveVersion = 9;
+  }
+  // v9 → v10: ball, ve kterém byl jedinec chycen (`caughtBall`). U starých
+  // jedinců ho zpětně neznáme – nastavíme rozumný výchozí „poke" (naprostá
+  // většina raných úlovků), ať se ikona na kartě ukáže i u dosavadní kolekce.
+  if (data.saveVersion < 10) {
+    for (const p of data.collection ?? []) {
+      if (p.caughtBall === undefined) p.caughtBall = "poke";
+    }
+    data.saveVersion = 10;
+  }
+  // v10 → v11: pohlaví jedince (`gender`). U stávajících jedinců ho rozlosujeme
+  // z poměru pohlaví druhu (jednorázově), ať mají všichni platné pohlaví.
+  if (data.saveVersion < 11) {
+    for (const p of data.collection ?? []) {
+      if (p.gender === undefined) p.gender = rollGender(getSpecies(p.speciesId));
+    }
+    data.saveVersion = 11;
+  }
+  // v11 → v12: trvalé aktuální HP na jedinci (`hp`). Stávajícím doplníme plné
+  // max HP, ať začínají „zdraví" (dřív se HP drželo jen běhově v souboji).
+  if (data.saveVersion < 12) {
+    for (const p of data.collection ?? []) {
+      if (typeof p.hp !== "number") p.hp = computeStats(p).maxHp;
+    }
+    data.saveVersion = 12;
+  }
+  // v12 → v13: tahy na jedinci (`moves`). Stávajícím doplníme tahy z learnsetu
+  // podle jejich aktuálního levelu, s plnými PP (dřív jedinci žádné tahy neměli).
+  if (data.saveVersion < 13) {
+    for (const p of data.collection ?? []) {
+      if (!Array.isArray(p.moves)) p.moves = defaultMovesFor(p.speciesId, p.level);
+    }
+    data.saveVersion = 13;
+  }
+  // v13 → v14: fronta nabídek naučení tahu (`moveLearnQueue`). Když jedinec
+  // levelováním získá nový tah, ale má plné 4 sloty, čeká zde na hráčovu volbu
+  // nahrazení. Starým save doplníme prázdnou frontu.
+  if (data.saveVersion < 14) {
+    if (!Array.isArray(data.moveLearnQueue)) data.moveLearnQueue = [];
+    data.saveVersion = 14;
   }
   return data;
 }

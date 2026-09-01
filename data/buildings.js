@@ -26,6 +26,7 @@
  * @property {number} maxLevel
  * @property {number} baseCost       cena prvního vylepšení (gold)
  * @property {number} growth         násobitel ceny za úroveň
+ * @property {number} [perLevel]     efekt na úroveň v % (linie počítané procenty, např. PP regen)
  */
 
 /** @type {BuildingDef[]} */
@@ -48,11 +49,17 @@ export const BUILDINGS = [
     icon: "🏥",
     color: "#e0524e",
     sprite: "assets/buildings/poke-center.png",
-    description: "After each victory, heals part of the active Pokémon's max HP. Upgrades heal more.",
+    description: "After each victory, heals part of the active Pokémon's max HP. Upgrades heal more. A separate PP Regen line also tops up move PP after wins.",
     startLevel: 1,
     maxLevel: 50,
     upgrade: { baseCost: 50, growth: 1.12 },
     heal: { basePercent: 1, perLevel: 1, maxPercent: 50 },
+    // Samostatná linie: doplnění PP tahů po výhře (auto battle). Level 0 = žádné
+    // (výchozí), každá úroveň +perLevel %, cap 100 % na maxLevel. Efekt v
+    // buildingSystem.ppRegenPercent(), aplikace v battleSystem po výhře.
+    tracks: {
+      ppRegen: { name: "PP regen", icon: "💧", startLevel: 0, maxLevel: 100, baseCost: 120, growth: 1.1, perLevel: 1 },
+    },
   },
   {
     id: "day-care",

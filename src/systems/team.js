@@ -7,6 +7,8 @@
 
 import { getState, commit, MAX_TEAM_SIZE } from "../core/state.js";
 import { createPokemon, STAT_KEYS, emptyEvs } from "./pokemonSystem.js";
+import { pokemonEngagement } from "./buildingSystem.js";
+import { ensureStartersSeen } from "./pokedex.js";
 
 /**
  * Výběr startovního Pokémona – jen dokud je kolekce prázdná.
@@ -16,9 +18,10 @@ import { createPokemon, STAT_KEYS, emptyEvs } from "./pokemonSystem.js";
 export function chooseStarter(speciesId) {
   const s = getState();
   if (s.collection.length > 0) return false;
-  const p = createPokemon(speciesId, 5);
+  const p = createPokemon(speciesId, 5, { caughtBall: "poke" }); // startér přichází v Poké Ballu
   s.collection.push(p);
   s.team.push(p.uid);
+  ensureStartersSeen(); // všechny startéry jsme viděli na výběrové obrazovce
   commit();
   return true;
 }
@@ -91,6 +94,9 @@ export function addToTeam(uid) {
   if (s.team.includes(uid)) return false;
   if (s.team.length >= MAX_TEAM_SIZE) return false;
   if (!s.collection.some((p) => p.uid === uid)) return false;
+  // Jedinec může být jen na jednom místě: ve Školce (výcvik) nebo breedingu
+  // ho nejdřív musíš vyzvednout. UI ho jako přidatelného ani nenabízí.
+  if (pokemonEngagement(uid)) return false;
   s.team.push(uid);
   commit();
   return true;

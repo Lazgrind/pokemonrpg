@@ -9,15 +9,42 @@ import { getState } from "../core/state.js";
 import {
   getBattle,
   toggleBattle,
-  setSpeed,
   attemptCatch,
   getCatchChance,
   getAutocatch,
   setAutocatch,
+  getAutoBattle,
+  setAutoBattle,
   getSelectedBall,
   setSelectedBall,
+  healTeam,
+  teamNeedsHeal,
+  playerMove,
+  playerSwitch,
+  playerCatch,
+  playerRun,
+  nextEncounter,
+  hpOf,
+  lootLabel,
 } from "../systems/battleSystem.js";
-import { POKEBALLS } from "../../data/pokeballs.js";
+import { POKEBALLS, getPokeball } from "../../data/pokeballs.js";
+import { xpForNextLevel } from "../systems/progression.js";
+import { ballIconHtml } from "./ballIcon.js";
+import { spriteImg } from "./sprites.js";
+import { getTeamPokemon } from "../systems/team.js";
+import { computeStats } from "../systems/pokemonSystem.js";
+import { getSpecies } from "../../data/pokemon.js";
+import { getMove } from "../../data/moves.js";
+import { isCaught } from "../systems/pokedex.js";
+import { typeColor, typeBadge } from "./typeColors.js";
+
+/** Podmenu manuálního souboje (jen manuál mód): root | fight | bag | switch. */
+let menuMode = "root";
+/** Poslední root pro překreslení při navigaci v podmenu (bez BATTLE_UPDATE). */
+let lastRoot = null;
+
+/** Ikona kategorie tahu pro tlačítka útoků. */
+const CAT_ICON = { physical: "💥", special: "✨", status: "🌀" };
 
 let subscribed = false;
 
@@ -29,30 +56,353 @@ export function renderBattle(root) {
   draw(root);
   if (!subscribed) {
     bus.on(EVENTS.BATTLE_UPDATE, () => draw(root));
+    bus.on(EVENTS.BATTLE_HIT, (hit) => spawnDamage(root, hit));
     subscribed = true;
   }
 }
 
-/** HTML jednoho bojovníka (nepřítel nahoře, hráč dole). */
-function combatantHtml(c, side) {
+/**
+ * Vyhodí nad zasaženého bojovníka plovoucí „-N" (červené číslo, které vylétne
+ * a zmizí). Spawnuje se až po překreslení scény, takže přežije redraw kola.
+ * @param {HTMLElement} root
+ * @param {{ side: "enemy"|"player", dmg: number }} hit
+ */
+function spawnDamage(root, hit) {
+  if (!hit || !hit.dmg) return;
+  const sprite = root.querySelector(`.battle-field .combatant.${hit.side} .battle-sprite`);
+  if (!sprite) return;
+  const el = document.createElement("span");
+  el.className = "dmg-float";
+  el.textContent = `-${hit.dmg}`;
+  sprite.appendChild(el);
+  el.addEventListener("animationend", () => el.remove());
+  setTimeout(() => el.remove(), 1200); // pojistka, kdyby animationend nepřišel
+}
+
+/**
+ * HTML jednoho bojovníka.
+ * @param c      bojovník ze souboje (ref = jedinec, stats, hp)
+ * @param side   "enemy" | "player" (řídí barvu a stranu spritu)
+ * @param view   pohled spritu: soupeř `front`, náš Pokémon `back`
+ * @param showXp přidá EXP bar (jen náš Pokémon – divoký nepřítel XP nesbírá)
+ */
+function combatantHtml(c, side, view, showXp = false) {
   const pct = Math.max(0, Math.round((c.hp / c.stats.maxHp) * 100));
   const low = pct <= 25 ? " low" : "";
-  const types = c.types.map((t) => `<span class="type">${t}</span>`).join("");
+  const types = c.types.map(typeBadge).join("");
   const name = `${c.ref.shiny ? "✨ " : ""}${c.name}`;
+
+  const sprite = spriteImg(c.ref.speciesId, {
+    view,
+    shiny: !!c.ref.shiny,
+    gender: c.ref.gender,
+    alt: c.name,
+    extraClass: "battle-sprite",
+  });
+
+  let xpHtml = "";
+  if (showXp) {
+    const need = xpForNextLevel(c.ref.level);
+    const xpPct = Math.max(0, Math.min(100, Math.round((c.ref.xp / need) * 100)));
+    xpHtml = `
+      <div class="xpbar"><div class="xpfill" style="width:${xpPct}%"></div></div>
+      <div class="hptext">${c.ref.xp} / ${need} XP</div>`;
+  }
+
+  // U soupeře skrýváme číselné HP (hráč nemá znát přesné hodnoty) – bar zůstává.
+  const hpText =
+    side === "player"
+      ? `<div class="hptext">${c.hp} / ${c.stats.maxHp} HP</div>`
+      : "";
+
   return `
     <div class="combatant ${side}">
-      <div class="c-head"><strong>${name}</strong> · Lv ${c.ref.level} ${types}</div>
-      <div class="hpbar"><div class="hpfill${low}" style="width:${pct}%"></div></div>
-      <div class="hptext">${c.hp} / ${c.stats.maxHp} HP</div>
+      ${sprite}
+      <div class="c-info">
+        <div class="c-head"><strong>${name}</strong> · Lv ${c.ref.level} ${types}</div>
+        <div class="hpbar"><div class="hpfill${low}" style="width:${pct}%"></div></div>
+        ${hpText}
+        ${xpHtml}
+      </div>
     </div>`;
 }
 
+/**
+ * Hlavička okna: nadpis vlevo, vpravo nahoře ovládání –
+ * Pause/Resume (pozastavení souboje) + přepínače Auto battle a Auto catch
+ * a výběr auto-catch módu (All / Shiny only). `b` může být null (žádný souboj).
+ */
+function headHtml(b) {
+  const ac = getAutocatch();
+  const pauseBtn =
+    b && !b.result
+      ? `<button class="btn head-btn" id="battle-toggle">${b.running ? "⏸ Pause" : "▶ Resume"}</button>`
+      : "";
+  // Catch tlačítko patří do lišty jen v Auto módu (v manuálu se chytá přes Items).
+  // Když dojdou Poké Bally, tlačítko rovnou hlásí „No Poké Balls" (i tooltip).
+  let catchBtn = "";
+  if (b && !b.result && getAutoBattle()) {
+    const balls = getState().resources.balls ?? {};
+    const selCount = balls[getSelectedBall()] ?? 0;
+    const canCatch = b.enemy && b.enemy.hp > 0 && selCount > 0;
+    if (selCount <= 0) {
+      catchBtn = `<button class="btn head-btn catch-btn" id="catch-btn" disabled title="No Poké Balls — buy some in the Poké Mart.">🔴 No Poké Balls</button>`;
+    } else {
+      const pctLabel = canCatch ? ` (${Math.round(getCatchChance() * 100)}%)` : "";
+      catchBtn = `<button class="btn head-btn catch-btn" id="catch-btn" ${canCatch ? "" : "disabled"}>🔴 Catch${pctLabel}</button>`;
+    }
+  }
+  const acMode = `<select id="ac-mode" class="ac-mode" ${ac.enabled ? "" : "disabled"} title="Auto catch: which Pokémon to catch">
+      <option value="all" ${ac.mode === "all" ? "selected" : ""}>All</option>
+      <option value="shiny" ${ac.mode === "shiny" ? "selected" : ""}>Shiny only</option>
+    </select>`;
+  return `<div class="battle-head">
+    <h2 class="panel-title">Battle Area${b ? ` — ${b.area.name}` : ""}</h2>
+    <div class="battle-toggles">
+      ${pauseBtn}
+      ${catchBtn}
+      <label class="tg"><input type="checkbox" id="tg-autobattle" ${getAutoBattle() ? "checked" : ""}/> Auto battle</label>
+      <label class="tg"><input type="checkbox" id="tg-autocatch" ${ac.enabled ? "checked" : ""}/> Auto catch</label>
+      ${acMode}
+    </div>
+  </div>`;
+}
+
+/**
+ * Řádek pod logem v side baru. V AUTO módu je vše (Catch i stav „došly balls")
+ * nahoře v liště souboje, takže tady nic není. V MANUÁLNÍM módu je herní menu
+ * překryté přímo ve scéně (viz {@link battleCmdHtml}) a tady je jen řádek na hlášku.
+ */
+function bottomControlsHtml(b) {
+  if (getAutoBattle()) return "";
+  return `<div id="battle-msg" class="placeholder" style="margin-top:6px"></div>`;
+}
+
+/** Zda se v manuálním módu teď dá hrát (a tedy zobrazit menu ve scéně). */
+function manualPlayable(b) {
+  return !getAutoBattle() && b.running && !b.result && b.enemy && b.enemy.hp > 0;
+}
+
+/**
+ * Manuální bojové menu překryté ve scéně. Kořen je lišta 4 dlaždic dole
+ * (Battle / Run / Items / Switch); podmenu je překryvné okno (cmd-panel) –
+ * u Battle navíc s panelem soupeře (info jen u chyceného druhu).
+ */
+function battleCmdHtml(b) {
+  if (menuMode === "fight")
+    return `<div class="battle-cmd cmd-panel">${enemyInfoHtml(b)}${fightMenuHtml(b)}</div>`;
+  if (menuMode === "bag")
+    return `<div class="battle-cmd cmd-panel">${bagMenuHtml(b)}</div>`;
+  if (menuMode === "switch")
+    return `<div class="battle-cmd cmd-panel">${switchMenuHtml(b)}</div>`;
+  return `<div class="battle-cmd cmd-root">${rootMenuHtml()}</div>`;
+}
+
+/**
+ * Panel soupeře nad útoky: sprite, jméno, level. Typ a base staty se ukážou
+ * jen když už máš daný druh chycený (v Pokédexu); jinak „???" a pobídka chytit.
+ */
+function enemyInfoHtml(b) {
+  const e = b.enemy;
+  const sp = getSpecies(e.ref.speciesId);
+  const caught = isCaught(e.ref.speciesId);
+  const name = `${e.ref.shiny ? "✨ " : ""}${e.name}`;
+  const sprite = spriteImg(e.ref.speciesId, {
+    view: "front",
+    shiny: !!e.ref.shiny,
+    gender: e.ref.gender,
+    alt: e.name,
+    extraClass: "cmd-enemy-sprite",
+  });
+  const head = `<div class="cmd-enemy-head"><strong>${name}</strong> · Lv ${e.ref.level}</div>`;
+
+  if (!caught) {
+    return `<div class="cmd-enemy">
+      ${sprite}
+      <div class="cmd-enemy-info">
+        ${head}
+        <div class="cmd-enemy-types"><span class="type">???</span></div>
+        <p class="placeholder cmd-enemy-note">Not in your Pokédex yet — catch one to reveal its type and base stats.</p>
+      </div>
+    </div>`;
+  }
+
+  const bs = sp?.baseStats ?? {};
+  const types = e.types.map(typeBadge).join("");
+  const stat = (label, v) =>
+    `<span class="bs"><span class="bs-l">${label}</span><span class="bs-v">${v ?? "—"}</span></span>`;
+  return `<div class="cmd-enemy">
+    ${sprite}
+    <div class="cmd-enemy-info">
+      ${head}
+      <div class="cmd-enemy-types">${types}</div>
+      <div class="cmd-bstats">
+        ${stat("HP", bs.hp)}${stat("Atk", bs.attack)}${stat("Def", bs.defense)}
+        ${stat("SpA", bs.spAttack)}${stat("SpD", bs.spDefense)}${stat("Spe", bs.speed)}
+      </div>
+    </div>
+  </div>`;
+}
+
+/** Kořenové menu manuálního souboje: 4 dlaždice vedle sebe (lišta dole). */
+function rootMenuHtml() {
+  return `
+    <button class="btn menu-btn" data-menu="fight">Battle</button>
+    <button class="btn menu-btn" data-menu="run">Run</button>
+    <button class="btn menu-btn" data-menu="bag">Items</button>
+    <button class="btn menu-btn" data-menu="switch">Switch</button>`;
+}
+
+/** Podmenu Battle: 4 tahy (jméno/typ/PP), nebo Struggle když došly PP. */
+function fightMenuHtml(b) {
+  const moves = b.player.ref.moves ?? [];
+  const anyPp = moves.some((m) => (m.pp ?? 0) > 0);
+  let btns;
+  if (!anyPp) {
+    btns = `<button class="btn move-btn struggle" data-move="0">
+      <span class="move-name">💢 Struggle</span>
+      <span class="move-sub">no PP left</span>
+    </button>`;
+  } else {
+    btns =
+      moves
+        .map((m, i) => {
+          const mv = getMove(m.id);
+          if (!mv) return "";
+          const out = (m.pp ?? 0) <= 0;
+          return `<button class="btn move-btn move-typed" data-move="${i}" style="--tc:${typeColor(mv.type)}" ${out ? "disabled" : ""}>
+            <span class="move-name">${CAT_ICON[mv.category] ?? ""} ${mv.name}</span>
+            <span class="move-sub">${mv.type ?? "—"} · PP ${m.pp}/${m.maxPp}</span>
+          </button>`;
+        })
+        .join("") || `<p class="placeholder">This Pokémon knows no moves.</p>`;
+  }
+  return `<div class="move-grid">${btns}</div>
+    <button class="btn btn-sm menu-back" data-menu="root">← Back</button>`;
+}
+
+/** Podmenu Items (batoh): výběr ballu + hod. Zatím jen Poké Bally. */
+function bagMenuHtml(b) {
+  const balls = getState().resources.balls ?? {};
+  const owned = POKEBALLS.filter((ball) => (balls[ball.id] ?? 0) > 0);
+  const selected = getSelectedBall();
+  const selCount = balls[selected] ?? 0;
+  const canCatch = b.enemy && b.enemy.hp > 0 && selCount > 0;
+  const catchPct = Math.round(getCatchChance() * 100);
+  if (!owned.length) {
+    return `<p class="placeholder">No Poké Balls — buy some in the Poké Mart.</p>
+      <button class="btn btn-sm menu-back" data-menu="root">← Back</button>`;
+  }
+  const chips = owned
+    .map(
+      (ball) =>
+        `<button class="ball-chip ${ball.id === selected ? "active" : ""}" data-ball="${ball.id}" title="${ball.name} — ${ball.desc}">${ballIconHtml(ball.id, { size: 16 })} ${balls[ball.id]}</button>`
+    )
+    .join("");
+  return `<div class="ball-picker">${chips}</div>
+    <button class="btn move-btn" id="throw-ball" ${canCatch ? "" : "disabled"}>🔴 Throw ${getPokeball(selected)?.name ?? "Ball"}${canCatch ? ` (${catchPct}%)` : ""}</button>
+    <button class="btn btn-sm menu-back" data-menu="root">← Back</button>`;
+}
+
+/** Podmenu Switch: seznam týmu s HP; klik prohodí (živého, nenasazeného). */
+function switchMenuHtml(b) {
+  const team = getTeamPokemon();
+  const tiles = team
+    .map((p, i) => {
+      const sp = getSpecies(p.speciesId);
+      const max = computeStats(p).maxHp;
+      const hp = Math.max(0, Math.min(max, hpOf(p)));
+      const active = i === b.teamCursor;
+      const fainted = hp <= 0;
+      const pct = Math.round((hp / max) * 100);
+      const low = fainted ? " fainted" : pct <= 25 ? " low" : "";
+      const tail = active ? " · in battle" : fainted ? " · fainted" : "";
+      return `<button class="btn switch-tile${active ? " active" : ""}" data-switch="${p.uid}" ${active || fainted ? "disabled" : ""}>
+        <span class="sw-name">${p.shiny ? "✨ " : ""}${sp?.name ?? p.speciesId} <span class="placeholder">Lv ${p.level}</span></span>
+        <span class="hpbar"><span class="hpfill${low}" style="width:${pct}%"></span></span>
+        <span class="sw-hp">${hp}/${max} HP${tail}</span>
+      </button>`;
+    })
+    .join("");
+  return `<div class="switch-list">${tiles}</div>
+    <button class="btn btn-sm menu-back" data-menu="root">← Back</button>`;
+}
+
+/**
+ * Výherní / chytací okno mezi souboji (JEN manuální mód). Po výhře ukáže
+ * odměnu, po chycení „hozený" ball s Pokémonem uvnitř. Obě verze mají tlačítko
+ * „Next battle" (nasadí dalšího soupeře, viz {@link nextEncounter}).
+ */
+function interludeHtml(b) {
+  const il = b.interlude;
+  const e = il.enemy;
+  const enemyName = `${e.shiny ? "✨ " : ""}${e.name}`;
+
+  if (il.kind === "catch") {
+    const sprite = spriteImg(e.speciesId, {
+      view: "front",
+      shiny: !!e.shiny,
+      gender: e.gender,
+      alt: e.name,
+      extraClass: "catch-mon-sprite",
+    });
+    const oc = il.outcome ?? {};
+    let sub;
+    if (oc.added) sub = `${enemyName} was added to your collection!`;
+    else if (oc.improvements && oc.improvements.length)
+      sub = `A better ${enemyName} — improved ${oc.improvements.join(", ")} (the previous one was released).`;
+    else sub = `${enemyName} caught, but your own was better — released.`;
+
+    return `<div class="battle-result is-catch">
+      <div class="result-title">Gotcha!</div>
+      <div class="catch-visual">
+        <span class="catch-mon">${sprite}</span>
+        <span class="catch-ball">${ballIconHtml(il.ball, { size: 84 })}</span>
+      </div>
+      <div class="result-name">${enemyName} <span class="placeholder">Lv ${e.level}</span></div>
+      <p class="result-sub">${sub}</p>
+      <button class="btn over-btn" id="next-encounter">Next battle ▶</button>
+    </div>`;
+  }
+
+  // kind === "win"
+  const r = il.rewards ?? {};
+  const sprite = spriteImg(e.speciesId, {
+    view: "front",
+    shiny: !!e.shiny,
+    gender: e.gender,
+    alt: e.name,
+    extraClass: "result-mon-sprite",
+  });
+  const rows = [];
+  rows.push(`<li>✨ <b>+${r.xp ?? 0}</b> XP</li>`);
+  rows.push(`<li>💰 <b>+${r.gold ?? 0}</b> gold</li>`);
+  for (const d of r.loot ?? []) rows.push(`<li>🎁 <b>+${d.amount}</b> ${lootLabel(d.resource)}</li>`);
+  if (r.egg) {
+    const eggName = getSpecies(r.egg.speciesId)?.name ?? r.egg.speciesId;
+    rows.push(`<li>🥚 ${eggName} Egg</li>`);
+  }
+  if (r.leveled) rows.push(`<li class="lvl-up">⬆ Reached <b>Lv ${r.newLevel}</b>!</li>`);
+
+  return `<div class="battle-result is-win">
+    <div class="result-title">Victory!</div>
+    <div class="result-enemy">
+      <span class="result-mon">${sprite}</span>
+      <span class="result-name">${enemyName} <span class="placeholder">Lv ${e.level}</span> defeated</span>
+    </div>
+    <ul class="result-rewards">${rows.join("")}</ul>
+    <button class="btn over-btn" id="next-encounter">Next battle ▶</button>
+  </div>`;
+}
+
 function draw(root) {
+  lastRoot = root;
   const b = getBattle();
 
   if (!b) {
+    menuMode = "root"; // příští souboj začne v kořenovém menu
     root.innerHTML = `
-      <h2 class="panel-title">Battle Area</h2>
+      ${headHtml(null)}
       <p class="placeholder">No battle yet. Build a team and start it.</p>
       <button class="btn" id="battle-toggle">▶ Start battle</button>
       <div id="battle-msg" class="placeholder" style="margin-top:8px"></div>
@@ -61,59 +411,49 @@ function draw(root) {
     return;
   }
 
-  const speeds = [1, 2, 4]
-    .map(
-      (s) => `<button class="btn spd ${b.speed === s ? "active" : ""}" data-speed="${s}">${s}×</button>`
-    )
-    .join("");
-
-  const ac = getAutocatch();
-  const balls = getState().resources.balls ?? {};
-  const owned = POKEBALLS.filter((ball) => (balls[ball.id] ?? 0) > 0);
-  const selected = getSelectedBall();
-  const selCount = balls[selected] ?? 0;
-  const canCatch = !b.result && b.enemy && b.enemy.hp > 0 && selCount > 0;
-  const catchPct = Math.round(getCatchChance() * 100);
-
-  const ballChips = owned.length
-    ? owned
-        .map(
-          (ball) =>
-            `<button class="ball-chip ${ball.id === selected ? "active" : ""}" data-ball="${ball.id}" title="${ball.name} — ${ball.desc}">${ball.icon} ${balls[ball.id]}</button>`
-        )
-        .join("")
-    : `<span class="placeholder">No Poké Balls — buy some in the Poké Mart.</span>`;
+  const defeated = b.result === "defeat";
+  const interlude = !defeated && !!b.interlude;
+  const showCmd = !defeated && !interlude && manualPlayable(b);
 
   root.innerHTML = `
-    <h2 class="panel-title">Battle Area — ${b.area.name}</h2>
-    <div class="battle-field">
-      ${combatantHtml(b.enemy, "enemy")}
-      <div class="vs">VS</div>
-      ${combatantHtml(b.player, "player")}
-    </div>
-    <div class="battle-controls">
-      <button class="btn" id="battle-toggle">
-        ${b.result ? "▶ New battle" : b.running ? "⏸ Pause" : "▶ Resume"}
-      </button>
-      <span class="speed-group">${speeds}</span>
-    </div>
-    <div class="catch-controls">
-      <button class="btn catch-btn" id="catch-btn" ${canCatch ? "" : "disabled"}>
-        🔴 Catch${b.enemy && b.enemy.hp > 0 && selCount > 0 ? ` (${catchPct}%)` : ""}
-      </button>
-      <label class="autocatch-toggle">
-        <input type="checkbox" id="ac-enabled" ${ac.enabled ? "checked" : ""} />
-        Autocatch
-      </label>
-      <div class="autocatch-filters${ac.enabled ? "" : " hidden"}">
-        <label><input type="checkbox" data-ac="newSpecies" ${ac.newSpecies ? "checked" : ""} /> New species</label>
-        <label><input type="checkbox" data-ac="betterIvs" ${ac.betterIvs ? "checked" : ""} /> Better IVs</label>
-        <label><input type="checkbox" data-ac="shiny" ${ac.shiny ? "checked" : ""} /> Shiny</label>
+    ${headHtml(b)}
+    <div class="battle-body">
+      <div class="battle-field${defeated ? " is-over" : ""}${interlude ? " is-result" : ""}${showCmd ? " has-cmd" : ""}">
+        <div class="bg"${b.background ? ` style="background-image:url('${b.background}')"` : ""}></div>
+        ${combatantHtml(b.enemy, "enemy", "front")}
+        <div class="vs">VS</div>
+        ${combatantHtml(b.player, "player", "back", true)}
+        ${showCmd ? battleCmdHtml(b) : ""}
+        ${interlude ? interludeHtml(b) : ""}
+        ${defeated
+          ? `<div class="battle-over">
+               <div class="over-title">Defeated</div>
+               <p class="over-sub">Your whole team fainted.</p>
+               <div class="over-actions">
+                 ${teamNeedsHeal()
+                   ? `<button class="btn over-btn" id="heal-team">🏥 Heal team</button>`
+                   : `<div class="over-healed">✓ Team healed — ready to go</div>`}
+                 <button class="btn over-btn" id="new-battle">▶ New battle</button>
+               </div>
+             </div>`
+          : ""}
       </div>
+      <aside class="battle-side">
+        <div class="battle-info">${b.log
+          .slice(-30)
+          .map((l) => {
+            const text = typeof l === "string" ? l : l.text;
+            const side = typeof l === "string" ? "neutral" : l.side ?? "neutral";
+            return `<div class="log-line log-${side}">${text}</div>`;
+          })
+          .join("")}</div>
+        ${defeated ? "" : bottomControlsHtml(b)}
+      </aside>
     </div>
-    <div class="ball-picker">${ballChips}</div>
-    <div class="battle-log">${b.log.slice(-8).map((l) => `<div>${l}</div>`).join("")}</div>
   `;
+  // „Textbox" se posune na nejnovější hlášku (jako v klasické hře).
+  const info = root.querySelector(".battle-info");
+  if (info) info.scrollTop = info.scrollHeight;
   wire(root);
 }
 
@@ -128,9 +468,25 @@ function wire(root) {
       }
     });
   }
-  root.querySelectorAll("[data-speed]").forEach((b) =>
-    b.addEventListener("click", () => setSpeed(Number(b.dataset.speed)))
-  );
+  // „New battle" po prohře (overlay přímo ve scéně).
+  const newBattle = root.querySelector("#new-battle");
+  if (newBattle) newBattle.addEventListener("click", () => toggleBattle());
+
+  // „Next battle" ve výherním/chytacím okně (manuální mód) → další soupeř.
+  const nextBtn = root.querySelector("#next-encounter");
+  if (nextBtn) nextBtn.addEventListener("click", () => nextEncounter());
+
+  // Rychlé vyléčení týmu přímo z obrazovky prohry (bez proklikávání města).
+  const healBtn = root.querySelector("#heal-team");
+  if (healBtn) healBtn.addEventListener("click", () => healTeam()); // redraw → tlačítko vystřídá „Team healed"
+
+  // Přepínače vpravo nahoře.
+  const tgAuto = root.querySelector("#tg-autobattle");
+  if (tgAuto) tgAuto.addEventListener("change", (e) => setAutoBattle(e.target.checked));
+  const tgCatch = root.querySelector("#tg-autocatch");
+  if (tgCatch) tgCatch.addEventListener("change", (e) => setAutocatch({ enabled: e.target.checked }));
+  const acMode = root.querySelector("#ac-mode");
+  if (acMode) acMode.addEventListener("change", (e) => setAutocatch({ mode: e.target.value }));
 
   const catchBtn = root.querySelector("#catch-btn");
   if (catchBtn) catchBtn.addEventListener("click", () => attemptCatch());
@@ -139,11 +495,49 @@ function wire(root) {
     chip.addEventListener("click", () => setSelectedBall(chip.dataset.ball))
   );
 
-  const acEnabled = root.querySelector("#ac-enabled");
-  if (acEnabled) {
-    acEnabled.addEventListener("change", (e) => setAutocatch({ enabled: e.target.checked }));
-  }
-  root.querySelectorAll("[data-ac]").forEach((cb) =>
-    cb.addEventListener("change", (e) => setAutocatch({ [cb.dataset.ac]: e.target.checked }))
+  /* --- Manuální bojové menu --- */
+  const showMsg = (msg) => {
+    const m = root.querySelector("#battle-msg");
+    if (m) m.textContent = msg ?? "";
+  };
+
+  // Navigace v menu (fight/bag/switch/root) + Run.
+  root.querySelectorAll("[data-menu]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      const to = btn.dataset.menu;
+      if (to === "run") {
+        playerRun(); // ukončí souboj → redraw na start
+        return;
+      }
+      menuMode = to; // fight | bag | switch | root
+      draw(root); // lokální překreslení (bez akce v souboji)
+    })
+  );
+
+  // Útok (index slotu). Před akcí zpět do rootu, ať po odehrání kola vidíme menu.
+  root.querySelectorAll("[data-move]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      menuMode = "root";
+      const r = playerMove(Number(btn.dataset.move));
+      if (!r.ok) showMsg(r.reason);
+    })
+  );
+
+  // Hod ballem z batohu.
+  const throwBtn = root.querySelector("#throw-ball");
+  if (throwBtn)
+    throwBtn.addEventListener("click", () => {
+      menuMode = "root";
+      const r = playerCatch();
+      if (!r.ok) showMsg(r.reason);
+    });
+
+  // Prohození Pokémona.
+  root.querySelectorAll("[data-switch]").forEach((tile) =>
+    tile.addEventListener("click", () => {
+      menuMode = "root";
+      const r = playerSwitch(tile.dataset.switch);
+      if (!r.ok) showMsg(r.reason);
+    })
   );
 }

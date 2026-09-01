@@ -8,6 +8,7 @@
 
 import { getBuilding } from "../../data/buildings.js";
 import { POKEBALLS } from "../../data/pokeballs.js";
+import { ballIconHtml } from "./ballIcon.js";
 import {
   getLevel,
   isMaxed,
@@ -16,6 +17,7 @@ import {
   ballPrice,
   buyBall,
   healPercent,
+  ppRegenPercent,
   daycareXpPerMinute,
   getDaycareOccupant,
   setDaycareOccupant,
@@ -33,6 +35,7 @@ import {
 import { breedingStatus } from "../systems/breedingSystem.js";
 import { canBreedSpecies, BREED_MINUTES, INHERIT_IV_COUNT } from "../../data/breeding.js";
 import { isBallUnlocked } from "../systems/pokeballSystem.js";
+import { healTeam } from "../systems/battleSystem.js";
 import {
   getEggs,
   incubationList,
@@ -98,14 +101,22 @@ export function openBuilding(id, onStatus = () => {}) {
       actions.push(`<button class="btn" data-act="market">🛒 Market</button>`);
     }
 
-    // Pokémon Centrum: doléčení HP po výhře (výše se ladí v Upgrades).
+    // Pokémon Centrum: ruční doléčení celého týmu + auto doléčení po výhře
+    // (auto battle mód; výše se ladí v Upgrades).
     if (def.heal) {
       const pct = healPercent(id);
       const cap = def.heal.maxPercent ?? Infinity;
       const atCap = pct >= cap;
       stats.push(
-        `<span>🏥 Heal after victory: <strong>${pct} %</strong> max HP${atCap ? " (cap)" : ""}</span>`
+        `<span>🏥 Auto-heal after victory (Auto battle): <strong>${pct} %</strong> max HP${atCap ? " (cap)" : ""}</span>`
       );
+      if (def.tracks?.ppRegen) {
+        const ppPct = ppRegenPercent(id);
+        stats.push(
+          `<span>💧 PP regen after victory (Auto battle): <strong>${ppPct} %</strong> move PP</span>`
+        );
+      }
+      actions.push(`<button class="btn" data-act="heal">🏥 Heal team</button>`);
     }
 
     // Školka: pasivní XP pro svěřence + inkubace vajec (Egg Breeders).
@@ -190,6 +201,13 @@ export function openBuilding(id, onStatus = () => {}) {
 
     const market = overlay.querySelector('[data-act="market"]');
     if (market) market.addEventListener("click", () => openMarket(id, onStatus));
+
+    const heal = overlay.querySelector('[data-act="heal"]');
+    if (heal)
+      heal.addEventListener("click", () => {
+        const n = healTeam();
+        onStatus(n > 0 ? `Healed ${n} Pokémon to full HP ✓` : "Your team is already at full HP");
+      });
 
     const upgrades = overlay.querySelector('[data-act="upgrades"]');
     if (upgrades) upgrades.addEventListener("click", () => openUpgrades(id, onStatus));
@@ -431,11 +449,18 @@ function buildingUpgradeEffect(def, id) {
  * Krátký popis efektu následujícího vylepšení dané linie (podle klíče).
  * @param {string} key
  * @param {number} level  aktuální úroveň linie
+ * @param {import("../../data/buildings.js").TrackDef} [t]  definice linie (kvůli perLevel)
  * @returns {string}
  */
-function trackUpgradeEffect(key, level) {
+function trackUpgradeEffect(key, level, t) {
   if (key === "hatchSpeed") return `Hatch speed +${level} % → +${level + 1} %`;
   if (key === "eggSlots") return `Egg breeders ${level} → ${level + 1}`;
+  if (key === "ppRegen") {
+    const per = t?.perLevel ?? 0;
+    const now = Math.min(100, level * per);
+    const next = Math.min(100, (level + 1) * per);
+    return `PP regen after victory +${now} % → +${next} % move PP`;
+  }
   return "";
 }
 
@@ -515,7 +540,7 @@ function openUpgrades(id, onStatus) {
             icon: t.icon,
             name: t.name,
             levelLabel: `Lv ${lvl}/${t.maxLevel}`,
-            effect: maxed ? "" : trackUpgradeEffect(key, lvl),
+            effect: maxed ? "" : trackUpgradeEffect(key, lvl, t),
             maxed,
             cost,
             canAfford: gold >= cost,
@@ -652,7 +677,7 @@ function openBallShop(id, onStatus) {
         const price = ballPrice(ball.id, id);
         const canBuy = gold >= price;
         return `<div class="ball-row">
-          <span>${ball.icon} <strong>${ball.name}</strong> <span class="placeholder">— ${ball.desc}</span></span>
+          <span>${ballIconHtml(ball.id, { size: 18 })} <strong>${ball.name}</strong> <span class="placeholder">— ${ball.desc}</span></span>
           <span class="ball-buy">×${owned}
             <button class="btn btn-sm" data-buy-ball="${ball.id}" ${canBuy ? "" : "disabled"}>${price} 💰</button>
           </span>

@@ -23,13 +23,12 @@ function inline(s) {
 }
 
 /**
- * Velmi lehký převod našeho CHANGELOG.md na HTML.
- * Podporuje: ## a ### nadpisy, odrážky "- ", prázdné řádky a inline formát.
- * @param {string} md
+ * Převede blok řádků (uvnitř jedné verze nebo preambule) na HTML.
+ * Podporuje: ### nadpisy, odrážky "- ", prázdné řádky a inline formát.
+ * @param {string[]} lines
  * @returns {string}
  */
-function renderMarkdown(md) {
-  const lines = md.split(/\r?\n/);
+function renderBlock(lines) {
   const out = [];
   let inList = false;
   const closeList = () => {
@@ -43,10 +42,8 @@ function renderMarkdown(md) {
     if (/^###\s+/.test(line)) {
       closeList();
       out.push(`<h4>${inline(esc(line.replace(/^###\s+/, "")))}</h4>`);
-    } else if (/^##\s+/.test(line)) {
-      closeList();
-      out.push(`<h3>${inline(esc(line.replace(/^##\s+/, "")))}</h3>`);
     } else if (/^#\s+/.test(line)) {
+      // (běžně jen titul „# CHANGELOG" v preambuli)
       closeList();
       out.push(`<h2>${inline(esc(line.replace(/^#\s+/, "")))}</h2>`);
     } else if (/^[-*]\s+/.test(line)) {
@@ -63,6 +60,56 @@ function renderMarkdown(md) {
     }
   }
   closeList();
+  return out.join("\n");
+}
+
+/**
+ * Velmi lehký převod našeho CHANGELOG.md na HTML. Každá verze (nadpis "## ") se
+ * vykreslí jako sbalitelný blok (<details>), ať se nemusí scrollovat – vidíš
+ * seznam verzí a obsah se ukáže až po kliknutí. První verze s obsahem je
+ * rozbalená. Text před první verzí (titul + úvod) se vykreslí normálně nahoře.
+ * @param {string} md
+ * @returns {string}
+ */
+function renderMarkdown(md) {
+  const lines = md.split(/\r?\n/);
+
+  // Rozdělit na preambuli a jednotlivé verze podle nadpisů "## ".
+  const preamble = [];
+  /** @type {{ title: string, body: string[] }[]} */
+  const sections = [];
+  let current = null;
+  for (const raw of lines) {
+    if (/^##\s+/.test(raw)) {
+      current = { title: raw.replace(/^##\s+/, "").trimEnd(), body: [] };
+      sections.push(current);
+    } else if (current) {
+      current.body.push(raw);
+    } else {
+      preamble.push(raw);
+    }
+  }
+
+  const out = [];
+  const pre = renderBlock(preamble).trim();
+  if (pre) out.push(pre);
+
+  // První verze, která má nějaký obsah, bude rozbalená.
+  const hasBody = (s) => s.body.some((l) => l.trim() !== "");
+  let firstWithBody = sections.findIndex(hasBody);
+
+  sections.forEach((s, i) => {
+    const body = renderBlock(s.body).trim();
+    const empty = body === "";
+    const open = i === firstWithBody ? " open" : "";
+    out.push(
+      `<details class="changelog-ver"${open}>
+        <summary>${inline(esc(s.title))}${empty ? ' <span class="cl-empty">(nothing yet)</span>' : ""}</summary>
+        <div class="changelog-ver-body">${body}</div>
+      </details>`
+    );
+  });
+
   return out.join("\n");
 }
 

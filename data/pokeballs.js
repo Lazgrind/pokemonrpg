@@ -26,6 +26,11 @@
  * @property {number} [mult]      základní násobek šance (výchozí 1)
  * @property {boolean} [guaranteed] jistota chycení (Master Ball)
  * @property {object} [bonus]     podmíněný bonus (viz výše)
+ * @property {boolean} [comingSoon] rezervováno – sprite existuje, ale mechanika
+ *                                  ještě není; ball se NEobjevuje v obchodě ani
+ *                                  v souboji (tier:null/price:null to zajistí),
+ *                                  jen si drží id → napojený obrázek. Až mechaniku
+ *                                  přidáme, stačí doplnit tier/price/bonus.
  * @property {string} desc        krátký popis efektu (do obchodu)
  */
 
@@ -66,6 +71,38 @@ export const POKEBALLS = [
   // --- Speciální: neprodejný, jistota chycení ---
   { id: "master", name: "Master Ball", icon: "🟣", tier: null, price: null, guaranteed: true,
     desc: "Never fails. Not for sale — a reward for reaching milestones." },
+
+  // --- Rezervováno na budoucnost (comingSoon) ---------------------------------
+  // Sprity už máme v assets/pokeballs/<id>-ball.png. Tyhle bally se zatím NIKDE
+  // neukazují (tier:null + price:null → mimo obchod; nedají se vlastnit → mimo
+  // souboj). Až doděláme příslušnou mechaniku, ballu se doplní tier/price/bonus
+  // a přesune se nahoru mezi prodejné. `desc` drží zamýšlený efekt.
+  { id: "premier", name: "Premier Ball", icon: "⚪", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — kosmetický ball (odměna za hromadný nákup)." },
+  { id: "friend", name: "Friend Ball", icon: "💚", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — zvýší friendship chyceného Pokémona." },
+  { id: "love", name: "Love Ball", icon: "💞", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — bonus proti opačnému pohlaví druhu, který už vlastníš." },
+  { id: "heavy", name: "Heavy Ball", icon: "🏋️", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — bonus na těžké druhy (hmotnost)." },
+  { id: "lure", name: "Lure Ball", icon: "🎣", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — bonus při rybaření." },
+  { id: "moon", name: "Moon Ball", icon: "🌙", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — bonus na druhy vyvíjené Měsíčním kamenem." },
+  { id: "dusk", name: "Dusk Ball", icon: "🌑", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — bonus v noci a v jeskyních." },
+  { id: "dive", name: "Dive Ball", icon: "🌊", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — bonus v podvodních oblastech." },
+  { id: "dream", name: "Dream Ball", icon: "💤", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — bonus proti spícím / se stavovým postižením." },
+  { id: "safari", name: "Safari Ball", icon: "🌴", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — event ball do Safari zóny." },
+  { id: "sport", name: "Sport Ball", icon: "🐛", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — event ball do Bug-Catching soutěže." },
+  { id: "park", name: "Park Ball", icon: "🏞️", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — event/přenosový ball." },
+  { id: "cherish", name: "Cherish Ball", icon: "🎁", tier: null, price: null, mult: 1, comingSoon: true,
+    desc: "Coming soon — speciální event / dárkový ball." },
 ];
 
 /** Rychlé vyhledání ballu podle id. */
