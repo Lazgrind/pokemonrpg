@@ -17,6 +17,7 @@
  * @property {{ discountPerLevel: number, maxDiscount: number }} [ball]  sleva na Poké Bally v % (Poké Mart); ceny jsou v data/pokeballs.js
  * @property {{ basePercent: number, perLevel: number, maxPercent: number }} [heal]  doléčení po vítězství v % max HP (Pokémon Centrum)
  * @property {{ xpPerMinute: number, perLevel: number }} [daycare]  pasivní XP za minutu (Školka)
+ * @property {{ baseEv: number, perLevel: number, goldCost: number }} [training]  trénink EV (Training Grounds): kolik EV za jednu placenou lekci (+perLevel za úroveň) a cena lekce v goldu
  * @property {Record<string, TrackDef>} [tracks]  samostatné upgrade linie budovy (vlastní úroveň i cena)
  *
  * @typedef {Object} TrackDef
@@ -78,6 +79,20 @@ export const BUILDINGS = [
       hatchSpeed: { name: "Hatch speed", icon: "⏩", startLevel: 1, maxLevel: 50, baseCost: 50, growth: 1.12 },
       eggSlots: { name: "Egg slots", icon: "🥚", startLevel: 1, maxLevel: 10, baseCost: 300, growth: 1.7 },
     },
+  },
+  {
+    id: "training-grounds",
+    name: "Training Grounds",
+    icon: "🏋️",
+    color: "#c0713b",
+    // sprite zatím není – použije se CSS domeček (fallback). Až přidáš
+    // assets/buildings/training-grounds.png, doplň sem `sprite:` jako u ostatních.
+    description: "Pay gold to train a Pokémon's Effort Values (EV) in a stat of your choice. Upgrades raise the EV gained per session. Caps: 252 per stat, 510 total.",
+    startLevel: 1,
+    maxLevel: 10,
+    upgrade: { baseCost: 150, growth: 1.5 },
+    // baseEv + (level-1)*perLevel EV za jednu lekci; každá lekce stojí goldCost.
+    training: { baseEv: 4, perLevel: 4, goldCost: 50 },
   },
 ];
 

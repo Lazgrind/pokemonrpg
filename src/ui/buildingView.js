@@ -31,11 +31,22 @@ import {
   getBreedingSlot,
   setBreedingParent,
   clearBreedingParent,
+  trainingEvPerSession,
+  trainingCost,
+  trainEv,
 } from "../systems/buildingSystem.js";
+import {
+  STAT_KEYS,
+  EV_MAX_PER_STAT,
+  EV_MAX_TOTAL,
+  evTotal,
+} from "../systems/pokemonSystem.js";
 import { breedingStatus } from "../systems/breedingSystem.js";
 import { canBreedSpecies, BREED_MINUTES, INHERIT_IV_COUNT } from "../../data/breeding.js";
 import { isBallUnlocked } from "../systems/pokeballSystem.js";
 import { healTeam } from "../systems/battleSystem.js";
+import { ITEMS, ITEM_CATEGORIES } from "../../data/items.js";
+import { buyItem, itemCount } from "../systems/itemSystem.js";
 import {
   getEggs,
   incubationList,
@@ -55,6 +66,16 @@ import { bus, EVENTS } from "../core/events.js";
 function speciesName(p) {
   return getSpecies(p.speciesId)?.name ?? p.speciesId;
 }
+
+/** Čitelné popisky statů (v pořadí STAT_KEYS) – sdíleno tréninkem. */
+const STAT_LABELS = {
+  hp: "HP",
+  attack: "Attack",
+  defense: "Defense",
+  spAttack: "Sp. Atk",
+  spDefense: "Sp. Def",
+  speed: "Speed",
+};
 
 /**
  * Otevře detail budovy jako modal.
@@ -169,6 +190,20 @@ export function openBuilding(id, onStatus = () => {}) {
       actions.push(`<button class="btn" data-act="breeding">💞 Breeding</button>`);
     }
 
+    // Training Grounds: placený trénink EV do zvoleného statu vybraného jedince.
+    if (def.training) {
+      const perSession = trainingEvPerSession(id);
+      const cost = trainingCost(id);
+      stats.push(`<span>🏋️ Training yield: <strong>+${perSession} EV</strong> per session</span>`);
+      stats.push(`<span>💵 Session cost: <strong>${cost} 💰</strong></span>`);
+      const trainable = getState().collection.length;
+      if (trainable === 0) {
+        extraHtml += `<p class="placeholder" style="margin-top:8px">You have no Pokémon to train yet — catch one first.</p>`;
+      } else {
+        actions.push(`<button class="btn" data-act="train">🏋️ Train a Pokémon</button>`);
+      }
+    }
+
     // Upgrades: budova i její linie za jedním klikacím oknem.
     const upgradeCount = 1 + (def.tracks ? Object.keys(def.tracks).length : 0);
     actions.push(
@@ -227,6 +262,103 @@ export function openBuilding(id, onStatus = () => {}) {
 
     const breeding = overlay.querySelector('[data-act="breeding"]');
     if (breeding) breeding.addEventListener("click", () => openBreeding(id, onStatus));
+
+    const train = overlay.querySelector('[data-act="train"]');
+    if (train) train.addEventListener("click", () => openTrainingPicker(id, onStatus));
+
+    overlay.querySelector('[data-act="close"]').addEventListener("click", close);
+  }
+
+  render();
+}
+
+/**
+ * Výběr Pokémona k tréninku EV (celá kolekce – trénovat lze i jedince v týmu).
+ * Po výběru se otevře okno s volbou statu.
+ * @param {string} id  id budovy (Training Grounds)
+ * @param {(msg: string) => void} onStatus
+ */
+function openTrainingPicker(id, onStatus) {
+  const avail = getState().collection;
+  openPokemonPicker({
+    title: "Choose a Pokémon to train",
+    avail,
+    onPick: (uid) => {
+      openTrainingStats(id, uid, onStatus);
+      return { ok: true }; // jen zavře picker; vlastní trénink řeší stat okno
+    },
+    okMsg: "",
+    onStatus,
+  });
+}
+
+/**
+ * Okno tréninku EV pro jednoho jedince: řádek na každý stat s aktuálním EV,
+ * ukazatelem a tlačítkem „Train" (za gold). Živě se aktualizuje po každé lekci.
+ * @param {string} id  id budovy (Training Grounds)
+ * @param {string} uid  jedinec z kolekce
+ * @param {(msg: string) => void} onStatus
+ */
+function openTrainingStats(id, uid, onStatus) {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  document.body.appendChild(overlay);
+
+  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+
+  function close() {
+    unsub();
+    document.removeEventListener("keydown", onKey);
+    overlay.remove();
+  }
+  function onKey(e) {
+    if (e.key === "Escape") close();
+  }
+  document.addEventListener("keydown", onKey);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+
+  function render() {
+    const p = getState().collection.find((x) => x.uid === uid);
+    if (!p) return close();
+    const gold = getState().resources.gold;
+    const cost = trainingCost(id);
+    const perSession = trainingEvPerSession(id);
+    const evs = p.evs ?? {};
+    const total = evTotal(p);
+    const totalFull = total >= EV_MAX_TOTAL;
+
+    const rows = STAT_KEYS.map((k) => {
+      const ev = evs[k] ?? 0;
+      const statFull = ev >= EV_MAX_PER_STAT;
+      const pctW = Math.max(0, Math.min(100, (ev / EV_MAX_PER_STAT) * 100));
+      const disabled = statFull || totalFull || gold < cost;
+      const label = statFull ? "Max" : `+${perSession} · ${cost} 💰`;
+      return `<div class="train-row">
+        <div class="train-info">
+          <div class="train-name">${STAT_LABELS[k]} <span class="placeholder">${ev}/${EV_MAX_PER_STAT} EV</span></div>
+          <span class="mc-bar ev"><span style="width:${pctW}%"></span></span>
+        </div>
+        <button class="btn btn-sm" data-train="${k}" ${disabled ? "disabled" : ""}>${label}</button>
+      </div>`;
+    }).join("");
+
+    overlay.innerHTML = `
+      <div class="modal building-modal">
+        <h2 class="panel-title">🏋️ Train ${speciesName(p)}${p.shiny ? " ✨" : ""} · Lv ${p.level}</h2>
+        <p class="placeholder">💰 Your gold: <strong>${gold}</strong> · EV total: <strong>${total}/${EV_MAX_TOTAL}</strong>${totalFull ? " (max)" : ""}</p>
+        <div class="train-list">${rows}</div>
+        <button class="btn btn-close" data-act="close">Close</button>
+      </div>
+    `;
+
+    overlay.querySelectorAll("[data-train]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const r = trainEv(uid, btn.dataset.train, id);
+        onStatus(r.ok ? `+${r.added} ${STAT_LABELS[btn.dataset.train]} EV ✓` : r.reason);
+      })
+    );
 
     overlay.querySelector('[data-act="close"]').addEventListener("click", close);
   }
@@ -441,6 +573,10 @@ function buildingUpgradeEffect(def, id) {
     const rate = daycareXpPerMinute(id);
     return `Training ${rate} → ${rate + def.daycare.perLevel} XP/min`;
   }
+  if (def.training) {
+    const per = trainingEvPerSession(id);
+    return `EV per session +${per} → +${per + def.training.perLevel}`;
+  }
   if (def.ball) return "Lowers all Poké Ball prices";
   return "";
 }
@@ -622,6 +758,10 @@ function openMarket(id, onStatus) {
             <span class="dept-icon">🔴</span>
             <span class="dept-name">Poké Balls</span>
           </button>
+          <button class="dept-card" data-section="items">
+            <span class="dept-icon">🧴</span>
+            <span class="dept-name">Items</span>
+          </button>
         </div>
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
@@ -629,6 +769,9 @@ function openMarket(id, onStatus) {
 
     const balls = overlay.querySelector('[data-section="balls"]');
     if (balls) balls.addEventListener("click", () => openBallShop(id, onStatus));
+
+    const items = overlay.querySelector('[data-section="items"]');
+    if (items) items.addEventListener("click", () => openItemShop(id, onStatus));
 
     overlay.querySelector('[data-act="close"]').addEventListener("click", close);
   }
@@ -700,6 +843,77 @@ function openBallShop(id, onStatus) {
       btn.addEventListener("click", () => {
         const r = buyBall(btn.dataset.buyBall, 1, id);
         onStatus(r.ok ? "Ball bought ✓" : r.reason);
+      })
+    );
+
+    overlay.querySelector('[data-act="close"]').addEventListener("click", close);
+  }
+
+  render();
+}
+
+/**
+ * Okno sekce Items (léčivé předměty): potiony, léčení statusů, revivy. Zboží
+ * je seskupené po kategoriích; nakupuje se po kusu. Zásoba se ukazuje u ceny.
+ * @param {string} id
+ * @param {(msg: string) => void} onStatus
+ */
+function openItemShop(id, onStatus) {
+  const def = getBuilding(id);
+  if (!def) return;
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  document.body.appendChild(overlay);
+
+  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+
+  function close() {
+    unsub();
+    document.removeEventListener("keydown", onKey);
+    overlay.remove();
+  }
+  function onKey(e) {
+    if (e.key === "Escape") close();
+  }
+  document.addEventListener("keydown", onKey);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+
+  function render() {
+    const gold = getState().resources.gold;
+    const groups = ITEM_CATEGORIES.map((cat) => {
+      const rows = ITEMS.filter((it) => it.category === cat.key)
+        .map((it) => {
+          const owned = itemCount(it.id);
+          const canBuy = gold >= it.price;
+          return `<div class="ball-row">
+            <span>${it.icon} <strong>${it.name}</strong> <span class="placeholder">— ${it.desc}</span></span>
+            <span class="ball-buy">×${owned}
+              <button class="btn btn-sm" data-buy-item="${it.id}" ${canBuy ? "" : "disabled"}>${it.price} 💰</button>
+            </span>
+          </div>`;
+        })
+        .join("");
+      return rows
+        ? `<h3 class="shop-cat">${cat.icon} ${cat.name}</h3>${rows}`
+        : "";
+    }).join("");
+
+    overlay.innerHTML = `
+      <div class="modal building-modal">
+        <h2 class="panel-title">🧴 Items</h2>
+        <p class="placeholder">💰 Your gold: <strong>${gold}</strong></p>
+        <div class="ball-shop">${groups}</div>
+        <button class="btn btn-close" data-act="close">Close</button>
+      </div>
+    `;
+
+    overlay.querySelectorAll("[data-buy-item]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const r = buyItem(btn.dataset.buyItem, 1);
+        onStatus(r.ok ? "Item bought ✓" : r.reason);
       })
     );
 

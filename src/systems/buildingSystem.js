@@ -9,6 +9,7 @@
 import { getState, commit } from "../core/state.js";
 import { getBuilding } from "../../data/buildings.js";
 import { getPokeball } from "../../data/pokeballs.js";
+import { addEv } from "./pokemonSystem.js";
 
 /** Aktuální úroveň budovy (výchozí = startLevel z definice). */
 export function getLevel(id) {
@@ -80,6 +81,50 @@ export function healPercent(id = "poke-center") {
   const pct = def.heal.basePercent + (level - 1) * def.heal.perLevel;
   const cap = def.heal.maxPercent ?? Infinity;
   return Math.min(cap, pct);
+}
+
+/**
+ * Kolik EV přidá jedna placená lekce v Training Grounds na aktuální úrovni.
+ * @param {string} id
+ * @returns {number}
+ */
+export function trainingEvPerSession(id = "training-grounds") {
+  const def = getBuilding(id);
+  if (!def || !def.training) return 0;
+  const level = getLevel(id);
+  return def.training.baseEv + (level - 1) * def.training.perLevel;
+}
+
+/** Cena jedné tréninkové lekce v goldu (0 = budova neexistuje / netrénuje). */
+export function trainingCost(id = "training-grounds") {
+  const def = getBuilding(id);
+  return def?.training?.goldCost ?? 0;
+}
+
+/**
+ * Provede jednu tréninkovou lekci: zaplatí gold a přidá EV do zvoleného statu
+ * (s respektem ke stropům 252/stat a 510 celkem). Když už není kam přidat
+ * (strop), gold se NEstrhne. Mutuje jedince + commituje.
+ * @param {string} uid  jedinec z kolekce
+ * @param {string} statKey  klíč statu (viz STAT_KEYS)
+ * @param {string} [id]  budova (Training Grounds)
+ * @returns {{ ok: boolean, added?: number, reason?: string }}
+ */
+export function trainEv(uid, statKey, id = "training-grounds") {
+  const def = getBuilding(id);
+  if (!def || !def.training) return { ok: false, reason: "No Training Grounds." };
+  const pokemon = getState().collection.find((p) => p.uid === uid);
+  if (!pokemon) return { ok: false, reason: "Unknown Pokémon." };
+  const cost = trainingCost(id);
+  const res = getState().resources;
+  if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
+
+  const added = addEv(pokemon, statKey, trainingEvPerSession(id));
+  if (added <= 0) return { ok: false, reason: "That stat's EV is already maxed out." };
+
+  res.gold -= cost;
+  commit();
+  return { ok: true, added };
 }
 
 /** Kolik XP za minutu dává Školka na aktuální úrovni (0 = není školka). */

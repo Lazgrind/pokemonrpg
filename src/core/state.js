@@ -24,8 +24,11 @@
  * @property {number} xp
  * @property {number} hp         aktuální HP jedince (trvalé; 0 = vyřazený, léčí se v Poké Centru)
  * @property {MoveSlot[]} moves  naučené tahy (max 4), z learnsetu; PP se spotřebovává v boji
+ * @property {{ kind: "poison"|"burn"|"paralysis" }|null} status  trvalý stavový efekt
+ *                                     (přežije výměnu i refresh; čistí ho až léčení – viz healTeam/healStatus)
  * @property {StatSpread} ivs    Individual Values (0–31 na stat), pevné při vzniku
  * @property {StatSpread} evs    Effort Values (0–252 na stat, max 510), z tréninku
+ * @property {string} nature     povaha (id z data/natures.js): +10 % jeden stat, −10 % jiný (nikdy HP)
  * @property {boolean} shiny     vzácná barevná varianta (kosmetika)
  * @property {string|null} caughtBall  id Poké Ballu, ve kterém byl chycen
  *                                     (null = dar/vylíhnutý – žádný ball)
@@ -35,7 +38,7 @@
  * @property {number} saveVersion
  * @property {{ createdAt: number, lastSaved: number }} meta
  * @property {{ name: string }} player
- * @property {{ gold: number, balls: Record<string, number> }} resources  balls: id typu → počet
+ * @property {{ gold: number, balls: Record<string, number>, items: Record<string, number> }} resources  balls/items: id → počet
  * @property {OwnedPokemon[]} collection
  * @property {string[]} team         uid jedinců v týmu (max 6)
  * @property {Array<{ id: string, speciesId: string }>} eggs  nalezená vejce (líhnou se ve Školce)
@@ -54,7 +57,7 @@
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 14;
+export const CURRENT_SAVE_VERSION = 17;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
@@ -72,7 +75,7 @@ export function createNewGame() {
     saveVersion: CURRENT_SAVE_VERSION,
     meta: { createdAt: now, lastSaved: now },
     player: { name: "Trainer" },
-    resources: { gold: 0, balls: { poke: 5 } },
+    resources: { gold: 0, balls: { poke: 5 }, items: {} },
     collection: [],
     team: [],
     eggs: [], // nalezená vejce; líhnou se ve Školce (viz eggSystem)

@@ -41,6 +41,7 @@ export const EVENTS = {
   STATE_CHANGED: "state:changed",
   BATTLE_UPDATE: "battle:update",
   BATTLE_HIT: "battle:hit",
+  BATTLE_FAINT: "battle:faint",
   EGG_HATCHED: "egg:hatched",
   EGG_BRED: "egg:bred",
 };

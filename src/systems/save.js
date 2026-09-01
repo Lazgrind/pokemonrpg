@@ -12,7 +12,7 @@ import {
   createNewGame,
   CURRENT_SAVE_VERSION,
 } from "../core/state.js";
-import { randomIvs, emptyEvs, rollGender, computeStats, defaultMovesFor } from "./pokemonSystem.js";
+import { randomIvs, emptyEvs, rollGender, computeStats, defaultMovesFor, randomNature } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 
 /** Klíč v localStorage. */
@@ -166,6 +166,31 @@ function migrate(data) {
   if (data.saveVersion < 14) {
     if (!Array.isArray(data.moveLearnQueue)) data.moveLearnQueue = [];
     data.saveVersion = 14;
+  }
+  // v14 → v15: trvalý stavový efekt na jedinci (`status`: otrava/popálení/paralýza).
+  // Stávající jedinci žádný nemají – nastavíme null (status navěsí až souboj).
+  if (data.saveVersion < 15) {
+    for (const p of data.collection ?? []) {
+      if (p.status === undefined) p.status = null;
+    }
+    data.saveVersion = 15;
+  }
+  // v15 → v16: povaha jedince (`nature`). Stávajícím rozlosujeme náhodnou povahu
+  // (jednorázově), ať mají všichni platnou; staty se tím mírně přepočítají (±10 %).
+  if (data.saveVersion < 16) {
+    for (const p of data.collection ?? []) {
+      if (typeof p.nature !== "string") p.nature = randomNature();
+    }
+    data.saveVersion = 16;
+  }
+  // v16 → v17: inventář léčivých předmětů (resources.items). Starým save doplníme
+  // prázdný inventář; itemy se kupují v Poké Martu (viz data/items.js, itemSystem).
+  if (data.saveVersion < 17) {
+    if (!data.resources) data.resources = { gold: 0 };
+    if (!data.resources.items || typeof data.resources.items !== "object") {
+      data.resources.items = {};
+    }
+    data.saveVersion = 17;
   }
   return data;
 }

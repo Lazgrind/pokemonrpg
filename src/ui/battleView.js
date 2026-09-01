@@ -22,12 +22,15 @@ import {
   playerMove,
   playerSwitch,
   playerCatch,
+  playerUseItem,
   playerRun,
   nextEncounter,
   hpOf,
   lootLabel,
 } from "../systems/battleSystem.js";
 import { POKEBALLS, getPokeball } from "../../data/pokeballs.js";
+import { ITEMS } from "../../data/items.js";
+import { canUseItem } from "../systems/itemSystem.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { ballIconHtml } from "./ballIcon.js";
 import { spriteImg } from "./sprites.js";
@@ -37,6 +40,7 @@ import { getSpecies } from "../../data/pokemon.js";
 import { getMove } from "../../data/moves.js";
 import { isCaught } from "../systems/pokedex.js";
 import { typeColor, typeBadge } from "./typeColors.js";
+import { statusBadge } from "./statusBadge.js";
 
 /** Podmenu manuálního souboje (jen manuál mód): root | fight | bag | switch. */
 let menuMode = "root";
@@ -56,24 +60,130 @@ export function renderBattle(root) {
   draw(root);
   if (!subscribed) {
     bus.on(EVENTS.BATTLE_UPDATE, () => draw(root));
-    bus.on(EVENTS.BATTLE_HIT, (hit) => spawnDamage(root, hit));
+    bus.on(EVENTS.BATTLE_HIT, (hit) => playHit(root, hit));
+    bus.on(EVENTS.BATTLE_FAINT, (info) => playFaint(root, info));
     subscribed = true;
   }
+}
+
+/**
+ * Přehraje jednu ránu: útočník vyrazí vpřed, zasažený se otřese/zabliká
+ * a nad ním vylétne plovoucí „-N". `hit.side` je ZASAŽENÁ strana, útočník je
+ * tedy ta druhá. Běží až po překreslení scény (event přichází po BATTLE_UPDATE).
+ *
+ * Útočná animace se liší podle kategorie tahu: physical = útočník doskočí až
+ * na soupeře (větší výpad), special = zatím ponecháváme původní menší výpad.
+ * @param {HTMLElement} root
+ * @param {{ side: "enemy"|"player", dmg: number, category?: string }} hit
+ */
+function playHit(root, hit) {
+  if (!hit) return;
+  if (hit.category === "status") {
+    // DoT (otrava/popálení) – žádný útočník; jen reakce zasaženého + číslo.
+    if (hit.dmg > 0) animateSprite(root, hit.side, "is-hit");
+    spawnDamage(root, hit);
+    return;
+  }
+  const atkSide = hit.side === "enemy" ? "player" : "enemy";
+  if (hit.category === "physical") {
+    // Physical: útočník skutečně doskočí na soupeře (vzdálenost počítáme z DOM).
+    jumpAttack(root, atkSide, hit.side);
+  } else {
+    // Special: zatím jen krátký výpad směrem k soupeři.
+    animateSprite(root, atkSide, "is-attacking");
+  }
+  if (hit.dmg > 0) animateSprite(root, hit.side, "is-hit");
+  spawnDamage(root, hit);
+}
+
+/**
+ * Physical útok: útočník vyskočí a doskočí až na sprite soupeře. Skutečnou
+ * vzdálenost mezi sprity spočítáme z jejich pozic v DOM (sprity jsou v rozích
+ * scény, takže napevno dané pixely by nedosáhly) a předáme ji do CSS animace
+ * přes proměnné `--jx`/`--jy`.
+ * @param {HTMLElement} root
+ * @param {"enemy"|"player"} atkSide  útočník
+ * @param {"enemy"|"player"} defSide  zasažený (cíl doskoku)
+ */
+function jumpAttack(root, atkSide, defSide) {
+  const atk = root.querySelector(`.battle-field .combatant.${atkSide} .battle-sprite`);
+  const def = root.querySelector(`.battle-field .combatant.${defSide} .battle-sprite`);
+  if (!atk) return;
+  if (!def) {
+    animateSprite(root, atkSide, "is-attacking");
+    return;
+  }
+  const ar = atk.getBoundingClientRect();
+  const dr = def.getBoundingClientRect();
+  // Dolet ke středu soupeře, ale zastavíme kousek před ním (85 %), ať útočník
+  // přistane „na" soupeři a ne přesně přes něj.
+  const dx = ((dr.left + dr.width / 2) - (ar.left + ar.width / 2)) * 0.85;
+  const dy = ((dr.top + dr.height / 2) - (ar.top + ar.height / 2)) * 0.85;
+  atk.style.setProperty("--jx", `${Math.round(dx)}px`);
+  atk.style.setProperty("--jy", `${Math.round(dy)}px`);
+  atk.classList.remove("is-attacking-physical");
+  void atk.offsetWidth; // reflow → restart animace
+  atk.classList.add("is-attacking-physical");
+  atk.addEventListener(
+    "animationend",
+    () => {
+      atk.classList.remove("is-attacking-physical");
+      atk.style.removeProperty("--jx");
+      atk.style.removeProperty("--jy");
+    },
+    { once: true }
+  );
+}
+
+/**
+ * Faint: padlý Pokémon klesne dolů a vybledne. Třídu necháváme navěšenou až do
+ * dalšího překreslení scény (které přijde po `FAINT_ANIM_MS` z battleSystem),
+ * takže sprite zůstane „ležet/zmizelý" po celou dobu animace.
+ * @param {HTMLElement} root
+ * @param {{ side: "enemy"|"player" }} info
+ */
+function playFaint(root, info) {
+  if (!info) return;
+  const sprite = root.querySelector(`.battle-field .combatant.${info.side} .battle-sprite`);
+  if (!sprite) return;
+  sprite.classList.remove("is-fainting");
+  void sprite.offsetWidth; // reflow → restart animace
+  sprite.classList.add("is-fainting");
+}
+
+/**
+ * Navěsí jednorázovou CSS animaci na sprite dané strany (útok/zásah).
+ * Třídu po doběhnutí odebere, aby šla příště spustit znovu.
+ * @param {HTMLElement} root
+ * @param {"enemy"|"player"} side
+ * @param {string} cls  CSS třída animace
+ */
+function animateSprite(root, side, cls) {
+  const sprite = root.querySelector(`.battle-field .combatant.${side} .battle-sprite`);
+  if (!sprite) return;
+  sprite.classList.remove(cls);
+  void sprite.offsetWidth; // reflow → restart animace, i když třída zůstala z minula
+  sprite.classList.add(cls);
+  sprite.addEventListener("animationend", () => sprite.classList.remove(cls), { once: true });
 }
 
 /**
  * Vyhodí nad zasaženého bojovníka plovoucí „-N" (červené číslo, které vylétne
  * a zmizí). Spawnuje se až po překreslení scény, takže přežije redraw kola.
  * @param {HTMLElement} root
- * @param {{ side: "enemy"|"player", dmg: number }} hit
+ * @param {{ side: "enemy"|"player", dmg: number, crit?: boolean, status?: string }} hit
  */
 function spawnDamage(root, hit) {
   if (!hit || !hit.dmg) return;
   const sprite = root.querySelector(`.battle-field .combatant.${hit.side} .battle-sprite`);
   if (!sprite) return;
   const el = document.createElement("span");
-  el.className = "dmg-float";
-  el.textContent = `-${hit.dmg}`;
+  let cls = "dmg-float";
+  if (hit.crit) cls += " is-crit"; // kritický zásah – větší, žluté
+  if (hit.status === "poison") cls += " is-poison";
+  else if (hit.status === "burn") cls += " is-burn";
+  el.className = cls;
+  el.textContent = hit.crit ? `-${hit.dmg}!` : `-${hit.dmg}`;
   sprite.appendChild(el);
   el.addEventListener("animationend", () => el.remove());
   setTimeout(() => el.remove(), 1200); // pojistka, kdyby animationend nepřišel
@@ -91,6 +201,7 @@ function combatantHtml(c, side, view, showXp = false) {
   const low = pct <= 25 ? " low" : "";
   const types = c.types.map(typeBadge).join("");
   const name = `${c.ref.shiny ? "✨ " : ""}${c.name}`;
+  const status = statusBadge(c.status);
 
   const sprite = spriteImg(c.ref.speciesId, {
     view,
@@ -119,7 +230,7 @@ function combatantHtml(c, side, view, showXp = false) {
     <div class="combatant ${side}">
       ${sprite}
       <div class="c-info">
-        <div class="c-head"><strong>${name}</strong> · Lv ${c.ref.level} ${types}</div>
+        <div class="c-head"><strong>${name}</strong> · Lv ${c.ref.level} ${types}${status}</div>
         <div class="hpbar"><div class="hpfill${low}" style="width:${pct}%"></div></div>
         ${hpText}
         ${xpHtml}
@@ -281,26 +392,47 @@ function fightMenuHtml(b) {
     <button class="btn btn-sm menu-back" data-menu="root">← Back</button>`;
 }
 
-/** Podmenu Items (batoh): výběr ballu + hod. Zatím jen Poké Bally. */
+/** Podmenu Items (batoh): léčivé itemy na aktivního Pokémona + výběr ballu a hod. */
 function bagMenuHtml(b) {
   const balls = getState().resources.balls ?? {};
+  const items = getState().resources.items ?? {};
   const owned = POKEBALLS.filter((ball) => (balls[ball.id] ?? 0) > 0);
   const selected = getSelectedBall();
   const selCount = balls[selected] ?? 0;
   const canCatch = b.enemy && b.enemy.hp > 0 && selCount > 0;
   const catchPct = Math.round(getCatchChance() * 100);
-  if (!owned.length) {
-    return `<p class="placeholder">No Poké Balls — buy some in the Poké Mart.</p>
-      <button class="btn btn-sm menu-back" data-menu="root">← Back</button>`;
-  }
-  const chips = owned
+
+  // Léčivé itemy použitelné TEĎ na aktivního bojovníka (HP potiony, léčení statusu).
+  const active = b.player?.ref;
+  const usableItems = active
+    ? ITEMS.filter((it) => (items[it.id] ?? 0) > 0 && canUseItem(it.id, active).ok)
+    : [];
+  const itemBtns = usableItems
     .map(
-      (ball) =>
-        `<button class="ball-chip ${ball.id === selected ? "active" : ""}" data-ball="${ball.id}" title="${ball.name} — ${ball.desc}">${ballIconHtml(ball.id, { size: 16 })} ${balls[ball.id]}</button>`
+      (it) =>
+        `<button class="btn move-btn item-use" data-use-item="${it.id}" title="${it.desc}">${it.icon} ${it.name} <span class="placeholder">×${items[it.id]}</span></button>`
     )
     .join("");
-  return `<div class="ball-picker">${chips}</div>
-    <button class="btn move-btn" id="throw-ball" ${canCatch ? "" : "disabled"}>🔴 Throw ${getPokeball(selected)?.name ?? "Ball"}${canCatch ? ` (${catchPct}%)` : ""}</button>
+  const itemsSection = itemBtns
+    ? `<div class="bag-items">${itemBtns}</div>`
+    : `<p class="placeholder bag-note">No usable healing items right now.</p>`;
+
+  // Sekce Poké Bally (může být prázdná – itemy jsou pořád k dispozici).
+  let ballSection;
+  if (!owned.length) {
+    ballSection = `<p class="placeholder bag-note">No Poké Balls — buy some in the Poké Mart.</p>`;
+  } else {
+    const chips = owned
+      .map(
+        (ball) =>
+          `<button class="ball-chip ${ball.id === selected ? "active" : ""}" data-ball="${ball.id}" title="${ball.name} — ${ball.desc}">${ballIconHtml(ball.id, { size: 16 })} ${balls[ball.id]}</button>`
+      )
+      .join("");
+    ballSection = `<div class="ball-picker">${chips}</div>
+      <button class="btn move-btn" id="throw-ball" ${canCatch ? "" : "disabled"}>🔴 Throw ${getPokeball(selected)?.name ?? "Ball"}${canCatch ? ` (${catchPct}%)` : ""}</button>`;
+  }
+
+  return `${itemsSection}${ballSection}
     <button class="btn btn-sm menu-back" data-menu="root">← Back</button>`;
 }
 
@@ -531,6 +663,15 @@ function wire(root) {
       const r = playerCatch();
       if (!r.ok) showMsg(r.reason);
     });
+
+  // Použití léčivého itemu z batohu na aktivního Pokémona (spotřebuje kolo).
+  root.querySelectorAll("[data-use-item]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      menuMode = "root";
+      const r = playerUseItem(btn.dataset.useItem);
+      if (!r.ok) showMsg(r.reason);
+    })
+  );
 
   // Prohození Pokémona.
   root.querySelectorAll("[data-switch]").forEach((tile) =>

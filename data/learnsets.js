@@ -35,11 +35,13 @@ export const LEARNSETS = {
     { level: 1, move: "tackle" },
     { level: 5, move: "gust" },
     { level: 8, move: "quick-attack" },
+    { level: 11, move: "body-slam" },
   ],
   rattata: [
     { level: 1, move: "tackle" },
     { level: 4, move: "quick-attack" },
     { level: 7, move: "scratch" },
+    { level: 9, move: "body-slam" },
   ],
   ditto: [
     { level: 1, move: "tackle" },
