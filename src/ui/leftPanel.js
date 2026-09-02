@@ -6,9 +6,11 @@
 import { renderCity } from "./cityView.js";
 import { renderTeamTab } from "./teamView.js";
 import { renderPokedexTab } from "./pokedexView.js";
+import { renderPcTab } from "./pcView.js";
 
 const TABS = [
   { id: "team", label: "Team" },
+  { id: "pc", label: "PC" },
   { id: "pokedex", label: "Pokédex" },
   { id: "city", label: "City" },
 ];
@@ -40,6 +42,7 @@ export function renderLeftPanel(root, onStatus = () => {}) {
 
   const content = root.querySelector("#tab-content");
   if (activeTab === "team") renderTeamTab(content, onStatus);
+  else if (activeTab === "pc") renderPcTab(content, onStatus);
   else if (activeTab === "pokedex") renderPokedexTab(content, onStatus);
   else renderCity(content, onStatus);
 }

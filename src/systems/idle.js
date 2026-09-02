@@ -72,7 +72,7 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
   if (totalXp <= 0 && totalGold <= 0 && !anyLoot) return null;
 
   // Aplikace na stav.
-  grantXp(owned, totalXp);
+  grantXp(owned, totalXp, { auto: true }); // offline zisk → tahy přepiš samy (bez popupu)
   const res = getState().resources;
   res.gold += totalGold;
   for (const [resource, amount] of Object.entries(loot)) {

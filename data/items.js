@@ -16,10 +16,14 @@
  * @property {string} icon
  * @property {string} desc
  * @property {number} price          cena v goldu (nákup v Poké Martu)
- * @property {"hp"|"status"|"revive"} category  sekce v obchodě/batohu
+ * @property {"hp"|"status"|"revive"|"held"} category  sekce v obchodě/batohu
  * @property {{ kind: "heal", amount: number|"full" }
  *          | { kind: "cure", status: "poison"|"burn"|"paralysis"|"any" }
- *          | { kind: "revive", healFrac: number|"full" }} effect
+ *          | { kind: "revive", healFrac: number|"full" }
+ *          | undefined } effect
+ * @property {{ kind: "endTurnHeal", fraction: number }
+ *          | { kind: "lowHpHeal", threshold: number, amount: number }
+ *          | undefined } held  efekt v boji (jen pro held itemy)
  */
 
 /** @type {ItemDef[]} */
@@ -39,6 +43,11 @@ export const ITEMS = [
   // --- Revive: oživení vyřazeného Pokémona ---
   { id: "revive", name: "Revive", icon: "✨", desc: "Revives a fainted Pokémon with half HP.", price: 200, category: "revive", effect: { kind: "revive", healFrac: 0.5 } },
   { id: "max-revive", name: "Max Revive", icon: "🌟", desc: "Revives a fainted Pokémon and fully restores HP.", price: 500, category: "revive", effect: { kind: "revive", healFrac: "full" } },
+
+  // --- Held items: drží se během souboje, poskytují efekty ---
+  { id: "leftovers", name: "Leftovers", icon: "🍖", desc: "Restores a little HP each turn in battle.", price: 2000, category: "held", held: { kind: "endTurnHeal", fraction: 1/16 } },
+  { id: "oran-berry", name: "Oran Berry", icon: "🍒", desc: "When HP drops below 50%, restores 10 HP. Consumed on use.", price: 100, category: "held", effect: { kind: "heal", amount: 10 }, held: { kind: "lowHpHeal", threshold: 0.5, amount: 10 } },
+  { id: "everstone", name: "Everstone", icon: "🪨", desc: "A held Pokémon won't evolve. If it's a breeding parent, the baby inherits its Nature.", price: 300, category: "held" },
 ];
 
 /**
@@ -55,4 +64,14 @@ export const ITEM_CATEGORIES = [
   { key: "hp", name: "Potions", icon: "🧴" },
   { key: "status", name: "Status Heals", icon: "💊" },
   { key: "revive", name: "Revives", icon: "✨" },
+  { key: "held", name: "Held Items", icon: "💎" },
 ];
+
+/**
+ * Je item drženého typu?
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function isHeldItem(id) {
+  return getItem(id)?.category === "held";
+}

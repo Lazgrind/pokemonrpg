@@ -6,6 +6,88 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.55.0] – 2026-09-02 · PC boxy · úložiště mimo tým · drag & drop
+### Added
+- **Nová záložka „PC"** v levém panelu (vedle Team). Úložiště všech vlastněných jedinců, kteří nejsou v týmu, v boxech po 30 slotech (mřížka 6×5).
+- **Více boxů + navigace.** Přepínání mezi boxy (◀ / ▶) a tlačítko „＋ Box" pro založení dalšího; boxy se zakládají automaticky, když se úložiště zaplní.
+- **Drag & drop.** Jedince lze přetáhnout na jiný slot v boxu; obsazený cíl se prohodí. Klik na slot otevře Kartu Pokémona, tlačítko „＋ Team" ho přidá do týmu.
+- **Samohojivé úložiště (`pcSystem.reconcile`).** Každý vlastněný jedinec mimo tým je vždy právě v jednom slotu: přidání úlovku ho do boxu doplní, přidání do týmu ho z boxu vyjme, odebrání z týmu ho zase uloží – bez duplikátů a osiřelých slotů.
+### Changed
+- **Save v18 → v19:** doplněno pole `pcBoxes`. Staré save se při načtení rozmístí do boxů automaticky (Pokédex zůstává beze změny).
+
+## [0.54.0] – 2026-09-02 · Kanto data layer · 151 druhů · learnsety · 268 tahů
+### Added
+- **Všech 151 druhů Kanto v `data/pokemon.js`.** Doplněny kanonické staty a typy dle nejnovější mainline generace, s moderním přetypováním Fairy/Steel, evoluční řetězce včetně evolucí kamenem a náhradního trade-itemu „linking-cord" (zastoupuje výměnu), `genderRatio` a `eggGroups` na každém druhu, `gen` (generace) a všechny relevantní evoliční informace.
+- **Kompletní level-up movepooly v `data/learnsets.js`.** Všech 151 druhů má kanonický level-up movepool se všemi svými tahy (267 unikátních tahů celkem), sjednocené move-id napojené na `data/moves.js`.
+- **Rozšířená `data/moves.js` na 268 tahů** (+213 nově). Všechny tahy Kanta s kanonickými daty (power, accuracy, PP, kategorie, typ), připravené efekty (`effect.kind` pročištěno pro budoucí implementaci).
+- **Bezpečnostní guardy pro nová data:** Eevee s větvovanou evolucí, kamenné a trade evoluce se zatím auto-nespouští (tlačítko, ne automatika); null-guardy pro `eggGroups`, spawn a startéry, aby chyba v datech nezbourala hru.
+- **Křížová validace:** všech 151 druhů má souvislý Dex, unikátní `id`, všechny cíle evolucí i všechny tahy v learnsetech existují. Integrity check v `pokemonSystem.validatePokemonData()`.
+
+## [0.53.0] – 2026-09-02 · Move effects wired up · stat stages · full 18-type chart
+### Added
+- **Stat-stage system.** Battlers now track the seven classic stat stages — **Attack, Defense, Sp. Atk, Sp. Def, Speed, accuracy and evasion** — with the standard stage multipliers. Stages feed into **damage** (Atk/Def/SpA/SpD), **turn order** (Speed) and **hit chance** (accuracy vs. evasion), so a Swords Dance, an Agility or a Sand-Attack finally does what it should.
+- **Move effects are live (`move.effect`), in both auto and manual battle.** The battle engine now executes the effect data that shipped "prepared" in 0.50.0: **statChange**, **recoil** (Take Down / Double-Edge), **drain**, **heal** (Roost / Synthesis), **highCrit** and **critUp** (Focus Energy), **flinch**, **confuse**, **sleep**, **leechSeed**, **trap** (Fire Spin & co.), **rapidSpin** (clears trap/Leech Seed), **fixedDamageHalf** (Super Fang), **twoTurn** (Solar Beam / Skull Bash — a charging turn), **thrash** (Petal Dance — locks in, then confuses), **weather / rain** (Rain Dance: Water ×1.5, Fire ×0.5), **tailwind** (×2 Speed) and **rage**.
+- **Type chart expanded to the full 18 types**, adding **Dark** and **Fairy** (among the missing ones). Dual-type damage now multiplies both matchups correctly.
+### Changed
+- **End-of-round residual damage is unified.** Poison / burn, **Leech Seed** and **trap** damage now resolve through one shared path (with step-by-step animation in manual battle), instead of poison/burn being handled on their own.
+- **Self-KO from recoil or confusion is resolved correctly** — a Pokémon that faints itself (recoil, a confusion hit) is now properly counted as fainted.
+### Notes
+- **Save format is unchanged** — move effects are runtime/transient state, so there's no migration.
+- **Deferred (data is "prepared", but the effect does nothing yet / shows "but it failed!"):** **transform**, **copyMove**, **forceSwitch**.
+
+## [0.52.0] – 2026-09-02 · Evolution sprites · building sprites · shiny dev toggle
+### Added
+- **Real sprites for all nine evolved species.** Ivysaur, Venusaur, Charmeleon, Charizard, Wartortle, Blastoise, Pidgeotto, Pidgeot and Raticate now show their proper artwork (front, back and shiny variants) instead of the "?" placeholder — in the Pokédex, on the Pokémon card and in battle. Venusaur and Raticate also have their female-form sprites.
+- **Sprites for the Training Grounds and Move Tutor buildings**, normalized to the same 256×256 transparent standard as the other buildings.
+### Changed
+- **Shiny survives evolution — confirmed.** A shiny stays shiny through every evolution step (e.g. a shiny Squirtle evolves into a shiny Wartortle and then a shiny Blastoise). This already worked; the new sprites just make it visible.
+### Added (dev)
+- **Shiny toggle on the Pokémon card's dev row** (next to the level tools) to flip a Pokémon's shiny state for testing shiny sprites and shiny-through-evolution. Debug only.
+
+## [0.51.0] – 2026-09-02 · Move Tutor building · learn-on-level-up asks in manual battle
+### Added
+- **Move Tutor — a new building.** A place to freely rearrange any Pokémon's four active moves. Pick a Pokémon, and you see **every move it can learn by level-up** up to its current level — tick up to four to make them its active set. Reteaching is **free** and **keeps the remaining PP** of moves you keep. This solves two long-standing pains: getting back a move that was overwritten on level-up, and picking up an **evolved form's new moves** (an evolved species' learnset includes its own moves, so they show up here after you evolve).
+### Changed
+- **Learning a move on level-up now depends on the battle mode.** In **manual battle**, when a Pokémon with four moves would learn a new one, the game **asks** whether to learn it and which move to replace (as before). In **auto battle** — and for offline/Day Care XP — it **auto-replaces** the weakest move (by power; it never downgrades itself), so nothing interrupts an unattended run. Use the Move Tutor afterwards to fine-tune the set.
+
+## [0.50.0] – 2026-09-02 · Full level-up movepools · dev level-setter
+### Added
+- **Complete level-up movepools for every current species.** All 15 Pokémon (the three starter lines, the Pidgey line, the Rattata line and Ditto) now learn their **full canonical level-up move list**, not just their damaging attacks. That means the support/status moves are in too — Growl, Leer, Tail Whip, Sand-Attack, Growth, Swords Dance, Focus Energy, Sweet Scent, Withdraw, Agility, Feather Dance, Whirlwind, Mirror Move, Leech Seed, Sleep Powder, Poison Powder, Smokescreen, Roost, Tailwind, Rain Dance, Synthesis and Ditto's Transform — plus more attacks (Take Down, Double-Edge, Rage, Skull Bash, Rapid Spin, Water Pulse, Aqua Tail, Fire Spin, Petal Dance, Super Fang, Pursuit, Sucker Punch, Crunch, Hurricane…).
+- **Move data is "prepared" for future mechanics.** Every move now carries an optional `effect` descriptor (stat changes, sleep, confusion, flinch, recoil, drain, two-turn charge, multi-hit, force-switch, copy-move, transform, heal, weather…). ⚠️ **Heads-up:** the battle engine does **not** execute these special effects yet — for now the game still only resolves direct damage, accuracy/miss, PP, priority and the poison/burn/paralysis conditions. The rest are in the data so they're ready to be wired up later; a status move whose effect isn't implemented simply does nothing this version.
+### Added (dev)
+- **Dev level-setter on the Pokémon card** (for testing evolutions/learnsets): a 🔧 row with −10 / −1 / +1 / +10, a jump-to-evolution-level button and **Max (Lv 100)**. Setting a level re-rolls the move set for that level and refills HP. It's a debug tool, not part of normal play.
+
+## [0.49.0] – 2026-09-02 · Evolutions (opt-in) · Nature inheritance · Everstone
+### Added
+- **Evolutions — but you decide.** Nine new evolved species are in the game (Ivysaur, Venusaur, Charmeleon, Charizard, Wartortle, Blastoise, Pidgeotto, Pidgeot, Raticate). Evolution is **never automatic**: once a Pokémon reaches its evolution level, an **✨ Evolve** button appears on its **Team** slot and on its **Pokémon card** (also reachable from the Pokédex). Evolving keeps the same individual (level, XP, IVs, EVs, nature, gender, shiny) — it just grows into the stronger form, gains the max-HP bump, and learns the new form's moves. One step per click; the next stage becomes available when it reaches its own level.
+- **Level cap is 100.** Because evolution is optional, any Pokémon — even an un-evolved starter — can now be trained all the way to **Lv 100**.
+- **Nature inheritance via Everstone.** A new held item, **🪨 Everstone** (Poké Mart, Held Items). If a breeding parent holds one, the baby inherits **that parent's Nature** instead of a random one (if both hold one, one is picked at random). A Pokémon holding an Everstone also won't show the Evolve button (the classic "won't evolve" rule).
+- The Pokémon card now shows **what a species evolves into and at what level** (and notes when an Everstone is blocking it).
+
+## [0.48.0] – 2026-09-02 · Auto-battle AI · unequip held items · market scroll fix
+### Added
+- **Smarter auto-battle.** With auto-battle on, your Pokémon now plays a real strategy instead of always spamming its first move:
+  - **Move choice weighs damage and accuracy** — it picks the move with the best expected damage (average roll × accuracy), so a shaky high-power move no longer beats a reliable one.
+  - **Status-inflicting moves are preferred on a healthy target** — against a full-ish, status-free opponent it favours a move that can inflict a condition (e.g. Body Slam's paralysis) over a plain hit.
+  - **Auto-heal** — when the active Pokémon drops below 30% HP and you own a healing Potion, it uses the smallest Potion that covers the missing HP (spending the turn, as in the classic games).
+  - **Auto-switch on a type disadvantage** — if the opponent's best move would hit your active Pokémon for ≥2× and a benched Pokémon resists it better, it switches out (with a guard so it never switch-loops).
+- **Unequip held items from the Bag.** The Bag now has a **📌 Currently held** section listing every Pokémon carrying an item, each with a **Remove** button that returns the item to your inventory.
+### Fixed
+- **Nothing jumps to the top on a refresh anymore.** Previously any scrollable window would snap back to the top whenever the game state changed — most visibly the market while buying items or when gold ticked up during auto-battle. Windows now keep their scroll position across refreshes. This covers all city/market windows (market, Poké Balls, Items, Upgrades, Training, Breeders, Breeding) as well as the Bag, the Pokémon card, the Pokédex and the Team panel. (The scroll lives on the inner scroll containers, not the outer modal, which is why the earlier attempt didn't help.)
+
+## [0.47.0] – 2026-09-02 · Held items managed in the Bag · radar layout
+### Changed
+- **Held items are now managed from the Bag**, not from the Pokémon card. The Bag is split into **Consumables** and a **💎 Held Items** section. Tap a held item and choose **Use** (a berry heals a chosen Pokémon right away and is consumed) or **Equip as Held Item** (pick who carries it). The Pokémon card now shows the held item read-only, with a hint to manage it in the Bag.
+- **Oran Berry** can now be used directly from the Bag to restore 10 HP (on top of its held effect).
+- **Stat radar** on the Pokémon card was reordered. Clockwise from the top vertex: **HP, Attack, Defense, Speed, Sp. Def, Sp. Atk**. The nature's boosted/lowered axes stay highlighted on the correct stats.
+
+## [0.46.0] – 2026-09-02 · Item targeting in battle · Revive in battle · Held items
+### Added
+- **Choose the target for items in battle.** The battle **Items** menu no longer only heals your active Pokémon — after picking an item you now choose which team member it applies to. The target list is filtered to valid choices (a Potion only lists hurt Pokémon, a status cure only afflicted ones, a Revive only fainted ones). Using an item still costs your turn.
+- **Revive in battle.** With targeting in place, **Revive / Max Revive** can now bring a fainted teammate back **during** a battle (pick it from the item's target list). The revived Pokémon stays on the bench — switch it in when you want it.
+- **Held items.** Pokémon can now hold an item that works automatically in battle. Two to start: **🍖 Leftovers** (restores 1/16 max HP at the end of every turn) and **🍒 Oran Berry** (restores 10 HP the first time HP drops below 50%, then is consumed). Equip/unequip from the Pokémon card; the held item shows on the team slot. Buy them in the new **Held Items** section of the Poké Mart.
+- Save migrates to **v18** (adds the `heldItem` field to every Pokémon, defaulting to none).
+
 ## [0.45.0] – 2026-09-01 · Healing items · Poké Mart Items section · Bag (in & out of battle)
 ### Added
 - **Healing items.** A full line of consumables you can buy and use: **Potions** (Potion / Super / Hyper / Max Potion — restore 20 / 60 / 120 / full HP), **status heals** (Antidote, Burn Heal, Paralyze Heal, and Full Heal for any condition), and **Revives** (Revive → half HP, Max Revive → full HP) that bring back a fainted Pokémon. Items are data-driven (`data/items.js`), so adding more later is just a new entry.

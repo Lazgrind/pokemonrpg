@@ -48,7 +48,7 @@ function accrue(seconds) {
 
   slot.buffer -= whole;
   const fromLevel = owned.level;
-  grantXp(owned, whole);
+  grantXp(owned, whole, { auto: true }); // Školka běží bez hráče → tahy přepiš samy
   return {
     xp: whole,
     name: getSpecies(owned.speciesId)?.name ?? owned.speciesId,

@@ -44,4 +44,5 @@ export const EVENTS = {
   BATTLE_FAINT: "battle:faint",
   EGG_HATCHED: "egg:hatched",
   EGG_BRED: "egg:bred",
+  POKEMON_EVOLVED: "pokemon:evolved",
 };

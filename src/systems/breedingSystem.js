@@ -19,6 +19,7 @@ import { bus, EVENTS } from "../core/events.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getBreedingSlot, getBreedingParents } from "./buildingSystem.js";
 import { makeBredEgg } from "./eggSystem.js";
+import { holdsEverstone } from "./evolutionSystem.js";
 import { OFFLINE_CAP_HOURS } from "./idle.js";
 import {
   areCompatible,
@@ -89,6 +90,13 @@ export function accrueBreeding(seconds) {
       inherit: INHERIT_IV_COUNT,
       shinyChance: BREED_SHINY_CHANCE,
     };
+    // Dědičnost povahy přes Everstone: drží-li ho rodič, potomek zdědí JEHO
+    // povahu. Když ho drží oba, náhodně vybereme jednoho (jinak zůstane náhodná).
+    const stoneA = holdsEverstone(a);
+    const stoneB = holdsEverstone(b);
+    if (stoneA && stoneB) breed.nature = Math.random() < 0.5 ? a.nature : b.nature;
+    else if (stoneA) breed.nature = a.nature;
+    else if (stoneB) breed.nature = b.nature;
     const egg = makeBredEgg(childId, breed);
     produced.push(egg);
   }

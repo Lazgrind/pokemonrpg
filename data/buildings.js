@@ -18,6 +18,7 @@
  * @property {{ basePercent: number, perLevel: number, maxPercent: number }} [heal]  doléčení po vítězství v % max HP (Pokémon Centrum)
  * @property {{ xpPerMinute: number, perLevel: number }} [daycare]  pasivní XP za minutu (Školka)
  * @property {{ baseEv: number, perLevel: number, goldCost: number }} [training]  trénink EV (Training Grounds): kolik EV za jednu placenou lekci (+perLevel za úroveň) a cena lekce v goldu
+ * @property {boolean} [moveTutor]  Move Tutor: budova umožní přeskládat aktivní tahy z celého level-up movepoolu (bez efektu na cenu/level)
  * @property {Record<string, TrackDef>} [tracks]  samostatné upgrade linie budovy (vlastní úroveň i cena)
  *
  * @typedef {Object} TrackDef
@@ -85,14 +86,25 @@ export const BUILDINGS = [
     name: "Training Grounds",
     icon: "🏋️",
     color: "#c0713b",
-    // sprite zatím není – použije se CSS domeček (fallback). Až přidáš
-    // assets/buildings/training-grounds.png, doplň sem `sprite:` jako u ostatních.
+    sprite: "assets/buildings/training-grounds.png",
     description: "Pay gold to train a Pokémon's Effort Values (EV) in a stat of your choice. Upgrades raise the EV gained per session. Caps: 252 per stat, 510 total.",
     startLevel: 1,
     maxLevel: 10,
     upgrade: { baseCost: 150, growth: 1.5 },
     // baseEv + (level-1)*perLevel EV za jednu lekci; každá lekce stojí goldCost.
     training: { baseEv: 4, perLevel: 4, goldCost: 50 },
+  },
+  {
+    id: "move-tutor",
+    name: "Move Tutor",
+    icon: "📖",
+    color: "#8e5bd0",
+    sprite: "assets/buildings/move-tutor.png",
+    description: "Freely rearrange a Pokémon's four active moves from everything it can learn by level-up — reteach forgotten moves, and pick up an evolved form's new moves.",
+    startLevel: 1,
+    maxLevel: 1, // budova buď stojí, nebo ne; přeučení tahů je zdarma a bez levelů
+    upgrade: { baseCost: 200, growth: 1 },
+    moveTutor: true,
   },
 ];
 
