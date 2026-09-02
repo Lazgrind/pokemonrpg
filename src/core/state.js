@@ -33,6 +33,7 @@
  * @property {string|null} caughtBall  id Poké Ballu, ve kterém byl chycen
  *                                     (null = dar/vylíhnutý – žádný ball)
  * @property {"m"|"f"|"genderless"} gender  pohlaví jedince (dle genderRatio druhu)
+ * @property {string|null} heldItem  id drženého itemu (held item) nebo null
  *
  * @typedef {Object} GameState
  * @property {number} saveVersion
@@ -41,6 +42,10 @@
  * @property {{ gold: number, balls: Record<string, number>, items: Record<string, number> }} resources  balls/items: id → počet
  * @property {OwnedPokemon[]} collection
  * @property {string[]} team         uid jedinců v týmu (max 6)
+ * @property {Array<{ name: string, slots: Array<string|null> }>} pcBoxes  PC boxy: úložiště
+ *                                     jedinců mimo tým; každý box = PC_BOX_SIZE slotů (uid | null).
+ *                                     Uspořádání drží hráč (drag & drop); pcSystem.reconcile()
+ *                                     zaručí, že každý vlastněný jedinec mimo tým je právě v 1 slotu.
  * @property {Array<{ id: string, speciesId: string }>} eggs  nalezená vejce (líhnou se ve Školce)
  * @property {{ tier: number }} progress  postup světem (odemyká typy ballů apod.)
  * @property {Array<{ uid: string, moveId: string }>} moveLearnQueue  čekající nabídky naučení tahu
@@ -57,10 +62,13 @@
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 17;
+export const CURRENT_SAVE_VERSION = 19;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
+
+/** Počet slotů v jednom PC boxu (mřížka 6×5). */
+export const PC_BOX_SIZE = 30;
 
 /** @type {GameState | null} */
 let state = null;
@@ -78,6 +86,7 @@ export function createNewGame() {
     resources: { gold: 0, balls: { poke: 5 }, items: {} },
     collection: [],
     team: [],
+    pcBoxes: [{ name: "Box 1", slots: Array(PC_BOX_SIZE).fill(null) }], // úložiště mimo tým (viz pcSystem)
     eggs: [], // nalezená vejce; líhnou se ve Školce (viz eggSystem)
     progress: { tier: 1 },
     moveLearnQueue: [], // čekající nabídky naučení tahu při plných slotech (viz pokemonSystem)

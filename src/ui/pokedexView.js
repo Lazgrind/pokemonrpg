@@ -18,6 +18,7 @@ import { pokemonEngagement } from "../systems/buildingSystem.js";
 import { spriteImg, silhouetteHtml } from "./sprites.js";
 import { openPokemonCard } from "./pokemonCard.js";
 import { genderSymbolHtml } from "./gender.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 // Startéři jsou jeden zdroj pravdy v datech (STARTER_IDS).
 
@@ -155,6 +156,7 @@ export function renderPokedexTab(root, onStatus = () => {}) {
   const statusChip = (val, label) =>
     `<button class="filter-chip ${statusFilter === val ? "active" : ""}" data-fstatus="${val}">${label}</button>`;
 
+  const _savedScroll = saveScroll(root);
   root.innerHTML = `
     <h2 class="panel-title">Pokédex <span class="dex-count">${caught} / ${total}</span></h2>
     <button class="btn filter-toggle ${filtersOpen ? "active" : ""}" id="dex-filter-toggle">🔎 Filters</button>
@@ -178,6 +180,7 @@ export function renderPokedexTab(root, onStatus = () => {}) {
       ${cards.length ? cards.join("") : `<p class="placeholder">No Pokémon match the filters.</p>`}
     </div>
   `;
+  restoreScroll(root, _savedScroll);
 
   root.querySelector("#dex-filter-toggle").addEventListener("click", () => {
     filtersOpen = !filtersOpen;

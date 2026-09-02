@@ -192,6 +192,21 @@ function migrate(data) {
     }
     data.saveVersion = 17;
   }
+  // v17 → v18: drženého itemu na jedinci (`heldItem`). Stávajícím doplníme null
+  // (žádný drženou item), ať všichni jedinci mají platné pole.
+  if (data.saveVersion < 18) {
+    for (const p of data.collection ?? []) {
+      if (p.heldItem === undefined) p.heldItem = null;
+    }
+    data.saveVersion = 18;
+  }
+  // v18 → v19: PC boxy (úložiště jedinců mimo tým). Starým save doplníme prázdné
+  // pole boxů; pcSystem.reconcile() při prvním vykreslení rozmístí všechny dosud
+  // vlastněné jedince mimo tým do slotů (a založí Box 1, pokud žádný není).
+  if (data.saveVersion < 19) {
+    if (!Array.isArray(data.pcBoxes)) data.pcBoxes = [];
+    data.saveVersion = 19;
+  }
   return data;
 }
 

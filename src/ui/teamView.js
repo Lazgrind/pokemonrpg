@@ -9,10 +9,13 @@ import { getTeamPokemon, removeFromTeam, moveInTeam } from "../systems/team.js";
 import { healStatus } from "../systems/battleSystem.js";
 import { ivPercent, evTotal, computeStats } from "../systems/pokemonSystem.js";
 import { xpForNextLevel } from "../systems/progression.js";
+import { canEvolveNow, evolvePokemon } from "../systems/evolutionSystem.js";
 import { openPokemonCard } from "./pokemonCard.js";
 import { openBag } from "./bagView.js";
 import { genderSymbolHtml } from "./gender.js";
 import { statusBadge } from "./statusBadge.js";
+import { heldItemOf } from "../systems/itemSystem.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /** Jméno druhu daného jedince. */
 function speciesName(p) {
@@ -26,7 +29,9 @@ function displayName(p) {
 
 /** Řádek s IV kvalitou a EV součtem. */
 function ivEvLine(p) {
-  return `<span class="placeholder iv-ev">IV ${ivPercent(p)}% · EV ${evTotal(p)}${p.shiny ? " · ✨ shiny" : ""}</span>`;
+  const heldItem = heldItemOf(p);
+  const heldStr = heldItem ? ` · ${heldItem.icon}` : "";
+  return `<span class="placeholder iv-ev">IV ${ivPercent(p)}% · EV ${evTotal(p)}${p.shiny ? " · ✨ shiny" : ""}${heldStr}</span>`;
 }
 
 /**
@@ -88,6 +93,7 @@ export function renderTeamTab(root, onStatus) {
             <button class="btn" data-move="-1" data-uid="${p.uid}" title="Move left">◀</button>
             <button class="btn" data-move="1" data-uid="${p.uid}" title="Move right">▶</button>
             ${p.status ? `<button class="btn" data-cure="${p.uid}" title="Cure status effect (no HP/PP restore)">💊 Cure</button>` : ""}
+            ${canEvolveNow(p) ? `<button class="btn btn-evolve" data-evolve="${p.uid}" title="Evolve this Pokémon">✨ Evolve</button>` : ""}
             <button class="btn btn-danger" data-remove="${p.uid}">Remove</button>
           </div>
         </div>`);
@@ -96,6 +102,7 @@ export function renderTeamTab(root, onStatus) {
     }
   }
 
+  const _savedScroll = saveScroll(root);
   root.innerHTML = `
     <div class="team-head">
       <h2 class="panel-title">Team (${team.length}/${MAX_TEAM_SIZE})</h2>
@@ -104,6 +111,7 @@ export function renderTeamTab(root, onStatus) {
     ${team.length === 0 ? `<p class="placeholder">Your team is empty. Add Pokémon from the Pokédex tab.</p>` : ""}
     ${slots.join("")}
   `;
+  restoreScroll(root, _savedScroll);
 
   const bagBtn = root.querySelector("[data-bag]");
   if (bagBtn) bagBtn.addEventListener("click", () => openBag(onStatus));
@@ -122,6 +130,12 @@ export function renderTeamTab(root, onStatus) {
   root.querySelectorAll("[data-cure]").forEach((b) =>
     b.addEventListener("click", () => {
       if (healStatus(b.dataset.cure)) onStatus("Status cured");
+    })
+  );
+  root.querySelectorAll("[data-evolve]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const res = evolvePokemon(b.dataset.evolve);
+      onStatus(res.ok ? `✨ ${res.fromName} evolved into ${res.toName}!` : res.reason ?? "Can't evolve.");
     })
   );
   // Klik na slot (mimo tlačítka) → karta Pokémona.

@@ -40,7 +40,11 @@ import {
   EV_MAX_PER_STAT,
   EV_MAX_TOTAL,
   evTotal,
+  setActiveMoves,
+  MAX_MOVES,
 } from "../systems/pokemonSystem.js";
+import { learnableMovesAtLevel } from "../../data/learnsets.js";
+import { getMove } from "../../data/moves.js";
 import { breedingStatus } from "../systems/breedingSystem.js";
 import { canBreedSpecies, BREED_MINUTES, INHERIT_IV_COUNT } from "../../data/breeding.js";
 import { isBallUnlocked } from "../systems/pokeballSystem.js";
@@ -54,13 +58,14 @@ import {
   removeIncubatingEgg,
   isIncubating,
 } from "../systems/eggSystem.js";
-import { getState } from "../core/state.js";
+import { getState, commit } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { hatchMinutesFor } from "../../data/eggs.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { formatDuration } from "../systems/idle.js";
 import { isInTeam } from "../systems/team.js";
 import { bus, EVENTS } from "../core/events.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /** Jméno druhu Pokémona. */
 function speciesName(p) {
@@ -204,6 +209,18 @@ export function openBuilding(id, onStatus = () => {}) {
       }
     }
 
+    // Move Tutor: přeskládání aktivních tahů z celého level-up movepoolu.
+    // Řeší i změnu movepoolu po evoluci (evolvovaný druh má v learnsetu i své
+    // nízkoúrovňové tahy) a doučení tahů „přepsaných" při level-upu.
+    if (def.moveTutor) {
+      const count = getState().collection.length;
+      if (count === 0) {
+        extraHtml += `<p class="placeholder" style="margin-top:8px">You have no Pokémon yet — catch one first.</p>`;
+      } else {
+        actions.push(`<button class="btn" data-act="tutor">📖 Reteach moves</button>`);
+      }
+    }
+
     // Upgrades: budova i její linie za jedním klikacím oknem.
     const upgradeCount = 1 + (def.tracks ? Object.keys(def.tracks).length : 0);
     actions.push(
@@ -265,6 +282,9 @@ export function openBuilding(id, onStatus = () => {}) {
 
     const train = overlay.querySelector('[data-act="train"]');
     if (train) train.addEventListener("click", () => openTrainingPicker(id, onStatus));
+
+    const tutor = overlay.querySelector('[data-act="tutor"]');
+    if (tutor) tutor.addEventListener("click", () => openMoveTutorPicker(id, onStatus));
 
     overlay.querySelector('[data-act="close"]').addEventListener("click", close);
   }
@@ -344,6 +364,9 @@ function openTrainingStats(id, uid, onStatus) {
       </div>`;
     }).join("");
 
+    // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
+    const savedScroll = saveScroll(overlay);
+
     overlay.innerHTML = `
       <div class="modal building-modal">
         <h2 class="panel-title">🏋️ Train ${speciesName(p)}${p.shiny ? " ✨" : ""} · Lv ${p.level}</h2>
@@ -353,12 +376,150 @@ function openTrainingStats(id, uid, onStatus) {
       </div>
     `;
 
+    // Obnoví scroll pozici PO přepsání obsahu.
+    restoreScroll(overlay, savedScroll);
+
     overlay.querySelectorAll("[data-train]").forEach((btn) =>
       btn.addEventListener("click", () => {
         const r = trainEv(uid, btn.dataset.train, id);
         onStatus(r.ok ? `+${r.added} ${STAT_LABELS[btn.dataset.train]} EV ✓` : r.reason);
       })
     );
+
+    overlay.querySelector('[data-act="close"]').addEventListener("click", close);
+  }
+
+  render();
+}
+
+/**
+ * Move Tutor – výběr Pokémona, kterému chceš přeskládat tahy (celá kolekce,
+ * i jedinci v týmu). Po výběru se otevře editor aktivní sady.
+ * @param {string} id  id budovy (Move Tutor)
+ * @param {(msg: string) => void} onStatus
+ */
+function openMoveTutorPicker(id, onStatus) {
+  const avail = getState().collection;
+  openPokemonPicker({
+    title: "Choose a Pokémon to reteach",
+    avail,
+    onPick: (uid) => {
+      openMoveTutorEditor(id, uid, onStatus);
+      return { ok: true }; // jen zavře picker; přeučení řeší editor
+    },
+    okMsg: "",
+    onStatus,
+  });
+}
+
+/** Krátký popisek kategorie tahu (fyzický/speciální/status). */
+const MOVE_CAT_ICON = { physical: "💥", special: "✨", status: "🌀" };
+
+/**
+ * Move Tutor – editor aktivní sady tahů jednoho jedince. Ukáže VŠECHNY tahy,
+ * které se druh do svého levelu učí level-upem (learnableMovesAtLevel), a nechá
+ * hráče vybrat až 4 aktivní. Přeučení je zdarma; PP naučených tahů se zachová
+ * (setActiveMoves). Řeší i movepool po evoluci a doučení tahů „přepsaných" při
+ * automatickém level-upu.
+ * @param {string} id  id budovy (Move Tutor)
+ * @param {string} uid  jedinec z kolekce
+ * @param {(msg: string) => void} onStatus
+ */
+function openMoveTutorEditor(id, uid, onStatus) {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  document.body.appendChild(overlay);
+
+  // Lokální rozpracovaný výběr (pořadí = pořadí slotů). Vychází z aktuální sady.
+  const start = getState().collection.find((x) => x.uid === uid);
+  let selected = (start?.moves ?? []).map((m) => m.id);
+
+  function close() {
+    document.removeEventListener("keydown", onKey);
+    overlay.remove();
+  }
+  function onKey(e) {
+    if (e.key === "Escape") close();
+  }
+  document.addEventListener("keydown", onKey);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+
+  function toggle(moveId) {
+    const i = selected.indexOf(moveId);
+    if (i >= 0) selected.splice(i, 1);
+    else if (selected.length < MAX_MOVES) selected.push(moveId);
+    render();
+  }
+
+  function render() {
+    const p = getState().collection.find((x) => x.uid === uid);
+    if (!p) return close();
+
+    const learnable = learnableMovesAtLevel(p.speciesId, p.level);
+
+    // Řádek s aktivními sloty (podle aktuálního výběru).
+    const slots = [];
+    for (let i = 0; i < MAX_MOVES; i++) {
+      const mid = selected[i];
+      const mv = mid ? getMove(mid) : null;
+      slots.push(
+        mv
+          ? `<div class="tutor-slot filled">${MOVE_CAT_ICON[mv.category] ?? "•"} ${mv.name}</div>`
+          : `<div class="tutor-slot empty placeholder">— empty —</div>`
+      );
+    }
+
+    // Seznam všech naučitelných tahů; vybrané ukazují číslo slotu.
+    const rows = learnable
+      .map(({ id: mid, level }) => {
+        const mv = getMove(mid);
+        if (!mv) return "";
+        const pos = selected.indexOf(mid);
+        const on = pos >= 0;
+        const full = !on && selected.length >= MAX_MOVES;
+        const power = mv.power ? `${mv.power} pow` : "status";
+        const badge = on ? `<span class="tutor-badge">#${pos + 1}</span>` : "";
+        return `<button class="tutor-move${on ? " on" : ""}" data-move="${mid}" ${full ? "disabled" : ""}>
+          ${badge}
+          <span class="tm-name">${MOVE_CAT_ICON[mv.category] ?? "•"} ${mv.name}</span>
+          <span class="tm-meta placeholder">${mv.type} · ${power} · ${mv.pp} PP · Lv ${level}</span>
+        </button>`;
+      })
+      .join("");
+
+    const canSave = selected.length >= 1;
+    const savedScroll = saveScroll(overlay);
+
+    overlay.innerHTML = `
+      <div class="modal building-modal">
+        <h2 class="panel-title">📖 Reteach — ${speciesName(p)}${p.shiny ? " ✨" : ""} · Lv ${p.level}</h2>
+        <p class="placeholder">Pick up to ${MAX_MOVES} moves this Pokémon can learn by level-up. Reteaching is free and keeps remaining PP.</p>
+        <div class="tutor-slots">${slots.join("")}</div>
+        <div class="tutor-list">${rows || `<p class="placeholder">No learnable moves.</p>`}</div>
+        <div class="tutor-actions">
+          <button class="btn" data-act="save" ${canSave ? "" : "disabled"}>Save moves</button>
+          <button class="btn btn-close" data-act="close">Close</button>
+        </div>
+      </div>
+    `;
+
+    restoreScroll(overlay, savedScroll);
+
+    overlay.querySelectorAll("[data-move]").forEach((btn) =>
+      btn.addEventListener("click", () => toggle(btn.dataset.move))
+    );
+
+    const save = overlay.querySelector('[data-act="save"]');
+    if (save)
+      save.addEventListener("click", () => {
+        if (selected.length < 1) return;
+        setActiveMoves(p, selected);
+        commit();
+        onStatus(`Moves updated for ${speciesName(p)} ✓`);
+        close();
+      });
 
     overlay.querySelector('[data-act="close"]').addEventListener("click", close);
   }
@@ -434,6 +595,9 @@ function openBreeders(id, onStatus) {
         ? `<p class="placeholder" style="margin-top:8px">No eggs to hatch — win battles for a chance to find one.</p>`
         : `<p class="placeholder" style="margin-top:8px">You have <strong>${idleEggs.length}</strong> egg(s) ready to place. The species stays a mystery until it hatches.</p>`;
 
+    // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
+    const savedScroll = saveScroll(overlay);
+
     overlay.innerHTML = `
       <div class="modal building-modal">
         <h2 class="panel-title">${def.icon} Egg Breeders</h2>
@@ -443,6 +607,9 @@ function openBreeders(id, onStatus) {
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
     `;
+
+    // Obnoví scroll pozici PO přepsání obsahu.
+    restoreScroll(overlay, savedScroll);
 
     overlay.querySelectorAll('[data-act="egg-open"]').forEach((btn) =>
       btn.addEventListener("click", () => openEggPicker(id, onStatus))
@@ -527,6 +694,9 @@ function openBreeding(id, onStatus) {
         <div class="breeder-time">${pct}% · ${remain}</div>`;
     }
 
+    // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
+    const savedScroll = saveScroll(overlay);
+
     overlay.innerHTML = `
       <div class="modal building-modal">
         <h2 class="panel-title">💞 Breeding</h2>
@@ -539,6 +709,9 @@ function openBreeding(id, onStatus) {
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
     `;
+
+    // Obnoví scroll pozici PO přepsání obsahu.
+    restoreScroll(overlay, savedScroll);
 
     overlay.querySelectorAll("[data-breed-add]").forEach((btn) =>
       btn.addEventListener("click", () => openBreedingPicker(id, btn.dataset.breedAdd, onStatus))
@@ -686,6 +859,9 @@ function openUpgrades(id, onStatus) {
       }
     }
 
+    // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
+    const savedScroll = saveScroll(overlay);
+
     overlay.innerHTML = `
       <div class="modal building-modal">
         <h2 class="panel-title">${def.icon} ${def.name} — Upgrades</h2>
@@ -696,6 +872,9 @@ function openUpgrades(id, onStatus) {
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
     `;
+
+    // Obnoví scroll pozici PO přepsání obsahu.
+    restoreScroll(overlay, savedScroll);
 
     const upB = overlay.querySelector("[data-up-building]");
     if (upB)
@@ -749,6 +928,10 @@ function openMarket(id, onStatus) {
 
   function render() {
     const gold = getState().resources.gold;
+
+    // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
+    const savedScroll = saveScroll(overlay);
+
     overlay.innerHTML = `
       <div class="modal building-modal">
         <h2 class="panel-title">${def.icon} ${def.name} — Market</h2>
@@ -766,6 +949,9 @@ function openMarket(id, onStatus) {
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
     `;
+
+    // Obnoví scroll pozici PO přepsání obsahu.
+    restoreScroll(overlay, savedScroll);
 
     const balls = overlay.querySelector('[data-section="balls"]');
     if (balls) balls.addEventListener("click", () => openBallShop(id, onStatus));
@@ -830,6 +1016,9 @@ function openBallShop(id, onStatus) {
 
     const body = rows || `<p class="placeholder">No Poké Balls available yet.</p>`;
 
+    // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
+    const savedScroll = saveScroll(overlay);
+
     overlay.innerHTML = `
       <div class="modal building-modal">
         <h2 class="panel-title">🔴 Poké Balls</h2>
@@ -838,6 +1027,9 @@ function openBallShop(id, onStatus) {
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
     `;
+
+    // Obnoví scroll pozici PO přepsání obsahu.
+    restoreScroll(overlay, savedScroll);
 
     overlay.querySelectorAll("[data-buy-ball]").forEach((btn) =>
       btn.addEventListener("click", () => {
@@ -901,6 +1093,9 @@ function openItemShop(id, onStatus) {
         : "";
     }).join("");
 
+    // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
+    const savedScroll = saveScroll(overlay);
+
     overlay.innerHTML = `
       <div class="modal building-modal">
         <h2 class="panel-title">🧴 Items</h2>
@@ -909,6 +1104,9 @@ function openItemShop(id, onStatus) {
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
     `;
+
+    // Obnoví scroll pozici PO přepsání obsahu.
+    restoreScroll(overlay, savedScroll);
 
     overlay.querySelectorAll("[data-buy-item]").forEach((btn) =>
       btn.addEventListener("click", () => {

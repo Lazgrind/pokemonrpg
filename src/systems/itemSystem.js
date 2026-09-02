@@ -12,7 +12,7 @@
 
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
-import { getItem } from "../../data/items.js";
+import { getItem, isHeldItem } from "../../data/items.js";
 import { computeStats } from "./pokemonSystem.js";
 
 /** Kolik kusů daného itemu hráč má. */
@@ -41,6 +41,7 @@ export function buyItem(itemId, qty = 1) {
 /**
  * Lze item teď použít na daného jedince? (bez spotřeby) – rozhoduje UI, které
  * cíle nabídnout a proč. Nekontroluje, jestli item vlastníme (to řeší useItem).
+ * Held item bez `effect` není použitelný (jen equippable).
  * @param {string} itemId
  * @param {import("../core/state.js").OwnedPokemon} owned
  * @returns {{ ok: boolean, reason?: string }}
@@ -48,6 +49,7 @@ export function buyItem(itemId, qty = 1) {
 export function canUseItem(itemId, owned) {
   const def = getItem(itemId);
   if (!def) return { ok: false, reason: "Unknown item." };
+  if (!def.effect) return { ok: false, reason: "This item can't be used." };
   if (!owned) return { ok: false, reason: "No target." };
   const max = computeStats(owned).maxHp;
   const hp = owned.hp ?? max;
@@ -122,4 +124,64 @@ export function useItem(uid, itemId) {
   commit();
   bus.emit(EVENTS.BATTLE_UPDATE); // cíl může být právě nasazený bojovník
   return { ok: true, msg };
+}
+
+/**
+ * Vrátí aktuálně drženou položku pokémona, nebo null.
+ * @param {import("../core/state.js").OwnedPokemon} owned
+ * @returns {any|null}
+ */
+export function heldItemOf(owned) {
+  return owned?.heldItem ? getItem(owned.heldItem) : null;
+}
+
+/**
+ * Vybavení drženého itemu pokémonovi. Ověří, že je to held item, hráč má
+ * aspoň 1 kus v inventáři a pokémon existuje. Pokud pokémon už drží jiný item,
+ * ten se vrátí do batohu. Vrací {ok, reason?}.
+ * @param {string} uid
+ * @param {string} itemId
+ */
+export function equipHeldItem(uid, itemId) {
+  const def = getItem(itemId);
+  if (!def || !isHeldItem(itemId)) return { ok: false, reason: "That's not a held item." };
+  if (itemCount(itemId) <= 0) return { ok: false, reason: `No ${def.name} left.` };
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false, reason: "Unknown Pokémon." };
+
+  const res = getState().resources;
+  if (!res.items) res.items = {};
+
+  // Vrátit starý held item do batohu, pokud existuje.
+  if (owned.heldItem) {
+    res.items[owned.heldItem] = (res.items[owned.heldItem] ?? 0) + 1;
+  }
+
+  // Odečíst nový item z batohu a vybavit.
+  res.items[itemId] = (res.items[itemId] ?? 0) - 1;
+  owned.heldItem = itemId;
+
+  commit();
+  return { ok: true };
+}
+
+/**
+ * Odvybavení drženého itemu. Pokud pokémon drží nějaký item, ten se vrátí
+ * do batohu a heldItem se nastaví na null. Vrací {ok, reason?}.
+ * @param {string} uid
+ */
+export function unequipHeldItem(uid) {
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false, reason: "Unknown Pokémon." };
+
+  const res = getState().resources;
+  if (!res.items) res.items = {};
+
+  if (owned.heldItem) {
+    res.items[owned.heldItem] = (res.items[owned.heldItem] ?? 0) + 1;
+    owned.heldItem = null;
+  }
+
+  commit();
+  return { ok: true };
 }

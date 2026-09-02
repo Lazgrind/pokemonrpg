@@ -10,7 +10,7 @@
  */
 
 import { getState, commit } from "../core/state.js";
-import { POKEMON_SPECIES, STARTER_IDS } from "../../data/pokemon.js";
+import { POKEMON_SPECIES, STARTER_IDS, getSpecies } from "../../data/pokemon.js";
 import { AREAS } from "../../data/areas.js";
 
 /** Pokédex stav se seznamem viděných druhů (lazy default). */
@@ -44,6 +44,8 @@ export function ensureStartersSeen() {
   const dex = getPokedex();
   let changed = false;
   for (const id of STARTER_IDS) {
+    // Guard: přeskočit id, pro která neexistuje druh
+    if (!getSpecies(id)) continue;
     if (!dex.seen.includes(id)) {
       dex.seen.push(id);
       changed = true;

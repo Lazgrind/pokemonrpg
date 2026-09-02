@@ -166,6 +166,11 @@ function init() {
     setStatus("💞 The Day Care couple produced an egg!");
   });
 
+  // Evoluce při level-upu (v souboji i ve výcviku): krátká hláška v liště.
+  bus.on(EVENTS.POKEMON_EVOLVED, (e) => {
+    setStatus(`✨ ${e.fromName} evolved into ${e.toName}!`);
+  });
+
   // 6) Přehled offline zisků + hned uložit (reset lastSaved → žádné dvojí počítání).
   if (offlineBattle || offlineDaycare || offlineEgg || offlineBred) {
     saveGame();

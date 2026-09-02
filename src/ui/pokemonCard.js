@@ -11,10 +11,14 @@
  * viděného druhu jen poměr pohlaví druhu (individuální pohlaví ještě neznáme).
  */
 
-import { getState } from "../core/state.js";
+import { getState, commit } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getPokeball } from "../../data/pokeballs.js";
 import { getMove } from "../../data/moves.js";
+import { getItem } from "../../data/items.js";
+import { heldItemOf } from "../systems/itemSystem.js";
+import { bus, EVENTS } from "../core/events.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 import {
   STAT_KEYS,
   IV_MAX,
@@ -28,6 +32,7 @@ import {
 import { getNature, isNeutralNature } from "../../data/natures.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { areasForSpecies } from "../systems/pokedex.js";
+import { evolutionInfo, canEvolveNow, evolvePokemon, devSetLevel, devToggleShiny } from "../systems/evolutionSystem.js";
 import { spriteImg, silhouetteHtml } from "./sprites.js";
 import { ballIconHtml } from "./ballIcon.js";
 import { genderSymbolHtml } from "./gender.js";
@@ -100,40 +105,45 @@ function natureLabel(natureId) {
  * Hexagonální radar staty (Value) jedince. Jedna „série" (jeden Pokémon) → jedna
  * barva, bez legendy (titul karty ji pojmenovává). Hodnoty se normalizují na
  * nejsilnější stat jedince, aby byl vidět relativní tvar bez ohledu na level.
- * Osy v pořadí STAT_KEYS; povahou zvednutý/snížený stat se barevně odliší.
+ * Osy se mapují na hexagon (pointy-top, vrchol nahoře) v pořadí:
+ * 12h=HP, 2h=Atk, 4h=Def, 6h=Spd, 8h=SpDef, 10h=SpAtk.
+ * Povahou zvednutý/snížený stat se barevně odliší.
  * @param {import("../core/state.js").OwnedPokemon} owned
  */
 function statRadar(owned) {
   const stats = computeStats(owned);
-  const values = STAT_KEYS.map((k) => (k === "hp" ? stats.maxHp : stats[k]));
-  const maxVal = Math.max(1, ...values);
   const nat = getNature(owned.nature);
+
+  // Pořadí statů na hexagonu (12h, 2h, 4h, 6h, 8h, 10h)
+  const hexStatOrder = ["hp", "attack", "defense", "speed", "spDefense", "spAttack"];
+  const values = hexStatOrder.map((k) => (k === "hp" ? stats.maxHp : stats[k]));
+  const maxVal = Math.max(1, ...values);
 
   const cx = 100;
   const cy = 100;
   const R = 62; // poloměr vnějšího hexagonu
-  const n = STAT_KEYS.length;
+  const n = hexStatOrder.length;
   // Vrchol i: úhel od -90° (HP nahoře) po směru hodinových ručiček.
   const angle = (i) => (-90 + (360 / n) * i) * (Math.PI / 180);
   const pointAt = (i, r) => [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))];
 
   // Mřížka: dva soustředné hexagony (0.5 a 1.0) + osy z centra.
   const ring = (frac) =>
-    STAT_KEYS.map((_, i) => pointAt(i, R * frac).map((v) => v.toFixed(1)).join(","))
+    hexStatOrder.map((_, i) => pointAt(i, R * frac).map((v) => v.toFixed(1)).join(","))
       .join(" ");
-  const axes = STAT_KEYS.map((_, i) => {
+  const axes = hexStatOrder.map((_, i) => {
     const [x, y] = pointAt(i, R);
     return `<line class="mc-radar-axis" x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" />`;
   }).join("");
 
   // Datový polygon (Value normalizovaný na nejsilnější stat).
-  const dataPts = STAT_KEYS.map((k, i) => {
+  const dataPts = hexStatOrder.map((k, i) => {
     const frac = values[i] / maxVal;
     return pointAt(i, R * frac).map((v) => v.toFixed(1)).join(",");
   }).join(" ");
 
   // Popisky statů na vrcholech (název + hodnota); povaha barevně odliší.
-  const labels = STAT_KEYS.map((k, i) => {
+  const labels = hexStatOrder.map((k, i) => {
     const [x, y] = pointAt(i, R + 13);
     const anchor = x < cx - 5 ? "end" : x > cx + 5 ? "start" : "middle";
     let cls = "mc-radar-label";
@@ -150,7 +160,7 @@ function statRadar(owned) {
       <polygon class="mc-radar-grid" points="${ring(0.5)}" />
       ${axes}
       <polygon class="mc-radar-area" points="${dataPts}" />
-      ${STAT_KEYS.map((k, i) => {
+      ${hexStatOrder.map((k, i) => {
         const frac = values[i] / maxVal;
         const [x, y] = pointAt(i, R * frac);
         return `<circle class="mc-radar-dot" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" />`;
@@ -228,6 +238,20 @@ function movesList(owned) {
   return `<ul class="mc-moves">${rows}</ul>`;
 }
 
+/** Sekce Held item – read-only zobrazení. Ovládání je v batohu. */
+function heldItemSection(owned) {
+  const current = heldItemOf(owned);
+  const currentHtml = current
+    ? `<span class="held-item-display">${current.icon} <strong>${esc(current.name)}</strong></span>`
+    : `<span class="placeholder">None</span>`;
+
+  return `
+    <h4 class="mc-section">Held Item</h4>
+    <div class="held-item-display-wrap">${currentHtml}</div>
+    <p class="placeholder"><em>Manage held items in the Bag.</em></p>
+  `;
+}
+
 /** Vnitřek karty chyceného jedince. */
 function ownedBody(owned) {
   const species = getSpecies(owned.speciesId);
@@ -248,11 +272,35 @@ function ownedBody(owned) {
       <div class="mc-xp-label">EXP <span>${owned.xp} / ${need}</span></div>
       <span class="mc-bar xp"><span style="width:${xpPctW}%"></span></span>
     </div>
+    ${
+      canEvolveNow(owned)
+        ? `<button class="btn btn-evolve" data-act="evolve">✨ Evolve into ${esc(typeof species.evolvesTo === "string" ? (getSpecies(species.evolvesTo)?.name ?? species.evolvesTo) : "...")}</button>`
+        : ""
+    }
+    <div class="mc-dev">
+      <span class="mc-dev-label">🔧 Dev level</span>
+      <button class="btn btn-sm" data-lvl="-10" title="−10">−10</button>
+      <button class="btn btn-sm" data-lvl="-1" title="−1">−1</button>
+      <strong class="mc-dev-lvl">Lv ${owned.level}</strong>
+      <button class="btn btn-sm" data-lvl="1" title="+1">+1</button>
+      <button class="btn btn-sm" data-lvl="10" title="+10">+10</button>
+      ${
+        (() => {
+          const ev = evolutionInfo(owned);
+          return ev && !ev.blocked && owned.level < ev.level
+            ? `<button class="btn btn-sm" data-lvl-set="${ev.level}" title="Jump to evolution level">→ Lv ${ev.level}</button>`
+            : "";
+        })()
+      }
+      <button class="btn btn-sm" data-lvl-set="100" title="Set to max level">Max</button>
+      <button class="btn btn-sm" data-toggle-shiny title="Toggle shiny (test shiny sprites)">${owned.shiny ? "✨ Shiny: on" : "Shiny: off"}</button>
+    </div>
     <h4 class="mc-section">Stats</h4>
     ${statRadar(owned)}
     ${ownedStatsTable(owned, species)}
     <h4 class="mc-section">Moves</h4>
     ${movesList(owned)}
+    ${heldItemSection(owned)}
     <dl class="mc-meta">
       <dt>Caught in</dt><dd>${
         owned.caughtBall
@@ -265,8 +313,16 @@ function ownedBody(owned) {
           : `${genderSymbolHtml(owned.gender)} ${owned.gender === "m" ? "Samec" : "Samice"}`
       }</dd>
       <dt>Nature</dt><dd>${natureLabel(owned.nature)}</dd>
+      ${(() => {
+        const ev = evolutionInfo(owned);
+        if (!ev) return "";
+        const note = ev.blocked
+          ? `<span class="placeholder">(Everstone blocks it)</span>`
+          : `<span class="placeholder">at Lv ${ev.level}</span>`;
+        return `<dt>Evolves into</dt><dd>${esc(ev.toName)} ${note}</dd>`;
+      })()}
       <dt>Gender ratio</dt><dd>${genderRatioLabel(species)}</dd>
-      <dt>Egg groups</dt><dd>${species.eggGroups.map(esc).join(", ")}</dd>
+      <dt>Egg groups</dt><dd>${(species.eggGroups ?? []).map(esc).join(", ")}</dd>
       <dt>Generation</dt><dd>Gen ${species.gen}</dd>
       ${owned.shiny ? `<dt>Variant</dt><dd>✨ Shiny</dd>` : ""}
     </dl>
@@ -290,7 +346,12 @@ function seenBody(species) {
     ${baseStatsTable(species)}
     <dl class="mc-meta">
       <dt>Gender ratio</dt><dd>${genderRatioLabel(species)}</dd>
-      <dt>Egg groups</dt><dd>${species.eggGroups.map(esc).join(", ")}</dd>
+      ${
+        species.evolvesTo && species.evolutionLevel != null
+          ? `<dt>Evolves into</dt><dd>${esc(typeof species.evolvesTo === "string" ? (getSpecies(species.evolvesTo)?.name ?? species.evolvesTo) : "Vyvíjí se pomocí kamene")} <span class="placeholder">at Lv ${species.evolutionLevel}</span></dd>`
+          : ""
+      }
+      <dt>Egg groups</dt><dd>${(species.eggGroups ?? []).map(esc).join(", ")}</dd>
       <dt>Generation</dt><dd>Gen ${species.gen}</dd>
     </dl>
     <h4 class="mc-section">Where to catch</h4>
@@ -305,8 +366,9 @@ function seenBody(species) {
  */
 export function openPokemonCard(arg = {}) {
   let inner = "";
+  let owned = null;
   if (arg.uid) {
-    const owned = getState().collection.find((p) => p.uid === arg.uid);
+    owned = getState().collection.find((p) => p.uid === arg.uid);
     if (!owned) return;
     inner = ownedBody(owned);
   } else if (arg.speciesId) {
@@ -327,7 +389,20 @@ export function openPokemonCard(arg = {}) {
   `;
   document.body.appendChild(overlay);
 
+  const unsub = owned ? bus.on(EVENTS.STATE_CHANGED, () => {
+    const fresh = getState().collection.find((p) => p.uid === owned.uid);
+    if (fresh) {
+      const body = overlay.querySelector(".mon-card-body");
+      if (body) {
+        const _savedScroll = saveScroll(body);
+        body.innerHTML = ownedBody(fresh);
+        restoreScroll(body, _savedScroll);
+      }
+    }
+  }) : () => {};
+
   function close() {
+    unsub();
     document.removeEventListener("keydown", onKey);
     overlay.remove();
   }
@@ -337,6 +412,35 @@ export function openPokemonCard(arg = {}) {
   document.addEventListener("keydown", onKey);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
+    // Evolve i dev-level tlačítka jsou uvnitř překreslovaného těla → deleguj
+    // přes overlay (listenery na vnitřních prvcích by se překreslením ztratily).
+    const evoBtn = e.target.closest?.('[data-act="evolve"]');
+    if (evoBtn && owned) {
+      const res = evolvePokemon(owned.uid);
+      if (!res.ok && res.reason) window.alert?.(res.reason);
+      // Při úspěchu commit() → STATE_CHANGED překreslí tělo na novou formu.
+      return;
+    }
+    // DEV/TEST: nastavení levelu jedince (data-lvl = relativní ±, data-lvl-set =
+    // absolutní). Po devSetLevel → commit() → STATE_CHANGED překreslí tělo.
+    if (owned) {
+      const relBtn = e.target.closest?.("[data-lvl]");
+      if (relBtn) {
+        const delta = Number(relBtn.getAttribute("data-lvl")) || 0;
+        devSetLevel(owned.uid, owned.level + delta);
+        return;
+      }
+      const setBtn = e.target.closest?.("[data-lvl-set]");
+      if (setBtn) {
+        devSetLevel(owned.uid, Number(setBtn.getAttribute("data-lvl-set")) || 1);
+        return;
+      }
+      const shinyBtn = e.target.closest?.("[data-toggle-shiny]");
+      if (shinyBtn) {
+        devToggleShiny(owned.uid); // commit → STATE_CHANGED překreslí tělo (i sprite)
+        return;
+      }
+    }
   });
   overlay.querySelector('[data-act="close"]').addEventListener("click", close);
 }

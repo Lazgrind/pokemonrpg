@@ -7,6 +7,28 @@ ještě nejsou hotové. Ať na ně nezapomeneme. Detaily rozhodnutí viz
 Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v kódu) · 🔵 částečně · ✅ hotovo (ponecháno kvůli navazující práci)
 
 ---
+## ROADMAP – Kanto / všechny generace (před 1.0)
+
+- ✅ **Datová expanze Kanto (v0.54.0) – HOTOVO:**
+  1. ✅ **`data/moves.js`** – 268 tahů včetně všech tahů Kanta.
+  2. ✅ **`data/pokemon.js`** – **151 druhů** (celý Kanto s kanonickými daty, evolucemi, gender/egg groups).
+  3. ✅ **`data/learnsets.js`** – kompletní level-up movepooly pro všech 151 druhů.
+  4. ✅ **Křížová validace** – integrity checks, guardy pro null hodnoty, všechny cíle evolucí a tahy ověřeny.
+  
+- 🔵 **Mechaniky pro dokončení Kanta – ZBÝVÁ:**
+  - **Evoluce kamenem + trade-item** (`linking-cord` jako náhrada za výměnu): kamenné evoluce (Fire/Water/Thunder/Leaf/Moon-stone) + UI výběru u větvených evolucí (Eevee → Vaporeon/Jolteon/Flareon).
+  - **Item systém rozšíření**: evoluční kameny do `data/items.js`, trade-item `linking-cord`.
+  - **Spawny/oblasti pro Kanto routes**: rozšířit `data/areas.js` (kde se kterí Pokémoni chytají) + rarita per oblast.
+  - **Sprity 135 chybějících druhů**: zatím fallback „?"; dodá uživatel po vyřešení pipeline.
+  - ⚠️ **Multi-stat boost tahy** (Dragon Dance, Calm Mind, Shell Smash…): zatím mají jen jeden `statChange`; čekají na rozšíření enginu.
+  
+- **Pravidlo dat (rozhodnuto):** **1 kanonický záznam na druh** dle **nejnovější
+  mainline generace** (base staty, typy, movepool…). **Region = jen spawn-filtr**
+  (`area.species` / `area.gen`), druh se NIKDY neduplikuje per generace/region.
+  (Viz „Model gen vs. výskyt" v sekci Mapa světa.)
+- ✅ **PC Boxy (Boxes) – HOTOVO v0.55.0** – viz sekce „Kolekce → Boxy (PC)".
+
+---
 ## Hatching
 
 Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.539999999999964 s
@@ -23,8 +45,10 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
 - ✅ **Povahy (natures) (v0.44.0).** 25 povah v `data/natures.js`; `computeStats`
   aplikuje ±10 % na jeden non-HP stat (`natureMultiplier`), losuje se ve
   `createPokemon` (`randomNature`), save v16 dorovná staré jedince. Zobrazení na
-  kartě (řádek Nature + barevné osy radaru). **Zbývá:** dědičnost povahy
-  (Everstone) u vylíhnutých – teď se losuje náhodně.
+  kartě (řádek Nature + barevné osy radaru). ✅ **Dědičnost povahy (Everstone)
+  hotovo v0.49.0** – drží-li rodič v breedingu 🪨 Everstone, potomek zdědí jeho
+  povahu (`breed.nature` v `breedingSystem`, předáno v `eggSystem` do
+  `createPokemon`); jinak náhodná.
 
 ## Získávání Pokémonů – pravidlo duplikátů
 
@@ -115,6 +139,20 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   „in breeding". Pravidlo „jedinec jen na jednom místě" je tím uzavřené v obou
   směrech (pickery Školky/breedingu tým vylučovaly už dřív).
 
+## Evoluce
+
+- ✅ **Evoluce – DOBROVOLNÁ, tlačítkem (v0.49.0).** Druhy mají `evolvesTo` +
+  `evolutionLevel` (`data/pokemon.js`), přidáno 9 evolučních druhů (ivysaur…
+  raticate) s Gen1 baseStats + learnsety. Logika `src/systems/evolutionSystem.js`
+  (`canEvolveNow`, `evolvePokemon(uid)` – jeden krok, in-place, přepočet HP,
+  doučení tahů, emit `POKEMON_EVOLVED`). NENÍ automatická: tlačítko **✨ Evolve**
+  na slotu Týmu a na kartě Pokémona (i z Pokédexu), objeví se od `evolutionLevel`.
+  Level cap **100** (`progression.MAX_LEVEL`), takže i nevyvinutý druh doroste.
+  **Everstone** blokuje tlačítko. ✅ **Reálné sprity 9 evolucí doplněny v0.52.0**
+  (vč. shiny; shiny se při evoluci zachovává). **Zbývá:** evoluce kamenem/itemem
+  (Vodní/Ohnivý kámen…) jako alternativní trigger; případně evoluce z breedingu =
+  základní forma potomka (viz Breeding).
+
 ## Poké Bally
 
 - ✅ **Typy Poké Ballů (R-020).** Hotovo v 0.14.0: `data/pokeballs.js` (13 typů),
@@ -184,9 +222,12 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   (v0.27.0): Pokédex i Karta Pokémona kreslí reálný sprite z
   `assets/pokemon/<id>/<view>.png`, shiny přes `shiny-<view>`, samice přes
   volitelnou příponu `-f` s fallbackem na výchozí. Standard 256×256 / postava
-  232 px (nástroj `tools/prep_sprite.py`). Hotové druhy: bulbasaur, charmander,
-  squirtle, pidgey, rattata, ditto. **Zbývá:** dodat sprity dalším druhům (jen
-  nahrát PNG → objeví se samy) a `back`/shiny-back využít v souboji (R-029).
+  232 px (nástroj `tools/prep_sprite.py`; Python+PIL JSOU v shellu). **✅ VŠECH 15
+  druhů má teď reálné sprity** (v0.52.0 doplněno 9 evolucí z pokemondb.net vč.
+  shiny a samičích variant venusaur/raticate; front/back/shiny-front/shiny-back).
+  Budovy: ✅ všech 5 má sprite (training-grounds + move-tutor doplněny v0.52.0).
+  **Zbývá:** `back`/shiny-back plně využít v souboji (R-029); sprity dalších druhů
+  až přibudou nové.
   Původní návrh:
 - ⚪ **Sprity Pokémonů – konvence složek (návrh, R-024).** Uživatel chce každý
   druh jako vlastní složku se sprity, hledatelnou **podle jména** (u 1000+ druhů
@@ -255,14 +296,18 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
 
 ## Kolekce → Boxy (PC)
 
-- ⚪ **Předělat Kolekci na Boxy (návrh, R-027).** Systém boxů jako PC ve
-  franchise: box = **30 míst** (mřížka), více boxů, přepínání. Jedinci jako
-  sprity na svých pozicích. **Drag & drop:** přesun jedince místo↔místo a
-  box↔box. Datově: `state.boxes = [{ name, slots: Array(30) }]` (slot = uid
-  jedince nebo null). Team zůstává oddělený (max 6). Řeší starou poznámku
-  „stejný box picker se hodí i pro správu kolekce" (v0.10.0).
-- ⚪ **Klik na jedince v Boxu** → Karta Pokémona (viz výše). Navázat na R-018
-  (unikátní druhy) – v boxech bude reálně max 1 kus/druh.
+- ✅ **PC Boxy (R-027) – HOTOVO v0.55.0.** Nová záložka **PC** vedle Team
+  (`src/ui/pcView.js`). Box = **30 slotů** (mřížka 6×5), více boxů, přepínání
+  ◀/▶ + „＋ Box". Jedinci jako sprity. **Drag & drop** (přeuspořádání v boxu),
+  **klik → Karta Pokémona**, „＋ Team". Datově `state.pcBoxes = [{name, slots:
+  (uid|null)[30]}]` (save v19); `state.collection` zůstává zdroj pravdy,
+  `pcSystem.reconcile` sladí boxy (jedinec mimo tým = právě 1 slot). Team oddělený
+  (max 6), integrace automatická přes reconcile. **Pokédex netknutý.**
+- ⚪ **PC boxy – doladit (MVP zbytky):** drag & drop **mezi boxy** (teď jen v rámci
+  zobrazeného boxu; `pcSystem.moveToSlot` už umí přesun podle uid, chybí jen UI –
+  např. drop na tlačítka ◀/▶ nebo mini-seznam boxů). **Přejmenování boxu**
+  (`box.name`). Volitelně: řazení/hromadné operace, počet obsazených na boxu,
+  „odeslat do boxu" přímo z Týmu.
 
 ## Mapa světa
 
@@ -338,8 +383,47 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
     akce `playerMove/Switch/Catch/Run` sdílí `runActions()` s `tick()`; ruční
     léčení přes Heal team. ✅ **popup nahrazení tahu** při plných 4 slotech
     (`moveLearnQueue` v save v14, `moveLearnView.js`, `resolveMoveLearn`).
-  - **Fáze 4 (později):** víc oblastí; auto-battle politika (auto-AI výběr tahu,
-    ⚪ zatím odloženo); Struggle recoil.
+    ✅ **Učení tahu při level-upu podle módu** (v0.51.0): **manual battle** se ptá
+    (popup, jako dřív), **auto battle** + offline/Školka **přepíšou nejslabší tah
+    sám** (`grantXp({auto})` → `learnLevelUpMoves({auto})` → `autoReplaceMove`;
+    nikdy nezhorší sadu).
+    ✅ **Move Tutor – budova** (v0.51.0): `data/buildings.js` `move-tutor`
+    (`moveTutor:true`), UI `buildingView.openMoveTutorEditor` staví na
+    `learnableMovesAtLevel` (celý level-up movepool ≤ level) + `setActiveMoves`
+    (zachová PP). Řeší přeučení „přepsaných" tahů i **movepool po evoluci**
+    (evolvovaný druh má v learnsetu i své nízkoúrovňové tahy). Přeučení zdarma.
+    ✅ **Kompletní level-up movepooly** (v0.50.0): `data/moves.js` rozšířen na
+    ~55 tahů, `data/learnsets.js` má plné level-up sady všech 15 druhů (vč.
+    status/support tahů). Tahy nesou volitelné pole **`effect`** (statChange,
+    sleep, confuse, flinch, recoil, drain, leechSeed, twoTurn, thrash, trap,
+    rapidSpin, highCrit, critUp, rage, fixedDamageHalf, forceSwitch, copyMove,
+    transform, heal, weather, tailwind, pursuit, suckerPunch). ⚠️ **Engine tyto
+    efekty ZATÍM NEPROVÁDÍ** – data jsou „připravená" (uživatel: „že nějaké útoky
+    zatím nic nedělají neřeš… připravené být mohou"). Nový typ **Dark** není v
+    TYPE_CHART → efektivita ×1. DEV level-setter na kartě (`devSetLevel`) na
+    testování evolucí/learnsetů.
+  - ✅ **Implementovat efekty tahů (`move.effect`) (v0.53.0).** Data hotová
+    (v0.50.0), zapojeno v `battleSystem`: **stat-stage systém** (7 statů
+    Attack/Defense/Sp.Atk/Sp.Def/Speed/accuracy/evasion, klasické násobiče →
+    damage, pořadí tahů, přesnost/úhyb; Growl/Leer/Growth/Swords Dance/Agility/
+    Withdraw/Sand-Attack…), spánek/zmatení/flinch, recoil (Take Down/Double-Edge),
+    drain, heal (Roost/Synthesis), Leech Seed, trap (Fire Spin), rapidSpin,
+    highCrit/critUp (Focus Energy), Super Fang (fixedDamageHalf), two-turn charge
+    (Solar Beam/Skull Bash), thrash (Petal Dance – zámek + zmatení), weather/déšť
+    (Rain Dance: Water ×1.5, Fire ×0.5), tailwind (×2 Speed), rage. Sjednocené
+    **residuální poškození konce kola** (otrava/popálení + Leech Seed + trap,
+    krokově v manuálu); sebe-KO z recoilu/zmatení správně vyřadí. **TYPE_CHART
+    rozšířen na plných 18 typů** (mj. Dark + Fairy), dvojtypy se násobí korektně.
+    ⚠️ **DEFEROVÁNO** (data „připravená", zatím bez efektu / „but it failed!"):
+    **transform**, **copyMove**, **forceSwitch** (Whirlwind). Do budoucna i další
+    Gen1 mechaniky: Substitute, Counter, Bide, Dig/Fly, Rest, Reflect/Light
+    Screen, Haze, Metronome…
+  - **Fáze 4 (později):** víc oblastí; Struggle recoil.
+    ✅ **Auto-battle politika** (v0.48.0): `chooseAutoPlayerTurn` (auto-heal <30 %
+    HP, auto-switch při enemy eff ≥2× s guardem, jinak move); `chooseAction`
+    skóruje `dmg(avg)×acc` + bonus za ailment na zdravém cíli. Čisté status tahy
+    (power 0) NOVĚ ve hře JSOU (v0.50.0) – power0-větev jim dá score 0/1, AI
+    proto vždy sáhne po damage tahu (efekty status tahů engine zatím neaplikuje).
     ✅ **Kritické zásahy** (v0.42.0): ~1/16 šance, ×1.5 (`CRIT_CHANCE`/`CRIT_MULT`
     v `calcMoveDamage`), hláška „A critical hit!", větší žluté číslo (`.dmg-float.is-crit`).
     ✅ **Statusy poison/burn** (v0.42.0): data `ailment`/`ailmentChance` na tazích

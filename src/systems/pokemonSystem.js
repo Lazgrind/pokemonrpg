@@ -53,14 +53,18 @@ export function defaultMovesFor(speciesId, level) {
 
 /**
  * Naučí jedince tahy, které se jeho druh učí v rozsahu levelů (prevLevel, level].
- * Přidává do VOLNÝCH slotů (max 4); když jsou plné, tah se NEzahazuje – zařadí se
- * do fronty `moveLearnQueue` a hráč později zvolí nahrazení (viz moveLearnView).
- * Mutuje jedince, vrací nově naučené id (jen ty rovnou přidané do volných slotů).
+ * Přidává do VOLNÝCH slotů (max 4). Při PLNÝCH slotech se tah NEzahazuje:
+ *  - `auto` (auto battle / offline / Školka): rovnou přepíše nejslabší tah
+ *    (viz {@link autoReplaceMove}) – bez otravování hráče,
+ *  - jinak (manuální souboj): zařadí do fronty `moveLearnQueue` a hráč později
+ *    zvolí nahrazení (viz moveLearnView).
+ * Mutuje jedince, vrací nově naučené id (jen ty rovnou přidané/přepsané).
  * @param {import("../core/state.js").OwnedPokemon} pokemon
  * @param {number} prevLevel  level PŘED level-upem
+ * @param {{ auto?: boolean }} [opts]
  * @returns {string[]} id tahů, které se nově naučil
  */
-export function learnLevelUpMoves(pokemon, prevLevel) {
+export function learnLevelUpMoves(pokemon, prevLevel, { auto = false } = {}) {
   if (!Array.isArray(pokemon.moves)) pokemon.moves = [];
   const learned = [];
   for (const entry of getLearnset(pokemon.speciesId)) {
@@ -69,13 +73,64 @@ export function learnLevelUpMoves(pokemon, prevLevel) {
     const mv = getMove(entry.id);
     if (!mv) continue;
     if (pokemon.moves.length >= MAX_MOVES) {
-      queueMoveLearn(pokemon.uid, entry.id); // plné sloty → nabídnout nahrazení později
+      if (auto) {
+        if (autoReplaceMove(pokemon, entry.id)) learned.push(entry.id);
+      } else {
+        queueMoveLearn(pokemon.uid, entry.id); // manuál → nabídnout nahrazení později
+      }
       continue;
     }
     pokemon.moves.push({ id: entry.id, pp: mv.pp, maxPp: mv.pp });
     learned.push(entry.id);
   }
   return learned;
+}
+
+/** „Bojová hodnota" tahu pro auto-výběr, co přepsat: síla tahu (status = 0). */
+function moveWorth(moveId) {
+  return getMove(moveId)?.power ?? 0;
+}
+
+/**
+ * AUTO režim: naučí `moveId` přepsáním NEJSLABŠÍHO stávajícího tahu, ale jen když
+ * nový tah není slabší než ten nejslabší (jinak by si jedinec sám zhoršil sadu –
+ * takový tah se přeskočí, hráč si ho může kdykoli doučit v Move Tutoru). Nový tah
+ * dostane plné PP. Mutuje jedince.
+ * @param {import("../core/state.js").OwnedPokemon} pokemon
+ * @param {string} moveId
+ * @returns {boolean} true, pokud tah opravdu nahradil (naučil se)
+ */
+function autoReplaceMove(pokemon, moveId) {
+  const mv = getMove(moveId);
+  if (!mv) return false;
+  let worstIdx = 0;
+  for (let i = 1; i < pokemon.moves.length; i++) {
+    if (moveWorth(pokemon.moves[i].id) < moveWorth(pokemon.moves[worstIdx].id)) worstIdx = i;
+  }
+  if (moveWorth(moveId) < moveWorth(pokemon.moves[worstIdx].id)) return false; // nezhoršuj sadu
+  pokemon.moves[worstIdx] = { id: moveId, pp: mv.pp, maxPp: mv.pp };
+  return true;
+}
+
+/**
+ * Přenastaví AKTIVNÍ tahy jedince na zvolenou sadu (max 4) – pro Move Tutor
+ * (přeučení/prohození už naučitelných tahů, i po evoluci). Zachovává PP u tahů,
+ * které jedinec už měl; nové tahy dostanou plné PP. Nekontroluje learnset – to
+ * dělá volající (UI nabídne jen naučitelné). Mutuje jedince (bez commit).
+ * @param {import("../core/state.js").OwnedPokemon} pokemon
+ * @param {string[]} moveIds  id tahů, které mají být aktivní (v pořadí slotů)
+ */
+export function setActiveMoves(pokemon, moveIds) {
+  const prev = new Map((pokemon.moves ?? []).map((m) => [m.id, m]));
+  const next = [];
+  for (const id of moveIds.slice(0, MAX_MOVES)) {
+    const mv = getMove(id);
+    if (!mv) continue;
+    if (next.some((m) => m.id === id)) continue; // bez duplikátů
+    const keep = prev.get(id);
+    next.push(keep ? { id, pp: keep.pp, maxPp: keep.maxPp ?? mv.pp } : { id, pp: mv.pp, maxPp: mv.pp });
+  }
+  pokemon.moves = next;
 }
 
 /**
@@ -233,6 +288,7 @@ export function createPokemon(speciesId, level = 5, opts = {}) {
     gender: opts.gender ?? rollGender(species),
     hp: 0, // doplní se níž na plné max HP
     moves: defaultMovesFor(speciesId, level), // tahy z learnsetu (plné PP)
+    heldItem: null, // žádný drženou item na začátku
   };
   p.hp = computeStats(p).maxHp; // nový jedinec začíná s plným HP
   return p;

@@ -29,7 +29,7 @@ import {
   lootLabel,
 } from "../systems/battleSystem.js";
 import { POKEBALLS, getPokeball } from "../../data/pokeballs.js";
-import { ITEMS } from "../../data/items.js";
+import { ITEMS, getItem } from "../../data/items.js";
 import { canUseItem } from "../systems/itemSystem.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { ballIconHtml } from "./ballIcon.js";
@@ -42,8 +42,10 @@ import { isCaught } from "../systems/pokedex.js";
 import { typeColor, typeBadge } from "./typeColors.js";
 import { statusBadge } from "./statusBadge.js";
 
-/** Podmenu manuálního souboje (jen manuál mód): root | fight | bag | switch. */
+/** Podmenu manuálního souboje (jen manuál mód): root | fight | bag | switch | item-target. */
 let menuMode = "root";
+/** Když je menuMode "item-target", tady je itemId který se má aplikovat. */
+let pendingItemId = null;
 /** Poslední root pro překreslení při navigaci v podmenu (bez BATTLE_UPDATE). */
 let lastRoot = null;
 
@@ -304,6 +306,8 @@ function battleCmdHtml(b) {
     return `<div class="battle-cmd cmd-panel">${enemyInfoHtml(b)}${fightMenuHtml(b)}</div>`;
   if (menuMode === "bag")
     return `<div class="battle-cmd cmd-panel">${bagMenuHtml(b)}</div>`;
+  if (menuMode === "item-target")
+    return `<div class="battle-cmd cmd-panel">${itemTargetMenuHtml(b, pendingItemId)}</div>`;
   if (menuMode === "switch")
     return `<div class="battle-cmd cmd-panel">${switchMenuHtml(b)}</div>`;
   return `<div class="battle-cmd cmd-root">${rootMenuHtml()}</div>`;
@@ -392,7 +396,7 @@ function fightMenuHtml(b) {
     <button class="btn btn-sm menu-back" data-menu="root">← Back</button>`;
 }
 
-/** Podmenu Items (batoh): léčivé itemy na aktivního Pokémona + výběr ballu a hod. */
+/** Podmenu Items (batoh): léčivé itemy (výběr cíle) + výběr ballu a hod. */
 function bagMenuHtml(b) {
   const balls = getState().resources.balls ?? {};
   const items = getState().resources.items ?? {};
@@ -402,20 +406,17 @@ function bagMenuHtml(b) {
   const canCatch = b.enemy && b.enemy.hp > 0 && selCount > 0;
   const catchPct = Math.round(getCatchChance() * 100);
 
-  // Léčivé itemy použitelné TEĎ na aktivního bojovníka (HP potiony, léčení statusu).
-  const active = b.player?.ref;
-  const usableItems = active
-    ? ITEMS.filter((it) => (items[it.id] ?? 0) > 0 && canUseItem(it.id, active).ok)
-    : [];
-  const itemBtns = usableItems
+  // Léčivé itemy (bez podmínky na aktivního – výběr cíle přijde v item-target módu).
+  const allItems = ITEMS.filter((it) => (items[it.id] ?? 0) > 0);
+  const itemBtns = allItems
     .map(
       (it) =>
-        `<button class="btn move-btn item-use" data-use-item="${it.id}" title="${it.desc}">${it.icon} ${it.name} <span class="placeholder">×${items[it.id]}</span></button>`
+        `<button class="btn move-btn item-use" data-select-item="${it.id}" title="${it.desc}">${it.icon} ${it.name} <span class="placeholder">×${items[it.id]}</span></button>`
     )
     .join("");
   const itemsSection = itemBtns
     ? `<div class="bag-items">${itemBtns}</div>`
-    : `<p class="placeholder bag-note">No usable healing items right now.</p>`;
+    : `<p class="placeholder bag-note">No healing items in your bag.</p>`;
 
   // Sekce Poké Bally (může být prázdná – itemy jsou pořád k dispozici).
   let ballSection;
@@ -434,6 +435,38 @@ function bagMenuHtml(b) {
 
   return `${itemsSection}${ballSection}
     <button class="btn btn-sm menu-back" data-menu="root">← Back</button>`;
+}
+
+/**
+ * Podmenu Item Target: výběr člena týmu, na kterého se item aplikuje.
+ * Filtruje členy dle canUseItem pro daný item.
+ * @param {*} b      souboj
+ * @param {string} itemId  který item se aplikuje
+ */
+function itemTargetMenuHtml(b, itemId) {
+  const team = getTeamPokemon();
+
+  const tiles = team
+    .map((p, i) => {
+      const sp = getSpecies(p.speciesId);
+      const max = computeStats(p).maxHp;
+      const hp = Math.max(0, Math.min(max, hpOf(p)));
+      const usable = canUseItem(itemId, p);
+      const fainted = hp <= 0;
+      const pct = Math.round((hp / max) * 100);
+      const low = fainted ? " fainted" : pct <= 25 ? " low" : "";
+      const reason = !usable.ok ? usable.reason : "";
+      const tiles_cls = usable.ok ? "" : " disabled";
+      return `<button class="btn switch-tile${tiles_cls}" data-item-target="${p.uid}" ${!usable.ok ? "disabled" : ""} title="${reason}">
+        <span class="sw-name">${p.shiny ? "✨ " : ""}${sp?.name ?? p.speciesId} <span class="placeholder">Lv ${p.level}</span></span>
+        <span class="hpbar"><span class="hpfill${low}" style="width:${pct}%"></span></span>
+        <span class="sw-hp">${hp}/${max} HP</span>
+        ${reason ? `<span class="placeholder" style="font-size:0.8em">${reason}</span>` : ""}
+      </button>`;
+    })
+    .join("");
+  return `<div class="switch-list">${tiles}</div>
+    <button class="btn btn-sm menu-back" data-menu="bag">← Back</button>`;
 }
 
 /** Podmenu Switch: seznam týmu s HP; klik prohodí (živého, nenasazeného). */
@@ -664,12 +697,22 @@ function wire(root) {
       if (!r.ok) showMsg(r.reason);
     });
 
-  // Použití léčivého itemu z batohu na aktivního Pokémona (spotřebuje kolo).
-  root.querySelectorAll("[data-use-item]").forEach((btn) =>
+  // Výběr itemu → přechod do item-target módu (výběr cíle).
+  root.querySelectorAll("[data-select-item]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      pendingItemId = btn.dataset.selectItem;
+      menuMode = "item-target";
+      draw(root); // lokální překreslení (bez akce v souboji)
+    })
+  );
+
+  // Aplikace itemu na vybraného člena týmu (v item-target módu).
+  root.querySelectorAll("[data-item-target]").forEach((btn) =>
     btn.addEventListener("click", () => {
       menuMode = "root";
-      const r = playerUseItem(btn.dataset.useItem);
+      const r = playerUseItem(pendingItemId, btn.dataset.itemTarget);
       if (!r.ok) showMsg(r.reason);
+      pendingItemId = null;
     })
   );
 

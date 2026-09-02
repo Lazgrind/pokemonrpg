@@ -193,6 +193,8 @@ export function accrueIncubation(seconds) {
       ? createPokemon(egg.speciesId, level, {
           ivs: inheritIvs(egg.breed.parents, egg.breed.inherit),
           shinyChance: egg.breed.shinyChance,
+          // Povaha zděděná přes Everstone (jinak undefined → createPokemon losuje).
+          nature: egg.breed.nature,
         })
       : createPokemon(egg.speciesId, level);
     const shiny = !!poke.shiny;
