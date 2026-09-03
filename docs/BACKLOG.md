@@ -10,17 +10,26 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 ## ROADMAP – Kanto / všechny generace (před 1.0)
 
 - ✅ **Datová expanze Kanto (v0.54.0) – HOTOVO:**
-  1. ✅ **`data/moves.js`** – 268 tahů včetně všech tahů Kanta.
+  1. ✅ **`data/moves.js`** – tahy Kanta (kanonická data z PokeAPI, viz níže).
   2. ✅ **`data/pokemon.js`** – **151 druhů** (celý Kanto s kanonickými daty, evolucemi, gender/egg groups).
   3. ✅ **`data/learnsets.js`** – kompletní level-up movepooly pro všech 151 druhů.
   4. ✅ **Křížová validace** – integrity checks, guardy pro null hodnoty, všechny cíle evolucí a tahy ověřeny.
+
+- ✅ **Přesnost learnsetů + moves z PokeAPI (v0.56.0) – HOTOVO:** původní data
+  (v0.54.0) byla LLM aproximace se starogeneračními úrovněmi. Přegenerováno
+  kanonicky z **PokeAPI (Gen 9 Scarlet/Violet)** generačně nezávislým skriptem
+  `tools/gen_movepools.py` (druhy čte z `data/pokemon.js`, VG fallback řetězec,
+  merge zachovává ruční `effect`/`ailment`). Skript je **znovupustitelný na další
+  generace**. **Zbývá:** ruční efekty u nově přidaných tahů (teď jen odvozená
+  bezpečná podmnožina + damage).
   
 - 🔵 **Mechaniky pro dokončení Kanta – ZBÝVÁ:**
-  - **Evoluce kamenem + trade-item** (`linking-cord` jako náhrada za výměnu): kamenné evoluce (Fire/Water/Thunder/Leaf/Moon-stone) + UI výběru u větvených evolucí (Eevee → Vaporeon/Jolteon/Flareon).
-  - **Item systém rozšíření**: evoluční kameny do `data/items.js`, trade-item `linking-cord`.
+  - ✅ **Evoluce kamenem + trade-item (v0.59.0) – HOTOVO:** kamenné evoluce (Fire/Water/Thunder/Leaf/Moon-stone) + `linking-cord` (výměna); větvené evoluce (Eevee) řeší volba kamene. UI: použití z batohu → výběr cíle. Data: pole `evolutions` u 18 druhů + vynulované levelové `evolvesTo`.
+  - ✅ **Item systém rozšíření (v0.59.0) – HOTOVO:** evoluční kameny + `linking-cord` v `data/items.js` (kategorie „evolution"), kupitelné v obchodě Items.
   - **Spawny/oblasti pro Kanto routes**: rozšířit `data/areas.js` (kde se kterí Pokémoni chytají) + rarita per oblast.
   - **Sprity 135 chybějících druhů**: zatím fallback „?"; dodá uživatel po vyřešení pipeline.
-  - ⚠️ **Multi-stat boost tahy** (Dragon Dance, Calm Mind, Shell Smash…): zatím mají jen jeden `statChange`; čekají na rozšíření enginu.
+  - ✅ **Multi-stat boost tahy (v0.59.0) – HOTOVO:** engine efektů umí `effect.changes[]` (víc statů jedním tahem). Dragon Dance / Calm Mind / Bulk Up / Shell Smash napojeny.
+  - ✅ **Dokončení soubojů (v0.61.0) – HOTOVO:** deferované **transform / copyMove (Mimic) / forceSwitch (Whirlwind/Roar)** už fungují (dočasný `volatile.moveOverride` přes `activeMoves` helper; blow-away nového soupeře / vytažení hráče). Přidány i **Substitute, Counter, Rest, Reflect/Light Screen** a **Sleep + Freeze jako trvalé non-volatile statusy** (spánek 1–3 kola, freeze 20 %/kolo + Fire thaw, Ice imunní). Zbývá do budoucna: Bide, Dig/Fly, Haze, Metronome.
   
 - **Pravidlo dat (rozhodnuto):** **1 kanonický záznam na druh** dle **nejnovější
   mainline generace** (base staty, typy, movepool…). **Region = jen spawn-filtr**
@@ -65,10 +74,14 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   Auto-catch **zjednodušen v 0.29.0** na mód `{ enabled, mode }` – `mode: "all" |
   "shiny"` (výběr vedle přepínače Auto catch). Filtry *Better IVs* a *New species*
   zrušeny (Better IVs případně vrátit později jako mód).
-- 🔵 **Redesign Catch tlačítka + celého interface okna souboje.** Uživatel:
-  „tlačítko catch předěláme úplně s celým dalším krokem interface." Teď je Catch
-  ponechán funkční beze změny. Přijde s dalším krokem přepracování okna (spolu s
-  volbou ballu, layoutem menu à la klasická hra atd.). Souvisí s R-029.
+- ✅ **Redesign Catch tlačítka + interface okna souboje (HOTOVO, ověřeno proti kódu 2026-09-03).**
+  Manuální souboj má plné menu à la klasická hra (`battleView.js`): kořen
+  **Battle/Run/Items/Switch** (`rootMenuHtml`), podmenu tahů s typovými barvami a
+  PP (`fightMenuHtml`), **Items** s výběrem cíle (`itemTargetMenuHtml`) a **ball
+  picker + hod s % šance** (`bagMenuHtml` → `throw-ball`), Switch (`switchMenuHtml`),
+  výherní/chytací **interlude okno** s „Next battle" (`interludeHtml`). Catch je
+  integrovaný do Items (volba ballu + %). **Zbývá jen kosmetika/další iterace, pokud
+  bude uživatel chtít** – základ i „další krok interface" jsou hotové.
 - ✅ **Rarita druhu ovlivní catch rate** (v0.42.0) – `catchChanceFor` násobí HP
   base šanci koeficientem `RARITY_CATCH_MULT` (common 1 → uncommon .85 → rare .6
   → epic .45 → legendary .3).
@@ -100,18 +113,12 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   mají dál běžnou šanci.
 - ⚪ **Vylíhnutí druhu, který už máš** – přes merge (R-018) se „pustí" a jen
   zlepší IV/EV/shiny. Záměr; případně nabídnout volbu ponechat jako duplikát.
-- ⚪ **Sprite vajíčka per druh (návrh).** Každý druh (resp. jeho vejce) by měl
-  vlastní vzhled vajíčka (např. Rattata = bílé s červenými puntíky) – hráč pak
-  časem pozná, co se může vylíhnout. **Můj názor:** nápad se mi líbí, ale
-  „random generované každou novou hru" bych řešil opatrně: buď **deterministicky
-  ze `species.id`** (stejný druh = stejné vejce napříč hrami → znalost přenosná,
-  jednodušší save), nebo **seedované per-průchod** (`seed = runSeed + species.id`
-  → v každé hře jiná mapa vzhledů, ale konzistentní během jednoho průchodu; do
-  save stačí jedno číslo `runSeed`). Doporučuju procedurální SVG/canvas vzor
-  (skořápka + barevná paleta + puntíky) generovaný z druhu, ne ruční obrázky pro
-  každý druh. Drží R-021 (druh skrytý do vylíhnutí) – vejce prozrazuje jen
-  „rodinu" vzhledu, ne konkrétní staty. K potvrzení: deterministicky vs.
-  per-průchod.
+- ✅ **Sprite vajíčka per druh – HOTOVO v0.62.0.** Procedurální SVG vejce
+  (`src/ui/eggSprite.js` → `eggSpriteHtml(speciesId,{size})`): skořápka + puntíky
+  deterministicky z hashe `speciesId` (uživatel zvolil variantu „per druh", ne
+  per-průchod → znalost přenosná). Zapojeno v `buildingView.js` (sloty líhně +
+  dlaždice výběru vejce). Vědomě změkčuje R-021: druh se vizuálně NAZNAČUJE
+  (hráč se učí vzory), ale jméno/staty zůstávají skryté (žádný text názvu).
 
 ## Breeding
 
@@ -125,14 +132,22 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   breeding otestovat). Cílově ho odebrat ze starterů (`teamView.js` → `STARTERS`)
   a dát jako chytatelný druh do vhodné oblasti (`data/areas.js`), ideálně vzácně
   (řeší až rarity-váhy výskytu per oblast).
-- ⚪ **Destiny Knot (item).** Zvedne počet zděděných IV ze 3 na 5. Seam hotový:
-  `INHERIT_IV_COUNT` v `data/breeding.js` + parametr `inherit` v breeding vejci;
-  stačí item, který hodnotu při produkci vejce zvýší. Napojit na budoucí itemy.
-- ⚪ **Rychlost breedingu jako upgrade linie Školky.** Teď fixní `BREED_MINUTES`.
-  Přidat track (jako Hatch speed) zkracující dobu produkce vejce.
-- ⚪ **Potomek = základní forma.** Až přibudou evoluce, měl by se z vejce líhnout
-  základní stupeň (a dědit po „samičí"/ne-Ditto linii). Teď potomek = druh rodiče
-  (`chooseChildSpeciesId` v `data/breeding.js`).
+- ✅ **Dědičnost tahů (egg moves) – HOTOVO v0.59.0.** Vejce z breedingu předá
+  potomkovi sjednocení aktivních tahů obou rodičů, ponechá jen ty, které druh
+  potomka umí naučit (celý level-up movepool), max 4 s předností před výchozí
+  sadou. `computeEggMoves` v `breedingSystem.js` → `breed.eggMoves` na vejci →
+  `applyEggMoves` (setActiveMoves) při vylíhnutí v `eggSystem.js`. Zpětně
+  kompatibilní (stará vejce beze změny), bez save migrace.
+- ✅ **Destiny Knot (item) – HOTOVO v0.62.0.** Held item `destiny-knot`
+  (`data/items.js`, 2000 g); drží-li ho rodič ve Školce, potomek zdědí 5 IV místo 3.
+  `breedingSystem.accrueBreeding` → `breed.inherit=DESTINY_KNOT_IV_COUNT`,
+  `eggSystem` předá do `inheritIvs(parents, count)`. Zpětně kompat., bez migrace.
+- 🚫 **Rychlost breedingu jako upgrade linie Školky – ZAMÍTNUTO uživatelem
+  (nikdy nedělat).** `BREED_MINUTES` zůstává fixní; žádný track na zkracování
+  produkce vejce se dělat NEBUDE.
+- ✅ **Potomek = základní forma – HOTOVO v0.62.0.** `chooseChildSpeciesId` vrací
+  `baseFormOf(...)` (kořen evoluční linie ne-Ditto rodiče), `baseFormOf` iteruje
+  `evolvesTo` reverzně nad `POKEMON_SPECIES` (`data/breeding.js`).
 - ✅ **Rodič v breedingu vs. tým.** Hotovo v 0.20.1: `addToTeam` odmítne jedince
   ve Školce/breedingu (guard přes nový `pokemonEngagement(uid)` v
   `buildingSystem.js`) a Kolekce mu místo „Add to team" ukáže „in Day Care" /
@@ -164,8 +179,8 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   zvyšovat `tier` a tím odemykat další typy ballů v obchodě.
 - ⚪ **Jak získat Master Ball.** Teď neprodejný a bez zdroje. Navrhnout milník/
   odměnu (např. dokončení oblasti, achievement).
-- ⚪ **Autocatch fallback na jiný ball.** Když vybraný typ dojde, autocatch se
-  zastaví. Zvážit automatické přepnutí na nejlevnější dostupný typ.
+- ✅ **Autocatch fallback na jiný ball – HOTOVO v0.58.0.** Když vybraný typ dojde,
+  autocatch přepne na nejlevnější vlastněný (`battleSystem.resolveAutocatchBall`).
 - ⚪ **Skutečné ikony ballů** – místo emoji použít obrázky z `assets/pokeballs/`.
   Uživatel dodává sprite jednotlivých ballů; použít je **všude**, kde je ball
   vidět (souboj, obchod, lišta, karta týmu). Jedna pomocná funkce
@@ -181,16 +196,14 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   jsme zrušili (bally jen z obchodu, R-020). Kdyby se někdy měl ball dropovat,
   loot aplikace (`handleFaint`/`idle.js`) počítá `res[resource]` – ball id by
   muselo jít do `res.balls[id]`, ne přímo do `resources`.
-- 🔵 **Rezervované bally (comingSoon).** 13 dalších ballů má už sprity
-  (`assets/pokeballs/<id>-ball.png`) a je zapsaných v `data/pokeballs.js` s
-  příznakem `comingSoon: true`, `tier:null`, `price:null` – tím se NEobjevují v
-  obchodě ani v souboji, jen si drží id → napojený obrázek. Zapojení = doplnit
-  ballu `tier`/`price`/`bonus` a mechaniku v `pokeballSystem.ballMultiplier`.
-  Zamýšlené efekty (v `desc`): Love (bonus proti opačnému pohlaví vlastněného
-  druhu – **data pohlaví už jsou od 0.25.0**), Heavy (hmotnost), Dusk (noc/
-  jeskyně), Dive (pod vodou), Dream (spánek/status), Moon (Měsíční kámen), Lure
-  (rybaření), Safari/Sport/Park/Cherish/Premier (eventy/kosmetika), Friend
-  (friendship).
+- 🔵 **Rezervované bally (comingSoon) – ČÁSTEČNĚ HOTOVO v0.62.0.** ✅ Odemčeny
+  **Love** (`loveMatch` ×8), **Heavy** (`heavy`, dle hmotnosti), **Dream**
+  (`statusEnemy` ×4/×6 spící), **Moon** (`moonStone` ×4) – doplněn tier/price/bonus
+  + mechanika v `pokeballSystem.ballMultiplier`. Zbývají (stále comingSoon,
+  `tier:null`/`price:null`, jen sprite+id): **Dusk** (noc/jeskyně – čeká na denní
+  dobu/biome), **Dive** (pod vodou), **Lure** (rybaření), Safari/Sport/Park/
+  Cherish/Premier (eventy/kosmetika), Friend (friendship). Zapojení = doplnit
+  ballu `tier`/`price`/`bonus` + case v `ballMultiplier`.
 - ⚪ **Beast Ball (Ultra Beasts).** Jediný chybějící ball z celého kánonu – NEMÁ
   zatím ani sprite (`beast-ball.png`) ani datovou položku. Řešit **až** s Ultra
   Beasts; teď záměrně vynecháno.
@@ -199,8 +212,8 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
 
 - 🔵 **Sekce Marketu.** Hotovo v 0.19.0: okno „🛒 Market" s obchodem po sekcích
   (`buildingView.js` → `openMarket`, dept-cards). ✅ **Items** (léčení/statusy/revive)
-  přidány v **0.45.0** (`openItemShop`, data `data/items.js`). Zbývá: **evoluční
-  kameny**, **hromadný nákup** (×5/×10/max).
+  přidány v **0.45.0** (`openItemShop`, data `data/items.js`). ✅ **Hromadný nákup**
+  (×1/×5/×10/Max) v obou obchodech v **0.58.0**. Zbývá: **evoluční kameny**.
 
 ## Itemy & léčení
 
@@ -208,13 +221,17 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   revive) + `itemSystem.js` (`buyItem`, `useItem`, `canUseItem`). Sekce **Items**
   v Poké Martu, **🎒 Bag** na záložce Tým (výběr itemu → cíl z kolekce), a itemy
   v bojovém batohu (na aktivního, spotřebují kolo). Save v17 (`resources.items`).
-- ⚪ **Revive v souboji.** Teď je revive jen v batohu mimo souboj (aktivní bojovník
-  nemůže být vyřazený). Chtělo by povolit revive i v boji přes výběr vyřazeného
-  člena týmu (mini-picker v bag menu, spotřebuje kolo).
-- ⚪ **Hromadný nákup / prodej itemů**, batch use, řazení batohu.
+- ✅ **Revive v souboji (HOTOVO, ověřeno 2026-09-03).** `canUseItem` povolí revive
+  na vyřazeného člena (`itemSystem.js:71`), item-target menu v souboji nabízí celý
+  tým vč. vyřazených (`battleView.js:479`), `playerUseItem` to provede a spotřebuje
+  kolo (`battleSystem.js`). **Pozn.:** nabízí jen členy TÝMU, ne jedince v PC boxech.
+- ✅ **Hromadný nákup itemů – HOTOVO v0.58.0** (×1/×5/×10/Max, `buildingView.js`).
+- ✅ **Prodej itemů + řazení batohu – HOTOVO v0.59.0** (`itemSystem.sellItem`, výkup 50 %, tlačítka Sell 1 / Sell all v batohu; seznamy řazené abecedně). 🚫 Batch use (použití víc kusů naráz) **ZAMÍTNUTO uživatelem – itemy vždy jen po 1 ks.**
 - ⚪ **Held items** (item nesený jedincem) – samostatný systém, později.
-- ⚪ **Ekonomika léčení.** Zvážit, jestli má Poké Centrum „Heal team" a Cure zůstat
-  zdarma, když teď existují placené itemy (potenciální paywall/balance).
+- ✅ **Ekonomika léčení – ROZHODNUTO v0.62.0: zůstává ZDARMA.** Uživatel zvolil
+  nechat Heal team / Cure v Poké Centru zdarma; potiony mají smysl hlavně v souboji
+  (do Centra tam nelze). Jen zpřehledněno UI: „Heal team (free)" + explicitní
+  info, že obnoví plné HP, status i PP.
 
 ## Sprity Pokémonů + struktura dat
 
@@ -242,12 +259,13 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   špatně. Cesty se **odvozují z `species.id`** (`spritePath(id, "front")`), nic
   se neregistruje ani nepíše per druh – to je ta „rychlejší metoda". Chybějící
   sprite → fallback (silueta / emoji).
-- 🔵 **Rozšíření schématu druhu.** Hotovo v 0.21.0: do `data/pokemon.js` přidány
-  **`gen`** (generace – řídí mapu, ne cestu ke spritu) a **`genderRatio`**
-  (`{ m, f }` nebo `"genderless"`) u všech druhů + typedefy (`GenderRatio`).
-  **Zbývá volitelně:** `height`/`weight`/`category`/`dexEntry` (dex popis) – až
-  je bude Karta/Pokédex potřebovat. Sprite se do dat neukládá – odvozuje se z
-  `id`. Pozn.: DATA zůstávají centrálně v `data/pokemon.js`; až druhů přibude,
+- ✅ **Rozšíření schématu druhu.** Hotovo v 0.21.0: do `data/pokemon.js` přidány
+  **`gen`** + **`genderRatio`** u všech druhů + typedefy. ✅ **`height`/`weight`/
+  `genus`/`dexEntry` doplněny v0.57.0** všem 151 druhům z PokeAPI generačně
+  nezávislým skriptem `tools/gen_pokedex_info.py` (id+dexNo z dat, idempotentní);
+  zobrazeno na Kartě Pokémona; `height` navíc řídí velikost spritu v Battle Area
+  (`spriteScaleForHeight`, `--mon-scale`). Sprite se do dat neukládá – odvozuje se
+  z `id`. Pozn.: DATA zůstávají centrálně v `data/pokemon.js`; až druhů přibude,
   rozdělit **po generacích** (`data/pokemon/gen1.js` …). Složku per druh jen na
   ASSETY (sprity).
 
@@ -288,11 +306,12 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
 - ✅ **Hledání + filtry (0.22.0).** Search (jméno u objevených / dex číslo),
   filtry stav (All/Caught/Seen/Missing) a typ, řazení dle dexNo. Znovupoužit
   vzor `.filter-bar`. Fokus/caret/scroll přežijí překreslení levého panelu.
-- ⚪ **Detail v Pokédexu = kde se druh vyskytuje.** Klik na kartu → info o druhu
-  + seznam oblastí, kde ho lze potkat – **jen když už byl objeven** (drží R-023,
-  skryté druhy na cestě). Vyskytovost se odvodí z `area.species`.
-- ⚪ **Ikona Pokédexu v horní liště.** Nahradit horní ukazatel „počet chycených
-  Pokémonů" ikonou Pokédexu (klik → otevře Pokédex). Malá UI změna v liště.
+- ✅ **Detail v Pokédexu = kde se druh vyskytuje (HOTOVO, ověřeno 2026-09-03).**
+  Karta Pokémona má sekci „Where to catch" (`whereToCatch` → `areasForSpecies`,
+  `pokemonCard.js:104`), v caughtBody i seenBody. Karta se otevře jen pro chycený
+  (`uid`) nebo viděný (`speciesId`) druh → neobjeveným se výskyt neukáže (drží R-023).
+- ✅ **Ikona Pokédexu v horní liště – HOTOVO v0.58.0.** Položka „📕 Pokédex"
+  (počet chycených) je klikatelná → `leftPanel.openLeftPanelTab("pokedex")`.
 
 ## Kolekce → Boxy (PC)
 
@@ -303,11 +322,11 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   (uid|null)[30]}]` (save v19); `state.collection` zůstává zdroj pravdy,
   `pcSystem.reconcile` sladí boxy (jedinec mimo tým = právě 1 slot). Team oddělený
   (max 6), integrace automatická přes reconcile. **Pokédex netknutý.**
-- ⚪ **PC boxy – doladit (MVP zbytky):** drag & drop **mezi boxy** (teď jen v rámci
-  zobrazeného boxu; `pcSystem.moveToSlot` už umí přesun podle uid, chybí jen UI –
-  např. drop na tlačítka ◀/▶ nebo mini-seznam boxů). **Přejmenování boxu**
-  (`box.name`). Volitelně: řazení/hromadné operace, počet obsazených na boxu,
-  „odeslat do boxu" přímo z Týmu.
+- ✅ **PC boxy – doladit – HOTOVO v0.58.0.** Drag & drop **mezi boxy** (drop na
+  ◀/▶ → `pcSystem.moveToBox`), **přejmenování boxu** (klik na jméno →
+  `renameBox`), **30 boxů napevno** (`PC_BOX_COUNT`, ＋ Box zrušen). Volitelně
+  do budoucna: řazení/hromadné operace, počet obsazených na boxu, „odeslat do
+  boxu" přímo z Týmu.
 
 ## Mapa světa
 
@@ -358,15 +377,22 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
     soupeře (`jumpAttack` počítá vzdálenost z DOM → `--jx/--jy`, `atkPounce`,
     v0.39.1–2). ✅ **Faint animace** (v0.41.0): padlý klesne, nakloní se a
     vybledne (`is-fainting` → `faintDrop`, `forwards`), event `BATTLE_FAINT`,
-    faint se vyhodnotí až po animaci (jen manuál – krokové kolo). **Zbývá:**
-    dodat další pozadí/biome + chybějící `back`/`front` sprity druhů; (faint
-    animace v auto módu – teď jen manuál).
+    faint se vyhodnotí až po animaci (jen manuál – krokové kolo). ✅ **GIF
+    animace na obou stranách v manuálu** (v0.56.0): `combatantHtml(..., animated)`
+    volí gif→png→glyph, `draw()` předává `anim = !getAutoBattle()` oběma stranám;
+    statické PNG v auto/idle. Gify se stahují `tools/dl_gifs.py` (druhy z dat).
+    ✅ **Škálování spritů podle úhlopříčky** (v0.56.0): `battleView.applySpriteScale`
+    počítá `--sprite` z `Math.hypot(w,h)` battle areny (`ResizeObserver`); úzký
+    panel ošetřen (`.c-info` se scvrkne, nepřekrývá sprite). **Zbývá:** dodat
+    další pozadí/biome + chybějící `back`/`front` sprity druhů; gify zbylých
+    druhů (`python tools/dl_gifs.py --all`); (faint animace v auto módu – teď jen manuál).
   - **Fáze 2 – Auto / Manual:** ⚙ částečně (v0.28–0.29): **Auto battle**
     (`settings.autoBattle`) je samostatný přepínač MÓDU, oddělený od Pause/Resume
     (`running`). V auto módu běží automatická kola (`schedule()` je pustí jen když
-    `running && autoBattle`); Pause jen pozastaví. **Zbývá** skutečný *Manual* mód:
-    když je Auto battle vypnutý, souboj má čekat na hráče a ten spouští kolo
-    tlačítkem (teď se prostě neposouvá) – bez Moves zatím jen „Attack".
+    `running && autoBattle`); Pause jen pozastaví. ✅ **Manual mód hotový (ověřeno
+    2026-09-03):** `schedule()` se ukončí, když není Auto battle (`battleSystem.js:915`);
+    v manuálu běží kola jen z tlačítek (`canManualAct` → `playerAttack/UseItem/Switch`
+    → `resolveManualRound`). Souboj čeká na hráče, plné menu tahů/itemů/switche.
   - **Fáze 2b – trvalé HP (hotovo, v0.30.0):** ✅ `owned.hp` je trvalé (save v12),
     boj čte/píše přes `makeCombatant` accessor, swap na dalšího živého, `teamView`
     ukazuje reálné HP i fainted. Doléčení po výhře jen v auto módu; **Heal team**
@@ -444,8 +470,10 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
     (PSN/BRN/PAR) v Battle Areně (oba), Teamu i kartě Pokémona. **Léčení:** `healTeam`
     čistí i status; `healStatus(uid)` (tlačítko 💊 Cure v Teamu) sundá jen status bez HP/PP.
     ✅ **Itemy proti statusu s cenou** (v0.45.0): Antidote/Burn Heal/Paralyze Heal/Full Heal
-    (viz sekce „Itemy & léčení"). **Zbývá:** další non-DoT statusy (spánek/zmrznutí),
-    čistě status tahy (Thunder Wave).
+    (viz sekce „Itemy & léčení").
+    ✅ **Spánek + zmrznutí jako trvalé statusy** (v0.61.0): non-volatile na `owned.status`
+    (serializují se, přežijí switch). Spánek 1–3 kola, freeze 20 %/kolo rozmrznutí + Fire
+    tah rozmrazí, Ice-typ imunní; badge SLP/FRZ. Thunder Wave (power0 ailment) funguje.
     ✅ **Doplňování PP v auto módu** (v0.33.0): linie **PP regen** v Poké Centru
     doplní % PP tahů po každé výhře (jen auto battle; 0 % dokud se nekoupí).
     ✅ **Plovoucí damage čísla** (v0.33.0): červené „-N" nad zasaženým bojovníkem
@@ -459,14 +487,29 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
 ## Nastavení hry
 
 - 🔵 **Okno Nastavení / herní modifikátory (R-030).** ⚙ **Seam hotový (v0.28.0):**
-  tlačítko ⚙ v horní liště otevírá menu globálních voleb (`src/ui/settingsView.js`,
-  kontejner `#settings-controls`); první volba je **Game speed** (přesunuta z okna
-  souboje, `settings.speed`). **Zbývá doplnit volby:** **Nuzlocke** (např.
-  permadeath, chytání jen prvního na oblasti), **Level cap** (podle levelu
-  nejsilnějšího trenéra v gymu následujícího města – předpokládá gymy/trenéry,
-  zatím neexistují), **No items**, **No potions** ap. Datově řízené přepínače
-  `state.settings.*`, systémy je jen respektují. Level cap a nuzlocke jsou
-  závislé na dalších mechanikách (gymy, permadeath) – seam je, plnit postupně.
+  tlačítko ⚙ v horní liště otevírá menu globálních voleb (`src/ui/settingsView.js`);
+  první volba je **Game speed** (přesunuta z okna souboje, `settings.speed`).
+  ✅ **Přepsáno na sdílený modal (v0.56.0):** `openSettingsModal()` je jeden modal
+  volaný z horní lišty ⚙ i z **title screenu** (SETTINGS hotspot).
+  ✅ **Herní režimy (v0.61.0) – HOTOVO:** sekce Rules v Nastavení; `settings.rules=
+  {noItems,noPotions,nuzlocke}` + top-level `nuzlockeCaught:{}` (save v20). **No items**
+  (zákaz všech předmětů v souboji vč. auto-heal), **No potions** (jen HP kategorie),
+  **Nuzlocke** (permadeath přes `releasePokemon` + chytání jen 1 druhu/oblast).
+  `battleSystem.getRules()`/`itemsAllowed()` – systémy jen respektují.
+  **Zbývá:** **Level cap** (podle nejsilnějšího trenéra v gymu – předpokládá gymy/trenéry,
+  zatím neexistují) → DEFEROVÁNO.
+
+## Úvodní obrazovka (title screen)
+
+- ✅ **Title screen (v0.56.0).** Při startu se ukáže `assets/Title_screen.png`
+  (`index.html` `#title-screen`, `src/ui/titleScreen.js`). Tlačítka jsou
+  **namalovaná v obrázku** → nad ně jsou napozicované **průhledné klikací zóny**
+  (`.title-hotspot`, souřadnice v % z rozměrů obrázku): CONTINUE schová overlay,
+  SETTINGS otevře sdílený modal nastavení. ✅ **Title screen jako BRÁNA (v0.57.0):**
+  offline souhrn / nabídky tahů / výběr startéra se spustí až PO Continue
+  (`onContinue` v `main.js`), overlay nad hrou (z-index 200), modaly nad ním (300).
+  **Zbývá:** až budou save sloty / nová hra, napojit CONTINUE vs. New game;
+  případně další hotspoty (kredity apod.).
 
 ## Responzivní layout
 

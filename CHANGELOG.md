@@ -6,6 +6,110 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.62.1] – 2026-09-03 · oprava přesunu jedinců mezi PC boxy (drag & drop)
+### Fixed
+- **Výběr boxů při přetažení jedince už „nespadne".** Když nad horní lištu (jméno boxu) přetáhneš jedince, rozbalí se výběr boxů a **zůstane otevřený, dokud jedince držíš „v ruce"** – zavře se až po puštění na box nebo po konci tažení. Dřív se picker kvůli překreslování panelu (živé progress bary) i falešnému `dragleave` zavíral okamžitě, takže se do jiného boxu nedalo trefit.
+- **Výběr boxů je teď mřížka dlaždic 6×5 (všech 30 boxů naráz), ne scrollovací seznam.** Každá dlaždice ukazuje číslo boxu a obsazenost (x/30), aktivní box je zvýrazněný, plný box má obsazenost červeně. Konec se scrollbarem, na cílový box stačí pustit jedince na příslušnou dlaždici.
+
+## [0.62.0] – 2026-09-03 · breeding & vajíčka · nové Poké Bally · přehlednější léčení
+### Added
+- **Destiny Knot (held item, 2000 gold).** Drží-li ho jeden z rodičů ve Školce, potomek zdědí **5 IV místo 3**. Kupuje se v Marketu (sekce held items), nasazuje jako ostatní held předměty.
+- **Potomek se líhne v základní formě.** Breeding vejce teď vždy vyprodukuje kořen evoluční linie (dědí po ne-Ditto rodiči) – dřív mohlo vzniknout přímo vyvinutého druhu.
+- **Procedurální sprite vajíček (per druh).** Skořápka se deterministicky odvodí ze species.id (barva + puntíky), takže vejce druh vizuálně naznačuje a hráč se učí vzory. Jméno a staty zůstávají skryté až do vylíhnutí (R-021). Zobrazuje se ve slotech líhně i ve výběru vejce.
+- **Nové Poké Bally (odemčeno z „coming soon").**
+  - **Love Ball** (tier 2, 100 g) – ×8 na stejný druh opačného pohlaví, než je tvůj aktivní Pokémon.
+  - **Heavy Ball** (tier 2, 80 g) – čím těžší druh, tím lepší (×2 / ×3 / ×4 dle hmotnosti).
+  - **Dream Ball** (tier 3, 120 g) – ×4 na soupeře se stavovým postižením, ×6 pokud spí.
+  - **Moon Ball** (tier 3, 140 g) – ×4 na druhy vyvíjené Měsíčním kamenem.
+### Changed
+- **Léčení v Poké Centru zůstává zdarma; jen zpřehledněno.** Manuální **Heal team** je nově označen „(free)" a jasně uvádí, že obnovuje **plné HP, vyléčí status i doplní PP naplno** (potiony tak mají smysl hlavně v souboji, kde do Centra nelze). Hláška po vyléčení to potvrzuje.
+### Poznámky
+- Master Ball zůstává bez zdroje (plán až na konec release 1.0). Dusk Ball zůstává „coming soon" (chybí noc/jeskyně). Bez batch-použití itemů (vždy po 1 ks). Rychlost breedingu se záměrně neupgraduje.
+
+## [0.61.2] – 2026-09-03 · přehlednější Herní pravidla (tabulka + toggle)
+### Changed
+- **Sekce „Herní pravidla" v Nastavení přepsána do kompaktní tabulky** s toggle přepínači vpravo (dřív roztažené checkboxy s dlouhým popisem, nepřehledné v úzkém okně). Každé pravidlo = řádek: název + krátký popis vlevo, zapínač vpravo (zapnuto = zelený).
+
+## [0.61.1] – 2026-09-03 · oprava auto-výběru tahů (jedinec vždy „bojeschopný")
+### Fixed
+- **Auto režim už nedá jedinci převahu status tahů (dřív např. 3 status + 1 útok).** Výběr tahů teď dává přednost ÚTOČNÝM tahům (zaplní klidně všechny 4 sloty), status tahy jen doplní zbylé sloty. Platí pro výchozí sadu při vzniku jedince i pro auto battle / offline / Školku, kde se sada při každém level-upu přeskládá na „útočné-first" (zachová i egg/TM tahy mimo learnset a PP naučených tahů). Důsledek: v auto souboji má jedinec vždy čím ubírat HP a souboj se nezasekne. V manuálním souboji zůstává chování beze změny (nový tah při plných slotech nabídne frontu na nahrazení).
+- **Oprava už pokažených save (migrace v20 → v21).** Jedinci s ≤ 1 útočným tahem, u kterých jde získat víc útočných, se při načtení přeskládají na útočné-first (řeší i deadlock, kdy zaseknutý jedinec v auto souboji nedostával XP, takže se sám nikdy neopravil level-upem). Záměrné vyvážené sady (2+ útoky) se nemění.
+
+## [0.61.0] – 2026-09-03 · dokončení soubojových mechanik · skutečné ikony míčků · herní režimy (No items / No potions / Nuzlocke)
+### Added
+- **Dokončené soubojové mechaniky (Gen 1).**
+  - **Reflect / Light Screen** – po dobu 5 kol půlí přijaté fyzické (Reflect) resp. speciální (Light Screen) poškození; kritické zásahy clonu ignorují. Clona po odeznění zmizí („wore off").
+  - **Substitute** – obětuje ¼ max HP a vytvoří návnadu, která pohlcuje poškození i navěšování statusů, dokud nepraskne.
+  - **Counter** – vrátí 2× poslední přijaté FYZICKÉ poškození (priorita −5, takže jde poslední). Jinak selže.
+  - **Rest** – jedinec se plně vyléčí, vyčistí status a usne na 2 kola.
+  - **Whirlwind / Roar (force switch)** – u divokého soupeře přivolá nového (bez odměny), hráče vytáhne náhodného zdravého člena z lavičky.
+  - **Transform / Mimic (Metamorf)** – Transform převezme typy, staty, stat-stage, jméno i tahy soupeře; Mimic dočasně zkopíruje jeho poslední tah. Dočasné tahy (`moveOverride`) mizí po výměně/konci souboje.
+  - **Sleep a Freeze jako trvalé (non-volatile) stavy** – přežijí výměnu jedince (dle kánonu). Spánek trvá 1–3 kola, zmrznutí má 20% šanci na rozmrznutí každé kolo a rozmrazí ho i zásah Fire tahem. Ice typ nelze zmrazit. Odznaky **SLP** / **FRZ** na kartě i v souboji.
+- **Herní režimy / pravidla (⚙ Nastavení → Rules).**
+  - **No items** – v souboji nelze použít žádný předmět (ani auto-heal). Batoh v souboji to hlásí.
+  - **No potions** – zakáže jen léčivé (HP) předměty; ostatní zůstávají.
+  - **Nuzlocke** – **permadeath** (omdlelý jedinec navždy opouští tým i kolekci) + na každé oblasti smíš chytit jen **jeden** úlovek (další chytání je zablokované).
+### Changed
+- **Skutečné ikony Poké Ballů místo emoji 🔴.** Catch tlačítka v liště i v batohu, hod míčkem a hlavičky/oddělení v Poké Martu teď používají opravdový obrázek vybraného míčku (fallback na emoji zůstává, když obrázek chybí). Ikona chyceného míčku na kartě i v týmu už fungovala dřív.
+### Fixed
+- (nic nového – viz 0.60.0)
+
+## [0.60.0] – 2026-09-03 · plynulý scroll (konec záseků kolečkem)
+### Fixed
+- **Scroll se už neseká.** Okna i panely se překreslovaly každý herní tik (kvůli živým progress barům); když překreslení padlo doprostřed scrollu kolečkem, prohlížeč scroll přerušil (element pod kolečkem se zničil) a uživatel musel pustit a scrollovat znovu. Nově se během aktivního scrollování překreslení odloží a proběhne až po jeho uklidnění (~200 ms), víc ticků se sloučí do jednoho. Platí pro market/obchody, batoh, kartu Pokémona, tým, PC, Pokédex i nastavení. Živé prvky (bary, počítadlo zlata) při scrollu na okamžik „zamrznou" a hned se dorovnají; počítadlo zlata v horní liště zůstává živé i během scrollu.
+### Changed
+- `scrollPreserve.js` má nově sdílené helpery `isScrolling()` a `scrollAware(renderFn)` (obalí render callback, aby se během scrollu neprováděl). Nasazeno na všechna překreslení řízená `STATE_CHANGED`.
+
+## [0.59.0] – 2026-09-03 · dědičnost tahů (egg moves) · evoluce kamenem + výměnou · multi-stat boost tahy · prodej itemů
+### Added
+- **Dědičnost tahů (egg moves).** Vejce z breedingu předá potomkovi „egg moves": vezme se sjednocení aktivních tahů obou rodičů, ponechají se jen ty, které druh potomka umí naučit (celý level-up movepool), a max 4 dostanou při vylíhnutí přednost před výchozí sadou. Ukládá se na vejce (`breed.eggMoves`), zpětně kompatibilní (stará vejce = beze změny).
+- **Evoluce kamenem.** Nová kategorie itemů „🪨 Evolution": Fire/Water/Thunder/Leaf/Moon Stone + Linking Cord (náhrada výměny). Kameny i cord jsou k dostání v obchodě Items. Použití z batohu → výběr vhodného jedince → evoluce (spotřebuje kámen). Větvené evoluce řeší volba kamene (Eevee → Vaporeon vodním / Jolteon hromovým / Flareon ohnivým kamenem).
+- **Evoluce výměnou (Linking Cord).** Kadabra→Alakazam, Machoke→Machamp, Graveler→Golem, Haunter→Gengar se vyvinou přes Linking Cord z batohu.
+- **Prodej itemů.** V batohu má každý consumable i held item tlačítka „Sell 1" / „Sell all" (výkup za 50 % nákupní ceny). Seznamy v batohu se řadí abecedně.
+- **Multi-stat boost tahy.** Engine efektů nově umí měnit víc statů jedním tahem (`effect.changes[]`). Přidáno/rozšířeno: Dragon Dance (Atk+Spe), Calm Mind (SpA+SpD), Bulk Up (Atk+Def), Shell Smash (Atk/SpA/Spe +2, Def/SpD −1); Swords Dance a Nasty Plot zůstávají jednostatové. Napojeno do learnsetů (Dragonite, Gyarados, Alakazam, Machamp, Squirtle, Scyther).
+### Changed
+- Evoluční druhy (kámen/výměna) mají v datech nové pole `evolutions: [{toId, method, item?}]` a vynulované levelové `evolvesTo`/`evolutionLevel`; levelové evoluce fungují beze změny.
+### Fixed
+- (nic nového – viz 0.58.0)
+
+## [0.58.0] – 2026-09-03 · ikona Pokédexu v liště · hromadný nákup · autocatch fallback · PC boxy (30, drag mezi boxy, přejmenování)
+### Added
+- **Ikona Pokédexu v horní liště.** Položka „📕 Pokédex" (s počtem chycených) je klikatelná (i klávesnicí) a otevře záložku Pokédex v levém panelu. Dřív tam byl jen neinteraktivní počet „📦 Pokémon".
+- **Hromadný nákup v obchodech.** Poké Mart i Items mají přepínač množství **×1 / ×5 / ×10 / Max**; tlačítko nákupu ukazuje reálný počet a celkovou cenu, „Max" koupí tolik, na kolik stačí zlato. Deaktivuje se, když není na jediný kus.
+- **Přesun mezi PC boxy a přejmenování boxu.** Jedince lze přetáhnout na navigační šipky ◀/▶ (přesun do sousedního boxu) **nebo na jméno boxu → rozbalí se seznam všech 30 boxů** a lze ho přesunout o víc než jeden box. Klik na jméno boxu ho přejmenuje.
+- **Globální Dev menu v Nastavení (⚙).** Nová sekce „🔧 Dev tools": přidat peníze (+1 000 / +10 000), přidat vejce (náhodný druh) a přidat Ditta, a per-jedincové úpravy **level (−10/−1/+1/+10/Max) a shiny** s výběrem cílového Pokémona z rozbalovacího seznamu.
+### Changed
+- **PC má napevno 30 boxů** (po 30 slotech). Tlačítko „＋ Box" zrušeno; `reconcile()` počet boxů vždy dorovná.
+- **Dev nástroje přesunuty z Karty Pokémona do globálního Dev menu.** Řádek „🔧 Dev level" a shiny přepínač na kartě zrušeny; totéž (a víc) je teď v ⚙ Settings s výběrem cíle.
+### Fixed
+- **Autocatch fallback při došlém míčku.** Když dojde vybraný typ Poké Ballu, autocatch se nezastaví, ale přepne na jiný vlastněný (nejlevnější → nešetří prémiové). Chytá, dokud má hráč aspoň jeden míček.
+- **Čas líhnutí ukazoval `13.539999… s`.** `formatDuration` teď vstup nejdřív zaokrouhlí na celé sekundy (řeší i přetečení 60 s), takže se zlomkové zbývající sekundy zobrazí čistě.
+- **Changelog servíroval starou verzi z cache.** `fetch("CHANGELOG.md")` má nově `{ cache: "no-store" }`, takže se „Co je nového" vždy načte aktuální (dřív rozpor „verze 0.55 vs. changelog 0.45").
+- **Hatchery (Egg Breeders) přetékaly okno.** Mřížka slotů měla `repeat(5, 1fr)`; obsazené sloty (bar + čas + „Take out") mají větší min-content, takže po naplnění pár slotů řádek utekl doprava mimo modal. Nově `repeat(5, minmax(0, 1fr))` + `min-width:0` na slotu (a zalamování textu/tlačítek), takže se sloupce korektně zúží a zůstanou v okně.
+
+## [0.57.0] – 2026-09-03 · Pokédex info (výška/váha/entry) · sprity podle výšky · title screen jako brána
+### Added
+- **Pokédex info u všech 151 druhů.** Do `data/pokemon.js` doplněny `height` (m), `weight` (kg), `genus` (angl. druhový popisek) a `dexEntry` (angl. flavor text) z PokeAPI. Zobrazují se na Kartě Pokémona (chycený i jen viděný druh): druhový popisek pod jménem, flavor text jako citace a řádky Height/Weight v meta přehledu.
+- **Nový generačně nezávislý nástroj `tools/gen_pokedex_info.py`.** Druhy (id + dexNo) čte z `data/pokemon.js`, info stahuje z PokeAPI; idempotentní (dá se pouštět opakovaně) a připravený na další generace.
+### Changed
+- **Velikost spritu v Battle Area podle výšky druhu.** Pidgey (0,3 m) už není stejně velký jako Charizard (1,7 m) ani Onix (8,8 m). Reálné výšky mají obrovský rozptyl, takže se komprimují mocninou a ořezávají do pásma [0,55 – 1,5]× (`spriteScaleForHeight`); poměr se násobí přes CSS proměnnou `--mon-scale` nad rámec škálování scény podle úhlopříčky.
+- **Title screen je teď skutečná BRÁNA do hry.** Offline souhrn, nabídky naučení tahu a výběr startéra se ukážou až PO kliknutí na Continue (dřív probleskly pod úvodní obrazovkou). Overlay leží nad herním obsahem (z-index 200), modály nad ním (300), aby šlo Nastavení otevřít i z title screenu.
+### Fixed
+- **Rozbité načtení hry po přegenerování learnsetů (v0.56.0).** Tři klíče druhů s pomlčkou (`nidoran-f`, `nidoran-m`, `mr-mime`) byly v `data/learnsets.js` bez uvozovek → `SyntaxError: Unexpected token '-'` → celý modul se nenačetl a po Continue zůstal prázdný layout. Klíče s pomlčkou teď VŽDY v uvozovkách (opraveno i v generátoru `tools/gen_movepools.py`).
+- **Trvalý on-page zachytávač chyb.** Jakákoli neodchycená chyba (včetně selhání načtení ES modulu) se vypíše dole na stránce, aby šla přečíst i bez F12.
+
+## [0.56.0] – 2026-09-03 · Title screen · sdílené nastavení · větší sprity · gify obou stran
+### Added
+- **Úvodní obrazovka (title screen).** Po načtení se přes hru položí `assets/Title_screen.png` s tlačítky **CONTINUE** (vstup do hry) a **SETTINGS**.
+- **Sdílené modální nastavení (`openSettingsModal`).** Jedno okno nastavení dostupné z horní lišty (⚙) i z title screenu; herní rychlost se v něm živě překresluje. Zdroj pravdy je jeden (žádný duplicitní dropdown).
+- **Animované gify pro celé evoluční linie obtainable druhů.** Doplněny front/back i shiny varianty pro Ivysaur, Venusaur, Charmeleon, Charizard, Wartortle, Blastoise, Pidgeotto, Pidgeot a Raticate → hráčův Pokémon animuje v manuálním souboji i po evoluci (obě strany scény).
+### Changed
+- **Škálování soubojové scény podle úhlopříčky.** Velikost spritů teď řídí JS (`ResizeObserver`) podle **úhlopříčky** battle areny (√(š²+v²)), takže sprite roste i klesá s celkovou velikostí scény při každé změně okna/panelu (dřív CSS container queries reagovaly jen na jeden rozměr → na nízké aréně se sprite zasekl). Bojovníci se rozestoupí dál od rohů; na úzkém panelu se info panel a sprite už nepřekrývají (omezené šířky + zalamování). Auto/idle mód dál používá statické png.
+- **Horní lišta ⚙** místo malého rozbalovacího menu otevírá plné modální nastavení.
+- **Přesné learnsety a data tahů z PokeAPI (Gen 9 Scarlet/Violet).** `data/learnsets.js` a `data/moves.js` přegenerovány kanonicky z PokeAPI (dřív šlo o aproximaci se starogeneračními úrovněmi). Ruční bojová pole (`effect`, `ailment`/`ailmentChance`) se při merge **zachovala**; u nově přidaných tahů se z PokeAPI meta odvodila bezpečná podmnožina efektů. Nový generačně nezávislý nástroj `tools/gen_movepools.py` (druhy čte z dat, version-group fallback řetězec) → znovupustitelný na další generace.
+### Removed
+- **Ditto z výběru startérů** (zůstává v Pokédexu a pro breeding).
+
 ## [0.55.0] – 2026-09-02 · PC boxy · úložiště mimo tým · drag & drop
 ### Added
 - **Nová záložka „PC"** v levém panelu (vedle Team). Úložiště všech vlastněných jedinců, kteří nejsou v týmu, v boxech po 30 slotech (mřížka 6×5).

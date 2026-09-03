@@ -15,6 +15,7 @@ import { openBag } from "./bagView.js";
 import { genderSymbolHtml } from "./gender.js";
 import { statusBadge } from "./statusBadge.js";
 import { heldItemOf } from "../systems/itemSystem.js";
+import { ballIconHtml } from "./ballIcon.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /** Jméno druhu daného jedince. */
@@ -86,7 +87,7 @@ export function renderTeamTab(root, onStatus) {
     if (p) {
       slots.push(`
         <div class="card team-slot clickable" data-open="${p.uid}" title="Show card">
-          <div><strong>${displayName(p)}</strong> ${genderSymbolHtml(p.gender)} · Lv ${p.level} ${typeBadges(p)}${statusBadge(p.status)}</div>
+          <div><strong>${displayName(p)}</strong> ${genderSymbolHtml(p.gender)} · Lv ${p.level} ${p.owned?.caughtBall ? ballIconHtml(p.owned.caughtBall, { size: 16 }) : ""} ${typeBadges(p)}${statusBadge(p.status)}</div>
           <div>${ivEvLine(p)}</div>
           ${statBars(p)}
           <div class="row-actions">

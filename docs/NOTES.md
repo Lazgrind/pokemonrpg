@@ -13,6 +13,65 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-09-03 – Title screen, sdílené nastavení, škálování spritů, GIFy, přesné learnsety (v0.56.0)
+
+### Zadání (uživatel) – 4 body + úpravy
+1. **Škálování spritů v souboji**: „pokemoni musí být při roztažení tak 2-3×
+   větší a dále z rohu"; posléze zpřesněno: velikost má záviset na **úhlopříčce**
+   battle areny (ne že se mění jen aréna a Pokémon zůstává stejný); a „když udělám
+   hodně úzký panel, rámečky o Pokémonech překrývají Pokémony" → ošetřit.
+2. **Title screen** z `assets/Title_screen.png` při startu s CONTINUE + SETTINGS.
+   Klíčová korekce: „ta tlačítka jsou už v tom obrázku namalovaná, ty přes ně
+   musíš udělat **klikatelnou zónu** – ne že pod to uděláš vlastní čudlíky."
+3. **Learnsety + moves** přegenerovat z PokeAPI (Gen 9 Scarlet/Violet) – stávající
+   data byla LLM aproximace (staré generace), ne kanonická. „ten skript na API pro
+   moves udělej **globálnější**, budeme ho potřebovat na všechny generace potom."
+4. **GIF animace** v manuálním souboji pro **obě strany**; statické PNG v auto/idle.
+- Navíc: Ditto pryč ze starterů. A: „ty už neděláš notes ani backlog?" → vést dál.
+
+### Hotovo teď
+- **Škálování spritů podle úhlopříčky (JS).** CSS container-query nestačilo
+  (drželo se na výškovém stropu u nízkých arén). `battleView.applySpriteScale()`
+  měří `.battle-field` přes `getBoundingClientRect`, spočítá úhlopříčku
+  (`Math.hypot(w,h)`), nastaví `--sprite = clamp(96..460, diag*0.21)`. Sleduje se
+  `ResizeObserver` na rootu + přepočet v `draw()`. Sprite CSS: `width:var(--sprite)`,
+  `max-width:44%`. **Úzký panel:** `.c-info` má `flex:0 1 auto; min-width:0;
+  max-width:54%; overflow-wrap:anywhere` → rámečky se scvrknou, nepřekrývají sprite.
+- **Title screen jako klikací zóny.** `index.html` `#title-screen` = `<img>` +
+  dva průhledné `.title-hotspot` (data-act continue/settings) napozicované v %
+  změřených z obrázku (1672×941; oba vodorovně 37–63 %, CONTINUE 43–54 %,
+  SETTINGS 54–65 %). `src/ui/titleScreen.js` napojí CONTINUE (schová overlay) a
+  SETTINGS (otevře sdílený modal). Žádná vlastní tlačítka pod obrázkem.
+- **Sdílené nastavení jako modal.** `settingsView.js` přepsán: `renderSettings`
+  kreslí jen ⚙ v horní liště, `openSettingsModal()` je sdílený (topbar i title
+  screen). Rychlost hry uvnitř; připraveno na další volby.
+- **GIF na obou stranách v manuálu.** `combatantHtml(..., animated)` volí příponu
+  gif→png→glyph; `draw()` předává `anim = !getAutoBattle()` pro OBĚ strany.
+  Root cause chybějících animací = pokrytí (evoluce neměly gify) → dostaženo
+  přes `tools/dl_gifs.py` (čte druhy z `data/pokemon.js`, žádný ruční seznam).
+- **Přesné learnsety + moves z PokeAPI (Gen 9).** Nový **generačně nezávislý**
+  `tools/gen_movepools.py`: druhy i dexNo čte z `data/pokemon.js`; pro každý druh
+  vybere level-up movepool z první dostupné version group dle priority
+  (scarlet-violet → … → red-blue); stáhne kanonická data tahů. **MERGE** do
+  `moves.js`: objektivní staty z API, ale **ruční `effect`/`ailment` pole se
+  zachovají** (verbatim). U nových tahů se z PokeAPI meta odvodí bezpečná
+  podmnožina efektů (ailment/sleep/confuse/flinch/statChange/recoil/drain/heal/
+  highCrit). JSDoc hlavičky obou souborů zachovány. Pustitelný znovu na další gen.
+
+### Rozhodnutí
+- 🟢 **Škálování řešit v JS, ne čistým CSS** – úhlopříčka je jediná metrika, co
+  splní „2–3× větší a dál z rohu" napříč tvary okna; container-query neumí hypot.
+- 🟢 **Title tlačítka = klikací zóny nad obrázkem**, ne vlastní UI (obrázek už je
+  má namalované). Souřadnice v % → drží se při libovolném zvětšení obrázku.
+- 🟢 **API skript generačně nezávislý** – druhy z dat, VG fallback řetězec, merge
+  zachovává ruční efekty. Žádné ruční seznamy druhů v Pythonu (viz dřívější
+  „hrozná kravina" s hardcoded dictem).
+
+### Pozn. / k ověření uživatelem
+- Odvozené efekty u nových tahů jsou konzervativní (co engine umí); ostatní tahy
+  zůstávají „připravené" (jen damage) – doladí se ručně později.
+- Ověřit ve hře: zarovnání hotspotů, škálování dle úhlopříčky, úzký panel.
+
 ## 2026-09-01 – Krok 5: manuální souboj (menu) + popup nahrazení tahu (v0.35.0)
 
 ### Zadání (uživatel)

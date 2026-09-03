@@ -62,13 +62,16 @@
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 19;
+export const CURRENT_SAVE_VERSION = 21;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
 
 /** Počet slotů v jednom PC boxu (mřížka 6×5). */
 export const PC_BOX_SIZE = 30;
+
+/** Pevný počet PC boxů (nepřidávají se ručně; reconcile je vždy dorovná na tento počet). */
+export const PC_BOX_COUNT = 30;
 
 /** @type {GameState | null} */
 let state = null;
@@ -96,7 +99,16 @@ export function createNewGame() {
       speed: 1, // herní rychlost (1/2/4) – globální, ovládá se v horní liště
       selectedBall: "poke",
       autocatch: { enabled: false, mode: "all" }, // mode: "all" | "shiny"
+      // Herní pravidla / režimy (viz settingsView, battleSystem):
+      //  - noItems: zakáže léčivé předměty (žádné lektvary ani jiné itemy) v souboji
+      //  - noPotions: zakáže jen lektvary (Potion apod.), ostatní předměty ok
+      //  - nuzlocke: permadeath (omdlelý jedinec navždy padne) + chytání jen prvního
+      //    druhu na dané oblasti
+      rules: { noItems: false, noPotions: false, nuzlocke: false },
     },
+    // Nuzlocke: mapa oblast -> true, když už na ní hráč (ne)úspěšně čerpal první
+    // úlovek. Prázdné = ještě nikde nechytal (viz battleSystem).
+    nuzlockeCaught: {},
     battle: null, // uložený běhový stav souboje (viz battleSystem.serialize)
     city: { buildings: {} }, // úrovně budov (viz buildingSystem)
   };

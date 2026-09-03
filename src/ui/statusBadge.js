@@ -5,7 +5,7 @@
  */
 
 /** Krátké popisky statusů pro odznak. */
-export const STATUS_LABEL = { poison: "PSN", burn: "BRN", paralysis: "PAR" };
+export const STATUS_LABEL = { poison: "PSN", burn: "BRN", paralysis: "PAR", sleep: "SLP", freeze: "FRZ" };
 
 /**
  * Vrátí HTML odznaku stavu (s úvodní mezerou, aby šel rovnou nalepit za jméno),

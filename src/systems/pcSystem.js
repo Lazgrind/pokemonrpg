@@ -18,7 +18,7 @@
  * naopak commit() volají.
  */
 
-import { getState, commit, PC_BOX_SIZE } from "../core/state.js";
+import { getState, commit, PC_BOX_SIZE, PC_BOX_COUNT } from "../core/state.js";
 
 /** Prázdný box s daným jménem. */
 function emptyBox(name) {
@@ -45,7 +45,10 @@ function reconcile(s) {
     }
   });
 
-  if (s.pcBoxes.length === 0) s.pcBoxes.push(emptyBox("Box 1"));
+  // Pevný počet boxů: dorovnej na PC_BOX_COUNT (boxy se nepřidávají ručně).
+  while (s.pcBoxes.length < PC_BOX_COUNT) {
+    s.pcBoxes.push(emptyBox(`Box ${s.pcBoxes.length + 1}`));
+  }
 
   const teamSet = new Set(s.team);
   const collectionUids = new Set(s.collection.map((p) => p.uid));
@@ -102,15 +105,6 @@ export function storedCount() {
   return getBoxes().reduce((n, b) => n + b.slots.filter(Boolean).length, 0);
 }
 
-/** Přidá nový prázdný box na konec. */
-export function addBox() {
-  const s = getState();
-  reconcile(s);
-  s.pcBoxes.push(emptyBox(`Box ${s.pcBoxes.length + 1}`));
-  commit();
-  return s.pcBoxes.length - 1;
-}
-
 /**
  * Prohodí obsah dvou slotů ve stejném boxu (přesun i na prázdný slot). Používá
  * drag & drop v rámci jednoho boxu.
@@ -127,6 +121,42 @@ export function swapSlots(boxIndex, from, to) {
   if (from === to) return false;
   if (from < 0 || to < 0 || from >= box.slots.length || to >= box.slots.length) return false;
   [box.slots[from], box.slots[to]] = [box.slots[to], box.slots[from]];
+  commit();
+  return true;
+}
+
+/**
+ * Přesune jedince (uid) do prvního volného slotu cílového boxu (bez zadání slotu).
+ * Používá drag & drop na jiný box (přes navigaci ◀/▶). Když je cílový box plný,
+ * vrátí false (žádné tiché vytváření boxů). Přesun do vlastního boxu je no-op.
+ * @param {string} uid
+ * @param {number} toBox
+ * @returns {boolean}
+ */
+export function moveToBox(uid, toBox) {
+  const s = getState();
+  reconcile(s);
+  const dest = s.pcBoxes[toBox];
+  if (!dest) return false;
+  const free = dest.slots.indexOf(null);
+  if (free === -1) return false; // cílový box je plný
+  return moveToSlot(uid, toBox, free);
+}
+
+/**
+ * Přejmenuje box. Prázdné/whitespace jméno se ignoruje; ořízne se na 24 znaků.
+ * @param {number} boxIndex
+ * @param {string} name
+ * @returns {boolean}
+ */
+export function renameBox(boxIndex, name) {
+  const s = getState();
+  reconcile(s);
+  const box = s.pcBoxes[boxIndex];
+  if (!box) return false;
+  const clean = String(name ?? "").trim().slice(0, 24);
+  if (!clean) return false;
+  box.name = clean;
   commit();
   return true;
 }

@@ -11,8 +11,8 @@
 
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
-import { getTeamPokemon, ownsSpecies, acquirePokemon } from "./team.js";
-import { getPokeball } from "../../data/pokeballs.js";
+import { getTeamPokemon, ownsSpecies, acquirePokemon, releasePokemon } from "./team.js";
+import { getPokeball, POKEBALLS } from "../../data/pokeballs.js";
 import { ballMultiplier } from "./pokeballSystem.js";
 import { createPokemon, computeStats } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
@@ -43,6 +43,62 @@ const CATCH_MAX = 0.85;
 export function lootLabel(resource) {
   if (resource === "gold") return "gold";
   return getPokeball(resource)?.name ?? resource;
+}
+
+/**
+ * Aktivní herní pravidla / režimy (No items / No potions / Nuzlocke).
+ * Vždy vrací kompletní objekt, i pro staré save bez `settings.rules`.
+ * @returns {{ noItems: boolean, noPotions: boolean, nuzlocke: boolean }}
+ */
+export function getRules() {
+  const r = getState().settings?.rules;
+  return {
+    noItems: r?.noItems === true,
+    noPotions: r?.noPotions === true,
+    nuzlocke: r?.nuzlocke === true,
+  };
+}
+
+/**
+ * Smí hráč v souboji použít daný předmět? Režim No items zakáže vše,
+ * No potions zakáže jen léčivé (HP) předměty; ostatní zůstávají povolené.
+ * @param {string} itemId
+ * @returns {boolean}
+ */
+export function itemsAllowed(itemId) {
+  const rules = getRules();
+  if (rules.noItems) return false;
+  if (rules.noPotions) {
+    const def = getItem(itemId);
+    if (def?.category === "hp") return false;
+  }
+  return true;
+}
+
+/** Nuzlocke: už hráč na této oblasti čerpal svůj (jediný) úlovek? */
+function nuzlockeAreaUsed(areaId) {
+  return getState().nuzlockeCaught?.[areaId] === true;
+}
+
+/**
+ * Nuzlocke: smí hráč teď chytat? Vrací důvod zákazu (string) nebo null (smí).
+ * Když je Nuzlocke vypnutý, vždy null.
+ */
+function nuzlockeCatchBlock() {
+  if (!getRules().nuzlocke) return null;
+  if (!battle?.area) return null;
+  if (nuzlockeAreaUsed(battle.area.id)) {
+    return "Nuzlocke: you already caught your one Pokémon in this area.";
+  }
+  return null;
+}
+
+/** Nuzlocke: označí oblast jako „vyčerpanou" (po úspěšném chycení). */
+function markNuzlockeCaught(areaId) {
+  if (!areaId) return;
+  const st = getState();
+  if (!st.nuzlockeCaught || typeof st.nuzlockeCaught !== "object") st.nuzlockeCaught = {};
+  st.nuzlockeCaught[areaId] = true;
 }
 
 /** @type {any} */
@@ -99,8 +155,10 @@ export function makeCombatant(owned) {
   });
   // Běhové (transientní) bojové stavy – NEUKLÁDAJÍ se do save, jen inicializace.
   // stages: dočasné stupně statů (−6..+6), volatile: pomíjivé stavy (flinch,
-  // confusion, sleepTurns, seeded, trapped, charging, locked, rageActive),
-  // critStages: navýšená šance na krit (Focus Energy).
+  // confusion, seeded, trapped, charging, locked, rageActive, substitute,
+  // moveOverride/transformed pro Transform+Mimic, lastMoveId pro Mimic,
+  // lastHitDmg/lastHitPhysical pro Counter). Spánek/zmrznutí jsou naopak TRVALÝ
+  // status (owned.status). critStages: navýšená šance na krit (Focus Energy).
   c.stages = { attack: 0, defense: 0, spAttack: 0, spDefense: 0, speed: 0, accuracy: 0, evasion: 0 };
   c.volatile = {};
   c.critStages = 0;
@@ -285,6 +343,9 @@ const CRIT_MULT = 1.5;
 const PARALYSIS_FIZZLE = 0.25;
 const PARALYSIS_SPEED_MULT = 0.5;
 
+/** Zmrznutí: šance, že bojovník na začátku svého tahu roztaje (jinak tah vypadne). */
+const FREEZE_THAW = 0.2;
+
 /**
  * Efektivní rychlost bojovníka pro pořadí tahů: základ ze Speed × modifikátor
  * stupně (Speed stage), paralýza půlí, aktivní Tailwind na dané straně zdvojuje.
@@ -377,6 +438,15 @@ function enemyAction() {
 }
 
 /**
+ * Aktuálně použitelné tahy bojovníka: dočasný override z Transform/Mimic
+ * (`volatile.moveOverride`), jinak jeho vlastní `ref.moves`. Override je
+ * transientní (nedeserializuje se) – po konci souboje/výměně mizí.
+ */
+function activeMoves(c) {
+  return c.volatile?.moveOverride ?? c.ref.moves ?? [];
+}
+
+/**
  * Auto mód: vybere akci pro hráčovu stranu v auto tiku (move / switch / item / heal).
  * Priorita (první splněná vyhrává):
  *   1. Auto-heal: když je HP < 30% maxHp a vlastní léčivý potion
@@ -391,10 +461,11 @@ function chooseAutoPlayerTurn() {
     return { kind: "move" };
   }
 
-  // Priorita 1: Auto-heal
+  // Priorita 1: Auto-heal (jen když režim předmětů dovoluje léčení)
   const playerMaxHp = battle.player.stats.maxHp;
   const healThreshold = 0.3 * playerMaxHp;
-  if (battle.player.hp < healThreshold) {
+  const canHeal = !getRules().noItems && !getRules().noPotions;
+  if (canHeal && battle.player.hp < healThreshold) {
     // Hledej nejmenší potion, který stačí na chybějící HP, jinak největší
     const missingHp = playerMaxHp - battle.player.hp;
     let bestPotion = null;
@@ -506,11 +577,20 @@ function calcMoveDamage(attacker, defender, move, avg = false) {
     if (move.type === "Water") weatherMult = 1.5;
     else if (move.type === "Fire") weatherMult = 0.5;
   }
+  // Reflect (fyzické) / Light Screen (speciální) půlí příchozí damage na straně
+  // obránce; kritický zásah screeny ignoruje (klasické pravidlo).
+  const dSide = defender === battle?.player ? "player" : "enemy";
+  const scr = battle?.screens?.[dSide];
+  let screenMult = 1;
+  if (scr && !crit) {
+    if (!special && scr.reflect > 0) screenMult = 0.5;
+    else if (special && scr.lightScreen > 0) screenMult = 0.5;
+  }
   const base = Math.floor((((2 * lvl) / 5 + 2) * move.power * (atk / def)) / 50) + 2;
   const rand = avg ? 0.925 : 0.85 + Math.random() * 0.15;
   const critMult = crit ? CRIT_MULT : 1;
   return {
-    dmg: Math.max(1, Math.floor(base * eff * stab * rand * burn * critMult * weatherMult)),
+    dmg: Math.max(1, Math.floor(base * eff * stab * rand * burn * critMult * weatherMult * screenMult)),
     eff,
     crit,
   };
@@ -529,7 +609,7 @@ function calcMoveDamage(attacker, defender, move, avg = false) {
  * @returns {{ slot: import("../core/state.js").MoveSlot | null, move: object }}
  */
 function chooseAction(attacker, defender) {
-  const slots = (attacker.ref.moves ?? []).filter((m) => (m.pp ?? 0) > 0);
+  const slots = activeMoves(attacker).filter((m) => (m.pp ?? 0) > 0);
   let best = null;
   let bestScore = -1;
   // Cíl je "zdravý" (vhodný na uštědření statusu), když nemá status a má > 60 % HP.
@@ -588,14 +668,27 @@ function useMove(attacker, defender, action) {
     pushLog(`${attacker.name} flinched and couldn't move!`, side);
     return { dmg: 0, crit: false };
   }
-  // Spánek: odtikej kolo; když ještě spí, tah vypadne; jinak se probudí a POKRAČUJE.
-  if (attacker.volatile?.sleepTurns > 0) {
-    attacker.volatile.sleepTurns--;
-    if (attacker.volatile.sleepTurns > 0) {
+  // Spánek (trvalý status): odtikej kolo; když ještě spí, tah vypadne; jinak se
+  // probudí a POKRAČUJE. Počet kol se drží na status objektu (přežije serializaci).
+  if (attacker.status?.kind === "sleep") {
+    const st = attacker.status;
+    st.turns = (st.turns ?? 1) - 1;
+    if (st.turns > 0) {
       pushLog(`${attacker.name} is fast asleep.`, side);
       return { dmg: 0, crit: false };
     }
+    attacker.status = null;
     pushLog(`${attacker.name} woke up!`, side);
+  }
+  // Zmrznutí (trvalý status): šance na roztátí; jinak tah v tomto kole vypadne.
+  if (attacker.status?.kind === "freeze") {
+    if (Math.random() < FREEZE_THAW) {
+      attacker.status = null;
+      pushLog(`${attacker.name} thawed out!`, side);
+    } else {
+      pushLog(`${attacker.name} is frozen solid!`, side);
+      return { dmg: 0, crit: false };
+    }
   }
   // Zmatení: odtikej; buď se probere, nebo si 1/3 šancí ublíží místo útoku.
   if (attacker.volatile?.confusion > 0) {
@@ -618,6 +711,9 @@ function useMove(attacker, defender, action) {
 
   // Rage: pokud útočník tentokrát nepoužil Rage, jeho „vztek" opadne.
   if (attacker.volatile && move.id !== "rage") attacker.volatile.rageActive = false;
+
+  // Zapamatuj poslední použitý tah (pro Mimic/Mirror Move kopírující tah soupeře).
+  if (attacker.volatile) attacker.volatile.lastMoveId = move.id;
 
   // Spotřeba PP – release tah dvoukola PP NEspotřebuje (spotřeboval se při nabíjení).
   if (action.slot && !action._release) action.slot.pp = Math.max(0, (action.slot.pp ?? 0) - 1);
@@ -646,6 +742,21 @@ function useMove(attacker, defender, action) {
     return { dmg, crit: false };
   }
 
+  // Counter: vrátí dvojnásobek FYZICKÉHO poškození, které útočník utrpěl v tomto
+  // kole (Counter má nízkou prioritu → soupeř už udeřil). Jinak selže. Řešeno před
+  // power0 větví, protože Counter má power 0, ale dělá damage.
+  if (move.effect?.kind === "counter") {
+    const taken = attacker.volatile?.lastHitDmg ?? 0;
+    if (attacker.volatile?.lastHitPhysical && taken > 0 && defender.hp > 0) {
+      const dmg = taken * 2;
+      defender.hp = Math.max(0, defender.hp - dmg);
+      pushLog(`${attacker.name} used ${move.name}! ${defender.name} took ${dmg}`, side);
+      return { dmg, crit: false };
+    }
+    pushLog(`${attacker.name} used ${move.name}, but it failed!`, side);
+    return { dmg: 0, crit: false };
+  }
+
   // Status tah bez přímého poškození (power 0) – navěsí ailment a/nebo effect.
   if (!move.power) {
     pushLog(`${attacker.name} used ${move.name}!`, side);
@@ -656,10 +767,30 @@ function useMove(attacker, defender, action) {
   }
 
   const { dmg, eff, crit } = calcMoveDamage(attacker, defender, move);
+  // Substitute: dokud krycí panák stojí, pohltí poškození místo obránce a blokuje
+  // status i vedlejší efekty. Zmizí, když mu dojde HP.
+  if (defender.volatile?.substitute > 0) {
+    const before = defender.volatile.substitute;
+    defender.volatile.substitute = Math.max(0, before - dmg);
+    const absorbed = before - defender.volatile.substitute;
+    pushLog(`${attacker.name} used ${move.name}! The substitute took the hit! (-${absorbed})`, side);
+    if (defender.volatile.substitute <= 0) pushLog(`${defender.name}'s substitute faded!`, side);
+    return { dmg: absorbed, crit };
+  }
   defender.hp = Math.max(0, defender.hp - dmg);
   const note = eff > 1 ? " (super effective!)" : eff < 1 ? " (not very effective)" : "";
   const critNote = crit ? " A critical hit!" : "";
   pushLog(`${attacker.name} used ${move.name}! ${defender.name} took ${dmg}${note}${critNote}`, side);
+  // Counter: zapamatuj poslední zásah obránce (typ + hodnota) pro jeho pozdější Counter.
+  if (dmg > 0 && defender.volatile) {
+    defender.volatile.lastHitDmg = dmg;
+    defender.volatile.lastHitPhysical = move.category === "physical";
+  }
+  // Oheň roztaje zmrzlého obránce.
+  if (move.type === "Fire" && defender.status?.kind === "freeze" && defender.hp > 0) {
+    defender.status = null;
+    pushLog(`${defender.name} thawed out!`, side);
+  }
   // Status: zásah může způsobit otravu/popálení (pokud obránce žije a je vnímavý).
   maybeInflict(move, defender, side);
 
@@ -708,9 +839,14 @@ function applyMoveEffects(attacker, defender, action, side, dmgDealt) {
 
   switch (eff.kind) {
     case "statChange": {
-      const tgt = eff.target === "self" ? attacker : defender;
-      const tgtSide = eff.target === "self" ? side : enemySide;
-      if (tgt.hp > 0) applyStatStage(tgt, eff.stat, eff.stages, tgtSide);
+      // Tah může měnit JEDEN stat (starý formát) NEBO VÍCE statů (pole objektů).
+      // Pokud je eff.stat (single), iteruj s tím; jinak iteruj eff.changes (pole).
+      const changes = eff.stat ? [{ stat: eff.stat, stages: eff.stages, target: eff.target }] : (eff.changes ?? []);
+      for (const change of changes) {
+        const tgt = change.target === "self" ? attacker : defender;
+        const tgtSide = change.target === "self" ? side : enemySide;
+        if (tgt.hp > 0) applyStatStage(tgt, change.stat, change.stages, tgtSide);
+      }
       break;
     }
     case "recoil": {
@@ -755,8 +891,10 @@ function applyMoveEffects(attacker, defender, action, side, dmgDealt) {
       break;
     }
     case "sleep": {
-      if (defender.hp > 0 && !(defender.volatile.sleepTurns > 0)) {
-        defender.volatile.sleepTurns = 1 + Math.floor(Math.random() * 3);
+      // Spánek je trvalý status (nikoli volatile) – vzájemně se vylučuje s jiným
+      // statusem a Substitute ho blokuje.
+      if (defender.hp > 0 && !defender.status && !(defender.volatile?.substitute > 0)) {
+        defender.status = { kind: "sleep", turns: 1 + Math.floor(Math.random() * 3) };
         pushLog(`${defender.name} fell asleep!`, side);
       }
       break;
@@ -830,12 +968,114 @@ function applyMoveEffects(attacker, defender, action, side, dmgDealt) {
       }
       break;
     }
-    case "forceSwitch":
-    case "copyMove":
-    case "transform":
-      // Zatím neimplementováno – tah proběhne, ale efekt selže.
-      pushLog(`${attacker.name} used ${move.name}, but it failed!`, side);
+    case "reflect":
+    case "lightScreen": {
+      if (!battle.screens) battle.screens = { player: {}, enemy: {} };
+      const scr = battle.screens[side];
+      if (scr[eff.kind] > 0) {
+        pushLog(`But it failed!`, side);
+      } else {
+        scr[eff.kind] = 5; // vydrží 5 kol
+        pushLog(
+          eff.kind === "reflect"
+            ? `Reflect made ${attacker.name}'s team stronger against physical moves!`
+            : `Light Screen made ${attacker.name}'s team stronger against special moves!`,
+          side
+        );
+      }
       break;
+    }
+    case "rest": {
+      // Rest: plné vyléčení + vyčistí předchozí status, ale usne na 2 kola.
+      if (attacker.hp >= attacker.stats.maxHp) {
+        pushLog(`${attacker.name}'s HP is already full!`, side);
+        break;
+      }
+      attacker.hp = attacker.stats.maxHp;
+      attacker.status = { kind: "sleep", turns: 2 };
+      pushLog(`${attacker.name} went to sleep and became healthy!`, side);
+      break;
+    }
+    case "substitute": {
+      // Substitute: obětuje 1/4 max HP a postaví krycího panáka s tímto HP.
+      const cost = Math.floor(attacker.stats.maxHp / 4);
+      if (attacker.volatile.substitute > 0) {
+        pushLog(`${attacker.name} already has a substitute!`, side);
+      } else if (cost <= 0 || attacker.hp <= cost) {
+        pushLog(`But it does not have enough HP left to make a substitute!`, side);
+      } else {
+        attacker.hp -= cost;
+        attacker.volatile.substitute = cost;
+        pushLog(`${attacker.name} put up a substitute!`, side);
+      }
+      break;
+    }
+    case "forceSwitch": {
+      // Whirlwind/Roar. U divokého nepřítele = „vyfouknutí" → nové setkání bez
+      // odměny. U hráče = vytažení náhodného živého člena z lavičky.
+      if (defender.hp <= 0) break;
+      if (defender.volatile?.substitute > 0) {
+        pushLog(`But it failed!`, side);
+        break;
+      }
+      if (defender === battle.enemy) {
+        pushLog(`The wild ${defender.name} was blown away!`, side);
+        battle._blowAway = true; // zpracuje round loop po návratu z useMove
+      } else {
+        const team = getTeamPokemon();
+        const bench = [];
+        for (let i = 0; i < team.length; i++) {
+          if (i !== battle.teamCursor && hpOf(team[i]) > 0) bench.push(i);
+        }
+        if (bench.length) {
+          const pick = bench[Math.floor(Math.random() * bench.length)];
+          battle.teamCursor = pick;
+          battle.player = makeCombatant(team[pick]);
+          pushLog(`${battle.player.name} was dragged out!`, side);
+        } else {
+          pushLog(`But it failed!`, side);
+        }
+      }
+      break;
+    }
+    case "copyMove": {
+      // Mimic/Mirror Move: zkopíruje poslední tah cíle do dočasného override
+      // (přepíše slot použitého tahu). Override je transientní (mizí po souboji).
+      const lastId = defender.volatile?.lastMoveId;
+      const copied = lastId ? getMove(lastId) : null;
+      if (!copied || lastId === move.id || copied.effect?.kind === "copyMove") {
+        pushLog(`${attacker.name}'s ${move.name} failed!`, side);
+        break;
+      }
+      const base = activeMoves(attacker).map((m) => ({ ...m }));
+      let idx = action.slot ? base.findIndex((m) => m.id === action.slot.id) : -1;
+      if (idx < 0) idx = base.findIndex((m) => m.id === move.id);
+      if (idx >= 0) {
+        base[idx] = { id: copied.id, pp: copied.pp ?? 5, maxPp: copied.pp ?? 5 };
+        attacker.volatile.moveOverride = base;
+        pushLog(`${attacker.name} learned ${copied.name}!`, side);
+      } else {
+        pushLog(`${attacker.name}'s ${move.name} failed!`, side);
+      }
+      break;
+    }
+    case "transform": {
+      // Transform: zkopíruje typy, staty (kromě max HP), stupně a tahy cíle.
+      // Vše transientní přes bojovníka/volatile – po souboji mizí.
+      if (defender.hp <= 0 || attacker.volatile?.transformed) {
+        pushLog(`${attacker.name}'s ${move.name} failed!`, side);
+        break;
+      }
+      const origName = attacker.name;
+      attacker.types = [...(defender.types ?? [])];
+      attacker.stats = { ...defender.stats, maxHp: attacker.stats.maxHp };
+      attacker.stages = { ...defender.stages };
+      attacker.name = defender.name;
+      attacker.volatile.moveOverride = activeMoves(defender).map((m) => ({ id: m.id, pp: 5, maxPp: 5 }));
+      attacker.volatile.transformed = true;
+      pushLog(`${origName} transformed into ${defender.name}!`, side);
+      break;
+    }
     // highCrit/twoTurn/fixedDamageHalf/pursuit/suckerPunch: řešeno jinde nebo
     // jen plný damage – tady nic.
     default:
@@ -870,11 +1110,18 @@ function isImmuneTo(status, defender) {
   if (status === "burn") return t.includes("Fire");
   if (status === "poison") return t.includes("Poison") || t.includes("Steel");
   if (status === "paralysis") return t.includes("Electric");
+  if (status === "freeze") return t.includes("Ice");
   return false;
 }
 
 /** Hláška do logu při navěšení statusu. */
-const AILMENT_VERB = { burn: "was burned", poison: "was poisoned", paralysis: "was paralyzed" };
+const AILMENT_VERB = {
+  burn: "was burned",
+  poison: "was poisoned",
+  paralysis: "was paralyzed",
+  sleep: "fell asleep",
+  freeze: "was frozen solid",
+};
 
 /**
  * Zkusí navěsit status z tahu na obránce. Jen když tah status má, obránce žije,
@@ -883,9 +1130,12 @@ const AILMENT_VERB = { burn: "was burned", poison: "was poisoned", paralysis: "w
  */
 function maybeInflict(move, defender, attackerSide) {
   if (!move.ailment || defender.hp <= 0 || defender.status) return;
+  if (defender.volatile?.substitute > 0) return; // Substitute blokuje status
   if (isImmuneTo(move.ailment, defender)) return;
   if (Math.random() * 100 >= (move.ailmentChance ?? 100)) return;
-  defender.status = { kind: move.ailment };
+  const st = { kind: move.ailment };
+  if (move.ailment === "sleep") st.turns = 1 + Math.floor(Math.random() * 3); // 1–3 kola
+  defender.status = st;
   pushLog(`${defender.name} ${AILMENT_VERB[move.ailment] ?? "was afflicted"}!`, attackerSide);
 }
 
@@ -927,12 +1177,15 @@ function tick() {
   // (výměna úderů) se přeskočí; při neúspěchu se normálně bojuje – hráč ho může
   // zabít dřív, než ho chytí.
   const ac = getAutocatch();
-  const ballId = getSelectedBall();
+  // Vybraný ball; když došel, fallback na jiný dostupný (null = nemá žádný).
+  const ballId = resolveAutocatchBall();
   if (
     ac.enabled &&
+    ballId &&
     battle.enemy &&
     battle.enemy.hp > 0 &&
     ballCount(ballId) > 0 &&
+    !nuzlockeCatchBlock() &&
     shouldAutocatch(battle.enemy.ref, ac)
   ) {
     const r = doCatch(ballId);
@@ -1058,9 +1311,21 @@ function tickFieldTimers() {
       if (battle.tailwind[side] === 0) pushLog(`Your team's Tailwind petered out!`, side);
     }
   }
+  // Reflect / Light Screen odtikají na obou stranách.
+  if (battle.screens) {
+    for (const side of ["player", "enemy"]) {
+      const scr = battle.screens[side];
+      if (!scr) continue;
+      if (scr.reflect > 0 && --scr.reflect === 0) pushLog(`Reflect wore off.`, side);
+      if (scr.lightScreen > 0 && --scr.lightScreen === 0) pushLog(`Light Screen wore off.`, side);
+    }
+  }
   // Flinch platí jen jedno kolo – vždy smaž.
   if (battle.player?.volatile) battle.player.volatile.flinch = false;
   if (battle.enemy?.volatile) battle.enemy.volatile.flinch = false;
+  // Counter: zapamatovaný poslední zásah platí jen v rámci kola – vynuluj.
+  if (battle.player?.volatile) { battle.player.volatile.lastHitDmg = 0; battle.player.volatile.lastHitPhysical = false; }
+  if (battle.enemy?.volatile) { battle.enemy.volatile.lastHitDmg = 0; battle.enemy.volatile.lastHitPhysical = false; }
   // Svírající tah odtiká; když doběhne, osvobodí.
   for (const who of ["player", "enemy"]) {
     const c = who === "player" ? battle.player : battle.enemy;
@@ -1134,6 +1399,12 @@ function runActions(actions) {
         crit,
         category: actions[who].move?.category ?? "physical",
       });
+    // Whirlwind/Roar vyfoukl divokého nepřítele – nové setkání, konec kola.
+    if (battle._blowAway) {
+      battle._blowAway = false;
+      replaceEnemyBlownAway();
+      break;
+    }
     if (defender.hp <= 0) {
       handleFaint(who); // obránce padl – vítěz je útočník
       break;
@@ -1216,6 +1487,19 @@ function runManualStep(order, i, actions) {
       : null;
   emit(); // překreslí HP – sprity jsou pořád ve scéně
   if (hit) flushHits([hit]); // animace útoku/zásahu na čerstvém DOM
+
+  // Whirlwind/Roar vyfoukl divokého nepřítele – nové setkání, konec kola.
+  if (battle._blowAway) {
+    battle._blowAway = false;
+    replaceEnemyBlownAway();
+    clearTimeout(stepTimer);
+    stepTimer = setTimeout(() => {
+      if (!battle) return;
+      battle.resolving = false;
+      emit();
+    }, MANUAL_STEP_HIT_MS);
+    return;
+  }
 
   clearTimeout(stepTimer);
   stepTimer = setTimeout(() => {
@@ -1321,6 +1605,17 @@ function restorePpAfterWin(combatant) {
   }
 }
 
+/**
+ * Divoký nepřítel je vyfouknut (Whirlwind/Roar) → nové setkání BEZ odměny.
+ * Na rozdíl od spawnNext() zachovává log (ať je „blown away" hláška vidět).
+ */
+function replaceEnemyBlownAway() {
+  battle.enemy = spawnEnemy(battle.area);
+  battle.background = pickBackground(battle.area);
+  battle.turn = 0;
+  pushLog(`A wild ${battle.enemy.name} appeared! (Lv ${battle.enemy.ref.level})`);
+}
+
 /** Nasadí dalšího divokého nepřítele (nové setkání) a zaloguje ho. */
 function spawnNext() {
   battle.log = []; // log drží jen aktuální souboj – nové setkání začíná načisto
@@ -1414,11 +1709,23 @@ function handleFaint(winner) {
     });
   } else {
     pushLog(`${battle.player.name} fainted!`, "enemy");
+    const faintedUid = battle.player.ref.uid;
+    if (getRules().nuzlocke) {
+      // Nuzlocke: permadeath – omdlelý jedinec navždy opouští tým i kolekci.
+      const lostName = battle.player.name;
+      releasePokemon(faintedUid); // odebere z týmu i kolekce (commit)
+      pushLog(`💀 ${lostName} was lost forever (Nuzlocke).`, "enemy");
+    }
     const team = getTeamPokemon();
-    // Nastupuje další ŽIVÝ člen týmu (vyřazené s hp=0 přeskoč).
-    let next = battle.teamCursor + 1;
-    while (next < team.length && hpOf(team[next]) <= 0) next++;
-    if (next < team.length) {
+    // Nastupuje další ŽIVÝ člen týmu. V Nuzlocke byl omdlelý odebrán, jinak ho
+    // (hp=0) přeskočíme spolu s ostatními vyřazenými. Hledáme od začátku, ať to
+    // funguje i po odebrání (indexy se posunou).
+    let next = -1;
+    for (let i = 0; i < team.length; i++) {
+      if (team[i].uid === faintedUid) continue; // pro jistotu (non-nuzlocke)
+      if (hpOf(team[i]) > 0) { next = i; break; }
+    }
+    if (next >= 0) {
       battle.teamCursor = next;
       battle.player = makeCombatant(team[next]);
       pushLog(`${battle.player.name} steps in`);
@@ -1470,6 +1777,24 @@ function ballCount(ballId) {
 /** Aktuálně vybraný typ ballu (výchozí „poke"). */
 export function getSelectedBall() {
   return getState().settings?.selectedBall ?? "poke";
+}
+
+/**
+ * Ball pro autocatch: primárně vybraný typ; když došel, přepne na jiný dostupný
+ * (nejlevnější vlastněný – ať se nevyplýtvají prémiové balls). Vrací null, když
+ * hráč nemá vůbec žádné balls. Díky tomu autocatch nezůstane „viset" na prázdném
+ * vybraném typu, ale sáhne po tom, co zbývá.
+ * @returns {string|null}
+ */
+function resolveAutocatchBall() {
+  const selected = getSelectedBall();
+  if (ballCount(selected) > 0) return selected;
+  const balls = getState().resources.balls ?? {};
+  // Vlastněné typy seřazené podle ceny (nejlevnější první; bez ceny až nakonec).
+  const owned = POKEBALLS
+    .filter((b) => (balls[b.id] ?? 0) > 0)
+    .sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+  return owned[0]?.id ?? null;
 }
 
 /** Nastaví vybraný typ ballu (pro chytání) a překreslí UI souboje. */
@@ -1547,6 +1872,8 @@ function doCatch(ballId) {
 
   const shinyTag = enemy.ref.shiny ? " ✨" : "";
   enemy.ref.caughtBall = ballId; // zaznamenej ball, ve kterém byl chycen
+  // Nuzlocke: úspěšné chycení „spotřebuje" oblast – další úlovek už tu nebude.
+  if (getRules().nuzlocke) markNuzlockeCaught(battle.area?.id);
   const outcome = acquirePokemon(enemy.ref); // volá commit() (uloží i ball)
   if (outcome.added) {
     pushLog(`Caught ${enemy.name}${shinyTag}!`, "player");
@@ -1577,6 +1904,8 @@ function doCatch(ballId) {
 export function attemptCatch(ballId = getSelectedBall()) {
   if (!battle || battle.result) return { ok: false, reason: "No active battle." };
   if (!battle.enemy || battle.enemy.hp <= 0) return { ok: false, reason: "No enemy to catch." };
+  const nzBlock = nuzlockeCatchBlock();
+  if (nzBlock) return { ok: false, reason: nzBlock };
   if (ballCount(ballId) <= 0) {
     return { ok: false, reason: `No ${getPokeball(ballId)?.name ?? "balls"} left` };
   }
@@ -1677,7 +2006,7 @@ export function playerMove(index) {
     return { ok: true };
   }
 
-  const moves = battle.player.ref.moves ?? [];
+  const moves = activeMoves(battle.player);
   const anyPp = moves.some((m) => (m.pp ?? 0) > 0);
   let playerAction;
   if (!anyPp) {
@@ -1729,6 +2058,8 @@ export function playerSwitch(uid) {
 export function playerCatch(ballId = getSelectedBall()) {
   const guard = canManualAct();
   if (!guard.ok) return guard;
+  const nzBlock = nuzlockeCatchBlock();
+  if (nzBlock) return { ok: false, reason: nzBlock };
   if (ballCount(ballId) <= 0) {
     return { ok: false, reason: `No ${getPokeball(ballId)?.name ?? "balls"} left` };
   }
@@ -1758,6 +2089,9 @@ export function playerUseItem(itemId, targetUid) {
 
   const def = getItem(itemId);
   if (!def) return { ok: false, reason: "Unknown item." };
+  if (!itemsAllowed(itemId)) {
+    return { ok: false, reason: getRules().noItems ? "No items allowed (game rule)." : "No potions allowed (game rule)." };
+  }
   if (itemCount(itemId) <= 0) return { ok: false, reason: `No ${def.name} left.` };
 
   // Výchozí cíl: aktivní bojovník

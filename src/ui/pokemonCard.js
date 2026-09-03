@@ -18,7 +18,7 @@ import { getMove } from "../../data/moves.js";
 import { getItem } from "../../data/items.js";
 import { heldItemOf } from "../systems/itemSystem.js";
 import { bus, EVENTS } from "../core/events.js";
-import { saveScroll, restoreScroll } from "./scrollPreserve.js";
+import { saveScroll, restoreScroll, scrollAware } from "./scrollPreserve.js";
 import {
   STAT_KEYS,
   IV_MAX,
@@ -32,7 +32,7 @@ import {
 import { getNature, isNeutralNature } from "../../data/natures.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { areasForSpecies } from "../systems/pokedex.js";
-import { evolutionInfo, canEvolveNow, evolvePokemon, devSetLevel, devToggleShiny } from "../systems/evolutionSystem.js";
+import { evolutionInfo, canEvolveNow, evolvePokemon } from "../systems/evolutionSystem.js";
 import { spriteImg, silhouetteHtml } from "./sprites.js";
 import { ballIconHtml } from "./ballIcon.js";
 import { genderSymbolHtml } from "./gender.js";
@@ -68,6 +68,30 @@ function genderRatioLabel(species) {
 /** Odznaky typů druhu. */
 function typeBadges(species) {
   return species.types.map((t) => `<span class="type">${esc(t)}</span>`).join("");
+}
+
+/** Pokédex flavor text druhu (jako citace). Prázdné → nic. */
+function dexEntryHtml(species) {
+  if (!species.dexEntry) return "";
+  return `<p class="mc-dexentry">${esc(species.dexEntry)}</p>`;
+}
+
+/** Řádky výška + hmotnost do meta seznamu (<dl>). Chybí-li data → nic. */
+function heightWeightRows(species) {
+  const rows = [];
+  if (typeof species.height === "number") {
+    rows.push(`<dt>Height</dt><dd>${species.height.toFixed(1)} m</dd>`);
+  }
+  if (typeof species.weight === "number") {
+    rows.push(`<dt>Weight</dt><dd>${species.weight.toFixed(1)} kg</dd>`);
+  }
+  return rows.join("");
+}
+
+/** Druhový popisek (genus) jako malý podtitul. Prázdné → nic. */
+function genusHtml(species) {
+  if (!species.genus) return "";
+  return `<div class="mc-genus">${esc(species.genus)}</div>`;
 }
 
 /** Malý vodorovný ukazatel (hodnota/max) s CSS třídou. */
@@ -265,9 +289,11 @@ function ownedBody(owned) {
       <div class="mc-title">
         <div class="mc-name">${esc(name)} ${genderSymbolHtml(owned.gender, { size: 18 })}${statusBadge(owned.status)} <span class="mc-dex">${dexNo}</span></div>
         <div class="mc-types">${typeBadges(species)}<span class="mc-rarity">${esc(species.rarity)}</span></div>
+        ${genusHtml(species)}
         <div class="mc-lvl">Lv ${owned.level}</div>
       </div>
     </div>
+    ${dexEntryHtml(species)}
     <div class="mc-xp">
       <div class="mc-xp-label">EXP <span>${owned.xp} / ${need}</span></div>
       <span class="mc-bar xp"><span style="width:${xpPctW}%"></span></span>
@@ -277,24 +303,6 @@ function ownedBody(owned) {
         ? `<button class="btn btn-evolve" data-act="evolve">✨ Evolve into ${esc(typeof species.evolvesTo === "string" ? (getSpecies(species.evolvesTo)?.name ?? species.evolvesTo) : "...")}</button>`
         : ""
     }
-    <div class="mc-dev">
-      <span class="mc-dev-label">🔧 Dev level</span>
-      <button class="btn btn-sm" data-lvl="-10" title="−10">−10</button>
-      <button class="btn btn-sm" data-lvl="-1" title="−1">−1</button>
-      <strong class="mc-dev-lvl">Lv ${owned.level}</strong>
-      <button class="btn btn-sm" data-lvl="1" title="+1">+1</button>
-      <button class="btn btn-sm" data-lvl="10" title="+10">+10</button>
-      ${
-        (() => {
-          const ev = evolutionInfo(owned);
-          return ev && !ev.blocked && owned.level < ev.level
-            ? `<button class="btn btn-sm" data-lvl-set="${ev.level}" title="Jump to evolution level">→ Lv ${ev.level}</button>`
-            : "";
-        })()
-      }
-      <button class="btn btn-sm" data-lvl-set="100" title="Set to max level">Max</button>
-      <button class="btn btn-sm" data-toggle-shiny title="Toggle shiny (test shiny sprites)">${owned.shiny ? "✨ Shiny: on" : "Shiny: off"}</button>
-    </div>
     <h4 class="mc-section">Stats</h4>
     ${statRadar(owned)}
     ${ownedStatsTable(owned, species)}
@@ -322,6 +330,7 @@ function ownedBody(owned) {
         return `<dt>Evolves into</dt><dd>${esc(ev.toName)} ${note}</dd>`;
       })()}
       <dt>Gender ratio</dt><dd>${genderRatioLabel(species)}</dd>
+      ${heightWeightRows(species)}
       <dt>Egg groups</dt><dd>${(species.eggGroups ?? []).map(esc).join(", ")}</dd>
       <dt>Generation</dt><dd>Gen ${species.gen}</dd>
       ${owned.shiny ? `<dt>Variant</dt><dd>✨ Shiny</dd>` : ""}
@@ -340,12 +349,15 @@ function seenBody(species) {
       <div class="mc-title">
         <div class="mc-name">${esc(species.name)} <span class="mc-dex">${dexNo}</span></div>
         <div class="mc-types">${typeBadges(species)}<span class="mc-rarity">${esc(species.rarity)}</span></div>
+        ${genusHtml(species)}
         <div class="mc-lvl"><span class="dex-tag">Seen — not caught yet</span></div>
       </div>
     </div>
+    ${dexEntryHtml(species)}
     ${baseStatsTable(species)}
     <dl class="mc-meta">
       <dt>Gender ratio</dt><dd>${genderRatioLabel(species)}</dd>
+      ${heightWeightRows(species)}
       ${
         species.evolvesTo && species.evolutionLevel != null
           ? `<dt>Evolves into</dt><dd>${esc(typeof species.evolvesTo === "string" ? (getSpecies(species.evolvesTo)?.name ?? species.evolvesTo) : "Vyvíjí se pomocí kamene")} <span class="placeholder">at Lv ${species.evolutionLevel}</span></dd>`
@@ -389,7 +401,7 @@ export function openPokemonCard(arg = {}) {
   `;
   document.body.appendChild(overlay);
 
-  const unsub = owned ? bus.on(EVENTS.STATE_CHANGED, () => {
+  const unsub = owned ? bus.on(EVENTS.STATE_CHANGED, scrollAware(() => {
     const fresh = getState().collection.find((p) => p.uid === owned.uid);
     if (fresh) {
       const body = overlay.querySelector(".mon-card-body");
@@ -399,7 +411,7 @@ export function openPokemonCard(arg = {}) {
         restoreScroll(body, _savedScroll);
       }
     }
-  }) : () => {};
+  })) : () => {};
 
   function close() {
     unsub();
@@ -412,34 +424,15 @@ export function openPokemonCard(arg = {}) {
   document.addEventListener("keydown", onKey);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
-    // Evolve i dev-level tlačítka jsou uvnitř překreslovaného těla → deleguj
-    // přes overlay (listenery na vnitřních prvcích by se překreslením ztratily).
+    // Evolve tlačítko je uvnitř překreslovaného těla → deleguj přes overlay
+    // (listenery na vnitřních prvcích by se překreslením ztratily).
+    // Dev nástroje (level/shiny) se přesunuly do globálního Dev menu (⚙ Settings).
     const evoBtn = e.target.closest?.('[data-act="evolve"]');
     if (evoBtn && owned) {
       const res = evolvePokemon(owned.uid);
       if (!res.ok && res.reason) window.alert?.(res.reason);
       // Při úspěchu commit() → STATE_CHANGED překreslí tělo na novou formu.
       return;
-    }
-    // DEV/TEST: nastavení levelu jedince (data-lvl = relativní ±, data-lvl-set =
-    // absolutní). Po devSetLevel → commit() → STATE_CHANGED překreslí tělo.
-    if (owned) {
-      const relBtn = e.target.closest?.("[data-lvl]");
-      if (relBtn) {
-        const delta = Number(relBtn.getAttribute("data-lvl")) || 0;
-        devSetLevel(owned.uid, owned.level + delta);
-        return;
-      }
-      const setBtn = e.target.closest?.("[data-lvl-set]");
-      if (setBtn) {
-        devSetLevel(owned.uid, Number(setBtn.getAttribute("data-lvl-set")) || 1);
-        return;
-      }
-      const shinyBtn = e.target.closest?.("[data-toggle-shiny]");
-      if (shinyBtn) {
-        devToggleShiny(owned.uid); // commit → STATE_CHANGED překreslí tělo (i sprite)
-        return;
-      }
     }
   });
   overlay.querySelector('[data-act="close"]').addEventListener("click", close);

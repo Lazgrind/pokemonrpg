@@ -61,11 +61,12 @@ import {
 import { getState, commit } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { hatchMinutesFor } from "../../data/eggs.js";
+import { eggSpriteHtml } from "./eggSprite.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { formatDuration } from "../systems/idle.js";
 import { isInTeam } from "../systems/team.js";
 import { bus, EVENTS } from "../core/events.js";
-import { saveScroll, restoreScroll } from "./scrollPreserve.js";
+import { saveScroll, restoreScroll, scrollAware } from "./scrollPreserve.js";
 
 /** Jméno druhu Pokémona. */
 function speciesName(p) {
@@ -82,6 +83,51 @@ const STAT_LABELS = {
   speed: "Speed",
 };
 
+/** Množstevní kroky pro hromadný nákup v obchodech (poslední = „vše, co utáhne zlato"). */
+const BUY_QTYS = [1, 5, 10, "max"];
+
+/**
+ * Kolik kusů se reálně koupí při zvoleném množství a ceně. Pro "max" spočítá,
+ * kolik utáhne aktuální zlato; fixní počty ořízne na dostupné zlato (nikdy nekoupí
+ * víc, než na co je zlato – tlačítko se pak jen deaktivuje, když by count byl 0).
+ * @param {number|"max"} qty
+ * @param {number} price
+ * @param {number} gold
+ * @returns {number}
+ */
+function buyCount(qty, price, gold) {
+  if (!price || price <= 0) return 0;
+  const affordable = Math.floor(gold / price);
+  if (qty === "max") return affordable;
+  return Math.min(qty, affordable);
+}
+
+/** Popisek nákupního tlačítka: „×N — cena 💰"; při 0 (nedost. zlata) ukáže cenu 1 ks. */
+function buyLabel(count, cost, unitPrice) {
+  if (count <= 0) return `${unitPrice} 💰`;
+  return count > 1 ? `×${count} — ${cost} 💰` : `${cost} 💰`;
+}
+
+/** HTML přepínače množství (×1 / ×5 / ×10 / Max) pro obchody. */
+function qtyBarHtml(active) {
+  const btns = BUY_QTYS.map((q) => {
+    const label = q === "max" ? "Max" : `×${q}`;
+    const on = q === active ? " active" : "";
+    return `<button class="btn btn-sm qty-btn${on}" data-qty="${q}">${label}</button>`;
+  }).join("");
+  return `<div class="shop-qty"><span class="placeholder">Buy:</span> ${btns}</div>`;
+}
+
+/** Napojí kliknutí přepínače množství; hodnotu předá zpět (number nebo "max"). */
+function wireQtyBar(overlay, active, onPick) {
+  overlay.querySelectorAll(".qty-btn").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      const raw = btn.dataset.qty;
+      onPick(raw === "max" ? "max" : Number(raw));
+    })
+  );
+}
+
 /**
  * Otevře detail budovy jako modal.
  * @param {string} id
@@ -96,7 +142,7 @@ export function openBuilding(id, onStatus = () => {}) {
   document.body.appendChild(overlay);
 
   // Živá aktualizace obsahu při změně stavu (po nákupu/vylepšení).
-  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
 
   function close() {
     unsub();
@@ -142,7 +188,10 @@ export function openBuilding(id, onStatus = () => {}) {
           `<span>💧 PP regen after victory (Auto battle): <strong>${ppPct} %</strong> move PP</span>`
         );
       }
-      actions.push(`<button class="btn" data-act="heal">🏥 Heal team</button>`);
+      stats.push(
+        `<span>♻️ Manual <strong>Heal team</strong> is free — full HP, cured status and full PP.</span>`
+      );
+      actions.push(`<button class="btn" data-act="heal">🏥 Heal team (free)</button>`);
     }
 
     // Školka: pasivní XP pro svěřence + inkubace vajec (Egg Breeders).
@@ -258,7 +307,7 @@ export function openBuilding(id, onStatus = () => {}) {
     if (heal)
       heal.addEventListener("click", () => {
         const n = healTeam();
-        onStatus(n > 0 ? `Healed ${n} Pokémon to full HP ✓` : "Your team is already at full HP");
+        onStatus(n > 0 ? `Healed ${n} Pokémon — full HP, status & PP restored ✓` : "Your team is already at full HP");
       });
 
     const upgrades = overlay.querySelector('[data-act="upgrades"]');
@@ -324,7 +373,7 @@ function openTrainingStats(id, uid, onStatus) {
   overlay.className = "modal-overlay";
   document.body.appendChild(overlay);
 
-  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
 
   function close() {
     unsub();
@@ -542,7 +591,7 @@ function openBreeders(id, onStatus) {
   overlay.className = "modal-overlay";
   document.body.appendChild(overlay);
 
-  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
 
   function close() {
     unsub();
@@ -577,7 +626,7 @@ function openBreeders(id, onStatus) {
         const p = Math.round(inc.ratio * 100);
         const remain = inc.remainingSec <= 0 ? "ready!" : formatDuration(inc.remainingSec);
         cells += `<div class="breeder-slot filled">
-          <div class="breeder-egg">🥚</div>
+          <div class="breeder-egg">${eggSpriteHtml(inc.speciesId, { size: 48 })}</div>
           <div class="egg-bar"><div class="egg-bar-fill" style="width:${p}%"></div></div>
           <div class="breeder-time">${p}% · ${remain}</div>
           <button class="btn btn-sm" data-egg-remove="${inc.id}">Take out</button>
@@ -644,7 +693,7 @@ function openBreeding(id, onStatus) {
   overlay.className = "modal-overlay";
   document.body.appendChild(overlay);
 
-  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
 
   function close() {
     unsub();
@@ -700,7 +749,7 @@ function openBreeding(id, onStatus) {
     overlay.innerHTML = `
       <div class="modal building-modal">
         <h2 class="panel-title">💞 Breeding</h2>
-        <p class="placeholder">A compatible pair lays an egg roughly every ${BREED_MINUTES} min (also while you're away). Bred eggs inherit ${INHERIT_IV_COUNT} IVs from the parents and are shiny at 1/4096.</p>
+        <p class="placeholder">A compatible pair lays an egg roughly every ${BREED_MINUTES} min (also while you're away). The baby hatches as the base form of its line. Bred eggs inherit ${INHERIT_IV_COUNT} IVs from the parents (5 if a parent holds a Destiny Knot) and are shiny at 1/4096.</p>
         <div class="breed-slots">
           ${slotHtml("a", st.a)}
           ${slotHtml("b", st.b)}
@@ -786,7 +835,7 @@ function openUpgrades(id, onStatus) {
   overlay.className = "modal-overlay";
   document.body.appendChild(overlay);
 
-  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
 
   function close() {
     unsub();
@@ -911,7 +960,7 @@ function openMarket(id, onStatus) {
   overlay.className = "modal-overlay";
   document.body.appendChild(overlay);
 
-  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
 
   function close() {
     unsub();
@@ -938,7 +987,7 @@ function openMarket(id, onStatus) {
         <p class="placeholder">💰 Your gold: <strong>${gold}</strong> · pick a department.</p>
         <div class="market-depts">
           <button class="dept-card" data-section="balls">
-            <span class="dept-icon">🔴</span>
+            <span class="dept-icon">${ballIconHtml("poke", { size: 28 })}</span>
             <span class="dept-name">Poké Balls</span>
           </button>
           <button class="dept-card" data-section="items">
@@ -979,7 +1028,7 @@ function openBallShop(id, onStatus) {
   overlay.className = "modal-overlay";
   document.body.appendChild(overlay);
 
-  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
 
   function close() {
     unsub();
@@ -994,6 +1043,9 @@ function openBallShop(id, onStatus) {
     if (e.target === overlay) close();
   });
 
+  // Zvolené množství na nákup (sdílené pro celý obchod). "max" = kolik utáhne zlato.
+  let qty = 1;
+
   function render() {
     const gold = getState().resources.gold;
     const balls = getState().resources.balls ?? {};
@@ -1004,11 +1056,13 @@ function openBallShop(id, onStatus) {
       .map((ball) => {
         const owned = balls[ball.id] ?? 0;
         const price = ballPrice(ball.id, id);
-        const canBuy = gold >= price;
+        const count = buyCount(qty, price, gold);
+        const cost = price * count;
+        const canBuy = count > 0;
         return `<div class="ball-row">
           <span>${ballIconHtml(ball.id, { size: 18 })} <strong>${ball.name}</strong> <span class="placeholder">— ${ball.desc}</span></span>
           <span class="ball-buy">×${owned}
-            <button class="btn btn-sm" data-buy-ball="${ball.id}" ${canBuy ? "" : "disabled"}>${price} 💰</button>
+            <button class="btn btn-sm" data-buy-ball="${ball.id}" ${canBuy ? "" : "disabled"}>${buyLabel(count, cost, price)}</button>
           </span>
         </div>`;
       })
@@ -1021,8 +1075,9 @@ function openBallShop(id, onStatus) {
 
     overlay.innerHTML = `
       <div class="modal building-modal">
-        <h2 class="panel-title">🔴 Poké Balls</h2>
+        <h2 class="panel-title">${ballIconHtml("poke", { size: 20 })} Poké Balls</h2>
         <p class="placeholder">💰 Your gold: <strong>${gold}</strong></p>
+        ${qtyBarHtml(qty)}
         <div class="ball-shop">${body}</div>
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
@@ -1031,10 +1086,19 @@ function openBallShop(id, onStatus) {
     // Obnoví scroll pozici PO přepsání obsahu.
     restoreScroll(overlay, savedScroll);
 
+    wireQtyBar(overlay, qty, (v) => {
+      qty = v;
+      render();
+    });
+
     overlay.querySelectorAll("[data-buy-ball]").forEach((btn) =>
       btn.addEventListener("click", () => {
-        const r = buyBall(btn.dataset.buyBall, 1, id);
-        onStatus(r.ok ? "Ball bought ✓" : r.reason);
+        const ballId = btn.dataset.buyBall;
+        const price = ballPrice(ballId, id);
+        const count = buyCount(qty, price, getState().resources.gold);
+        if (count <= 0) return;
+        const r = buyBall(ballId, count, id);
+        onStatus(r.ok ? `Bought ×${count} ✓` : r.reason);
       })
     );
 
@@ -1058,7 +1122,7 @@ function openItemShop(id, onStatus) {
   overlay.className = "modal-overlay";
   document.body.appendChild(overlay);
 
-  const unsub = bus.on(EVENTS.STATE_CHANGED, render);
+  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
 
   function close() {
     unsub();
@@ -1073,17 +1137,22 @@ function openItemShop(id, onStatus) {
     if (e.target === overlay) close();
   });
 
+  // Zvolené množství na nákup (sdílené pro celý obchod). "max" = kolik utáhne zlato.
+  let qty = 1;
+
   function render() {
     const gold = getState().resources.gold;
     const groups = ITEM_CATEGORIES.map((cat) => {
       const rows = ITEMS.filter((it) => it.category === cat.key)
         .map((it) => {
           const owned = itemCount(it.id);
-          const canBuy = gold >= it.price;
+          const count = buyCount(qty, it.price, gold);
+          const cost = it.price * count;
+          const canBuy = count > 0;
           return `<div class="ball-row">
             <span>${it.icon} <strong>${it.name}</strong> <span class="placeholder">— ${it.desc}</span></span>
             <span class="ball-buy">×${owned}
-              <button class="btn btn-sm" data-buy-item="${it.id}" ${canBuy ? "" : "disabled"}>${it.price} 💰</button>
+              <button class="btn btn-sm" data-buy-item="${it.id}" ${canBuy ? "" : "disabled"}>${buyLabel(count, cost, it.price)}</button>
             </span>
           </div>`;
         })
@@ -1100,6 +1169,7 @@ function openItemShop(id, onStatus) {
       <div class="modal building-modal">
         <h2 class="panel-title">🧴 Items</h2>
         <p class="placeholder">💰 Your gold: <strong>${gold}</strong></p>
+        ${qtyBarHtml(qty)}
         <div class="ball-shop">${groups}</div>
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
@@ -1108,10 +1178,20 @@ function openItemShop(id, onStatus) {
     // Obnoví scroll pozici PO přepsání obsahu.
     restoreScroll(overlay, savedScroll);
 
+    wireQtyBar(overlay, qty, (v) => {
+      qty = v;
+      render();
+    });
+
     overlay.querySelectorAll("[data-buy-item]").forEach((btn) =>
       btn.addEventListener("click", () => {
-        const r = buyItem(btn.dataset.buyItem, 1);
-        onStatus(r.ok ? "Item bought ✓" : r.reason);
+        const itemId = btn.dataset.buyItem;
+        const def = ITEMS.find((it) => it.id === itemId);
+        if (!def) return;
+        const count = buyCount(qty, def.price, getState().resources.gold);
+        if (count <= 0) return;
+        const r = buyItem(itemId, count);
+        onStatus(r.ok ? `Bought ×${count} ✓` : r.reason);
       })
     );
 
@@ -1343,12 +1423,14 @@ function openBreedingPicker(id, which, onStatus) {
  */
 function openEggPicker(id, onStatus) {
   // Jen vejce, která ještě neinkubují. Stabilní číslo #N (dle pořadí v inventáři)
-  // + rarita/čas líhnutí – druh zůstává skrytý (respektujeme skrytí, R-021).
+  // + rarita/čas líhnutí. Sprite skořápky je odvozený ze species.id, takže druh
+  // vizuálně NAZNAČUJE (hráč se učí vzory), ale jméno a staty zůstávají skryté
+  // až do vylíhnutí (R-021).
   const eggs = getEggs()
     .filter((e) => !isIncubating(e.id))
     .map((e, i) => {
       const rarity = getSpecies(e.speciesId)?.rarity ?? "common";
-      return { id: e.id, label: i + 1, rarity, mins: hatchMinutesFor(rarity) };
+      return { id: e.id, speciesId: e.speciesId, label: i + 1, rarity, mins: hatchMinutesFor(rarity) };
     });
 
   const rarities = RARITY_ORDER.filter((r) => eggs.some((e) => e.rarity === r));
@@ -1397,7 +1479,7 @@ function openEggPicker(id, onStatus) {
       .map(
         (e) => `
         <button class="daycare-tile" data-egg-id="${e.id}" title="Egg #${e.label} · ~${e.mins} min">
-          <span class="dt-name">🥚 Egg #${e.label}</span>
+          <span class="dt-name">${eggSpriteHtml(e.speciesId, { size: 28 })} Egg #${e.label}</span>
           <span class="dt-lvl">~${e.mins} min</span>
         </button>`
       )

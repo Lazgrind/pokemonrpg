@@ -29,6 +29,65 @@
     <span id="version-tag"></span>
   </footer>
 
+  <!-- Úvodní obrazovka: překryje hru hned po načtení. Tlačítka CONTINUE/SETTINGS
+       jsou NAMALOVANÁ přímo v Title_screen.png; my přes ně jen položíme průhledné
+       klikací zóny (.title-hotspot) umístěné v procentech obrázku, aby seděly při
+       každé velikosti okna. CONTINUE overlay skryje (hra běží pod ním),
+       SETTINGS otevře nastavení. -->
+  <div id="title-screen" class="title-screen">
+    <div class="title-frame">
+      <img class="title-img" src="assets/Title_screen.png" alt="Pokémon Idle RPG" />
+      <button class="title-hotspot" data-act="continue" aria-label="Continue"></button>
+      <button class="title-hotspot" data-act="settings" aria-label="Settings"></button>
+    </div>
+  </div>
+
+  <!-- Pojistka: schová title screen na klik i kdyby ES moduly selhaly. -->
+  <script>
+    (function () {
+      var ov = document.getElementById("title-screen");
+      if (!ov) return;
+      ov.addEventListener("click", function () {
+        ov.classList.add("hidden");
+        setTimeout(function () { ov.style.display = "none"; }, 400);
+      });
+    })();
+  </script>
+
+  <!-- Zachytávač chyb: jakoukoli neodchycenou chybu (včetně selhání načtení
+       ES modulu) vypíše dole na stránku, aby šla přečíst i bez F12. Když žádná
+       chyba nenastane, nic se nezobrazí. Křížkem se panel zavře. -->
+  <script>
+    (function () {
+      var box = null;
+      function panel() {
+        if (box) return box;
+        box = document.createElement("div");
+        box.style.cssText = "position:fixed;left:0;right:0;bottom:0;z-index:99999;max-height:50vh;overflow:auto;background:#300;color:#fdd;font:12px/1.4 monospace;padding:10px 28px 10px 10px;border-top:3px solid #f55;white-space:pre-wrap;";
+        var x = document.createElement("button");
+        x.textContent = "×";
+        x.setAttribute("aria-label", "Close errors");
+        x.style.cssText = "position:absolute;top:4px;right:6px;background:none;border:none;color:#fdd;font-size:18px;cursor:pointer;line-height:1;";
+        x.onclick = function () { box.remove(); box = null; };
+        box.appendChild(x);
+        document.body.appendChild(box);
+        return box;
+      }
+      function show(kind, msg, extra) {
+        var line = document.createElement("div");
+        line.textContent = "🐞 " + kind + ": " + msg + (extra ? "\n" + extra : "");
+        panel().appendChild(line);
+      }
+      window.addEventListener("error", function (e) {
+        show("ERROR", (e.message || e.error) + "", (e.filename ? e.filename + ":" + e.lineno + ":" + e.colno : "") + (e.error && e.error.stack ? "\n" + e.error.stack : ""));
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        var r = e.reason;
+        show("PROMISE", (r && (r.message || r)) + "", r && r.stack ? r.stack : "");
+      });
+    })();
+  </script>
+
   <!-- Vstupní bod aplikace (ES modul) -->
   <script type="module" src="src/main.js"></script>
 </body>

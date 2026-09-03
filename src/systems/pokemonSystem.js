@@ -14,7 +14,7 @@
  */
 
 import { getSpecies } from "../../data/pokemon.js";
-import { getLearnset, movesAtLevel } from "../../data/learnsets.js";
+import { getLearnset, learnableMovesAtLevel } from "../../data/learnsets.js";
 import { getMove } from "../../data/moves.js";
 import { NATURES, getNature, NATURE_UP_MULT, NATURE_DOWN_MULT } from "../../data/natures.js";
 import { getState } from "../core/state.js";
@@ -44,21 +44,71 @@ export const MAX_MOVES = 4;
  * @returns {Array<{ id: string, pp: number, maxPp: number }>}
  */
 export function defaultMovesFor(speciesId, level) {
-  return movesAtLevel(speciesId, level).map((id) => {
+  const ids = balancedMovesetIds(learnableMovesAtLevel(speciesId, level).map((e) => e.id));
+  return ids.map((id) => {
     const mv = getMove(id);
     const pp = mv?.pp ?? 0;
     return { id, pp, maxPp: pp };
   });
 }
 
+/** Je tah útočný (má sílu > 0)? Status tahy mají power 0/undefined. */
+function isAttackingMove(moveId) {
+  return (getMove(moveId)?.power ?? 0) > 0;
+}
+
+/**
+ * Vybere „bojeschopnou" sadu ≤ MAX_MOVES tahů z kandidátů: ÚTOČNÉ tahy mají
+ * přednost (zaplní klidně všechny sloty), status tahy jen doplní zbylé sloty.
+ * Díky tomu jedinec nikdy neskončí s převahou statusů (např. „3 status + 1
+ * útok"), což je fatální hlavně v auto režimu – neměl by čím ubírat HP a souboj
+ * by uvízl. Kandidáti se berou v pořadí ROSTOUCÍ priority (poslední = nejvyšší
+ * priorita, typicky nejnovější naučené tahy).
+ * @param {string[]} candidateIds
+ * @returns {string[]} id tahů (útočné first), ≤ MAX_MOVES, bez duplikátů
+ */
+function balancedMovesetIds(candidateIds) {
+  const uniq = [...new Set(candidateIds)].filter((id) => getMove(id));
+  const attacking = uniq.filter((id) => isAttackingMove(id));
+  const status = uniq.filter((id) => !isAttackingMove(id));
+  const chosen = attacking.slice(-MAX_MOVES);
+  const statusSlots = Math.max(0, MAX_MOVES - chosen.length);
+  for (const id of status.slice(-statusSlots)) chosen.push(id);
+  return chosen;
+}
+
+/**
+ * Oprava „slabé" sady (např. dřívější bug: 3 status + 1 útok). Zasáhne JEN
+ * jedince s ≤ 1 útočným tahem (hrozí zaseknutí – v auto souboji nemá čím ubírat
+ * HP) A jen když z learnsetu/stávajících tahů jde získat VÍC útočných tahů.
+ * Záměrné vyvážené sady (2+ útoky) nechává být. Zachovává PP. Mutuje jedince.
+ * @param {import("../core/state.js").OwnedPokemon} pokemon
+ * @returns {boolean} true, pokud sadu opravil
+ */
+export function repairWeakMoveset(pokemon) {
+  if (!pokemon || !Array.isArray(pokemon.moves) || !pokemon.moves.length) return false;
+  const attacks = pokemon.moves.filter((m) => isAttackingMove(m.id)).length;
+  if (attacks >= 2) return false; // dost útočných tahů → nesahat
+  const pool = [
+    ...learnableMovesAtLevel(pokemon.speciesId, pokemon.level).map((e) => e.id),
+    ...pokemon.moves.map((m) => m.id),
+  ];
+  const balanced = balancedMovesetIds(pool);
+  const newAttacks = balanced.filter((id) => isAttackingMove(id)).length;
+  if (newAttacks <= attacks) return false; // víc útočných stejně nezískáme
+  setActiveMoves(pokemon, balanced);
+  return true;
+}
+
 /**
  * Naučí jedince tahy, které se jeho druh učí v rozsahu levelů (prevLevel, level].
- * Přidává do VOLNÝCH slotů (max 4). Při PLNÝCH slotech se tah NEzahazuje:
- *  - `auto` (auto battle / offline / Školka): rovnou přepíše nejslabší tah
- *    (viz {@link autoReplaceMove}) – bez otravování hráče,
- *  - jinak (manuální souboj): zařadí do fronty `moveLearnQueue` a hráč později
+ *  - `auto` (auto battle / offline / Školka): celou sadu přeskládá na „útočné-
+ *    first" (viz {@link balancedMovesetIds}), aby měl jedinec vždy čím útočit –
+ *    bez otravování hráče; ignoruje prevLevel (přepočítá dle aktuálního levelu).
+ *  - jinak (manuální souboj): přidá do VOLNÝCH slotů (max 4), a při PLNÝCH
+ *    slotech tah NEzahazuje – zařadí do fronty `moveLearnQueue` a hráč později
  *    zvolí nahrazení (viz moveLearnView).
- * Mutuje jedince, vrací nově naučené id (jen ty rovnou přidané/přepsané).
+ * Mutuje jedince, vrací nově naučené id.
  * @param {import("../core/state.js").OwnedPokemon} pokemon
  * @param {number} prevLevel  level PŘED level-upem
  * @param {{ auto?: boolean }} [opts]
@@ -66,6 +116,20 @@ export function defaultMovesFor(speciesId, level) {
  */
 export function learnLevelUpMoves(pokemon, prevLevel, { auto = false } = {}) {
   if (!Array.isArray(pokemon.moves)) pokemon.moves = [];
+  if (auto) {
+    // AUTO režim (auto battle / offline / Školka): celou sadu přeskládá na
+    // „útočné-first" (viz balancedMovesetIds), aby měl jedinec VŽDY čím útočit a
+    // souboj neuvázl (žádné „3 status + 1 útok"). Kandidáti = tahy naučitelné do
+    // aktuálního levelu + ty, které už umí (zachová i egg/TM tahy mimo learnset).
+    // Tím se navíc při dalším level-upu OPRAVÍ i sady pokažené dřívější verzí.
+    const before = new Set(pokemon.moves.map((m) => m.id));
+    const pool = [
+      ...learnableMovesAtLevel(pokemon.speciesId, pokemon.level).map((e) => e.id),
+      ...pokemon.moves.map((m) => m.id),
+    ];
+    setActiveMoves(pokemon, balancedMovesetIds(pool));
+    return pokemon.moves.filter((m) => !before.has(m.id)).map((m) => m.id);
+  }
   const learned = [];
   for (const entry of getLearnset(pokemon.speciesId)) {
     if (entry.level <= prevLevel || entry.level > pokemon.level) continue; // mimo rozsah
@@ -73,43 +137,13 @@ export function learnLevelUpMoves(pokemon, prevLevel, { auto = false } = {}) {
     const mv = getMove(entry.id);
     if (!mv) continue;
     if (pokemon.moves.length >= MAX_MOVES) {
-      if (auto) {
-        if (autoReplaceMove(pokemon, entry.id)) learned.push(entry.id);
-      } else {
-        queueMoveLearn(pokemon.uid, entry.id); // manuál → nabídnout nahrazení později
-      }
+      queueMoveLearn(pokemon.uid, entry.id); // manuál → nabídnout nahrazení později
       continue;
     }
     pokemon.moves.push({ id: entry.id, pp: mv.pp, maxPp: mv.pp });
     learned.push(entry.id);
   }
   return learned;
-}
-
-/** „Bojová hodnota" tahu pro auto-výběr, co přepsat: síla tahu (status = 0). */
-function moveWorth(moveId) {
-  return getMove(moveId)?.power ?? 0;
-}
-
-/**
- * AUTO režim: naučí `moveId` přepsáním NEJSLABŠÍHO stávajícího tahu, ale jen když
- * nový tah není slabší než ten nejslabší (jinak by si jedinec sám zhoršil sadu –
- * takový tah se přeskočí, hráč si ho může kdykoli doučit v Move Tutoru). Nový tah
- * dostane plné PP. Mutuje jedince.
- * @param {import("../core/state.js").OwnedPokemon} pokemon
- * @param {string} moveId
- * @returns {boolean} true, pokud tah opravdu nahradil (naučil se)
- */
-function autoReplaceMove(pokemon, moveId) {
-  const mv = getMove(moveId);
-  if (!mv) return false;
-  let worstIdx = 0;
-  for (let i = 1; i < pokemon.moves.length; i++) {
-    if (moveWorth(pokemon.moves[i].id) < moveWorth(pokemon.moves[worstIdx].id)) worstIdx = i;
-  }
-  if (moveWorth(moveId) < moveWorth(pokemon.moves[worstIdx].id)) return false; // nezhoršuj sadu
-  pokemon.moves[worstIdx] = { id: moveId, pp: mv.pp, maxPp: mv.pp };
-  return true;
 }
 
 /**

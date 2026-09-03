@@ -137,7 +137,9 @@ export function openChangelog() {
   overlay.querySelector('[data-act="close"]').addEventListener("click", close);
 
   const body = overlay.querySelector(".changelog-body");
-  fetch("CHANGELOG.md")
+  // no-store: CHANGELOG.md se mění každou verzí; bez toho browser servíruje
+  // starou cache (viděli jsme rozpor „verze 0.55 vs. changelog 0.45").
+  fetch("CHANGELOG.md", { cache: "no-store" })
     .then((r) => {
       if (!r.ok) throw new Error(`HTTP ${r.status}`);
       return r.text();
