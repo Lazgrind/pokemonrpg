@@ -69,6 +69,11 @@ body {
 .resource .icon { font-size: 15px; }
 .resource .value { font-weight: 700; }
 
+/* Klikatelná položka lišty (ikona Pokédexu → otevře záložku). */
+.resource-clickable { cursor: pointer; border-radius: 6px; padding: 2px 6px; transition: background 0.12s; }
+.resource-clickable:hover,
+.resource-clickable:focus-visible { background: rgba(255, 255, 255, 0.12); outline: none; }
+
 /* Zdroj s rozpisem po najetí myší (Poké Bally: kolik a jakých mám). */
 .resource.has-tooltip { position: relative; cursor: default; }
 .resource .ball-tooltip {
@@ -139,6 +144,135 @@ body {
   color: var(--text-dim);
   line-height: 1.5;
 }
+/* Nastavení v modalu: řádky pod sebou s trochou vzduchu. */
+.settings-modal .settings-modal-body { text-align: left; }
+.settings-modal .settings-row { margin-bottom: 6px; }
+
+/* ---- Dev nástroje v nastavení ---- */
+.settings-dev {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.settings-dev .settings-label { display: block; margin-bottom: 8px; }
+.dev-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+.dev-sublabel {
+  font-size: 12px;
+  color: var(--text-dim);
+  min-width: 62px;
+}
+.dev-select {
+  flex: 1;
+  min-width: 140px;
+  padding: 4px 6px;
+  background: var(--bg-panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+}
+.dev-lvl { min-width: 52px; text-align: center; font-size: 13px; }
+.dev-feedback { font-size: 11px; min-height: 14px; margin-top: 2px; }
+
+/* ---- Herní pravidla (tabulka s toggle přepínači) ---- */
+.settings-rules {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+}
+.settings-rules .settings-label { display: block; margin-bottom: 8px; }
+.rules-table { width: 100%; border-collapse: collapse; }
+.rules-table td {
+  padding: 7px 0;
+  border-top: 1px solid var(--border);
+  vertical-align: middle;
+}
+.rules-table tr:first-child td { border-top: none; }
+.rule-cell { padding-right: 10px; }
+.rule-name { display: block; font-size: 13px; color: var(--text); }
+.rule-desc { display: block; font-size: 11px; color: var(--text-dim); line-height: 1.35; margin-top: 1px; }
+.rule-toggle-cell { width: 46px; text-align: right; white-space: nowrap; }
+
+/* Toggle switch (kompaktní, do úzkého okna). */
+.switch { position: relative; display: inline-block; width: 40px; height: 22px; }
+.switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+.switch-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 22px;
+  transition: background 0.15s ease;
+  cursor: pointer;
+}
+.switch-slider::before {
+  content: "";
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 3px;
+  top: 3px;
+  background: #fff;
+  border-radius: 50%;
+  transition: transform 0.15s ease;
+}
+.switch input:checked + .switch-slider { background: #4caf50; }
+.switch input:checked + .switch-slider::before { transform: translateX(18px); }
+.switch input:focus-visible + .switch-slider { outline: 2px solid #4caf50; outline-offset: 2px; }
+
+/* ---- Úvodní obrazovka (title screen) ---- */
+.title-screen {
+  position: fixed;
+  inset: 0;
+  /* Title screen je BRÁNA do hry – leží NAD veškerým herním obsahem (panely,
+     lišta). Modaly (300) jdou ještě nad něj, aby šlo z title otevřít SETTINGS;
+     offline souhrn a výběr startéra se ale ukazují až PO Continue (viz main.js),
+     takže se pod title nikdy neobjeví. */
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Letterbox v barvě horní oblohy obrázku, ať okraje nevyčnívají. */
+  background: #3aa0ee;
+  transition: opacity 0.4s ease;
+}
+.title-screen.hidden { opacity: 0; pointer-events: none; }
+/* Rám se zmenší přesně na vykreslený obrázek (contain), takže hotspoty umístěné
+   v procentech sedí na namalovaná tlačítka při jakékoli velikosti okna. */
+.title-frame {
+  position: relative;
+  line-height: 0;
+}
+.title-img {
+  display: block;
+  max-width: 100vw;
+  max-height: 100vh;
+  width: auto;
+  height: auto;
+}
+/* Průhledná klikací zóna přes namalované tlačítko. Souřadnice = procenta obrázku
+   (změřené z Title_screen.png): obě tlačítka vodorovně ~37–63 %. */
+.title-hotspot {
+  position: absolute;
+  left: 37%;
+  width: 26%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 14px;
+  cursor: pointer;
+}
+.title-hotspot[data-act="continue"] { top: 43%; height: 11.5%; }
+.title-hotspot[data-act="settings"] { top: 54.5%; height: 11.5%; }
+/* Jemné prosvětlení při najetí – jen náznak, ať nepřekryje malbu tlačítka. */
+.title-hotspot:hover { background: rgba(255, 255, 255, 0.12); }
+.title-hotspot:active { background: rgba(0, 0, 0, 0.12); }
 
 .btn {
   background: var(--bg-panel-2);
@@ -379,6 +513,8 @@ body {
   overflow: hidden;
   /* Fallback, když prostředí ještě nemá obrázky pozadí. */
   background: linear-gradient(180deg, #1a2740, #0e1526);
+  /* Umožní sprity i odsazení bojovníků škálovat podle velikosti scény (cqmin). */
+  container-type: size;
 }
 /* Vrstva s obrázkem pozadí. Chybí-li, prosvítá fallback gradient výše. */
 .battle-field .bg {
@@ -517,35 +653,48 @@ body {
 /* Bojovník = průhledný pruh přes scénu: soupeř nahoře, náš dole. */
 .battle-field .combatant {
   position: absolute;
-  left: 8px;
-  right: 8px;
+  /* Odsazení od okrajů roste s velikostí scény → na velkém okně se bojovníci
+     rozestoupí diagonálně dál od rohů, na malém zůstane kompaktní jako dřív. */
+  left: clamp(10px, 6cqmin, 90px);
+  right: clamp(10px, 6cqmin, 90px);
   z-index: 1;
   display: flex;
-  gap: 10px;
+  gap: clamp(10px, 2cqmin, 28px);
   justify-content: space-between;
   background: none;
   border: none;
   padding: 0;
 }
-.battle-field .combatant.enemy { top: 8px; align-items: flex-start; flex-direction: row-reverse; }
-.battle-field .combatant.player { bottom: 8px; align-items: flex-end; }
+.battle-field .combatant.enemy { top: clamp(8px, 5cqmin, 72px); align-items: flex-start; flex-direction: row-reverse; }
+.battle-field .combatant.player { bottom: clamp(8px, 5cqmin, 72px); align-items: flex-end; }
 /* Info panel (jméno + HP/XP) – průsvitný, ať prosvítá scéna. */
 .battle-field .c-info {
+  /* Smí se zmenšit (flex-shrink), ať se na úzkém panelu nikdy nepřekryje se
+     spritem: sprite je max 44 %, info max 54 % → vejdou se vedle sebe i s gapem.
+     Text se zalomí místo přetečení přes sprite. */
+  flex: 0 1 auto;
   min-width: 0;
-  max-width: 60%;
+  max-width: 54%;
   background: rgba(8, 12, 24, 0.62);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
   padding: 6px 9px;
   color: var(--text);
+  overflow-wrap: anywhere;
 }
 .battle-field .combatant.enemy .c-info { border-left: 3px solid var(--danger); }
 .battle-field .combatant.player .c-info { border-left: 3px solid var(--accent-2); }
 /* Sprite „stojí" ve scéně (větší, čtvercový, ostrý pixel-art z .mon-sprite img). */
 .battle-field .battle-sprite {
   position: relative; /* kotva pro plovoucí damage čísla */
-  width: 34%;
-  max-width: 128px;
+  /* Velikost řídí JS podle ÚHLOPŘÍČKY scény (proměnná --sprite, viz
+     battleView.applySpriteScale) – roste i klesá s celkovou velikostí battle
+     areny. Fallback 160px, než ji JS nastaví. Strop max-width 44 % šířky
+     bojovníka je pojistka na úzký panel, ať zbude místo na info panel.
+     --mon-scale (nastaví JS podle výšky druhu) ještě velikost poměrově upraví,
+     aby Pidgey nebyl stejně velký jako Charizard (viz spriteScaleForHeight). */
+  width: calc(var(--sprite, 160px) * var(--mon-scale, 1));
+  max-width: 44%;
   height: auto;
   aspect-ratio: 1 / 1;
   flex: 0 0 auto;
@@ -595,6 +744,8 @@ body {
 .status-badge.status-poison { background: #c58cf0; }
 .status-badge.status-burn { background: #ff9f43; }
 .status-badge.status-paralysis { background: #f4d03f; }
+.status-badge.status-sleep { background: #a4b0be; }
+.status-badge.status-freeze { background: #74d3f0; }
 
 /* Útok (special): útočník krátce vyrazí směrem k soupeři a vrátí se (soupeř
    shora dolů, náš Pokémon zdola nahoru). Třídu navěšuje/odebírá battleView na
@@ -1345,6 +1496,66 @@ body {
   text-align: center;
   font-weight: 600;
   font-size: 13px;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 2px 4px;
+}
+.pc-box-name:hover { background: rgba(255, 255, 255, 0.08); }
+/* Zvýraznění navigační šipky při přetažení jedince na sousední box. */
+.pc-nav .btn.drag-over {
+  border-color: var(--accent, #7fc97f);
+  box-shadow: 0 0 6px rgba(127, 201, 127, 0.5);
+}
+
+/* Výběr boxů = dlaždice 6×5 (ukáže se při přetažení jedince na jméno boxu a
+   zůstane, dokud držíš jedince „v ruce"). Žádný scroll – všech 30 boxů naráz. */
+.pc-box-name-wrap { position: relative; flex: 1; }
+.pc-box-picker {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: 288px;
+  max-width: 94vw;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 4px;
+  padding: 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+/* Bez tohohle by `display:grid` přebilo prohlížečové [hidden]{display:none}
+   (selektor třídy má vyšší specificitu) a picker by byl vidět pořád. */
+.pc-box-picker[hidden] { display: none; }
+.pc-box-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 40px;
+  padding: 4px 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  text-align: center;
+  cursor: pointer;
+}
+.pc-box-pick:hover { border-color: var(--accent, #7fc97f); }
+.pc-box-pick .pick-num { font-weight: 700; font-size: 13px; line-height: 1; }
+.pc-box-pick .pick-cnt { font-size: 9px; opacity: 0.65; line-height: 1; }
+.pc-box-pick.full .pick-cnt { color: #d98a8a; opacity: 0.9; }
+.pc-box-pick.active {
+  border-color: var(--accent, #7fc97f);
+  color: var(--accent, #7fc97f);
+  box-shadow: inset 0 0 0 1px var(--accent, #7fc97f);
+}
+.pc-box-pick.drag-over {
+  background: rgba(127, 201, 127, 0.25);
+  border-color: var(--accent, #7fc97f);
 }
 .pc-grid {
   display: grid;
@@ -1505,7 +1716,8 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  /* Nad title screenem (200), aby šlo SETTINGS otevřít i z úvodní obrazovky. */
+  z-index: 300;
 }
 .modal {
   background: var(--bg-panel);
@@ -1534,7 +1746,20 @@ body {
 .mc-dex { font-size: 12px; opacity: 0.6; font-weight: normal; }
 .mc-types { margin: 4px 0; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 .mc-rarity { font-size: 11px; opacity: 0.7; text-transform: capitalize; }
+.mc-genus { font-size: 12px; opacity: 0.7; font-style: italic; margin: 2px 0; }
 .mc-lvl { font-size: 13px; opacity: 0.85; }
+/* Pokédex flavor text – jako citace pod hlavičkou karty. */
+.mc-dexentry {
+  margin: 8px 0 10px;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  font-style: italic;
+  color: var(--text-dim, #b8c0d0);
+  background: rgba(255, 255, 255, 0.05);
+  border-left: 3px solid var(--accent-2, #5aa9e6);
+  border-radius: 6px;
+}
 .mc-xp { margin: 4px 0 12px; }
 .mc-xp-label { font-size: 11px; opacity: 0.7; display: flex; justify-content: space-between; margin-bottom: 2px; }
 .mc-bar {
@@ -1661,7 +1886,9 @@ body {
 .breeder-grid {
   margin-top: 4px;
   display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  /* minmax(0,1fr): sloupce se smí zúžit pod min-content obsahu, jinak by
+     obsazené sloty (bar + čas + tlačítko) přetekly modal doprava. */
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 8px;
 }
 .breeder-slot {
@@ -1669,6 +1896,7 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 6px;
+  min-width: 0; /* aby se slot mohl zúžit v grid buňce */
   min-height: 84px;
   display: flex;
   flex-direction: column;
@@ -1694,10 +1922,14 @@ body {
 }
 .breeder-time {
   font-size: 11px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 .breeder-slot .btn-sm {
   padding: 2px 6px;
   font-size: 11px;
+  max-width: 100%;
+  white-space: normal; /* delší popisky se zalomí místo vyčnívání */
 }
 
 /* ---- Breeding (Školka): dva rodičovské sloty ---- */
@@ -1888,6 +2120,21 @@ body {
   color: var(--text-dim);
 }
 .shop-cat:first-child { margin-top: 0; }
+
+/* Přepínač množství (×1 / ×5 / ×10 / Max) v obchodech. */
+.shop-qty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+.shop-qty .qty-btn { min-width: 40px; }
+.shop-qty .qty-btn.active {
+  background: var(--accent, #4a90d9);
+  color: #fff;
+  border-color: var(--accent, #4a90d9);
+}
+
 /* Seznam itemů v batohu (řádky jako tlačítka). */
 .bag-list { display: grid; gap: 6px; max-height: 380px; overflow-y: auto; }
 .bag-item-row {
@@ -1905,7 +2152,34 @@ body {
   cursor: pointer;
 }
 .bag-item-row:hover { border-color: var(--accent, #7fc97f); }
+.bag-item-row:disabled { opacity: 0.5; cursor: not-allowed; }
+.bag-item-row:disabled:hover { border-color: var(--border); }
 .bag-count { font-weight: 700; white-space: nowrap; }
+.bag-evolution-row { cursor: pointer; }
+/* Obálka s řádkem + tlačítka akcí (Sell). */
+.bag-item-row-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bag-item-row-wrapper .bag-item-row { flex: 1; }
+.bag-item-actions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+/* Tlačítka prodeje. */
+.btn-sell {
+  background: linear-gradient(135deg, #663300, #8b4513);
+  border-color: var(--danger, #d55a5a);
+  color: #f0e6d2;
+  font-size: 11px;
+  white-space: nowrap;
+}
+.btn-sell:hover {
+  background: linear-gradient(135deg, #7d4608, #a0522d);
+  border-color: #ff7f50;
+}
 /* Léčivé itemy v bojovém batohu + poznámka. */
 .bag-items { display: grid; gap: 6px; margin-bottom: 8px; }
 .item-use { text-align: left; }

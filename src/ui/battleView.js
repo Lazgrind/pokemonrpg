@@ -27,13 +27,15 @@ import {
   nextEncounter,
   hpOf,
   lootLabel,
+  itemsAllowed,
+  getRules,
 } from "../systems/battleSystem.js";
 import { POKEBALLS, getPokeball } from "../../data/pokeballs.js";
 import { ITEMS, getItem } from "../../data/items.js";
 import { canUseItem } from "../systems/itemSystem.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { ballIconHtml } from "./ballIcon.js";
-import { spriteImg } from "./sprites.js";
+import { spriteImg, spriteScaleForHeight } from "./sprites.js";
 import { getTeamPokemon } from "../systems/team.js";
 import { computeStats } from "../systems/pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
@@ -53,6 +55,26 @@ let lastRoot = null;
 const CAT_ICON = { physical: "💥", special: "✨", status: "🌀" };
 
 let subscribed = false;
+/** ResizeObserver, který drží velikost spritů závislou na úhlopříčce scény. */
+let spriteObs = null;
+
+/**
+ * Nastaví velikost spritů podle ÚHLOPŘÍČKY scény (√(š²+v²)), takže sprite roste
+ * i klesá s CELKOVOU velikostí battle areny, ne jen s jedním rozměrem (CSS
+ * container queries uměly reagovat jen na š/v zvlášť → na nízké aréně se sprite
+ * zasekl na výškovém stropu). Volá se po každém překreslení scény (vytváří se
+ * znovu) i z ResizeObserveru při změně velikosti okna/panelu.
+ * @param {HTMLElement} root
+ */
+function applySpriteScale(root) {
+  const field = root.querySelector(".battle-field");
+  if (!field) return;
+  const r = field.getBoundingClientRect();
+  const diag = Math.hypot(r.width, r.height);
+  // ~21 % úhlopříčky, s dolním/horním stropem, ať sprite nezmizí ani nepřeteče.
+  const size = Math.max(96, Math.min(460, Math.round(diag * 0.21)));
+  field.style.setProperty("--sprite", `${size}px`);
+}
 
 /**
  * Vykreslí panel a jednorázově se přihlásí k aktualizacím souboje.
@@ -65,6 +87,11 @@ export function renderBattle(root) {
     bus.on(EVENTS.BATTLE_HIT, (hit) => playHit(root, hit));
     bus.on(EVENTS.BATTLE_FAINT, (info) => playFaint(root, info));
     subscribed = true;
+  }
+  // Sprity škálují s úhlopříčkou scény – sleduj změny velikosti panelu/okna.
+  if (!spriteObs && typeof ResizeObserver !== "undefined") {
+    spriteObs = new ResizeObserver(() => applySpriteScale(root));
+    spriteObs.observe(root);
   }
 }
 
@@ -197,20 +224,25 @@ function spawnDamage(root, hit) {
  * @param side   "enemy" | "player" (řídí barvu a stranu spritu)
  * @param view   pohled spritu: soupeř `front`, náš Pokémon `back`
  * @param showXp přidá EXP bar (jen náš Pokémon – divoký nepřítel XP nesbírá)
+ * @param animated animovaný gif sprite (jen manuální souboj; auto/idle = statické png)
  */
-function combatantHtml(c, side, view, showXp = false) {
+function combatantHtml(c, side, view, showXp = false, animated = false) {
   const pct = Math.max(0, Math.round((c.hp / c.stats.maxHp) * 100));
   const low = pct <= 25 ? " low" : "";
   const types = c.types.map(typeBadge).join("");
   const name = `${c.ref.shiny ? "✨ " : ""}${c.name}`;
   const status = statusBadge(c.status);
 
+  // Velikost spritu ve scéně škálujeme podle výšky druhu (Pidgey ≠ Charizard).
+  const spScale = spriteScaleForHeight(getSpecies(c.ref.speciesId)?.height);
   const sprite = spriteImg(c.ref.speciesId, {
     view,
     shiny: !!c.ref.shiny,
     gender: c.ref.gender,
+    animated,
     alt: c.name,
     extraClass: "battle-sprite",
+    scale: spScale,
   });
 
   let xpHtml = "";
@@ -258,11 +290,12 @@ function headHtml(b) {
     const balls = getState().resources.balls ?? {};
     const selCount = balls[getSelectedBall()] ?? 0;
     const canCatch = b.enemy && b.enemy.hp > 0 && selCount > 0;
+    const ballIcon = ballIconHtml(getSelectedBall(), { size: 16 });
     if (selCount <= 0) {
-      catchBtn = `<button class="btn head-btn catch-btn" id="catch-btn" disabled title="No Poké Balls — buy some in the Poké Mart.">🔴 No Poké Balls</button>`;
+      catchBtn = `<button class="btn head-btn catch-btn" id="catch-btn" disabled title="No Poké Balls — buy some in the Poké Mart.">${ballIcon} No Poké Balls</button>`;
     } else {
       const pctLabel = canCatch ? ` (${Math.round(getCatchChance() * 100)}%)` : "";
-      catchBtn = `<button class="btn head-btn catch-btn" id="catch-btn" ${canCatch ? "" : "disabled"}>🔴 Catch${pctLabel}</button>`;
+      catchBtn = `<button class="btn head-btn catch-btn" id="catch-btn" ${canCatch ? "" : "disabled"}>${ballIcon} Catch${pctLabel}</button>`;
     }
   }
   const acMode = `<select id="ac-mode" class="ac-mode" ${ac.enabled ? "" : "disabled"} title="Auto catch: which Pokémon to catch">
@@ -370,7 +403,8 @@ function rootMenuHtml() {
 
 /** Podmenu Battle: 4 tahy (jméno/typ/PP), nebo Struggle když došly PP. */
 function fightMenuHtml(b) {
-  const moves = b.player.ref.moves ?? [];
+  // Transform/Mimic dočasně mění dostupné tahy (volatile.moveOverride).
+  const moves = b.player.volatile?.moveOverride ?? b.player.ref.moves ?? [];
   const anyPp = moves.some((m) => (m.pp ?? 0) > 0);
   let btns;
   if (!anyPp) {
@@ -407,16 +441,25 @@ function bagMenuHtml(b) {
   const catchPct = Math.round(getCatchChance() * 100);
 
   // Léčivé itemy (bez podmínky na aktivního – výběr cíle přijde v item-target módu).
-  const allItems = ITEMS.filter((it) => (items[it.id] ?? 0) > 0);
+  // Herní pravidla No items / No potions můžou předměty v souboji zakázat.
+  const rules = getRules();
+  const allItems = ITEMS.filter((it) => (items[it.id] ?? 0) > 0 && itemsAllowed(it.id));
   const itemBtns = allItems
     .map(
       (it) =>
         `<button class="btn move-btn item-use" data-select-item="${it.id}" title="${it.desc}">${it.icon} ${it.name} <span class="placeholder">×${items[it.id]}</span></button>`
     )
     .join("");
-  const itemsSection = itemBtns
-    ? `<div class="bag-items">${itemBtns}</div>`
-    : `<p class="placeholder bag-note">No healing items in your bag.</p>`;
+  let itemsSection;
+  if (itemBtns) {
+    itemsSection = `<div class="bag-items">${itemBtns}</div>`;
+  } else if (rules.noItems) {
+    itemsSection = `<p class="placeholder bag-note">Items are disabled (game rule).</p>`;
+  } else if (rules.noPotions) {
+    itemsSection = `<p class="placeholder bag-note">Potions are disabled (game rule).</p>`;
+  } else {
+    itemsSection = `<p class="placeholder bag-note">No healing items in your bag.</p>`;
+  }
 
   // Sekce Poké Bally (může být prázdná – itemy jsou pořád k dispozici).
   let ballSection;
@@ -430,7 +473,7 @@ function bagMenuHtml(b) {
       )
       .join("");
     ballSection = `<div class="ball-picker">${chips}</div>
-      <button class="btn move-btn" id="throw-ball" ${canCatch ? "" : "disabled"}>🔴 Throw ${getPokeball(selected)?.name ?? "Ball"}${canCatch ? ` (${catchPct}%)` : ""}</button>`;
+      <button class="btn move-btn" id="throw-ball" ${canCatch ? "" : "disabled"}>${ballIconHtml(selected, { size: 16 })} Throw ${getPokeball(selected)?.name ?? "Ball"}${canCatch ? ` (${catchPct}%)` : ""}</button>`;
   }
 
   return `${itemsSection}${ballSection}
@@ -579,15 +622,18 @@ function draw(root) {
   const defeated = b.result === "defeat";
   const interlude = !defeated && !!b.interlude;
   const showCmd = !defeated && !interlude && manualPlayable(b);
+  // Animované gif sprity jen v manuálním souboji; v auto módu jedou rychlé
+  // kola, kde by animace nebyla vidět → statické png.
+  const anim = !getAutoBattle();
 
   root.innerHTML = `
     ${headHtml(b)}
     <div class="battle-body">
       <div class="battle-field${defeated ? " is-over" : ""}${interlude ? " is-result" : ""}${showCmd ? " has-cmd" : ""}">
         <div class="bg"${b.background ? ` style="background-image:url('${b.background}')"` : ""}></div>
-        ${combatantHtml(b.enemy, "enemy", "front")}
+        ${combatantHtml(b.enemy, "enemy", "front", false, anim)}
         <div class="vs">VS</div>
-        ${combatantHtml(b.player, "player", "back", true)}
+        ${combatantHtml(b.player, "player", "back", true, anim)}
         ${showCmd ? battleCmdHtml(b) : ""}
         ${interlude ? interludeHtml(b) : ""}
         ${defeated
@@ -620,6 +666,8 @@ function draw(root) {
   const info = root.querySelector(".battle-info");
   if (info) info.scrollTop = info.scrollHeight;
   wire(root);
+  // Scéna se právě vytvořila znovu → nastav velikost spritů dle úhlopříčky.
+  applySpriteScale(root);
 }
 
 function wire(root) {

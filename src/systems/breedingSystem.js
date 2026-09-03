@@ -17,6 +17,7 @@
 import { commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { getSpecies } from "../../data/pokemon.js";
+import { learnableMovesAtLevel } from "../../data/learnsets.js";
 import { getBreedingSlot, getBreedingParents } from "./buildingSystem.js";
 import { makeBredEgg } from "./eggSystem.js";
 import { holdsEverstone } from "./evolutionSystem.js";
@@ -26,6 +27,8 @@ import {
   chooseChildSpeciesId,
   BREED_SECONDS,
   INHERIT_IV_COUNT,
+  DESTINY_KNOT_IV_COUNT,
+  DESTINY_KNOT_ID,
   BREED_SHINY_CHANCE,
 } from "../../data/breeding.js";
 
@@ -34,6 +37,42 @@ import {
 const BREED_TICK_SEC = 1;
 
 let timer = null;
+
+/**
+ * Spočítá tahy zděděné z breeding vajíčka (egg moves).
+ * Vezme sjednocení aktivních move-id obou rodičů a filtruje je tak,
+ * aby potomek (druh) je legitimně mohl naučit. Ořízne na max 4.
+ * @param {import("../core/state.js").OwnedPokemon} parentA
+ * @param {import("../core/state.js").OwnedPokemon} parentB
+ * @param {string} babySpeciesId  druh potomka
+ * @returns {string[]} pole move-id k dědění (max 4, bez duplikátů)
+ */
+function computeEggMoves(parentA, parentB, babySpeciesId) {
+  // Sjednocení aktivních tahů obou rodičů
+  const parentMoves = new Set();
+  if (parentA?.moves) {
+    for (const m of parentA.moves) parentMoves.add(m.id);
+  }
+  if (parentB?.moves) {
+    for (const m of parentB.moves) parentMoves.add(m.id);
+  }
+
+  // Tahy, které potomek umí naučit na levelu 100
+  const learnableIds = new Set(
+    learnableMovesAtLevel(babySpeciesId, 100).map((e) => e.id)
+  );
+
+  // Filtruj: jen ty, co potomek umí
+  const eggMoves = [];
+  for (const moveId of Array.from(parentMoves)) {
+    if (learnableIds.has(moveId)) {
+      eggMoves.push(moveId);
+    }
+  }
+
+  // Ořízni na max 4
+  return eggMoves.slice(0, 4);
+}
 
 /** Jsou aktuální rodiče kompatibilní pro breeding? */
 export function breedingCompatible() {
@@ -87,9 +126,15 @@ export function accrueBreeding(seconds) {
     const breed = {
       // Kopie IV rodičů (neměnné, ale ať nedržíme referenci na živého jedince).
       parents: [{ ...a.ivs }, { ...b.ivs }],
-      inherit: INHERIT_IV_COUNT,
       shinyChance: BREED_SHINY_CHANCE,
     };
+    // Dědičnost IV přes Destiny Knot: drží-li ho jeden z rodičů, potomek zdědí
+    // 5 IV místo 3. Jinak zůstane default INHERIT_IV_COUNT.
+    const destinyKnotA = a.heldItem === DESTINY_KNOT_ID;
+    const destinyKnotB = b.heldItem === DESTINY_KNOT_ID;
+    if (destinyKnotA || destinyKnotB) {
+      breed.inherit = DESTINY_KNOT_IV_COUNT;
+    }
     // Dědičnost povahy přes Everstone: drží-li ho rodič, potomek zdědí JEHO
     // povahu. Když ho drží oba, náhodně vybereme jednoho (jinak zůstane náhodná).
     const stoneA = holdsEverstone(a);
@@ -97,6 +142,8 @@ export function accrueBreeding(seconds) {
     if (stoneA && stoneB) breed.nature = Math.random() < 0.5 ? a.nature : b.nature;
     else if (stoneA) breed.nature = a.nature;
     else if (stoneB) breed.nature = b.nature;
+    // Dědičnost tahů z rodičů (egg moves).
+    breed.eggMoves = computeEggMoves(a, b, childId);
     const egg = makeBredEgg(childId, breed);
     produced.push(egg);
   }

@@ -12,7 +12,7 @@ import {
   createNewGame,
   CURRENT_SAVE_VERSION,
 } from "../core/state.js";
-import { randomIvs, emptyEvs, rollGender, computeStats, defaultMovesFor, randomNature } from "./pokemonSystem.js";
+import { randomIvs, emptyEvs, rollGender, computeStats, defaultMovesFor, randomNature, repairWeakMoveset } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 
 /** Klíč v localStorage. */
@@ -206,6 +206,32 @@ function migrate(data) {
   if (data.saveVersion < 19) {
     if (!Array.isArray(data.pcBoxes)) data.pcBoxes = [];
     data.saveVersion = 19;
+  }
+  // v19 → v20: herní pravidla / režimy (settings.rules: noItems/noPotions/nuzlocke)
+  // a sledování Nuzlocke úlovků po oblastech (nuzlockeCaught). Starým save doplníme
+  // vypnuté režimy a prázdný tracking, ať se chování nezmění.
+  if (data.saveVersion < 20) {
+    if (!data.settings) data.settings = { autoBattle: true };
+    if (!data.settings.rules || typeof data.settings.rules !== "object") {
+      data.settings.rules = { noItems: false, noPotions: false, nuzlocke: false };
+    } else {
+      const r = data.settings.rules;
+      if (typeof r.noItems !== "boolean") r.noItems = false;
+      if (typeof r.noPotions !== "boolean") r.noPotions = false;
+      if (typeof r.nuzlocke !== "boolean") r.nuzlocke = false;
+    }
+    if (!data.nuzlockeCaught || typeof data.nuzlockeCaught !== "object") {
+      data.nuzlockeCaught = {};
+    }
+    data.saveVersion = 20;
+  }
+  // v20 → v21: oprava „slabých" sad tahů (dřívější bug – jedinec mohl skončit
+  // např. s 3 status + 1 útok, což v auto souboji vede k zaseknutí, protože nemá
+  // čím ubírat HP). Přeskládá na útočné-first JEN u jedinců s ≤ 1 útočným tahem,
+  // kde jde získat víc útočných; vyvážené sady (2+ útoky) nechává být.
+  if (data.saveVersion < 21) {
+    for (const p of data.collection ?? []) repairWeakMoveset(p);
+    data.saveVersion = 21;
   }
   return data;
 }

@@ -68,6 +68,38 @@ export function ballMultiplier(ball, ctx) {
       if ((sp?.baseStats.speed ?? 0) >= FAST_SPEED_THRESHOLD) m = b.mult;
       break;
     }
+    case "loveMatch": {
+      const playerRef = ctx.player?.ref;
+      const enemyRef = ctx.enemy?.ref;
+      // Obě pole existují, stejný druh a opačná pohlaví (m/f nebo f/m)?
+      if (playerRef && enemyRef && playerRef.speciesId === enemyRef.speciesId) {
+        const pg = playerRef.gender;
+        const eg = enemyRef.gender;
+        if ((pg === "m" && eg === "f") || (pg === "f" && eg === "m")) {
+          m = b.mult;
+        }
+      }
+      break;
+    }
+    case "heavy": {
+      const w = getSpecies(ctx.enemy?.ref?.speciesId)?.weight ?? 0;
+      m = w >= 200 ? 4 : w >= 100 ? 3 : w >= 50 ? 2 : 1;
+      break;
+    }
+    case "statusEnemy": {
+      const st = ctx.enemy?.ref?.status;
+      if (st) {
+        m = st.kind === "sleep" ? b.mult * 1.5 : b.mult;
+      }
+      break;
+    }
+    case "moonStone": {
+      const sp = getSpecies(ctx.enemy?.ref?.speciesId);
+      if (sp?.evolutions?.some((e) => e.item === "moon-stone")) {
+        m = b.mult;
+      }
+      break;
+    }
   }
   return m;
 }

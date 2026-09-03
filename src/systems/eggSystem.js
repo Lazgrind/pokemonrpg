@@ -15,10 +15,12 @@
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { getSpecies } from "../../data/pokemon.js";
-import { createPokemon, inheritIvs } from "./pokemonSystem.js";
+import { learnableMovesAtLevel } from "../../data/learnsets.js";
+import { createPokemon, inheritIvs, setActiveMoves } from "./pokemonSystem.js";
 import { acquirePokemon } from "./team.js";
 import { getDaycareSlot, eggSlotCount, hatchSpeedPercent } from "./buildingSystem.js";
 import { OFFLINE_CAP_HOURS } from "./idle.js";
+import { INHERIT_IV_COUNT } from "../../data/breeding.js";
 import {
   EGG_DROP_CHANCE,
   HATCH_LEVEL_MIN,
@@ -32,6 +34,32 @@ const EGG_TICK_SEC = 1;
 
 let timer = null;
 let eggCounter = 0;
+
+/**
+ * Aplikuje egg moves na vylíhnutého jedince. Přenastaví jeho tahy tak, aby měly
+ * egg moves na začátku, pak doplní zbylé sloty z výchozích tahů daného levelu.
+ * Egg moves se filtrují, aby potomek je opravdu mohl naučit (dle learnset).
+ * @param {import("../core/state.js").OwnedPokemon} pokemon  vylíhnutý jedinec
+ * @param {string[]} eggMoveIds  pole move-id k aplikování
+ */
+function applyEggMoves(pokemon, eggMoveIds) {
+  if (!eggMoveIds || eggMoveIds.length === 0) return;
+
+  // Filtruj egg moves: jen ty, co potomek umí naučit
+  const learnableIds = new Set(
+    learnableMovesAtLevel(pokemon.speciesId, 100).map((e) => e.id)
+  );
+  const validEggMoves = eggMoveIds.filter((id) => learnableIds.has(id));
+
+  if (validEggMoves.length === 0) return;
+
+  // Sjednocení: egg moves + zbylé aktuální tahy mláděte
+  const current = (pokemon.moves ?? []).map((m) => m.id);
+  const combined = [...validEggMoves, ...current];
+
+  // Přeskládej tahy (deduplikuje, ořeže na 4, inicializuje PP)
+  setActiveMoves(pokemon, combined);
+}
 
 /** Inventář vajec (lazy inicializace prázdným polem). */
 export function getEggs() {
@@ -72,6 +100,19 @@ export function rollEggDrop(area) {
 export function makeBredEgg(speciesId, breed) {
   const egg = { id: makeEggId(speciesId), speciesId, breed };
   getEggs().push(egg);
+  return egg;
+}
+
+/**
+ * Přidá do inventáře „obyčejné" vejce daného druhu (bez breeding dat) a uloží.
+ * Genetika se vylosuje až při vylíhnutí. Používá dev nástroj / testování.
+ * @param {string} speciesId
+ * @returns {{ id: string, speciesId: string }}
+ */
+export function addEgg(speciesId) {
+  const egg = { id: makeEggId(speciesId), speciesId };
+  getEggs().push(egg);
+  commit();
   return egg;
 }
 
@@ -152,6 +193,7 @@ export function incubationList() {
     const elapsedSec = Math.min(slot.elapsedSec ?? 0, needSec);
     out.push({
       id: egg.id,
+      speciesId: egg.speciesId,
       name: getSpecies(egg.speciesId)?.name ?? egg.speciesId,
       elapsedSec,
       needSec,
@@ -191,12 +233,16 @@ export function accrueIncubation(seconds) {
       HATCH_LEVEL_MIN + Math.floor(Math.random() * (HATCH_LEVEL_MAX - HATCH_LEVEL_MIN + 1));
     const poke = egg.breed
       ? createPokemon(egg.speciesId, level, {
-          ivs: inheritIvs(egg.breed.parents, egg.breed.inherit),
+          ivs: inheritIvs(egg.breed.parents, egg.breed.inherit ?? INHERIT_IV_COUNT),
           shinyChance: egg.breed.shinyChance,
           // Povaha zděděná přes Everstone (jinak undefined → createPokemon losuje).
           nature: egg.breed.nature,
         })
       : createPokemon(egg.speciesId, level);
+    // Aplikuj egg moves, pokud vejce z breedingu nese dědičné tahy.
+    if (egg.breed?.eggMoves) {
+      applyEggMoves(poke, egg.breed.eggMoves);
+    }
     const shiny = !!poke.shiny;
     const name = getSpecies(egg.speciesId)?.name ?? egg.speciesId;
     const idx = eggs.findIndex((e) => e.id === egg.id);

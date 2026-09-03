@@ -185,3 +185,31 @@ export function unequipHeldItem(uid) {
   commit();
   return { ok: true };
 }
+
+/**
+ * Prodej itemu. Vrací utržený gold a odečte qty z inventáře.
+ * @param {string} itemId
+ * @param {number} [qty=1]
+ * @returns {{ ok: boolean, reason?: string, gold?: number }}
+ */
+export function sellItem(itemId, qty = 1) {
+  const def = getItem(itemId);
+  if (!def) return { ok: false, reason: "Unknown item." };
+
+  const owned = itemCount(itemId);
+  const actualQty = Math.max(0, Math.min(qty, owned));
+  if (actualQty <= 0) return { ok: false, reason: "You don't have that item." };
+
+  const res = getState().resources;
+  if (!res.items) res.items = {};
+
+  // Cena za kus je 50% z nákupní ceny.
+  const goldPerItem = Math.floor((def.price ?? 0) * 0.5);
+  const totalGold = goldPerItem * actualQty;
+
+  res.gold = (res.gold ?? 0) + totalGold;
+  res.items[itemId] = Math.max(0, (res.items[itemId] ?? 0) - actualQty);
+
+  commit();
+  return { ok: true, gold: totalGold };
+}

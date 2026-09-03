@@ -134,6 +134,40 @@ export function moveInTeam(uid, dir) {
 }
 
 /**
+ * Nadobro odebere jedince ze hry – z týmu, z kolekce i z PC boxů. Používá
+ * Nuzlocke permadeath (omdlelý jedinec navždy padne). Vrací true, když někoho
+ * skutečně odebral.
+ * @param {string} uid
+ * @returns {boolean}
+ */
+export function releasePokemon(uid) {
+  const s = getState();
+  let removed = false;
+  const ti = s.team.indexOf(uid);
+  if (ti !== -1) {
+    s.team.splice(ti, 1);
+    removed = true;
+  }
+  const ci = s.collection.findIndex((p) => p.uid === uid);
+  if (ci !== -1) {
+    s.collection.splice(ci, 1);
+    removed = true;
+  }
+  // Pro jistotu i z PC boxů (jedinec mohl být uložený mimo tým).
+  for (const box of s.pcBoxes ?? []) {
+    if (!Array.isArray(box.slots)) continue;
+    for (let i = 0; i < box.slots.length; i++) {
+      if (box.slots[i] === uid) {
+        box.slots[i] = null;
+        removed = true;
+      }
+    }
+  }
+  if (removed) commit();
+  return removed;
+}
+
+/**
  * Vrátí jedince aktivního týmu ve správném pořadí.
  * @returns {import("../core/state.js").OwnedPokemon[]}
  */

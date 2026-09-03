@@ -18,12 +18,29 @@ const TABS = [
 /** Aktivní záložka přežívá překreslení (modulová proměnná). */
 let activeTab = "team";
 
+/** Poslední root+onStatus – ať umí přepnout záložku i vnější volání (ikona v liště). */
+let lastRoot = null;
+let lastStatus = () => {};
+
+/**
+ * Přepne aktivní záložku zvenčí (např. klik na ikonu Pokédexu v horní liště)
+ * a překreslí levý panel. Bez efektu, dokud panel nebyl aspoň jednou vykreslen.
+ * @param {string} tabId
+ */
+export function openLeftPanelTab(tabId) {
+  if (!TABS.some((t) => t.id === tabId)) return;
+  activeTab = tabId;
+  if (lastRoot) renderLeftPanel(lastRoot, lastStatus);
+}
+
 /**
  * Vykreslí levý panel se záložkami a obsahem aktivní záložky.
  * @param {HTMLElement} root
  * @param {(msg: string) => void} onStatus
  */
 export function renderLeftPanel(root, onStatus = () => {}) {
+  lastRoot = root;
+  lastStatus = onStatus;
   root.innerHTML = `
     <div class="tabs">
       ${TABS.map(

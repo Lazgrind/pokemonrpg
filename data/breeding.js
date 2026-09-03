@@ -9,6 +9,12 @@
  * eggSystem.js); zde jsou jen laditelná data a čistá pravidla nad daty druhů.
  */
 
+// Import druhů pro funkcionalitu básní formy – toto NEOBSAHUJE cyklickou závislost,
+// protože pokemon.js NEIMPORTUJE breeding.js (breeding.js je čistá datová vrstva,
+// bez závislostí na systémech). Pokud by cyklická závislost vznikla, lze baseFormOf
+// přesunout do breedingSystem.js místo toho.
+import { POKEMON_SPECIES } from "./pokemon.js";
+
 /** Základní doba (minuty), za kterou kompatibilní pár vyprodukuje jedno vejce. */
 export const BREED_MINUTES = 30;
 
@@ -16,8 +22,14 @@ export const BREED_MINUTES = 30;
 export const BREED_SECONDS = BREED_MINUTES * 60;
 
 /** Kolik IV se zdědí od rodičů (zbytek se hodí náhodně). Laditelné jedním
- *  číslem; budoucí item Destiny Knot tuto hodnotu zvedne (viz BACKLOG). */
+ *  číslem; item Destiny Knot tuto hodnotu zvedne na DESTINY_KNOT_IV_COUNT. */
 export const INHERIT_IV_COUNT = 3;
+
+/** Kolik IV se zdědí od rodičů, když jeden z nich drží Destiny Knot. */
+export const DESTINY_KNOT_IV_COUNT = 5;
+
+/** Id itemu Destiny Knot (drží ho rodič ve Školce, zvyšuje dědičnost IV). */
+export const DESTINY_KNOT_ID = "destiny-knot";
 
 /** Šance na shiny u vylíhnutého breeding vejce (Masuda-styl, 2× oproti 1/8192). */
 export const BREED_SHINY_CHANCE = 1 / 4096;
@@ -59,15 +71,65 @@ export function areCompatible(spA, spB) {
 }
 
 /**
+ * Vrátí základní formu (kořen) evoluční linie daného druhu. Základní forma je
+ * ten druh, na který NEUKAZUJE ŽÁDNÝ jiný druh evolucí (tj. nemá předka).
+ * Procházíme evoluční historii směrem zpět (hledáme druhy, jejichž `evolvesTo`
+ * ukazuje na daný druh) a iterujeme, pokud existuje. Fallback: původní speciesId
+ * (např. neznámý druh nebo chyba v datech).
+ * @param {string} speciesId
+ * @returns {string} id základní formy (nebo původní speciesId, je-li neznámý)
+ */
+export function baseFormOf(speciesId) {
+  if (!speciesId) return speciesId;
+
+  // Hledáme kořen evoluční linie iteračně směrem zpět.
+  // currentId = aktuální druh, hledáme jeho předchůdce (druh, jehož evolvesTo === currentId).
+  let currentId = speciesId;
+  let iterations = 0;
+  const maxIterations = 100; // bezpečnost před nekonečnými smyčkami
+
+  while (currentId && iterations < maxIterations) {
+    iterations++;
+    let foundPredecessor = null;
+
+    // Hledej druh, jehož evolvesTo ukazuje na currentId.
+    for (const sp of POKEMON_SPECIES) {
+      if (sp.evolvesTo === currentId) {
+        foundPredecessor = sp.id;
+        break;
+      }
+    }
+
+    if (!foundPredecessor) {
+      // Žádný druh na currentId neodkazuje – currentId je kořen.
+      return currentId;
+    }
+
+    // Pokračuj směrem zpět (nahoru v hierarchii).
+    currentId = foundPredecessor;
+  }
+
+  // Fallback (neznámý druh nebo chyba v datech).
+  return speciesId;
+}
+
+/**
  * Druh potomka. Bez pohlaví: je-li jeden rodič žolík, potomek je ten druhý;
- * jinak náhodně jeden z rodičů. (Zatím bez evolučních linií – potomek = druh
- * rodiče; jakmile přibudou evoluce, měla by se rodit základní forma.)
+ * jinak náhodně jeden z rodičů. POTOMEK SE RODÍ V ZÁKLADNÍ FORMĚ (kořen
+ * evoluční linie vybraného NE-Ditto rodiče).
  * @param {import("./pokemon.js").Species} spA
  * @param {import("./pokemon.js").Species} spB
- * @returns {string} id druhu potomka
+ * @returns {string} id druhu potomka (základní forma)
  */
 export function chooseChildSpeciesId(spA, spB) {
-  if (isWildcard(spA)) return spB.id;
-  if (isWildcard(spB)) return spA.id;
-  return Math.random() < 0.5 ? spA.id : spB.id;
+  let childSpeciesId;
+  if (isWildcard(spA)) {
+    childSpeciesId = spB.id;
+  } else if (isWildcard(spB)) {
+    childSpeciesId = spA.id;
+  } else {
+    childSpeciesId = Math.random() < 0.5 ? spA.id : spB.id;
+  }
+  // Vrátí základní formu vybraného druhu.
+  return baseFormOf(childSpeciesId);
 }

@@ -90,8 +90,11 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
   };
 }
 
-/** Naformátuje trvání (sekundy) na „Xh Ym“ / „Ym Zs“. */
+/** Naformátuje trvání (sekundy) na „Xh Ym“ / „Ym Zs“.
+ * Vstup se nejdřív zaokrouhlí na celé sekundy (remainingSec bývá zlomkové) –
+ * ať se nikdy neukáže „13.539999… s“; zaokrouhlení celku ošetří i přetečení 60 s. */
 export function formatDuration(sec) {
+  sec = Math.max(0, Math.round(sec));
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;

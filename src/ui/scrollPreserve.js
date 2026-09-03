@@ -52,3 +52,67 @@ export function restoreScroll(root, saved) {
     if (el) el.scrollTop = top;
   }
 }
+
+/* -------------------------------------------------------------------------- *
+ * Odložení překreslení během aktivního scrollování
+ * -------------------------------------------------------------------------- *
+ * PROČ: každý idle tik (1×/s) překreslí obsah oken/panelů přes `innerHTML`.
+ * Když to padne DOPROSTŘED scrollu kolečkem, prohlížeč probíhající scroll
+ * přeruší – element, na kterém kolečko „jede", se zničí a nahradí novým.
+ * Uživatel to vnímá jako zásek: musí pustit kolečko a scrollovat znovu.
+ * `restoreScroll` sice vrátí pozici, ale rozjetý scroll už neobnoví.
+ *
+ * Řešení: dokud uživatel scrolluje, překreslení NEprovádíme – jen si ho
+ * poznamenáme a naplánujeme jediný „flush", jakmile se scroll na chvíli
+ * uklidní. Víc ticků během scrollu se tak sloučí do jednoho překreslení.
+ * Živé prvky (progress bary, počítadla) na okamžik „zamrznou", ale plynulý
+ * scroll má přednost – po zastavení kolečka se vše dorovná.
+ */
+
+/** Časové razítko posledního scroll/wheel eventu (ms). */
+let _lastScrollTs = 0;
+/** Jak dlouho po posledním scroll eventu ho ještě považujeme za „aktivní". */
+const SCROLL_IDLE_MS = 200;
+
+if (typeof window !== "undefined") {
+  const mark = () => { _lastScrollTs = Date.now(); };
+  // capture + passive: zachytíme scroll na LIBOVOLNÉM vnitřním kontejneru
+  // (scroll nebublá), aniž bychom samotný scroll jakkoli blokovali.
+  const opts = { capture: true, passive: true };
+  window.addEventListener("wheel", mark, opts);
+  window.addEventListener("scroll", mark, opts);
+  window.addEventListener("touchmove", mark, opts);
+}
+
+/** @returns {boolean} true, když uživatel právě (< SCROLL_IDLE_MS) scrolloval. */
+export function isScrolling() {
+  return Date.now() - _lastScrollTs < SCROLL_IDLE_MS;
+}
+
+/**
+ * Obalí render callback tak, aby se NEprovedl během aktivního scrollování.
+ * Vrací funkci vhodnou přímo do `bus.on(STATE_CHANGED, ...)`. Přijde-li
+ * překreslení během scrollu, jen se poznamená a naplánuje jediný flush po
+ * uklidnění scrollu (coalescing: víc ticků → jedno překreslení). Přímá volání
+ * `render()` po akci uživatele obalovat NETŘEBA – ta mají proběhnout hned.
+ * @param {() => void} renderFn
+ * @returns {() => void}
+ */
+export function scrollAware(renderFn) {
+  let pending = false;
+  let timer = null;
+  const flush = () => {
+    timer = null;
+    if (!pending) return;
+    if (isScrolling()) { schedule(); return; } // pořád scrolluje → počkej dál
+    pending = false;
+    renderFn();
+  };
+  const schedule = () => {
+    if (timer == null) timer = setTimeout(flush, SCROLL_IDLE_MS);
+  };
+  return () => {
+    if (isScrolling()) { pending = true; schedule(); return; }
+    renderFn();
+  };
+}

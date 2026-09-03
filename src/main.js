@@ -9,7 +9,7 @@ import { VERSION } from "./core/version.js";
 import { bus, EVENTS } from "./core/events.js";
 import { getState } from "./core/state.js";
 import { loadGame, newGame, saveGame } from "./systems/save.js";
-import { renderLeftPanel } from "./ui/leftPanel.js";
+import { renderLeftPanel, openLeftPanelTab } from "./ui/leftPanel.js";
 import { renderBattle } from "./ui/battleView.js";
 import { restore as restoreBattle } from "./systems/battleSystem.js";
 import { applyOfflineProgress } from "./systems/idle.js";
@@ -21,10 +21,12 @@ import { showOfflineSummary } from "./ui/offlineView.js";
 import { renderMap } from "./ui/mapView.js";
 import { renderSaveControls } from "./ui/saveControls.js";
 import { renderSettings } from "./ui/settingsView.js";
+import { initTitleScreen } from "./ui/titleScreen.js";
 import { openChangelog } from "./ui/changelogView.js";
 import { initMoveLearnPrompts } from "./ui/moveLearnView.js";
 import { initStarterPrompt } from "./ui/starterModal.js";
 import { ballIconHtml } from "./ui/ballIcon.js";
+import { scrollAware } from "./ui/scrollPreserve.js";
 import { POKEBALLS } from "../data/pokeballs.js";
 
 /** Interval automatického ukládání (ms). */
@@ -79,18 +81,38 @@ function renderResourceBar(root) {
       // Přehled kolik a jakých míčků mám – ukáže se po najetí myší na ikonu.
       tooltipHtml: ballsTooltipHtml(balls),
     },
-    { icon: "📦", label: "Pokémon", value: s.collection.length },
+    {
+      icon: "📕",
+      label: "Pokédex",
+      value: s.collection.length,
+      // Klik otevře záložku Pokédex v levém panelu.
+      action: "pokedex",
+    },
     { icon: "🥚", label: "Eggs", value: (s.eggs ?? []).length },
   ];
   root.innerHTML = items
     .map(
-      (r) => `<span class="resource${r.tooltipHtml ? " has-tooltip" : ""}"${r.tooltipHtml ? "" : ` title="${r.label}"`}>
+      (r) => `<span class="resource${r.tooltipHtml ? " has-tooltip" : ""}${r.action ? " resource-clickable" : ""}"${r.action ? ` data-action="${r.action}" role="button" tabindex="0"` : ""}${r.tooltipHtml ? "" : ` title="${r.label}"`}>
                 ${r.iconHtml ?? `<span class="icon">${r.icon}</span>`}
                 <span class="value">${r.value}</span>
                 ${r.tooltipHtml ?? ""}
               </span>`
     )
     .join("");
+
+  // Klikatelné položky lišty (zatím jen ikona Pokédexu → otevře záložku).
+  root.querySelectorAll(".resource-clickable").forEach((node) => {
+    const open = () => {
+      if (node.dataset.action === "pokedex") openLeftPanelTab("pokedex");
+    };
+    node.addEventListener("click", open);
+    node.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
+  });
 }
 
 /** Inicializace hry. */
@@ -144,9 +166,13 @@ function init() {
   renderResourceBar(el("resource-bar"));
 
   // 4) UI reaguje na změny stavu (oddělení logiky od UI).
+  // Levý panel obsahuje scrollovací seznamy (tým/PC/pokédex) → jeho překreslení
+  // odložíme během aktivního scrollování, ať kolečko neseká (viz scrollAware).
+  // Resource bar (zlato) není scrollovací, ať zůstane živý, necháváme napřímo.
+  const renderPanel = scrollAware(() => renderLeftPanel(el("city-panel"), setStatus));
   bus.on(EVENTS.STATE_CHANGED, () => {
     renderResourceBar(el("resource-bar"));
-    renderLeftPanel(el("city-panel"), setStatus);
+    renderPanel();
   });
 
   // 5) Automatické ukládání a uložení při zavření karty + pasivní výcvik ve školce.
@@ -171,16 +197,13 @@ function init() {
     setStatus(`✨ ${e.fromName} evolved into ${e.toName}!`);
   });
 
-  // 6) Přehled offline zisků + hned uložit (reset lastSaved → žádné dvojí počítání).
-  if (offlineBattle || offlineDaycare || offlineEgg || offlineBred) {
+  // 6) Offline zisky jsou už APLIKOVÁNY na stav (výše); hned ulož (reset
+  // lastSaved → žádné dvojí počítání). Uživatelský SOUHRN se ale ukáže až po
+  // Continue (title screen je brána – viz 6d), ať se nevynoří pod úvodní
+  // obrazovkou. Krátká hláška v liště je pod overlayem, takže nevadí.
+  const hasOffline = !!(offlineBattle || offlineDaycare || offlineEgg || offlineBred);
+  if (hasOffline) {
     saveGame();
-    showOfflineSummary({
-      elapsedSec,
-      battle: offlineBattle,
-      daycare: offlineDaycare,
-      egg: offlineEgg,
-      bred: offlineBred,
-    });
     const parts = [];
     if (offlineBattle) parts.push(`battle +${offlineBattle.xp} XP, +${offlineBattle.gold} gold`);
     if (offlineDaycare) parts.push(`day care +${offlineDaycare.xp} XP`);
@@ -189,11 +212,25 @@ function init() {
     setStatus(`Offline: ${parts.join(" · ")}`);
   }
 
-  // 6b) Nabídky naučení tahu (plné sloty) – sleduje frontu i položky z offline.
-  initMoveLearnPrompts();
-
-  // 6c) Výběr startéra při nové hře (prázdná kolekce) – modální okno.
-  initStarterPrompt();
+  // 6d) Úvodní obrazovka (title screen) = BRÁNA do hry. Overlay leží nad vším a
+  // teprve po Continue se spustí VIDITELNÉ věci: offline souhrn, nabídky
+  // naučení tahu (fronta z offline) a výběr startéra u nové hry. Do té doby
+  // vidí hráč jen title screen (SETTINGS jde otevřít i z něj).
+  initTitleScreen(() => {
+    if (hasOffline) {
+      showOfflineSummary({
+        elapsedSec,
+        battle: offlineBattle,
+        daycare: offlineDaycare,
+        egg: offlineEgg,
+        bred: offlineBred,
+      });
+    }
+    // Nabídky naučení tahu (plné sloty) – sleduje frontu i položky z offline.
+    initMoveLearnPrompts();
+    // Výběr startéra při nové hře (prázdná kolekce) – modální okno.
+    initStarterPrompt();
+  });
 
   const versionTag = el("version-tag");
   versionTag.textContent = `Pokémon Idle RPG · v${VERSION}`;

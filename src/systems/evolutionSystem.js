@@ -64,6 +64,66 @@ export function canEvolveNow(pokemon) {
 }
 
 /**
+ * INTERNÍ: Vykoná samotnou evoluci (změnu speciesId, přepočet HP, doučení tahů).
+ * Mutuje jedince IN-PLACE. Vrací jména pro report.
+ * @param {import("../core/state.js").OwnedPokemon} owned
+ * @param {string} toId nový druh
+ * @returns {{ fromId: string, toId: string, fromName: string, toName: string }}
+ */
+function applyEvolution(owned, toId) {
+  const fromId = owned.speciesId;
+  const fromSp = getSpecies(fromId);
+  const fromName = fromSp?.name ?? fromId;
+  const oldMax = computeStats(owned).maxHp;
+
+  owned.speciesId = toId;
+  const newMax = computeStats(owned).maxHp;
+  // Přírůstek max HP přidej k aktuálnímu HP (klasika: evoluce „přiroste"), ať se
+  // nová forma nezraní ani neplní úplně, když byla nakřáplá.
+  const cur = owned.hp ?? oldMax;
+  owned.hp = Math.max(1, Math.min(newMax, cur + Math.max(0, newMax - oldMax)));
+
+  // Doučí tahy nové formy (od levelu 0 do aktuálního) do volných slotů; při
+  // plných slotech se stejně jako u level-upu nabídne nahrazení přes frontu.
+  learnLevelUpMoves(owned, 0);
+
+  const toSp = getSpecies(toId);
+  return {
+    fromId,
+    toId,
+    fromName,
+    toName: toSp?.name ?? toId,
+  };
+}
+
+/**
+ * Na které druhy se může evolučním kamenem vyvinou (pro UI: zjištění vhodných cílů).
+ * @param {string} speciesId
+ * @param {string} itemId
+ * @returns {string[]} pole toId
+ */
+export function itemEvolutionTargets(speciesId, itemId) {
+  const sp = getSpecies(speciesId);
+  if (!sp?.evolutions || !Array.isArray(sp.evolutions)) return [];
+  return sp.evolutions
+    .filter((evo) => evo.method === "item" && evo.item === itemId)
+    .map((evo) => evo.toId)
+    .filter(Boolean);
+}
+
+/**
+ * Na který druh se může vyvinout trade metodou (Linking Cord).
+ * @param {string} speciesId
+ * @returns {string|null}
+ */
+export function tradeEvolutionTarget(speciesId) {
+  const sp = getSpecies(speciesId);
+  if (!sp?.evolutions || !Array.isArray(sp.evolutions)) return null;
+  const evo = sp.evolutions.find((e) => e.method === "trade");
+  return evo?.toId ?? null;
+}
+
+/**
  * Ručně vyvine jedince o JEDEN stupeň (na kliknutí tlačítka). Ověří podmínky
  * (existuje další forma, dost levelu, nedrží Everstone). Mutuje jedince
  * IN-PLACE: mění `speciesId`, přepočítá max HP (přírůstek se přičte k aktuálnímu
@@ -88,31 +148,72 @@ export function evolvePokemon(uid) {
     return { ok: false, reason: `Needs to reach Lv ${sp.evolutionLevel} to evolve.` };
   }
 
-  const fromId = owned.speciesId;
-  const fromName = sp.name ?? fromId;
-  const oldMax = computeStats(owned).maxHp;
-
-  owned.speciesId = sp.evolvesTo;
-  const newMax = computeStats(owned).maxHp;
-  // Přírůstek max HP přidej k aktuálnímu HP (klasika: evoluce „přiroste"), ať se
-  // nová forma nezraní ani neplní úplně, když byla nakřáplá.
-  const cur = owned.hp ?? oldMax;
-  owned.hp = Math.max(1, Math.min(newMax, cur + Math.max(0, newMax - oldMax)));
-
-  // Doučí tahy nové formy (od levelu 0 do aktuálního) do volných slotů; při
-  // plných slotech se stejně jako u level-upu nabídne nahrazení přes frontu.
-  learnLevelUpMoves(owned, 0);
-
-  const toSp = getSpecies(owned.speciesId);
-  const evt = {
-    uid,
-    fromId,
-    toId: owned.speciesId,
-    fromName,
-    toName: toSp?.name ?? owned.speciesId,
-  };
+  const evt = applyEvolution(owned, sp.evolvesTo);
   commit();
-  bus.emit(EVENTS.POKEMON_EVOLVED, evt);
+  bus.emit(EVENTS.POKEMON_EVOLVED, { uid, ...evt });
+  return { ok: true, uid, ...evt };
+}
+
+/**
+ * Evolve pokémon s evoluční kamenem. Vrací {ok, reason?, fromName, toName}.
+ * @param {string} uid
+ * @param {string} itemId
+ * @returns {{ ok: boolean, reason?: string, fromName?: string, toName?: string }}
+ */
+export function evolveWithItem(uid, itemId) {
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false, reason: "Unknown Pokémon." };
+
+  if (holdsEverstone(owned)) return { ok: false, reason: "It's holding an Everstone." };
+
+  const targets = itemEvolutionTargets(owned.speciesId, itemId);
+  if (targets.length === 0) {
+    return { ok: false, reason: "This Pokémon can't evolve with that item." };
+  }
+
+  // Vezmi první cílový druh (obvykle jen jeden).
+  const toId = targets[0];
+
+  const res = getState().resources;
+  if (!res.items || (res.items[itemId] ?? 0) <= 0) {
+    return { ok: false, reason: "You don't have that item." };
+  }
+
+  // Odečti item a vyvolej evoluci.
+  res.items[itemId] = (res.items[itemId] ?? 0) - 1;
+  const evt = applyEvolution(owned, toId);
+  commit();
+  bus.emit(EVENTS.POKEMON_EVOLVED, { uid, ...evt });
+  return { ok: true, ...evt };
+}
+
+/**
+ * Evolve pokémon pomocí trade (Linking Cord). Vrací {ok, reason?, fromName, toName}.
+ * @param {string} uid
+ * @param {string} [itemId="linking-cord"]
+ * @returns {{ ok: boolean, reason?: string, fromName?: string, toName?: string }}
+ */
+export function evolveByTrade(uid, itemId = "linking-cord") {
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false, reason: "Unknown Pokémon." };
+
+  if (holdsEverstone(owned)) return { ok: false, reason: "It's holding an Everstone." };
+
+  const toId = tradeEvolutionTarget(owned.speciesId);
+  if (!toId) {
+    return { ok: false, reason: "This Pokémon can't evolve by trade." };
+  }
+
+  const res = getState().resources;
+  if (!res.items || (res.items[itemId] ?? 0) <= 0) {
+    return { ok: false, reason: "You don't have a Linking Cord." };
+  }
+
+  // Odečti item a vyvolej evoluci.
+  res.items[itemId] = (res.items[itemId] ?? 0) - 1;
+  const evt = applyEvolution(owned, toId);
+  commit();
+  bus.emit(EVENTS.POKEMON_EVOLVED, { uid, ...evt });
   return { ok: true, ...evt };
 }
 

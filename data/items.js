@@ -44,10 +44,19 @@ export const ITEMS = [
   { id: "revive", name: "Revive", icon: "✨", desc: "Revives a fainted Pokémon with half HP.", price: 200, category: "revive", effect: { kind: "revive", healFrac: 0.5 } },
   { id: "max-revive", name: "Max Revive", icon: "🌟", desc: "Revives a fainted Pokémon and fully restores HP.", price: 500, category: "revive", effect: { kind: "revive", healFrac: "full" } },
 
+  // --- Evoluční kameny a Linking Cord ---
+  { id: "fire-stone", name: "Fire Stone", icon: "🔥", desc: "Evolves certain Pokémon exposed to fire energy.", price: 1500, category: "evolution", evolution: true },
+  { id: "water-stone", name: "Water Stone", icon: "💧", desc: "Evolves certain Water-loving Pokémon.", price: 1500, category: "evolution", evolution: true },
+  { id: "thunder-stone", name: "Thunder Stone", icon: "⚡", desc: "Evolves certain Electric-type Pokémon.", price: 1500, category: "evolution", evolution: true },
+  { id: "leaf-stone", name: "Leaf Stone", icon: "🍃", desc: "Evolves certain Grass-type Pokémon.", price: 1500, category: "evolution", evolution: true },
+  { id: "moon-stone", name: "Moon Stone", icon: "🌙", desc: "Evolves certain Pokémon exposed to lunar energy.", price: 1500, category: "evolution", evolution: true },
+  { id: "linking-cord", name: "Linking Cord", icon: "🔗", desc: "A device that evolves Pokémon which would normally evolve by trading.", price: 2000, category: "evolution", evolution: true },
+
   // --- Held items: drží se během souboje, poskytují efekty ---
   { id: "leftovers", name: "Leftovers", icon: "🍖", desc: "Restores a little HP each turn in battle.", price: 2000, category: "held", held: { kind: "endTurnHeal", fraction: 1/16 } },
   { id: "oran-berry", name: "Oran Berry", icon: "🍒", desc: "When HP drops below 50%, restores 10 HP. Consumed on use.", price: 100, category: "held", effect: { kind: "heal", amount: 10 }, held: { kind: "lowHpHeal", threshold: 0.5, amount: 10 } },
   { id: "everstone", name: "Everstone", icon: "🪨", desc: "A held Pokémon won't evolve. If it's a breeding parent, the baby inherits its Nature.", price: 300, category: "held" },
+  { id: "destiny-knot", name: "Destiny Knot", icon: "🪢", desc: "If it's a breeding parent, the baby inherits 5 IVs instead of 3.", price: 2000, category: "held" },
 ];
 
 /**
@@ -64,6 +73,7 @@ export const ITEM_CATEGORIES = [
   { key: "hp", name: "Potions", icon: "🧴" },
   { key: "status", name: "Status Heals", icon: "💊" },
   { key: "revive", name: "Revives", icon: "✨" },
+  { key: "evolution", name: "Evolution", icon: "🪨" },
   { key: "held", name: "Held Items", icon: "💎" },
 ];
 

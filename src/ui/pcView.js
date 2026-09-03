@@ -3,8 +3,10 @@
  *
  * Boxy po 30 slotech (mřížka 6×5), přepínání mezi boxy, přidání nového boxu.
  * Jedince lze přetáhnout (drag & drop) na jiný slot v boxu (obsazený cíl se
- * prohodí). Klik na slot otevře Kartu Pokémona; tlačítko ＋ Team ho přidá do
- * týmu (pak zmizí z boxu – řídí pcSystem.reconcile). Pokédex se nijak nedotýká.
+ * prohodí) nebo na navigační šipky ◀/▶ = přesun do sousedního boxu (do prvního
+ * volného slotu). Klik na jméno boxu ho přejmenuje. Klik na slot otevře Kartu
+ * Pokémona; tlačítko ＋ Team ho přidá do týmu (pak zmizí z boxu – řídí
+ * pcSystem.reconcile). Pokédex se nijak nedotýká.
  *
  * Pozn.: levý panel se překresluje na každou změnu stavu, proto si aktivní box
  * i scroll mřížky držíme napříč rendery (modulové proměnné + restore).
@@ -12,7 +14,7 @@
 
 import { getSpecies } from "../../data/pokemon.js";
 import { getState } from "../core/state.js";
-import { getBoxes, storedCount, addBox, moveToSlot } from "../systems/pcSystem.js";
+import { getBoxes, storedCount, moveToSlot, moveToBox, renameBox } from "../systems/pcSystem.js";
 import { addToTeam, isInTeam } from "../systems/team.js";
 import { pokemonEngagement } from "../systems/buildingSystem.js";
 import { spriteImg } from "./sprites.js";
@@ -26,6 +28,14 @@ let activeBox = 0;
 /** uid právě taženého jedince (drag & drop) – i k potlačení kliknutí po tažení. */
 let draggingUid = null;
 let didDrag = false;
+
+/**
+ * Zůstává true, dokud držíš jedince „v ruce" nad výběrem boxů. Je to modulová
+ * proměnná, protože levý panel se během tažení překresluje (živé progress bary)
+ * – bez ní by picker po prvním překreslení „spadl". Zhasne se až při dropu nebo
+ * konci tažení (dragend).
+ */
+let pickerOpen = false;
 
 /** Jedinec v kolekci podle uid. */
 function ownedByUid(uid) {
@@ -77,10 +87,20 @@ export function renderPcTab(root, onStatus = () => {}) {
   root.innerHTML = `
     <h2 class="panel-title">PC <span class="dex-count">${stored} stored</span></h2>
     <div class="pc-nav">
-      <button class="btn btn-sm" data-box-prev title="Previous box" ${boxes.length <= 1 ? "disabled" : ""}>◀</button>
-      <span class="pc-box-name">${box.name} <span class="placeholder">(${activeBox + 1}/${boxes.length})</span></span>
-      <button class="btn btn-sm" data-box-next title="Next box" ${boxes.length <= 1 ? "disabled" : ""}>▶</button>
-      <button class="btn btn-sm" data-box-add title="Add a new box">＋ Box</button>
+      <button class="btn btn-sm" data-box-prev title="Previous box (drop here to move)" ${boxes.length <= 1 ? "disabled" : ""}>◀</button>
+      <div class="pc-box-name-wrap">
+        <span class="pc-box-name" data-box-rename title="Click to rename · drag a Pokémon here to pick a box">${box.name} <span class="placeholder">(${activeBox + 1}/${boxes.length})</span></span>
+        <div class="pc-box-picker" data-box-picker ${pickerOpen ? "" : "hidden"}>
+          ${boxes
+            .map((b, i) => {
+              const cnt = b.slots.filter(Boolean).length;
+              const full = cnt >= b.slots.length;
+              return `<div class="pc-box-pick ${i === activeBox ? "active" : ""} ${full ? "full" : ""}" data-pick-box="${i}" title="${b.name} (${cnt}/${b.slots.length})"><span class="pick-num">${i + 1}</span><span class="pick-cnt">${cnt}/${b.slots.length}</span></div>`;
+            })
+            .join("")}
+        </div>
+      </div>
+      <button class="btn btn-sm" data-box-next title="Next box (drop here to move)" ${boxes.length <= 1 ? "disabled" : ""}>▶</button>
     </div>
     <div class="pc-grid">
       ${box.slots.map((uid, i) => slotHtml(uid, i)).join("")}
@@ -99,11 +119,88 @@ export function renderPcTab(root, onStatus = () => {}) {
     activeBox = (activeBox + 1) % boxes.length;
     renderPcTab(root, onStatus);
   });
-  root.querySelector("[data-box-add]").addEventListener("click", () => {
-    activeBox = addBox();
-    onStatus("New box added");
-    // commit() z addBox překreslí panel; aktivní box je nastavený na nový.
+
+  // Přejmenování boxu (klik na jméno → prompt).
+  const nameEl = root.querySelector("[data-box-rename]");
+  if (nameEl) nameEl.addEventListener("click", () => {
+    const current = boxes[activeBox]?.name ?? "";
+    const val = window.prompt("Rename box:", current);
+    if (val == null) return; // zrušeno
+    if (renameBox(activeBox, val)) onStatus("Box renamed"); // commit → překreslení
   });
+
+  // Přetažení jedince na jméno boxu → rozbalí VŠECHNY boxy jako dlaždice 6×5
+  // (přesun o víc než 1 box najednou). Jakmile picker jednou během tažení
+  // otevřeš, zůstane otevřený, dokud držíš jedince „v ruce" – zhasne se až
+  // při dropu na box nebo při konci tažení (dragend). Žádné skrývání na
+  // dragleave (to dřív způsobovalo okamžité „spadnutí" pickeru).
+  const nameWrap = root.querySelector(".pc-box-name-wrap");
+  const picker = root.querySelector("[data-box-picker]");
+  const hidePicker = () => {
+    pickerOpen = false;
+    if (picker) picker.hidden = true;
+  };
+  if (nameWrap && picker) {
+    nameWrap.addEventListener("dragover", (e) => {
+      if (!draggingUid) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      if (!pickerOpen) {
+        pickerOpen = true;
+        picker.hidden = false;
+      }
+    });
+    picker.querySelectorAll("[data-pick-box]").forEach((row) => {
+      row.addEventListener("dragover", (e) => {
+        if (!draggingUid) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "move";
+        row.classList.add("drag-over");
+      });
+      row.addEventListener("dragleave", () => row.classList.remove("drag-over"));
+      row.addEventListener("drop", (e) => {
+        e.preventDefault();
+        row.classList.remove("drag-over");
+        hidePicker();
+        const uid = draggingUid ?? e.dataTransfer.getData("text/plain");
+        const dest = Number(row.dataset.pickBox);
+        if (!uid || Number.isNaN(dest)) return;
+        if (moveToBox(uid, dest)) {
+          activeBox = dest;
+          onStatus(`Moved to ${boxes[dest].name}`); // commit z moveToBox překreslí
+        } else {
+          onStatus("Target box is full");
+        }
+      });
+    });
+  }
+
+  // Drop na navigační šipky = přesun taženého jedince do sousedního boxu.
+  const navDrop = (btn, targetIndex) => {
+    if (!btn) return;
+    btn.addEventListener("dragover", (e) => {
+      if (!draggingUid) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      btn.classList.add("drag-over");
+    });
+    btn.addEventListener("dragleave", () => btn.classList.remove("drag-over"));
+    btn.addEventListener("drop", (e) => {
+      e.preventDefault();
+      btn.classList.remove("drag-over");
+      const uid = draggingUid ?? e.dataTransfer.getData("text/plain");
+      if (!uid || boxes.length <= 1) return;
+      const dest = (targetIndex + boxes.length) % boxes.length;
+      if (moveToBox(uid, dest)) {
+        activeBox = dest; // ať hráč vidí, kam se přesunul
+        onStatus(`Moved to ${boxes[dest].name}`); // commit z moveToBox překreslí
+      } else {
+        onStatus("Target box is full");
+      }
+    });
+  };
+  navDrop(prev, activeBox - 1);
+  navDrop(next, activeBox + 1);
 
   // ＋ Team.
   root.querySelectorAll("[data-add]").forEach((b) =>
@@ -135,6 +232,7 @@ export function renderPcTab(root, onStatus = () => {}) {
     slot.addEventListener("dragend", () => {
       slot.classList.remove("dragging");
       draggingUid = null;
+      hidePicker(); // zavři případně otevřený box-picker
       // didDrag necháme na true jen do nejbližšího kliknutí (potlačí kartu).
       setTimeout(() => { didDrag = false; }, 0);
     });
@@ -151,6 +249,7 @@ export function renderPcTab(root, onStatus = () => {}) {
     slot.addEventListener("drop", (e) => {
       e.preventDefault();
       slot.classList.remove("drag-over");
+      hidePicker(); // zavři případně otevřený picker
       const uid = draggingUid ?? e.dataTransfer.getData("text/plain");
       if (!uid) return;
       const toSlot = Number(slot.dataset.slot);
