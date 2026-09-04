@@ -137,7 +137,7 @@ function stackOrderHtml() {
     </div>`;
 }
 
-/** HTML přepínače rozvržení (Auto / Široké / Pod sebou). */
+/** HTML přepínače rozvržení (Auto / Široké / Pod sebou / Mobil). */
 function layoutHtml() {
   const cur = getState().settings?.layout ?? "auto";
   const opt = (key, label, desc) =>
@@ -149,6 +149,7 @@ function layoutHtml() {
         ${opt("auto", "Auto", "Přizpůsobí se velikosti okna – na úzkém displeji panely pod sebe")}
         ${opt("wide", "Široké", "Vždy dva sloupce (klasické, pro velké obrazovky)")}
         ${opt("stacked", "Pod sebou", "Vždy jeden sloupec (telefon / půl obrazovky)")}
+        ${opt("mobile", "Mobil", "Jednosloupcový layout se svislým rozdělením souboje")}
       </span>
     </div>`;
 }
@@ -220,7 +221,7 @@ export function openSettingsModal() {
       b.addEventListener("click", () => setSpeed(Number(b.dataset.speed)))
     );
 
-    // Přepínač rozvržení panelů.
+    // Přepínač rozvržení panelů (generický, přijímá jakoukoliv hodnotu z atributu).
     bodyEl.querySelectorAll("[data-layout-set]").forEach((b) =>
       b.addEventListener("click", () => {
         getState().settings.layout = b.dataset.layoutSet;

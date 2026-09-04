@@ -6,6 +6,10 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.63.1] – 2026-09-04 · mobilní layout
+### Added
+- **Nový layout „Mobil" (v Nastavení): jednosloupcové rozvržení jako „Pod sebou", ale battle area je rozdělená svisle – scéna souboje nahoře, log a ovládání pod ní** (na úzké obrazovce se scéna nezmenší jen na tlačítko battle). Oproti módu „Pod sebou" dává lepší přehled v manuálním souboji na telefonu.
+
 ## [0.63.0] – 2026-09-04 · responsive layout
 ### Added
 - **Responsive layout: panels now stack vertically on narrow screens/windows instead of shrinking (playable on phones and half-screen).** New layout switch in Settings: Auto (responsive), Wide (always two columns), Stacked (always one column).

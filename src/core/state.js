@@ -98,7 +98,7 @@ export function createNewGame() {
       autoBattle: false, // výchozí je normální (manuální) souboj
       speed: 1, // herní rychlost (1/2/4) – globální, ovládá se v horní liště
       selectedBall: "poke",
-      layout: "auto", // rozvržení panelů: auto (responzivní) | wide (2 sloupce) | stacked (1 sloupec)
+      layout: "auto", // rozvržení panelů: auto (responzivní) | wide (2 sloupce) | stacked (1 sloupec) | mobile (1 sloupec + svislé rozdělení souboje)
       stackOrder: ["battle", "map", "tabs"], // pořadí panelů ve skládaném režimu (shora dolů)
       autocatch: { enabled: false, mode: "all" }, // mode: "all" | "shiny"
       // Herní pravidla / režimy (viz settingsView, battleSystem):
