@@ -2523,3 +2523,6 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   padding: 6px;
   resize: vertical;
 }
+/* Vyskakovací okno s výpisem pozic (📋 Výpis pozic v place módu) – širší, ať
+   se řádky nezalamují; text-align:left kvůli monospace výpisu. */
+.map-pos-card { width: min(520px, 94vw); text-align: left; }
