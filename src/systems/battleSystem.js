@@ -25,7 +25,7 @@ import { healPercent, ppRegenPercent } from "./buildingSystem.js";
 import { useItem, canUseItem, itemCount, heldItemOf } from "./itemSystem.js";
 import { getItem, ITEMS } from "../../data/items.js";
 import { markSeen } from "./pokedex.js";
-import { AREAS } from "../../data/areas.js";
+import { AREAS, getArea, isAreaUnlocked } from "../../data/areas.js";
 import { biomeBackgrounds } from "../../data/backgrounds.js";
 
 /** Záložní druhy nepřátel, kdyby oblast neměla vlastní species pool. */
@@ -1191,10 +1191,16 @@ function tick() {
   // (výměna úderů) se přeskočí; při neúspěchu se normálně bojuje – hráč ho může
   // zabít dřív, než ho chytí.
   const ac = getAutocatch();
-  // Vybraný ball; když došel, fallback na jiný dostupný (null = nemá žádný).
+  // Autocatch drží jeden vybraný typ ballu; když ten dojde, NESAHÁ po jiném –
+  // rovnou se sám vypne (viditelně v UI), ať nespotřebuje prémiové míčky.
+  if (ac.enabled && ac.mode !== "none" && ballCount(ac.ball) <= 0) {
+    setAutocatch({ enabled: false });
+    pushLog(`Auto catch off — out of ${getPokeball(ac.ball)?.name ?? "balls"}.`);
+  }
+  // Vybraný autocatch ball (null = došel → nechytáme, žádný fallback).
   const ballId = resolveAutocatchBall();
   if (
-    ac.enabled &&
+    getAutocatch().enabled &&
     ballId &&
     battle.enemy &&
     battle.enemy.hp > 0 &&
@@ -1794,21 +1800,15 @@ export function getSelectedBall() {
 }
 
 /**
- * Ball pro autocatch: primárně vybraný typ; když došel, přepne na jiný dostupný
- * (nejlevnější vlastněný – ať se nevyplýtvají prémiové balls). Vrací null, když
- * hráč nemá vůbec žádné balls. Díky tomu autocatch nezůstane „viset" na prázdném
- * vybraném typu, ale sáhne po tom, co zbývá.
+ * Ball pro autocatch: VÝHRADNĚ typ zvolený pro autocatch (autocatch.ball).
+ * ŽÁDNÝ fallback na jiný typ – hráč nechce, aby autocatch po dojití sáhl po jiných
+ * (dražších) míčcích. Když vybraný typ došel, vrací null → autocatch nechytá
+ * (a v tick loopu se navíc sám vypne, viz runAutoTurn).
  * @returns {string|null}
  */
 function resolveAutocatchBall() {
-  const selected = getSelectedBall();
-  if (ballCount(selected) > 0) return selected;
-  const balls = getState().resources.balls ?? {};
-  // Vlastněné typy seřazené podle ceny (nejlevnější první; bez ceny až nakonec).
-  const owned = POKEBALLS
-    .filter((b) => (balls[b.id] ?? 0) > 0)
-    .sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
-  return owned[0]?.id ?? null;
+  const ball = getAutocatch().ball;
+  return ballCount(ball) > 0 ? ball : null;
 }
 
 /** Nastaví vybraný typ ballu (pro chytání) a překreslí UI souboje. */
@@ -1835,13 +1835,16 @@ export function getCatchChance(ballId = getSelectedBall()) {
 
 /**
  * Nastavení autocatch z herního stavu (normalizované, s bezpečným výchozím).
- * `mode`: "all" = chytat všechny, "shiny" = jen shiny.
+ * `mode`: "none" = nechytat nic (výchozí – ať zapnutí samo nezačne chytat),
+ * "all" = chytat všechny, "shiny" = jen shiny.
  */
 export function getAutocatch() {
   const s = getState().settings?.autocatch;
   return {
     enabled: s?.enabled ?? false,
-    mode: s?.mode ?? "all",
+    mode: s?.mode ?? "none",
+    // Typ ballu vyhrazený pro autocatch (nezávislý na ručně vybraném selectedBall).
+    ball: s?.ball ?? "poke",
   };
 }
 
@@ -1857,6 +1860,7 @@ export function setAutocatch(patch) {
 
 /** Má se hra pokusit tohoto nepřítele automaticky chytit? (dle módu) */
 function shouldAutocatch(ref, ac) {
+  if (ac.mode === "none") return false; // nic – dokud si hráč nevybere co chytat
   if (ac.mode === "shiny") return !!ref.shiny; // jen shiny
   return true; // "all" – chytat všechny
 }
@@ -1932,6 +1936,60 @@ export function attemptCatch(ballId = getSelectedBall()) {
  * Spustí nový souboj s aktuálním týmem na první oblasti.
  * @returns {{ ok: boolean, reason?: string }}
  */
+/* ------------------------------ Aktivní oblast ----------------------------- */
+
+/** Získané odznaky (id) – gatují oblasti mapy s unlock.badge (viz areas.js). */
+function earnedBadges() {
+  return getState().progress?.badges ?? [];
+}
+
+/** Id aktuálně vybrané oblasti (kde se bojuje). */
+export function getActiveAreaId() {
+  return getState().progress?.activeAreaId ?? AREAS[0].id;
+}
+
+/** Aktuálně vybraná oblast (fallback = první oblast, ať se nikdy nevrátí null). */
+export function getActiveArea() {
+  return getArea(getActiveAreaId()) ?? AREAS[0];
+}
+
+/**
+ * Přepne aktivní oblast (klik na mapě). Respektuje odemčení (odznaky).
+ * Když právě běží souboj a nová oblast je bojová (má species), plynule přehodí
+ * na nového nepřítele z nové oblasti; když je to město (bez species), souboj ukončí.
+ * @param {string} areaId
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function setActiveArea(areaId) {
+  const area = getArea(areaId);
+  if (!area) return { ok: false, reason: "Unknown area." };
+  const s = getState();
+  if (!s.progress) s.progress = { tier: 1, visited: [], badges: [] };
+  if (!Array.isArray(s.progress.visited)) s.progress.visited = [];
+  if (!isAreaUnlocked(area, s.progress.visited, earnedBadges())) {
+    return { ok: false, reason: "This area is locked — reach it through the previous area first." };
+  }
+  s.progress.activeAreaId = areaId;
+  // Návštěva uzlu odemyká navazující uzly (viz data/areas.js unlock.visited).
+  if (!s.progress.visited.includes(areaId)) s.progress.visited.push(areaId);
+
+  // Běžící souboj přizpůsobit nové oblasti.
+  if (battle && battle.running) {
+    if (area.species?.length) {
+      battle.area = area;
+      battle.enemy = spawnEnemy(area);
+      battle.background = pickBackground(area);
+      pushLog(`Moved to ${area.name}.`);
+    } else {
+      // Ve městě se nebojuje – souboj ukončit.
+      stopBattle();
+    }
+  }
+  commit(); // → STATE_CHANGED (překreslí mapu = zvýrazní aktivní oblast)
+  bus.emit(EVENTS.BATTLE_UPDATE);
+  return { ok: true };
+}
+
 export function startBattle() {
   const team = getTeamPokemon();
   if (team.length === 0) return { ok: false, reason: "You have no Pokémon in your team." };
@@ -1941,14 +1999,20 @@ export function startBattle() {
     return { ok: false, reason: "Your whole team has fainted — heal at the Poké Center." };
   }
 
+  const activeArea = getActiveArea();
+  if (!activeArea.species?.length) {
+    // Města (a jiné oblasti bez divokých druhů) nemají koho spawnovat.
+    return { ok: false, reason: `No wild Pokémon at ${activeArea.name} — pick a route on the map.` };
+  }
+
   battle = {
     running: true,
     log: [],
-    area: AREAS[0],
+    area: activeArea,
     teamCursor: firstAlive,
     turn: 0,
     result: null,
-    background: pickBackground(AREAS[0]),
+    background: pickBackground(activeArea),
     interlude: null,
     resolving: false, // právě se krokově odehrává manuální kolo?
     weather: null, // běhové počasí (déšť) – transientní, neukládá se

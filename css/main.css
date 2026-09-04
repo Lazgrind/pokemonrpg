@@ -366,27 +366,60 @@ body {
 #layout {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr 1.4fr;
-  grid-template-rows: 1.3fr 1fr;
+  /* Horní řada = hlavní tabový panel (Battle/City/PC/Pokédex, vlevo širší) +
+     mapa (vpravo) vedle sebe; spodní řada = kompaktní tým přes celou šířku.
+     Hlavní panel a mapa NESMÍ být pod sebou (nevejdou se na běžný monitor). */
+  grid-template-columns: 1.5fr 1fr;
+  grid-template-rows: 1.7fr 1fr;
   grid-template-areas:
-    "city battle"
-    "city map";
+    "main map"
+    "team team";
   gap: var(--gap);
   padding: var(--gap);
   min-height: 0;
 }
 
-#city-panel   { grid-area: city; }
-/* Battle Area má FIXNÍ okno – nikdy scrollbar. Panel je flex sloupec, který se
-   vejde do své buňky; posouvat se smí jen log uvnitř (viz .battle-log). */
-#battle-panel { grid-area: battle; display: flex; flex-direction: column; overflow: hidden; }
-#map-panel    { grid-area: map; }
+/* Hlavní tabový panel (nahoře vlevo): lišta záložek + tělo s podpanely. */
+#main-panel {
+  grid-area: main;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+#main-panel .main-tabs { flex: 0 0 auto; }
+#main-panel .main-body { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+/* Podpanel záložky: zobrazený jen aktivní. Battle má fixní okno (nescrolluje –
+   posouvá se jen log uvnitř); PC/Pokédex/City smí uvnitř scrollovat. */
+.tab-pane { flex: 1 1 auto; min-height: 0; display: none; }
+.tab-pane.is-active { display: flex; flex-direction: column; }
+#tab-battle { overflow: hidden; }
+#tab-rest { overflow-y: auto; }
+
+/* Tým dole přes celou šířku – kompaktní mřížka 3×2, panel NEscrolluje. */
+#team-panel {
+  grid-area: team;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0;
+}
+#team-panel .team-head { flex: 0 0 auto; }
+#team-panel .team-grid {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: var(--gap);
+}
+#map-panel { grid-area: map; overflow: hidden; min-height: 0; }
 
 /* ---- Responzivní / skládané rozvržení (v0.63.0) ---- */
 /* Layout řídí atribut body[data-layout]:
    - "auto"    – výchozí, přizpůsobí se šířce (pod 1000px se skládá pod sebe),
    - "wide"    – vždy 2 sloupce,
-   - "stacked" – vždy 1 sloupec (panely pod sebe: taby → souboj → mapa),
+   - "stacked" – vždy 1 sloupec (panely pod sebe dle stackOrder: souboj → mapa → taby),
    - "mobile"  – jako stacked, ale NAVÍC rozdělí battle area svisle (scéna
                  nahoře, log + ovládání pod ní) pro telefon.
    Ve skládaných režimech smí celá stránka svisle scrollovat (body dostane
@@ -399,16 +432,22 @@ body[data-layout="mobile"] #layout {
   flex-direction: column;
   flex: 0 0 auto;
 }
-body[data-layout="stacked"] #city-panel,
+body[data-layout="stacked"] #main-panel,
 body[data-layout="stacked"] #map-panel,
-body[data-layout="mobile"] #city-panel,
-body[data-layout="mobile"] #map-panel { overflow: visible; }
-body[data-layout="stacked"] #battle-panel { min-height: 60vh; }
+body[data-layout="stacked"] #team-panel,
+body[data-layout="mobile"] #main-panel,
+body[data-layout="mobile"] #map-panel,
+body[data-layout="mobile"] #team-panel { overflow: visible; }
+/* Ve skládaných režimech scrolluje celá stránka → podpanely se nesmí uzavřít do
+   vlastního scrollu (jinak by se seznam sevřel do pár řádků). */
+body[data-layout="stacked"] #tab-rest,
+body[data-layout="mobile"] #tab-rest { overflow: visible; }
+body[data-layout="stacked"] #main-panel { min-height: 60vh; }
 
 /* Mobilní režim (preset "mobile"): battle area se rozdělí SVISLE – scéna souboje
    nahoře (pevná výška), log + ovládání pod ní (ne vedle). Jinak by se scéna na
    úzké obrazovce zúžila tak, že v manuálu není vidět nic než tlačítko. */
-body[data-layout="mobile"] #battle-panel { min-height: auto; }
+body[data-layout="mobile"] #main-panel { min-height: auto; }
 body[data-layout="mobile"] .battle-body { flex-direction: column; }
 body[data-layout="mobile"] .battle-field { flex: 0 0 auto; min-height: clamp(280px, 50vh, 520px); }
 body[data-layout="mobile"] .battle-side { flex: 0 0 auto; width: 100%; }
@@ -423,9 +462,11 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
     flex-direction: column;
     flex: 0 0 auto;
   }
-  body[data-layout="auto"] #city-panel,
-  body[data-layout="auto"] #map-panel { overflow: visible; }
-  body[data-layout="auto"] #battle-panel { min-height: 60vh; }
+  body[data-layout="auto"] #main-panel,
+  body[data-layout="auto"] #map-panel,
+  body[data-layout="auto"] #team-panel { overflow: visible; }
+  body[data-layout="auto"] #tab-rest { overflow: visible; }
+  body[data-layout="auto"] #main-panel { min-height: 60vh; }
 }
 
 /* Úzké displeje (telefon): stáhnout mezery, zalomit horní lištu, menší logo. */
@@ -512,6 +553,33 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   font-style: italic;
   border-style: dashed;
 }
+
+/* Kompaktní týmové dlaždice v dolním panelu (mřížka 3×2 přes celou šířku). */
+.team-grid .team-slot {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 8px;
+  font-size: 12px;
+  min-height: 0;
+}
+.team-grid .team-slot.empty { align-items: center; justify-content: center; }
+/* Číslo slotu v rohu dlaždice. */
+.slot-num {
+  position: absolute;
+  top: 3px;
+  right: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--text-dim);
+  opacity: 0.75;
+}
+.team-grid .slot-bars { margin-top: auto; gap: 3px; }
+.team-grid .row-actions { margin-top: 3px; gap: 3px; flex-wrap: wrap; }
+.team-grid .row-actions .btn { padding: 2px 6px; font-size: 11px; }
+.team-grid .iv-ev { font-size: 10px; }
 .starter {
   display: block;
   width: 100%;
@@ -2300,4 +2368,158 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   font-size: 12px;
   color: var(--text-dim);
   text-align: right;
+}
+
+/* ------------------------------- Klikací mapa ------------------------------ */
+.kanto-map { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+
+/* Scéna = obrázek mapy + absolutně pozicované markery (v %).
+   display:inline-block → scéna se smrští PŘESNĚ na velikost obrázku (i po
+   zmenšení max-height), takže markery v % sedí na obrázek. Fixní, bez scrollu. */
+.map-stage {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  line-height: 0; /* ať img nedělá spodní mezeru */
+}
+.map-img {
+  display: block;
+  max-width: 100%;
+  max-height: 48vh; /* strop výšky → mapa se vejde celá do horní řady, žádný scroll */
+  width: auto;
+  height: auto;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+/* Marker uzlu – pilulka s tečkou a názvem, ukotvená středem na x/y. */
+.map-node {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  background: rgba(16, 22, 40, 0.82);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.1;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+  transition: transform 0.08s ease, background 0.12s ease, box-shadow 0.12s ease;
+  z-index: 2;
+}
+.map-node:hover:not(:disabled) {
+  transform: translate(-50%, -50%) scale(1.06);
+  background: rgba(24, 34, 64, 0.95);
+}
+.map-node:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.map-node-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #cfd8ec;
+  border: 1px solid rgba(0, 0, 0, 0.4);
+  flex: 0 0 auto;
+}
+.map-node.type-city .map-node-dot { background: var(--accent); }      /* města žlutě */
+.map-node.type-route .map-node-dot { background: #7fc97f; }           /* routy zeleně */
+
+/* Aktivní oblast – zvýrazněná, tečka pulzuje. */
+.map-node.is-active {
+  border-color: var(--accent);
+  background: rgba(60, 48, 8, 0.92);
+  box-shadow: 0 0 0 2px var(--accent), 0 1px 6px rgba(0, 0, 0, 0.6);
+  z-index: 3;
+}
+.map-node.is-active .map-node-dot {
+  background: var(--accent);
+  animation: mapPulse 1.2s ease-in-out infinite;
+}
+@keyframes mapPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 203, 5, 0.7); }
+  50% { box-shadow: 0 0 0 5px rgba(255, 203, 5, 0); }
+}
+
+/* Zamčená oblast – ztlumená, kurzor zakázán, zámek místo tečky. */
+.map-node.is-locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+  filter: grayscale(0.6);
+}
+.map-node.is-locked .map-node-dot {
+  background: transparent;
+  border: none;
+}
+.map-node.is-locked .map-node-dot::before { content: "🔒"; font-size: 11px; }
+
+/* Skrytý uzel – zamčený a mimo dev „reveal" režim se nevykresluje vůbec
+   (hráč vidí jen to, co odemkl). Viditelnost řídí mapView.updateStates. */
+.map-node.is-hidden { display: none; }
+
+/* Název uzlu je defaultně skrytý → na mapě jsou jen malé tečky (nepřekrývají se).
+   Ukáže se jen u aktivní/cílové oblasti a na hover/focus. */
+.map-node-label { display: none; }
+.map-node:hover .map-node-label,
+.map-node:focus-visible .map-node-label,
+.map-node.is-active .map-node-label,
+.map-node.is-target .map-node-label { display: inline; }
+
+.map-info {
+  font-size: 12px;
+  color: var(--text-dim);
+  min-height: 16px;
+  padding: 0 2px;
+}
+
+/* Hlavička mapy: titulek + přepínač režimu umístění. */
+.map-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.map-head .panel-title { margin: 0; }
+.map-head-actions { display: flex; align-items: center; gap: 6px; }
+
+/* Režim umístění uzlů. */
+.map-stage.is-editing { cursor: crosshair; }
+/* V edit režimu jsou markery klikací: klik na uzel = vyber ho k přesunu,
+   klik do prázdna = umísti vybraný uzel sem (viz mapView stage handler). */
+.map-stage.is-editing .map-node { cursor: pointer; }
+.map-stage.is-editing .map-node-label { display: inline; } /* v editu ukázat názvy všech */
+/* …ale s „Labels: off" je zase skryj → jen tečky, nic nepřekáží v kliku. */
+.map-stage.is-editing.hide-labels .map-node-label { display: none; }
+.map-node.is-target {
+  border-color: #ff5bb0;
+  box-shadow: 0 0 0 3px #ff5bb0, 0 1px 6px rgba(0, 0, 0, 0.6);
+  z-index: 4;
+}
+.map-edit { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.map-edit-hint { margin: 0; font-size: 12px; color: var(--text-dim); }
+.map-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.map-chip {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text, #e6ecfb);
+  cursor: pointer;
+}
+.map-chip.active { border-color: var(--accent); color: var(--accent); }
+.map-chip.placed { opacity: 0.7; }
+.map-pos-dump {
+  width: 100%;
+  font-family: monospace;
+  font-size: 11px;
+  background: var(--bg-panel);
+  color: var(--text, #e6ecfb);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px;
+  resize: vertical;
 }
