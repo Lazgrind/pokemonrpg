@@ -20,6 +20,18 @@ import { bus, EVENTS } from "../core/events.js";
 
 const MAP_IMG = "assets/map/kanto.webp";
 
+/* ===================== DEV: Map placement mode =====================
+ * Vývojový nástroj pro naklikání pozic uzlů na mapě (tlačítko 📍 Place nodes)
+ * + výpis pozic (📋), který se ručně přepíše do data/areas.js.
+ *
+ * PŘED OSTRÝM RELEASEM: přepni DEV_MAP_PLACEMENT = false → celý nástroj zmizí
+ * z UI (tlačítko se nevykreslí, edit režim je nedostupný, žádné mapPositions).
+ * Pro ÚPLNÉ smazání kódu vyřízni bloky ohraničené značkami
+ * `DEV-PLACEMENT-START` … `DEV-PLACEMENT-END` níže.
+ * (Konvence stejná jako u ostatních dev věcí – viz „🔧 Dev tools" v Nastavení.)
+ * =================================================================== */
+const DEV_MAP_PLACEMENT = true;
+
 /** Režim umístění uzlů + aktuálně vybraný uzel (modulový stav UI). */
 let editMode = false;
 let editTarget = null;
@@ -90,7 +102,8 @@ export function renderMap(root) {
       <h2 class="panel-title">Map</h2>
       <div class="map-head-actions">
         ${editMode ? `<button class="btn btn-sm" data-toggle-labels>${editHideLabels ? "🏷 Labels: off" : "🏷 Labels: on"}</button>` : ""}
-        <button class="btn btn-sm map-edit-toggle" data-edit-toggle>${editMode ? "✓ Done" : "📍 Place nodes"}</button>
+        ${editMode ? `<button class="btn btn-sm" data-show-dump title="Zobrazit výpis pozic k odeslání">📋 Výpis pozic</button>` : ""}
+        ${DEV_MAP_PLACEMENT ? `<button class="btn btn-sm map-edit-toggle" data-edit-toggle>${editMode ? "✓ Done" : "📍 Place nodes"}</button>` : ""}
       </div>
     </div>
     <div class="kanto-map ${editMode ? "is-editing" : ""}">
@@ -105,12 +118,15 @@ export function renderMap(root) {
   const stage = root.querySelector(".map-stage");
   const info = root.querySelector(".map-info");
 
-  // Přepínač režimu umístění.
-  root.querySelector("[data-edit-toggle]").addEventListener("click", () => {
-    editMode = !editMode;
-    editTarget = editMode ? firstUnplaced() : null;
-    renderMap(root);
-  });
+  // Přepínač režimu umístění (dev; tlačítko existuje jen když DEV_MAP_PLACEMENT).
+  const editToggle = root.querySelector("[data-edit-toggle]");
+  if (editToggle) {
+    editToggle.addEventListener("click", () => {
+      editMode = !editMode;
+      editTarget = editMode ? firstUnplaced() : null;
+      renderMap(root);
+    });
+  }
 
   // Výběr uzlu k umístění (čipy v liště) + kopírování výpisu.
   if (editMode) {
@@ -127,15 +143,8 @@ export function renderMap(root) {
         renderMap(root);
       });
     }
-    const copyBtn = root.querySelector("[data-copy-pos]");
-    if (copyBtn) {
-      copyBtn.addEventListener("click", () => {
-        const txt = positionsDump();
-        navigator.clipboard?.writeText(txt).catch(() => {});
-        copyBtn.textContent = "✓ Copied";
-        setTimeout(() => (copyBtn.textContent = "Copy positions"), 1500);
-      });
-    }
+    const dumpBtn = root.querySelector("[data-show-dump]");
+    if (dumpBtn) dumpBtn.addEventListener("click", openPositionsModal);
   }
 
   // Klik na scénu.
@@ -181,6 +190,8 @@ export function renderMap(root) {
   unsub = bus.on(EVENTS.STATE_CHANGED, () => updateStates(root));
 }
 
+/* ---------- DEV-PLACEMENT-START (celý blok lze při releasu smazat) ---------- */
+
 /** Lišta režimu umístění: čipy uzlů + instrukce + výpis pozic. */
 function editPanelHtml() {
   const chips = AREAS.map((a) => {
@@ -191,11 +202,61 @@ function editPanelHtml() {
   }).join("");
   return `
     <div class="map-edit">
-      <p class="map-edit-hint">Vyber uzel (klikni na jeho tečku na mapě nebo na čip níže), pak klikni na mapu, kam patří. Klikáním do prázdna pozici dolaď. Nakonec mi pošli výpis níže.</p>
+      <p class="map-edit-hint">Vyber uzel (klikni na jeho tečku na mapě nebo na čip níže), pak klikni na mapu, kam patří. Klikáním do prázdna pozici dolaď. Nakonec klikni na <strong>📋 Výpis pozic</strong> nahoře a pošli mi ten výpis.</p>
       <div class="map-chips">${chips}</div>
-      <textarea class="map-pos-dump" readonly rows="5">${positionsDump()}</textarea>
-      <button class="btn btn-sm" data-copy-pos>Copy positions</button>
     </div>`;
+}
+
+/**
+ * Vyskakovací okno s textovým výpisem pozic (nad vším → neořízne ho overflow
+ * panelu mapy). Uživatel ho zkopíruje a pošle → přepíše se do data/areas.js.
+ */
+function openPositionsModal() {
+  // Guard proti dvojímu otevření.
+  if (document.querySelector(".map-pos-modal")) return;
+
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay map-pos-modal";
+  overlay.innerHTML = `
+    <div class="modal map-pos-card">
+      <h3 style="margin:0 0 8px">📋 Výpis pozic uzlů</h3>
+      <p style="margin:0 0 10px;font-size:12px;opacity:0.8">Zkopíruj celý výpis a pošli mi ho – přepíšu ho natvrdo do <code>data/areas.js</code> a bude i na produkci.</p>
+      <textarea class="map-pos-dump" readonly rows="10">${positionsDump()}</textarea>
+      <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
+        <button class="btn btn-sm" data-copy>📋 Kopírovat</button>
+        <button class="btn btn-sm" data-close>Zavřít</button>
+      </div>
+    </div>`;
+
+  const close = () => {
+    document.removeEventListener("keydown", onKey);
+    overlay.remove();
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") close();
+  };
+
+  const ta = overlay.querySelector(".map-pos-dump");
+  overlay.querySelector("[data-copy]").addEventListener("click", (e) => {
+    ta.select();
+    navigator.clipboard?.writeText(ta.value).catch(() => {});
+    // Fallback pro prostředí bez clipboard API: text je vybraný, jde Ctrl+C.
+    try {
+      document.execCommand("copy");
+    } catch {}
+    const b = e.currentTarget;
+    b.textContent = "✓ Zkopírováno";
+    setTimeout(() => (b.textContent = "📋 Kopírovat"), 1500);
+  });
+  overlay.querySelector("[data-close]").addEventListener("click", close);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+  document.addEventListener("keydown", onKey);
+
+  document.body.appendChild(overlay);
+  ta.focus();
+  ta.select();
 }
 
 /** Textový výpis aktuálních pozic (pro přepis do data/areas.js). */
@@ -211,6 +272,8 @@ function firstUnplaced() {
   const mp = getState().mapPositions ?? {};
   return (AREAS.find((a) => !mp[a.id]) ?? AREAS[0]).id;
 }
+
+/* ---------- DEV-PLACEMENT-END ---------- */
 
 /** Přepočítá stavové třídy + pozice markerů a popisek aktivní oblasti. */
 function updateStates(root) {
