@@ -113,6 +113,46 @@ function ruleRow(key, name, desc, on) {
     </tr>`;
 }
 
+/** Popisky panelů pro přeuspořádání pořadí. */
+const PANEL_LABELS = { tabs: "Menu (taby)", battle: "Souboj", map: "Mapa / město" };
+
+/** HTML přeuspořádání pořadí panelů ve skládaném režimu (šipky nahoru/dolů). */
+function stackOrderHtml() {
+  const order = getState().settings?.stackOrder ?? ["battle", "map", "tabs"];
+  const rows = order
+    .map(
+      (key, i) => `
+      <div class="order-row">
+        <span class="order-idx">${i + 1}.</span>
+        <span class="order-name">${PANEL_LABELS[key] ?? key}</span>
+        <button class="btn btn-sm" data-order-up="${key}" ${i === 0 ? "disabled" : ""} title="Nahoru">▲</button>
+        <button class="btn btn-sm" data-order-down="${key}" ${i === order.length - 1 ? "disabled" : ""} title="Dolů">▼</button>
+      </div>`
+    )
+    .join("");
+  return `
+    <div class="settings-row settings-order">
+      <span class="settings-label">🧱 Pořadí panelů (pod sebou)</span>
+      <div class="order-list">${rows}</div>
+    </div>`;
+}
+
+/** HTML přepínače rozvržení (Auto / Široké / Pod sebou). */
+function layoutHtml() {
+  const cur = getState().settings?.layout ?? "auto";
+  const opt = (key, label, desc) =>
+    `<button class="btn spd layout-opt ${cur === key ? "active" : ""}" data-layout-set="${key}" title="${desc}">${label}</button>`;
+  return `
+    <div class="settings-row">
+      <span class="settings-label">🖥️ Rozvržení</span>
+      <span class="layout-group">
+        ${opt("auto", "Auto", "Přizpůsobí se velikosti okna – na úzkém displeji panely pod sebe")}
+        ${opt("wide", "Široké", "Vždy dva sloupce (klasické, pro velké obrazovky)")}
+        ${opt("stacked", "Pod sebou", "Vždy jeden sloupec (telefon / půl obrazovky)")}
+      </span>
+    </div>`;
+}
+
 /** HTML sekce herních pravidel (kompaktní tabulka s toggle přepínači). */
 function rulesHtml() {
   const rules = getState().settings?.rules ?? {};
@@ -140,6 +180,8 @@ function settingsBodyHtml() {
       <span class="settings-label">Game speed</span>
       <span class="speed-group">${speeds}</span>
     </div>
+    ${layoutHtml()}
+    ${stackOrderHtml()}
     ${rulesHtml()}
     ${devSectionHtml()}`;
 }
@@ -176,6 +218,34 @@ export function openSettingsModal() {
   const wireBody = () => {
     bodyEl.querySelectorAll("[data-speed]").forEach((b) =>
       b.addEventListener("click", () => setSpeed(Number(b.dataset.speed)))
+    );
+
+    // Přepínač rozvržení panelů.
+    bodyEl.querySelectorAll("[data-layout-set]").forEach((b) =>
+      b.addEventListener("click", () => {
+        getState().settings.layout = b.dataset.layoutSet;
+        commit();
+      })
+    );
+
+    // Přeuspořádání pořadí panelů (šipky).
+    const moveOrder = (key, dir) => {
+      const s = getState();
+      const cur = Array.isArray(s.settings.stackOrder)
+        ? [...s.settings.stackOrder]
+        : ["battle", "map", "tabs"];
+      const i = cur.indexOf(key);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= cur.length) return;
+      [cur[i], cur[j]] = [cur[j], cur[i]];
+      s.settings.stackOrder = cur;
+      commit();
+    };
+    bodyEl.querySelectorAll("[data-order-up]").forEach((b) =>
+      b.addEventListener("click", () => moveOrder(b.dataset.orderUp, -1))
+    );
+    bodyEl.querySelectorAll("[data-order-down]").forEach((b) =>
+      b.addEventListener("click", () => moveOrder(b.dataset.orderDown, 1))
     );
 
     // Checkboxy herních pravidel.

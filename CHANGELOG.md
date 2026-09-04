@@ -6,6 +6,17 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.63.0] – 2026-09-04 · responsive layout
+### Added
+- **Responsive layout: panels now stack vertically on narrow screens/windows instead of shrinking (playable on phones and half-screen).** New layout switch in Settings: Auto (responsive), Wide (always two columns), Stacked (always one column).
+- **Customizable stacked order.** In Stacked mode, reorder panels (Battle → Map → Menu) via arrow buttons in Settings. Rearrangement persists in saves.
+### Changed
+- **Výrazně rychlejší načtení úvodní obrazovky (title screen).** `Title_screen.png` (2,74 MB) blokoval první vykreslení; nově se servíruje jako **WebP (~488 KB) s JPG fallbackem** přes `<picture>` (−82 % dat). Obrázek má navíc `fetchpriority="high"` a `decoding="async"`. Originál PNG zachován jako `assets/Title_screen_original_backup.png`.
+### Fixed
+- **Auto battle už nevybírá sebe-poškozující tahy (recoil: Take Down, Double-Edge, Submission, Flare Blitz, Brave Bird, Wood Hammer, Wild Charge).** Dřív auto vyhodnotilo Take Down (power 90) jako „nejlepší“ útok a Pokémon si tak v auto souboji ubližoval recoilem sám sobě. Nově je auto vybere jen jako KRAJNÍ fallback (kdyby nebylo čím jiným útočit) – jinak nikdy. Manuální souboj se nemění, hráč si recoil tah dál může zvolit.
+- **Auto-učení tahů (auto battle / offline / Školka) už si recoil tahy samo nenaučí.** Vyvážená sada „útočné-first“ recoil přeskočí (fallback jen když by jinak nebyl žádný útočný tah). Existující jedinci s Take Down apod. si ho v auto souboji přestanou vybírat okamžitě a při dalším auto level-upu ho ze sady vypustí.
+- **Skládaný layout: stránka už „neuskakuje“ nahoru při kliknutí (auto battle, přepínače…).** Ve skládaném/úzkém režimu scrolluje celé okno; překreslení panelu (přepis innerHTML, hlavně rychlé tiky auto souboje) dokument na okamžik zkrátilo a prohlížeč scroll vyhodil nahoru. Nově se pozice okna při každém překreslení battle i levého panelu zachovává.
+
 ## [0.62.1] – 2026-09-03 · oprava přesunu jedinců mezi PC boxy (drag & drop)
 ### Fixed
 - **Výběr boxů při přetažení jedince už „nespadne".** Když nad horní lištu (jméno boxu) přetáhneš jedince, rozbalí se výběr boxů a **zůstane otevřený, dokud jedince držíš „v ruce"** – zavře se až po puštění na box nebo po konci tažení. Dřív se picker kvůli překreslování panelu (živé progress bary) i falešnému `dragleave` zavíral okamžitě, takže se do jiného boxu nedalo trefit.

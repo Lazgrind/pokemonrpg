@@ -40,7 +40,7 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 ---
 ## Hatching
 
-Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.539999999999964 s
+- ✅ **Líhnutí – formátování času – HOTOVO v0.58.0.** Bug kdy se zobrazovalo „9 min 13.539999999999964 s" (nezaokrouhlený čas). Opraveno v `idle.js` – `formatDuration` zaokrouhluje vstup `Math.round(sec)` před formátováním.
 
 ## Pokémoni – hodnoty jedince
 
@@ -128,10 +128,7 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
   (`breedingSystem.js`), dědění 3 IV + shiny 1/4096 při vylíhnutí
   (`inheritIvs` v `pokemonSystem.js`, `makeBredEgg` v `eggSystem.js`), UI okno
   „💞 Breeding" (`buildingView.js`). Druh i genetika skryté do vylíhnutí (R-021).
-- ⚪ **Ditto jako běžný úlovek.** Ditto je teď **dočasně starter** (aby šel
-  breeding otestovat). Cílově ho odebrat ze starterů (`teamView.js` → `STARTERS`)
-  a dát jako chytatelný druh do vhodné oblasti (`data/areas.js`), ideálně vzácně
-  (řeší až rarity-váhy výskytu per oblast).
+- ✅ **Ditto ze startérů – HOTOVO v0.56.0.** Ditto již není dočasný starter. Odebráno z `STARTERS` a ponecháno v Pokédexu jako běžný chytatelný druh pro breeding.
 - ✅ **Dědičnost tahů (egg moves) – HOTOVO v0.59.0.** Vejce z breedingu předá
   potomkovi sjednocení aktivních tahů obou rodičů, ponechá jen ty, které druh
   potomka umí naučit (celý level-up movepool), max 4 s předností před výchozí
@@ -513,10 +510,12 @@ Potřeba opravit čas hatchování, je tam třeba - 8% · 9 min 13.5399999999999
 
 ## Responzivní layout
 
-- ⚪ **Přizpůsobení rozlišení (návrh, R-031).** Layout tří panelů reagující na
-  velikost obrazovky: zúžit levý bar, roztáhnout pravý apod. Při úzkém rozlišení
-  Město skládat logicky (domek pod domkem místo vedle sebe). Řešit přes CSS
-  (media queries / clamp / grid) v `css/main.css`, ideálně bez zásahu do logiky.
+- ✅ **Přizpůsobení rozlišení (R-031) – HOTOVO v0.63.0.** Layout tří panelů reagující na
+  velikost obrazovky: pod hranicí 1000px se panely skládají do jednoho sloupce (levé menu → souboj → mapa),
+  celá stránka smí svisle scrollovat. Tři režimy: **Auto** (přizpůsobí se), **Široké** (vždy 2 sloupce),
+  **Pod sebou** (vždy 1 sloupec). Řešeno CSS grid + media queries (bez zásahu do logiky).
+- ⚪ **Plně přizpůsobitelný layout (budoucí).** Drag & drop uspořádání panelů – uživatel si sám
+  rozhodne o pořadí/velikosti (nad rámec předdefinovaných presetů).
 
 ## Ladění / drobnosti
 

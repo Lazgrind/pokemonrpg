@@ -36,9 +36,17 @@
        SETTINGS otevře nastavení. -->
   <div id="title-screen" class="title-screen">
     <div class="title-frame">
-      <img class="title-img" src="assets/Title_screen.png" alt="Pokémon Idle RPG" />
+      <picture>
+        <source srcset="assets/Title_screen.webp" type="image/webp" />
+        <img class="title-img" src="assets/Title_screen.jpg" alt="Pokémon Idle RPG"
+             fetchpriority="high" decoding="async" />
+      </picture>
       <button class="title-hotspot" data-act="continue" aria-label="Continue"></button>
       <button class="title-hotspot" data-act="settings" aria-label="Settings"></button>
+      <div class="title-loading" id="title-loading" aria-live="polite">
+        <div class="title-loading-track"><span class="title-loading-fill"></span></div>
+        <div class="title-loading-text">Načítání hry…</div>
+      </div>
     </div>
   </div>
 

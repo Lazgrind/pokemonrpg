@@ -51,7 +51,7 @@
  * @property {Array<{ uid: string, moveId: string }>} moveLearnQueue  čekající nabídky naučení tahu
  *                                     (jedinec chce nový tah, ale má plné 4 sloty → hráč volí nahrazení)
  * @property {{ seen: string[] }} pokedex  druhy potkané v souboji (chycené se odvozují z kolekce)
- * @property {{ autoBattle: boolean, speed: number, autocatch: AutocatchSettings, selectedBall: string }} settings
+ * @property {{ autoBattle: boolean, speed: number, autocatch: AutocatchSettings, selectedBall: string, layout: string, stackOrder: string[] }} settings
  *
  * @typedef {Object} AutocatchSettings
  * @property {boolean} enabled      chytat automaticky během souboje
@@ -98,6 +98,8 @@ export function createNewGame() {
       autoBattle: false, // výchozí je normální (manuální) souboj
       speed: 1, // herní rychlost (1/2/4) – globální, ovládá se v horní liště
       selectedBall: "poke",
+      layout: "auto", // rozvržení panelů: auto (responzivní) | wide (2 sloupce) | stacked (1 sloupec)
+      stackOrder: ["battle", "map", "tabs"], // pořadí panelů ve skládaném režimu (shora dolů)
       autocatch: { enabled: false, mode: "all" }, // mode: "all" | "shiny"
       // Herní pravidla / režimy (viz settingsView, battleSystem):
       //  - noItems: zakáže léčivé předměty (žádné lektvary ani jiné itemy) v souboji

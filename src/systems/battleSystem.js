@@ -612,6 +612,10 @@ function chooseAction(attacker, defender) {
   const slots = activeMoves(attacker).filter((m) => (m.pp ?? 0) > 0);
   let best = null;
   let bestScore = -1;
+  // Sebe-poškozující (recoil) tahy drží stranou jako KRAJNÍ fallback – auto je
+  // nikdy nevybere, když existuje jakýkoli jiný tah (lepší recoil než Struggle).
+  let fallback = null;
+  let fallbackScore = -1;
   // Cíl je "zdravý" (vhodný na uštědření statusu), když nemá status a má > 60 % HP.
   const targetHealthy = !defender.status && defender.hp > 0.6 * defender.stats.maxHp;
 
@@ -636,13 +640,23 @@ function chooseAction(attacker, defender) {
       score = mv.ailment && targetHealthy ? 1 : 0;
     }
 
+    // Recoil (take-down, double-edge…) auto NIKDY nevybere jako první volbu –
+    // ubližoval by sám sobě. Nech ho jen jako fallback, kdyby nebylo čím útočit.
+    if (mv.effect?.kind === "recoil") {
+      if (score > fallbackScore) {
+        fallbackScore = score;
+        fallback = { slot, move: mv };
+      }
+      continue;
+    }
+
     if (score > bestScore) {
       bestScore = score;
       best = { slot, move: mv };
     }
   }
 
-  return best ?? { slot: null, move: STRUGGLE };
+  return best ?? fallback ?? { slot: null, move: STRUGGLE };
 }
 
 /** Hláška při nabíjení dvoukolového tahu (první kolo). */
