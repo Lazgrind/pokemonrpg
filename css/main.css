@@ -383,19 +383,36 @@ body {
 #map-panel    { grid-area: map; }
 
 /* ---- Responzivní / skládané rozvržení (v0.63.0) ---- */
-/* Layout řídí atribut body[data-layout]: "auto" (výchozí, přizpůsobí se šířce),
-   "wide" (vždy 2 sloupce), "stacked" (vždy 1 sloupec – telefon / půl obrazovky).
-   Ve stacked režimu jdou panely pod sebe (taby → souboj → mapa) a celá stránka
-   smí svisle scrollovat (body dostane overflow-y:auto místo hidden). */
-body[data-layout="stacked"] { overflow-y: auto; overflow-x: hidden; }
-body[data-layout="stacked"] #layout {
+/* Layout řídí atribut body[data-layout]:
+   - "auto"    – výchozí, přizpůsobí se šířce (pod 1000px se skládá pod sebe),
+   - "wide"    – vždy 2 sloupce,
+   - "stacked" – vždy 1 sloupec (panely pod sebe: taby → souboj → mapa),
+   - "mobile"  – jako stacked, ale NAVÍC rozdělí battle area svisle (scéna
+                 nahoře, log + ovládání pod ní) pro telefon.
+   Ve skládaných režimech smí celá stránka svisle scrollovat (body dostane
+   overflow-y:auto místo hidden). */
+body[data-layout="stacked"],
+body[data-layout="mobile"] { overflow-y: auto; overflow-x: hidden; }
+body[data-layout="stacked"] #layout,
+body[data-layout="mobile"] #layout {
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
 }
 body[data-layout="stacked"] #city-panel,
-body[data-layout="stacked"] #map-panel { overflow: visible; }
+body[data-layout="stacked"] #map-panel,
+body[data-layout="mobile"] #city-panel,
+body[data-layout="mobile"] #map-panel { overflow: visible; }
 body[data-layout="stacked"] #battle-panel { min-height: 60vh; }
+
+/* Mobilní režim (preset "mobile"): battle area se rozdělí SVISLE – scéna souboje
+   nahoře (pevná výška), log + ovládání pod ní (ne vedle). Jinak by se scéna na
+   úzké obrazovce zúžila tak, že v manuálu není vidět nic než tlačítko. */
+body[data-layout="mobile"] #battle-panel { min-height: auto; }
+body[data-layout="mobile"] .battle-body { flex-direction: column; }
+body[data-layout="mobile"] .battle-field { flex: 0 0 auto; min-height: clamp(280px, 50vh, 520px); }
+body[data-layout="mobile"] .battle-side { flex: 0 0 auto; width: 100%; }
+body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-height: 28vh; min-height: 110px; }
 
 /* Automatické skládání: v režimu "auto" pod hranicí šířky (pokryje i půl
    obrazovky na 1920px = 960px). Nad hranicí zůstávají 2 sloupce. */
