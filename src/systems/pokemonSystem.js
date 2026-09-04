@@ -57,6 +57,12 @@ function isAttackingMove(moveId) {
   return (getMove(moveId)?.power ?? 0) > 0;
 }
 
+/** Ubližuje tah sám svému uživateli (recoil – take-down, double-edge…)? Auto
+ *  režim si ho NIKDY sám nenaučí ani nevybere; v manuálu si ho hráč může zvolit. */
+function isSelfHarmingMove(moveId) {
+  return getMove(moveId)?.effect?.kind === "recoil";
+}
+
 /**
  * Vybere „bojeschopnou" sadu ≤ MAX_MOVES tahů z kandidátů: ÚTOČNÉ tahy mají
  * přednost (zaplní klidně všechny sloty), status tahy jen doplní zbylé sloty.
@@ -69,8 +75,11 @@ function isAttackingMove(moveId) {
  */
 function balancedMovesetIds(candidateIds) {
   const uniq = [...new Set(candidateIds)].filter((id) => getMove(id));
-  const attacking = uniq.filter((id) => isAttackingMove(id));
   const status = uniq.filter((id) => !isAttackingMove(id));
+  // Útočné tahy: sebe-poškozující (recoil) do auto sady NIKDY nedáváme – jen jako
+  // fallback, kdyby jinak nebylo čím útočit (jedinec nesmí uvíznout bez damage).
+  const attackingSafe = uniq.filter((id) => isAttackingMove(id) && !isSelfHarmingMove(id));
+  const attacking = attackingSafe.length ? attackingSafe : uniq.filter((id) => isAttackingMove(id));
   const chosen = attacking.slice(-MAX_MOVES);
   const statusSlots = Math.max(0, MAX_MOVES - chosen.length);
   for (const id of status.slice(-statusSlots)) chosen.push(id);

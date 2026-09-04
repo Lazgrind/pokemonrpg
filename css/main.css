@@ -274,6 +274,50 @@ body {
 .title-hotspot:hover { background: rgba(255, 255, 255, 0.12); }
 .title-hotspot:active { background: rgba(0, 0, 0, 0.12); }
 
+/* Indikátor načítání na title screenu: dokud se hra pod overlayem nenačte, běží
+   neurčitý (animovaný) proužek; po dokončení init() se přepne na "ready". */
+.title-loading {
+  position: absolute;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  width: min(60%, 360px);
+  text-align: center;
+  font: 600 13px/1.4 system-ui, sans-serif;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+.title-loading-track {
+  position: relative;
+  height: 8px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  margin-bottom: 6px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.title-loading-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -40%;
+  width: 40%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #3fa9f5, #6ee7b7);
+  animation: title-loading-slide 1.1s ease-in-out infinite;
+}
+@keyframes title-loading-slide {
+  0% { left: -40%; }
+  100% { left: 100%; }
+}
+/* Hotovo: proužek se zastaví, vyplní se celý a zezelená. */
+.title-loading.is-ready .title-loading-fill {
+  animation: none;
+  left: 0;
+  width: 100%;
+  background: #4ade80;
+}
+
 .btn {
   background: var(--bg-panel-2);
   color: var(--text);
@@ -337,6 +381,52 @@ body {
    vejde do své buňky; posouvat se smí jen log uvnitř (viz .battle-log). */
 #battle-panel { grid-area: battle; display: flex; flex-direction: column; overflow: hidden; }
 #map-panel    { grid-area: map; }
+
+/* ---- Responzivní / skládané rozvržení (v0.63.0) ---- */
+/* Layout řídí atribut body[data-layout]: "auto" (výchozí, přizpůsobí se šířce),
+   "wide" (vždy 2 sloupce), "stacked" (vždy 1 sloupec – telefon / půl obrazovky).
+   Ve stacked režimu jdou panely pod sebe (taby → souboj → mapa) a celá stránka
+   smí svisle scrollovat (body dostane overflow-y:auto místo hidden). */
+body[data-layout="stacked"] { overflow-y: auto; overflow-x: hidden; }
+body[data-layout="stacked"] #layout {
+  display: flex;
+  flex-direction: column;
+  flex: 0 0 auto;
+}
+body[data-layout="stacked"] #city-panel,
+body[data-layout="stacked"] #map-panel { overflow: visible; }
+body[data-layout="stacked"] #battle-panel { min-height: 60vh; }
+
+/* Automatické skládání: v režimu "auto" pod hranicí šířky (pokryje i půl
+   obrazovky na 1920px = 960px). Nad hranicí zůstávají 2 sloupce. */
+@media (max-width: 1000px) {
+  body[data-layout="auto"] { overflow-y: auto; overflow-x: hidden; }
+  body[data-layout="auto"] #layout {
+    display: flex;
+    flex-direction: column;
+    flex: 0 0 auto;
+  }
+  body[data-layout="auto"] #city-panel,
+  body[data-layout="auto"] #map-panel { overflow: visible; }
+  body[data-layout="auto"] #battle-panel { min-height: 60vh; }
+}
+
+/* Úzké displeje (telefon): stáhnout mezery, zalomit horní lištu, menší logo. */
+@media (max-width: 560px) {
+  :root { --gap: 8px; }
+  .panel { padding: 10px; }
+  #topbar { flex-wrap: wrap; gap: 10px; padding: 8px 10px; }
+  .logo { font-size: 16px; }
+}
+
+/* Přepínač rozvržení v nastavení. */
+.layout-group { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+
+/* Přeuspořádání pořadí panelů (skládaný režim). */
+.order-list { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+.order-row { display: flex; align-items: center; gap: 8px; }
+.order-idx { color: var(--text-dim); min-width: 18px; text-align: right; }
+.order-name { flex: 1; min-width: 0; }
 
 .panel {
   background: var(--bg-panel);

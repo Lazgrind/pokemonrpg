@@ -43,6 +43,7 @@ import { getMove } from "../../data/moves.js";
 import { isCaught } from "../systems/pokedex.js";
 import { typeColor, typeBadge } from "./typeColors.js";
 import { statusBadge } from "./statusBadge.js";
+import { preserveWindowScroll } from "./scrollPreserve.js";
 
 /** Podmenu manuálního souboje (jen manuál mód): root | fight | bag | switch | item-target. */
 let menuMode = "root";
@@ -603,7 +604,14 @@ function interludeHtml(b) {
   </div>`;
 }
 
+/** Překreslí battle-panel a přitom zachová scroll pozici OKNA (skládaný layout
+ *  scrolluje celé okno; přepis innerHTML by ho jinak vyhodil nahoru – hlavně
+ *  v auto módu, kde BATTLE_UPDATE tiká rychle). Vlastní vykreslení viz drawInner. */
 function draw(root) {
+  preserveWindowScroll(() => drawInner(root));
+}
+
+function drawInner(root) {
   lastRoot = root;
   const b = getBattle();
 

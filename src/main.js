@@ -26,7 +26,7 @@ import { openChangelog } from "./ui/changelogView.js";
 import { initMoveLearnPrompts } from "./ui/moveLearnView.js";
 import { initStarterPrompt } from "./ui/starterModal.js";
 import { ballIconHtml } from "./ui/ballIcon.js";
-import { scrollAware } from "./ui/scrollPreserve.js";
+import { scrollAware, preserveWindowScroll } from "./ui/scrollPreserve.js";
 import { POKEBALLS } from "../data/pokeballs.js";
 
 /** Interval automatického ukládání (ms). */
@@ -37,6 +37,21 @@ function el(id) {
   const node = document.getElementById(id);
   if (!node) throw new Error(`Chybí element #${id} v index.html`);
   return node;
+}
+
+/** Mapování klíčů pořadí na ID panelů. */
+const PANEL_BY_KEY = { tabs: "city-panel", battle: "battle-panel", map: "map-panel" };
+
+/** Promítne rozvržení z nastavení: režim do body[data-layout] + pořadí panelů
+ *  (inline `order`, projeví se jen ve skládaném/flex režimu; v grid režimu je order ignorován). */
+function applyLayout() {
+  const s = getState().settings ?? {};
+  document.body.dataset.layout = s.layout ?? "auto";
+  const order = Array.isArray(s.stackOrder) ? s.stackOrder : ["battle", "map", "tabs"];
+  order.forEach((key, i) => {
+    const node = document.getElementById(PANEL_BY_KEY[key]);
+    if (node) node.style.order = String(i);
+  });
 }
 
 /** Krátká stavová hláška v horní liště. */
@@ -154,8 +169,9 @@ function init() {
   renderLeftPanel(el("city-panel"), setStatus);
   renderBattle(el("battle-panel"));
   renderMap(el("map-panel"));
+  applyLayout();
 
-  // 2b) Obnovit rozehraný souboj ze save (pozastavený) – „přímý save“:
+  // 2b) Obnovit rozehraný souboj ze save (pozastavený) – „přímý save”:
   // po F5 zůstane HP i nepřítel zachovaný, souboj se jen pozastaví.
   // (Case offline: hráč už má případný level-up z idle, restore ho zohlední.)
   restoreBattle(getState().battle);
@@ -169,8 +185,11 @@ function init() {
   // Levý panel obsahuje scrollovací seznamy (tým/PC/pokédex) → jeho překreslení
   // odložíme během aktivního scrollování, ať kolečko neseká (viz scrollAware).
   // Resource bar (zlato) není scrollovací, ať zůstane živý, necháváme napřímo.
-  const renderPanel = scrollAware(() => renderLeftPanel(el("city-panel"), setStatus));
+  const renderPanel = scrollAware(() =>
+    preserveWindowScroll(() => renderLeftPanel(el("city-panel"), setStatus))
+  );
   bus.on(EVENTS.STATE_CHANGED, () => {
+    applyLayout();
     renderResourceBar(el("resource-bar"));
     renderPanel();
   });
@@ -231,6 +250,14 @@ function init() {
     // Výběr startéra při nové hře (prázdná kolekce) – modální okno.
     initStarterPrompt();
   });
+
+  // Indikator nacitani na title screenu → hotovo (hra je pod overlayem pripravena).
+  const titleLoading = document.getElementById("title-loading");
+  if (titleLoading) {
+    titleLoading.classList.add("is-ready");
+    const readyText = titleLoading.querySelector(".title-loading-text");
+    if (readyText) readyText.textContent = "Připraveno – klikni pro vstup";
+  }
 
   const versionTag = el("version-tag");
   versionTag.textContent = `Pokémon Idle RPG · v${VERSION}`;
