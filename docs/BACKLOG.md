@@ -176,8 +176,12 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
   zvyšovat `tier` a tím odemykat další typy ballů v obchodě.
 - ⚪ **Jak získat Master Ball.** Teď neprodejný a bez zdroje. Navrhnout milník/
   odměnu (např. dokončení oblasti, achievement).
-- ✅ **Autocatch fallback na jiný ball – HOTOVO v0.58.0.** Když vybraný typ dojde,
-  autocatch přepne na nejlevnější vlastněný (`battleSystem.resolveAutocatchBall`).
+- ✅ **Autocatch – výběr míčku + auto-vypnutí (ZMĚNA v0.64.0).** ~~Dřív (v0.58.0)
+  fallback na nejlevnější vlastněný~~ → uživatel to VRÁTIL: autocatch teď má
+  **vlastní výběr typu** (`#ac-ball` select, `autocatch.ball`, ukazuje počty) a
+  používá **JEN vybraný typ**. Když dojde → `resolveAutocatchBall` vrátí null a
+  tick loop **autocatch automaticky vypne** (`setAutocatch({enabled:false})`) +
+  hláška do logu. NIKDY nesáhne po jiném (dražším) míčku.
 - ⚪ **Skutečné ikony ballů** – místo emoji použít obrázky z `assets/pokeballs/`.
   Uživatel dodává sprite jednotlivých ballů; použít je **všude**, kde je ball
   vidět (souboj, obchod, lišta, karta týmu). Jedna pomocná funkce
@@ -327,7 +331,30 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 
 ## Mapa světa
 
-- ⚪ **Mapa vpravo dole (návrh, R-028).** V pravém panelu (nebo jeho spodní
+- 🔵 **Klikací mapa Kanto (MVP) – HOTOVO v0.64.0.** Obrázek `assets/map/kanto.webp`
+  + absolutně (%) pozicované klikací markery (`src/ui/mapView.js`), model odemykání
+  přes **visited-graf** (`unlock:{start}|{visited}|{badge}`, `progress.visited[]`),
+  volba oblasti klikem → `setActiveArea`. Save v21→v24. Nový **tabový layout**
+  (`src/ui/mainPanel.js`: Battle/City/PC/Pokédex nahoře, Team 3×2 dlaždice dole,
+  mapa vpravo). `leftPanel.js` smazán. **Badge-gating základ** připraven
+  (`isAreaUnlocked(area, visited, badges)` + `unlock.badge`), zatím nevyužit.
+
+### DALŠÍ KROKY (pokračování v úterý 2026-09-08) — priorita shora
+1. ⚪ **Vizuální ověření uživatelem** nového layoutu ve hře (velikost mapy 48vh,
+   vejde-li se team-grid 3×2, přepínání tabů, City tab jen ve městě, Battle tab
+   i ve městě). Doladit CSS podle oka.
+2. ⚪ **Doladit pozice markerů** – uživatel v placement módu naskládá uzly a
+   pošle **positionsDump** → zadrátovat `x`/`y` do `data/areas.js`.
+3. ⚪ **Skutečné GYMY.** Ve City tabu tlačítko/budova Gym → přepnutí na **Battle
+   tab** → gym souboj (vůdce + jeho tým/level cap) → po výhře **udělit badge**
+   (`progress.badges.push(...)`). Badge pak odemyká další route přes `unlock.badge`
+   (mechanika už připravená). První: Pewter City (Brock).
+4. ⚪ **Trenéři na routách** – náhodná/pevná setkání s trenéry (tým, odměna),
+   odděleně od divokých Pokémonů.
+5. ⚪ **Odemknout fázi 5 Kanto** (spawny nových druhů dle oblastí) z
+   alldex-data-strategy – navázat na postup po mapě + `progress.tier` pro bally.
+
+- ⚪ **Mapa vpravo dole (původní návrh, R-028).** V pravém panelu (nebo jeho spodní
   části) reálný obrázek oblasti s vyznačením, **kde postava je**. Cíl přesunu
   zatím jako bar/výběr (kam jít). Držet klasická progress pravidla per mapa
   (postup odemyká další lokace). Nová `data/map.js` (uzly lokací + souřadnice pro

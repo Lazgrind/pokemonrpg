@@ -87,6 +87,7 @@ export function renderTeamTab(root, onStatus) {
     if (p) {
       slots.push(`
         <div class="card team-slot clickable" data-open="${p.uid}" title="Show card">
+          <span class="slot-num">${i + 1}</span>
           <div><strong>${displayName(p)}</strong> ${genderSymbolHtml(p.gender)} · Lv ${p.level} ${p.owned?.caughtBall ? ballIconHtml(p.owned.caughtBall, { size: 16 }) : ""} ${typeBadges(p)}${statusBadge(p.status)}</div>
           <div>${ivEvLine(p)}</div>
           ${statBars(p)}
@@ -99,7 +100,7 @@ export function renderTeamTab(root, onStatus) {
           </div>
         </div>`);
     } else {
-      slots.push(`<div class="card team-slot empty">Empty slot ${i + 1}</div>`);
+      slots.push(`<div class="card team-slot empty"><span class="slot-num">${i + 1}</span>Empty</div>`);
     }
   }
 
@@ -110,7 +111,9 @@ export function renderTeamTab(root, onStatus) {
       <button class="btn btn-sm" data-bag title="Use healing items">🎒 Bag</button>
     </div>
     ${team.length === 0 ? `<p class="placeholder">Your team is empty. Add Pokémon from the Pokédex tab.</p>` : ""}
-    ${slots.join("")}
+    <div class="team-grid">
+      ${slots.join("")}
+    </div>
   `;
   restoreScroll(root, _savedScroll);
 

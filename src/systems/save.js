@@ -14,6 +14,7 @@ import {
 } from "../core/state.js";
 import { randomIvs, emptyEvs, rollGender, computeStats, defaultMovesFor, randomNature, repairWeakMoveset } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
+import { AREAS } from "../../data/areas.js";
 
 /** Klíč v localStorage. */
 const SAVE_KEY = "pokemonIdleRpg.save";
@@ -232,6 +233,33 @@ function migrate(data) {
   if (data.saveVersion < 21) {
     for (const p of data.collection ?? []) repairWeakMoveset(p);
     data.saveVersion = 21;
+  }
+  if (data.saveVersion < 22) {
+    // Klikací mapa: aktivní oblast + odznaky (viz data/areas.js, mapView.js).
+    data.progress = data.progress ?? { tier: 1 };
+    if (!data.progress.activeAreaId) data.progress.activeAreaId = "route-01";
+    if (!Array.isArray(data.progress.badges)) data.progress.badges = [];
+    if (!data.mapPositions) data.mapPositions = {}; // override pozic uzlů z "režimu umístění"
+    data.saveVersion = 22;
+  }
+  // v22 → v23: nový výchozí autocatch mód "none" (zapnutí Auto catch samo nezačne
+  // hned chytat). Kdo autocatch nikdy nezapnul (enabled=false), dostane "none"
+  // místo starého defaultu "all"; komu běžel (enabled=true), volbu necháme.
+  if (data.saveVersion < 23) {
+    const ac = data.settings?.autocatch;
+    if (ac && ac.enabled === false && ac.mode === "all") ac.mode = "none";
+    data.saveVersion = 23;
+  }
+  // v23 → v24: postup přes NÁVŠTĚVY (progress.visited) místo odemčení odznaky.
+  // Staré save: označíme všechny oblasti jako navštívené (dřív byly všechny
+  // odemčené), aby nikdo nepřišel o přístup – žádná regrese. Nová hra začíná
+  // jen s Pallet Townem (viz createNewGame, data/areas.js).
+  if (data.saveVersion < 24) {
+    if (!data.progress) data.progress = { tier: 1, badges: [] };
+    if (!Array.isArray(data.progress.visited)) {
+      data.progress.visited = AREAS.map((a) => a.id);
+    }
+    data.saveVersion = 24;
   }
   return data;
 }

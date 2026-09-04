@@ -47,22 +47,27 @@
  *                                     Uspořádání drží hráč (drag & drop); pcSystem.reconcile()
  *                                     zaručí, že každý vlastněný jedinec mimo tým je právě v 1 slotu.
  * @property {Array<{ id: string, speciesId: string }>} eggs  nalezená vejce (líhnou se ve Školce)
- * @property {{ tier: number }} progress  postup světem (odemyká typy ballů apod.)
+ * @property {{ tier: number, activeAreaId: string, visited: string[], badges: string[] }} progress  postup světem:
+ *   tier (odemyká typy ballů), activeAreaId (aktuální oblast na mapě – kde se bojuje),
+ *   visited (id navštívených oblastí → odemykají další uzly mapy, viz data/areas.js),
+ *   badges (získané odznaky z gymů; gym gating přibude později)
  * @property {Array<{ uid: string, moveId: string }>} moveLearnQueue  čekající nabídky naučení tahu
  *                                     (jedinec chce nový tah, ale má plné 4 sloty → hráč volí nahrazení)
  * @property {{ seen: string[] }} pokedex  druhy potkané v souboji (chycené se odvozují z kolekce)
  * @property {{ autoBattle: boolean, speed: number, autocatch: AutocatchSettings, selectedBall: string, layout: string, stackOrder: string[] }} settings
  *
  * @typedef {Object} AutocatchSettings
- * @property {boolean} enabled      chytat automaticky během souboje
- * @property {"all"|"shiny"} mode   které chytat: všechny, nebo jen shiny
+ * @property {boolean} enabled       chytat automaticky během souboje
+ * @property {"none"|"all"|"shiny"} mode  které chytat: nic / všechny / jen shiny
+ * @property {string} ball           vyhrazený typ míčku pro autocatch (nezávislý na selectedBall);
+ *                                   když dojde, autocatch se sám vypne (nesahá po jiných)
  * @property {{ buildings: Record<string, { level: number }>, daycare?: { uid: string|null, buffer: number, eggs?: Array<{ id: string, elapsedSec: number }>, breeding?: { a: string|null, b: string|null, buffer: number } } }} city  budovy města + sloty školky (výcvik + inkubace vajec + breeding)
  */
 
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 21;
+export const CURRENT_SAVE_VERSION = 24;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
@@ -91,7 +96,12 @@ export function createNewGame() {
     team: [],
     pcBoxes: [{ name: "Box 1", slots: Array(PC_BOX_SIZE).fill(null) }], // úložiště mimo tým (viz pcSystem)
     eggs: [], // nalezená vejce; líhnou se ve Školce (viz eggSystem)
-    progress: { tier: 1 },
+    // Start doma v Pallet Townu; Route 1 je odemčená (start), vstup na ni odemkne
+    // Viridian City atd. (řetěz viz data/areas.js). visited = kde už hráč byl.
+    progress: { tier: 1, activeAreaId: "pallet-town", visited: ["pallet-town"], badges: [] },
+    // Override pozic uzlů na mapě (areaId → {x,y} v %). Prázdné = použijí se
+    // výchozí pozice z data/areas.js. Plní je "režim umístění" v mapView.
+    mapPositions: {},
     moveLearnQueue: [], // čekající nabídky naučení tahu při plných slotech (viz pokemonSystem)
     pokedex: { seen: [] }, // druhy potkané v souboji (viz pokedex.js)
     settings: {
@@ -100,7 +110,7 @@ export function createNewGame() {
       selectedBall: "poke",
       layout: "auto", // rozvržení panelů: auto (responzivní) | wide (2 sloupce) | stacked (1 sloupec) | mobile (1 sloupec + svislé rozdělení souboje)
       stackOrder: ["battle", "map", "tabs"], // pořadí panelů ve skládaném režimu (shora dolů)
-      autocatch: { enabled: false, mode: "all" }, // mode: "all" | "shiny"
+      autocatch: { enabled: false, mode: "none", ball: "poke" }, // mode: "none" (nechytat) | "all" | "shiny"; ball = vyhrazený typ míčku
       // Herní pravidla / režimy (viz settingsView, battleSystem):
       //  - noItems: zakáže léčivé předměty (žádné lektvary ani jiné itemy) v souboji
       //  - noPotions: zakáže jen lektvary (Potion apod.), ostatní předměty ok

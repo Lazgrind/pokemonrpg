@@ -92,6 +92,13 @@ function devSectionHtml() {
       </div>
       ${targetControls}
 
+      <div class="dev-row">
+        <span class="dev-sublabel">Map</span>
+        <button class="btn btn-sm" data-map-reveal>${
+          getState().settings?.mapReveal ? "👁 Nodes: show all" : "🧭 Nodes: by progress"
+        }</button>
+      </div>
+
       <div class="dev-feedback placeholder">${lastDevMsg}</div>
     </div>`;
 }
@@ -114,7 +121,7 @@ function ruleRow(key, name, desc, on) {
 }
 
 /** Popisky panelů pro přeuspořádání pořadí. */
-const PANEL_LABELS = { tabs: "Menu (taby)", battle: "Souboj", map: "Mapa / město" };
+const PANEL_LABELS = { battle: "Hlavní panel (souboj/taby)", map: "Mapa", tabs: "Tým" };
 
 /** HTML přeuspořádání pořadí panelů ve skládaném režimu (šipky nahoru/dolů). */
 function stackOrderHtml() {
@@ -281,6 +288,15 @@ export function openSettingsModal() {
         }
       })
     );
+
+    // Přepínač viditelnosti uzlů na mapě: vše (dev) ↔ jen odemčené (reálný postup).
+    const mapBtn = bodyEl.querySelector("[data-map-reveal]");
+    if (mapBtn) mapBtn.addEventListener("click", () => {
+      const s = getState().settings;
+      s.mapReveal = !s.mapReveal;
+      commit(); // STATE_CHANGED → mapa i tato sekce se překreslí
+      showDevMsg(s.mapReveal ? "Map: showing ALL nodes." : "Map: nodes by progress.");
+    });
 
     // Výběr cílového jedince pro level/shiny.
     const sel = bodyEl.querySelector("[data-dev-target]");

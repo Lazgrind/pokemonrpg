@@ -9,8 +9,8 @@ import { VERSION } from "./core/version.js";
 import { bus, EVENTS } from "./core/events.js";
 import { getState } from "./core/state.js";
 import { loadGame, newGame, saveGame } from "./systems/save.js";
-import { renderLeftPanel, openLeftPanelTab } from "./ui/leftPanel.js";
-import { renderBattle } from "./ui/battleView.js";
+import { renderMainPanel, openMainTab } from "./ui/mainPanel.js";
+import { renderTeamTab } from "./ui/teamView.js";
 import { restore as restoreBattle } from "./systems/battleSystem.js";
 import { applyOfflineProgress } from "./systems/idle.js";
 import { applyDaycareOffline, startDaycareLoop } from "./systems/daycare.js";
@@ -40,7 +40,7 @@ function el(id) {
 }
 
 /** Mapování klíčů pořadí na ID panelů. */
-const PANEL_BY_KEY = { tabs: "city-panel", battle: "battle-panel", map: "map-panel" };
+const PANEL_BY_KEY = { tabs: "team-panel", battle: "main-panel", map: "map-panel" };
 
 /** Promítne rozvržení z nastavení: režim do body[data-layout] + pořadí panelů
  *  (inline `order`, projeví se jen ve skládaném/flex režimu; v grid režimu je order ignorován). */
@@ -118,7 +118,7 @@ function renderResourceBar(root) {
   // Klikatelné položky lišty (zatím jen ikona Pokédexu → otevře záložku).
   root.querySelectorAll(".resource-clickable").forEach((node) => {
     const open = () => {
-      if (node.dataset.action === "pokedex") openLeftPanelTab("pokedex");
+      if (node.dataset.action === "pokedex") openMainTab("pokedex");
     };
     node.addEventListener("click", open);
     node.addEventListener("keydown", (e) => {
@@ -165,9 +165,10 @@ function init() {
     offlineEgg = applyEggOffline(elapsedMs);
   }
 
-  // 2) Vykreslit panely.
-  renderLeftPanel(el("city-panel"), setStatus);
-  renderBattle(el("battle-panel"));
+  // 2) Vykreslit panely. renderMainPanel postaví i battle podpanel (nutné před
+  // restoreBattle, které do něj obnoví rozehraný souboj).
+  renderMainPanel(el("main-panel"), setStatus);
+  renderTeamTab(el("team-panel"), setStatus);
   renderMap(el("map-panel"));
   applyLayout();
 
@@ -186,7 +187,10 @@ function init() {
   // odložíme během aktivního scrollování, ať kolečko neseká (viz scrollAware).
   // Resource bar (zlato) není scrollovací, ať zůstane živý, necháváme napřímo.
   const renderPanel = scrollAware(() =>
-    preserveWindowScroll(() => renderLeftPanel(el("city-panel"), setStatus))
+    preserveWindowScroll(() => {
+      renderMainPanel(el("main-panel"), setStatus);
+      renderTeamTab(el("team-panel"), setStatus);
+    })
   );
   bus.on(EVENTS.STATE_CHANGED, () => {
     applyLayout();

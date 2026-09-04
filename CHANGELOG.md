@@ -6,6 +6,23 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.64.0] – 2026-09-04 · klikací mapa + nové rozvržení panelů
+### Added
+- **Klikací mapa světa (à la PokeClicker / nintendo).** Panel Mapy je nově interaktivní art mapa Kanta s klikacími uzly (města i routy). Klik na uzel tě „přesune" – nastaví aktivní oblast a souboje pak spawnují nepřátele odsud. Aktivní oblast je zvýrazněná (pulzující marker), aktuální lokace se ukazuje pod mapou.
+- **MVP rozsah: celá linka po Pewter City (1. gym)** – Pallet Town → Route 1 → Viridian City → Route 2 → Viridian Forest → Pewter City. Route 22 je volitelná západní odbočka od Viridianu (grinding). Routy mají vlastní divoké druhy (Viridian Forest: Caterpie/Metapod/Weedle/Kakuna/Pidgey + vzácně Pikachu); města jsou zatím jen orientační body (obchody a Gym přibudou). Diglett's Cave a Route 3 patří až za Pewter → přibudou později.
+- **Lineární postup přes NÁVŠTĚVY.** Pallet Town máš od začátku, Route 1 je otevřená. Vstup na uzel odemyká navazující (Route 1 → Viridian City → Route 2 + Route 22 → Viridian Forest → Pewter City). Hráč vidí jen odemčené uzly; zamčené jsou neviditelné.
+- **Záložka City je podmíněná lokací** – ukáže se jen když jsi ve městě, na routě mizí.
+- **Dev přepínač viditelnosti uzlů** (Nastavení → Dev): „ukázat všechny uzly" vs. „podle postupu" – ať se dá mapa ladit bez reálného průchodu.
+- **Umísťovací režim mapy (📍):** uzly si na art mapu naklikáš sám – vybereš uzel (klikem na jeho tečku na mapě nebo na čip), klikneš kam patří; přepínač skrytí popisků (ať tag jednoho uzlu nepřekáží v kliknutí na druhý). Pozice se uloží a zobrazí jako výpis k přepsání do dat.
+- **Badge-gating oblastí (základ):** `unlock.badge` navíc vyžaduje odznak z gymu (platí zároveň s návštěvou) – připraveno pro route za Brockem. Gymy zatím žádný odznak nedávají.
+- **Auto catch: výběr vyhrazeného Poké Ballu.** Vedle módu (None/All/Shiny) si vybereš, kterým typem míčku autocatch chytá. **Když ten typ dojde, autocatch se sám vypne** a nesáhne po jiných (dražších) míčcích.
+- **Art mapa optimalizována:** `Mapa-Kanto.png` (9,2 MB) → `kanto.webp` (~430 KB, 1600×1131) kvůli rychlosti načtení.
+### Changed
+- **Nové rozvržení panelů.** Nahoře vlevo tabový panel (Battle / City / PC / Pokédex), vpravo mapa; dole přes celou šířku kompaktní **Tým jako mřížka 3×2 s čísly slotů**. Souboj i správcovské záložky tak sdílí jeden velký panel a tým je pořád na očích. (City se tu objeví jen ve městě.)
+- **Souboj startuje v aktivní oblasti mapy** (dřív natvrdo Route 1). Ve městě (bez divokých druhů) souboj nejde spustit – hra vyzve k výběru route na mapě.
+- **Auto catch má nově výchozí mód „None".** Po zapnutí Auto catch se hned nezačne chytat vše – nejdřív vyber, co chytat. Komu Auto catch nikdy neběžel, přepne se ze starého „All" na „None".
+- **Save v21 → v24:** doplněno `progress.activeAreaId`, `progress.visited` (navštívené oblasti), `progress.badges`, `autocatch.ball` (vyhrazený míček) a přenastaven výchozí autocatch mód na „none". Staré savy dostanou všechny oblasti jako navštívené (žádná regrese). Zpětně kompatibilní.
+
 ## [0.63.1] – 2026-09-04 · mobilní layout
 ### Added
 - **Nový layout „Mobil" (v Nastavení): jednosloupcové rozvržení jako „Pod sebou", ale battle area je rozdělená svisle – scéna souboje nahoře, log a ovládání pod ní** (na úzké obrazovce se scéna nezmenší jen na tlačítko battle). Oproti módu „Pod sebou" dává lepší přehled v manuálním souboji na telefonu.

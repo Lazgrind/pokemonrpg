@@ -300,8 +300,17 @@ function headHtml(b) {
     }
   }
   const acMode = `<select id="ac-mode" class="ac-mode" ${ac.enabled ? "" : "disabled"} title="Auto catch: which Pokémon to catch">
+      <option value="none" ${ac.mode === "none" ? "selected" : ""}>None</option>
       <option value="all" ${ac.mode === "all" ? "selected" : ""}>All</option>
       <option value="shiny" ${ac.mode === "shiny" ? "selected" : ""}>Shiny only</option>
+    </select>`;
+  // Výběr míčku vyhrazeného pro autocatch (nezávislý na ručním selectedBall).
+  // Ukáže počet kusů; když typ dojde, autocatch se sám vypne (viz battleSystem).
+  const balls = getState().resources.balls ?? {};
+  const acBall = `<select id="ac-ball" class="ac-mode" ${ac.enabled ? "" : "disabled"} title="Auto catch: which Poké Ball to use (never switches to another)">
+      ${POKEBALLS.map(
+        (ball) => `<option value="${ball.id}" ${ball.id === ac.ball ? "selected" : ""}>${ball.name} (${balls[ball.id] ?? 0})</option>`
+      ).join("")}
     </select>`;
   return `<div class="battle-head">
     <h2 class="panel-title">Battle Area${b ? ` — ${b.area.name}` : ""}</h2>
@@ -311,6 +320,7 @@ function headHtml(b) {
       <label class="tg"><input type="checkbox" id="tg-autobattle" ${getAutoBattle() ? "checked" : ""}/> Auto battle</label>
       <label class="tg"><input type="checkbox" id="tg-autocatch" ${ac.enabled ? "checked" : ""}/> Auto catch</label>
       ${acMode}
+      ${acBall}
     </div>
   </div>`;
 }
@@ -708,6 +718,8 @@ function wire(root) {
   if (tgCatch) tgCatch.addEventListener("change", (e) => setAutocatch({ enabled: e.target.checked }));
   const acMode = root.querySelector("#ac-mode");
   if (acMode) acMode.addEventListener("change", (e) => setAutocatch({ mode: e.target.value }));
+  const acBall = root.querySelector("#ac-ball");
+  if (acBall) acBall.addEventListener("change", (e) => setAutocatch({ ball: e.target.value }));
 
   const catchBtn = root.querySelector("#catch-btn");
   if (catchBtn) catchBtn.addEventListener("click", () => attemptCatch());
