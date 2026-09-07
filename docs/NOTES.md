@@ -13,6 +13,102 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-09-07 – Kompletní Kanto mapa + design trenérů, gymů a vícevrstvého gatingu
+
+### Kanto mapa – datová vrstva HOTOVA (v0.64.0)
+- `data/areas.js` rozšířen na **celé Kanto: 45 uzlů** (11 měst + 34 bojových oblastí:
+  routy, jeskyně, dungeony), pořadí 0–44. Spawny **kanonické dle FR/LG** (jen druhy,
+  co se reálně chytají divoce – žádné legendy/static/dárkové, protože rarity systém
+  per oblast zatím není → jinak by Mewtwo padal stejně často jako Golbat). Vodní routy
+  = tentacool/tentacruel, města = `species:[]`. Pozice (x/y %) naklikané uživatelem
+  a zadrátované. **Gating zatím = jen visited-řetěz** (badge/trainer gaty připravené,
+  ale neaktivní – zapneme s trenéry/gymy, viz níže).
+
+### Design trenérů + gymů + gatingu – sekce A odsouhlasena (🟢)
+Klíčové uvědomění: **trenér = jen „scénář" (předdefinovaná fronta soupeřů) pro STÁVAJÍCÍ
+battle engine.** Auto battle to zvládne beze změny (AI odbojuje frontu), autocatch se
+u trenéra vypne. Žádný nový bojový mód není potřeba.
+
+**A1 – týmy trenérů:**
+- 🟢 **Route trenéři = reprezentativní pool druhů s chronologickým omezením:** trenér
+  na routě N smí mít **jen druhy dostupné z rout ≤ N** (dle postupu) **+ jejich evoluce,
+  pokud to level dovolí.** Příklad: Route 3 → jen Pokémoni z rout 1–3 (+ evoluce).
+  **Max level trenéra = dle levelu následujícího gym bosse** (přirozený level cap).
+- 🟢 **Gym leadeři = věrné kopie kánonu, ale lehce těžší:** kanonický tým + kanonické
+  levely, ale **plné IV (31) a EV (252/252)** týmy, ať to není moc snadné. Max level
+  drží kánon.
+
+**A2 – rozsah a mini-bossové:**
+- 🟢 **Max 5 trenérů na routu** (strop; některé routy míň).
+- 🟢 **Mini-boss / gate trenér = SCHVÁLENO (A2b, potvrzeno uživatelem 2026-09-07):**
+  **sloučit obě varianty** – *rival* je jen speciální „třída" gate-mini-bosse. Na
+  kanonických místech rivala (Route 22, Cerulean, S.S. Anne, Pokémon Tower, Silph,
+  Route 22 před Ligou) je gate **rival**, jinde **silný trenér** na uzlu před gym-městem.
+  Jeden gate-mini-boss = jedna gatující podmínka `unlock.trainer`.
+- 🟢 **Prize money = kanonicky** (base za třídu × nejvyšší level týmu).
+- 🟢 **Rematch XP = lehce nad úrovní divokých Pokémonů dané routy** (těžší idle souboj).
+- 🟢 **Frekvence trenérů na routě = fixní ~15 %** (místo divokého encounteru), zatím
+  napevno, časem laditelné.
+
+**A3 – gymy a odznaky:**
+- 🟢 **Kanonické pořadí gymů** (Brock → Misty → Lt. Surge → Erika → Koga → Sabrina →
+  Blaine → Giovanni) i **kanonická jména odznaků** (Boulder/Cascade/Thunder/Rainbow/
+  Soul/Marsh/Volcano/Earth).
+- 🟢 **Odměna za gym v MVP = jen odznak + peníze.** ⚪ **TM odměny až časem** (do backlogu).
+- 🟢 **„Překvapení týmu"** – hráč dopředu nevidí soupeřův tým (jako v kánonu).
+
+**A3+ – GYM = samostatný tab v Battle Areně, sekvenční progres (upřesnění uživatele):**
+- 🟢 Když hráč přijde do **města s gymem** a **je možné do gymu vstoupit** (splněny
+  podmínky), objeví se na **Battle Areně NOVÝ tab „Gym"**. V něm hráč vidí **řadu
+  trenérů + gym leadera na konci.**
+- 🟢 **Progres uvnitř gymu:** na začátku je odemčený **jen první trenér**; po jeho
+  poražení se odemkne **další**, a tak dál – až se nakonec odemkne **gym leader.**
+- 🟢 **Souboje uvnitř gymu = manual mode** (ne auto/idle).
+- 🟢 **Počet trenérů před leaderem = dle kánonu** (ti klasičtí gym trenéři), **všichni
+  POVINNÍ** (nedají se přeskočit, jsou součástí progresu k leaderovi).
+- 🟢 **Poražení gym leadera = gym badge** (`progress.badges`) + peníze.
+- Pozn.: tím se **gym liší od route trenérů** – route trenér je náhodný (~15 %) volitelný
+  encounter v proudu; gym trenéři jsou **pevná povinná sekvence** ve vlastním tabu.
+  Datově: gym = uzel s uspořádaným seznamem trenérů + leader; stav progrese uvnitř gymu
+  se drží v save (kolik gym-trenérů poraženo).
+
+**A4 – gating postupu:**
+- 🟢 **Gating dle kánonu** (dohledat konkrétní mapu podmínek – existují návody, co/koho
+  je potřeba porazit/získat, aby šlo dál). Hlavní badge-gate kanonicky = **Victory Road /
+  Route 23 = všech 8 odznaků.**
+- 🟢 **HM oblasti zatím nechat volně** (jen visited). ⚪ **Do backlogu: vymyslet HM
+  systém a jeho roli v progresu** (Cut/Surf/Strength/Flash/Fly stromy, vodní plochy,
+  Rock Tunnel…).
+
+**A5 – UX souboje s trenérem:**
+- 🟢 **Autocatch se u trenéra vypne** (nejde chytat).
+- 🟢 **Ukazatel Poké Ballů u soupeřova HP:** barevné bally = Pokémoni, které trenér ještě
+  má, ztmavené = už poražení (klasika z her).
+- 🟢 **Bez postihu za prohru** – padne-li týmu hráče celý tým, jen „zkus znovu" (kvůli
+  idle – jinak by hráč přišel o hodně bez povšimnutí). Časem případně upravit.
+- 🟢 **Texty souboje** (výzva, „X poslal Y", výhra…): v **auto módu se automaticky
+  odklikávají po chvilce**, v **manuálu je odklikává hráč.**
+
+**A6 – vizuál:**
+- 🟢 **Scéna jako ve hrách:** uvidíš trenéra, ten **vyhodí Poké Ball**, a **trenér
+  zůstane v pozadí** za svým aktuálním Pokémonem.
+
+### Nápad: Player Profile / Trainer Card (nový tab) – 🟡 návrh
+Uživatel navrhl **samostatný tab „Profile"** (jako trainer card ve hrách): na jednom
+místě přehled hráče – **badge case** (8 slotů, získané rozsvícené / chybějící ztmavené),
+**Pokédex** (chyceno/viděno z 151), **peníze**, **jméno hráče**, **odehraný čas**,
+volitelně portrét + statistiky (shiny, evoluce, poražení trenéři). Souhlas: dobrý nápad,
+přirozený domov pro badge case a levné (všechna data už v `state`: `collection`,
+`pokedex.seen`, `progress.badges`, `resources`) – jen čtení + vykreslení, žádná nová
+herní logika. Napojit na tabový layout (`src/ui/mainPanel.js`).
+
+### Co potřebujeme od uživatele (sprity – shání)
+- **Pozadí (biome):** jeskyně, voda, hory, budova/interiér, les (do `assets/backgrounds/`).
+- **Trenérské třídy** (Bug Catcher, Youngster, Lass, Sailor, Hiker… dle rout).
+- **8 gym leaderů** (portréty/sprity) + **8 ikon odznaků**.
+
+---
+
 ## 2026-09-03 – Title screen, sdílené nastavení, škálování spritů, GIFy, přesné learnsety (v0.56.0)
 
 ### Zadání (uživatel) – 4 body + úpravy

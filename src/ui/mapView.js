@@ -49,6 +49,11 @@ function earnedBadges() {
   return getState().progress?.badges ?? [];
 }
 
+/** Poražení trenéři/rivalové (gatují uzly s unlock.trainer, viz data/areas.js). */
+function defeatedTrainers() {
+  return getState().progress?.defeatedTrainers ?? [];
+}
+
 /** Dev přepínač „ukázat všechny uzly" (i zamčené) – řídí ho Dev sekce v Nastavení. */
 function devReveal() {
   return !!getState().settings?.mapReveal;
@@ -80,8 +85,9 @@ export function renderMap(root) {
   const visited = visitedAreas();
 
   const badges = earnedBadges();
+  const beaten = defeatedTrainers();
   const nodesHtml = AREAS.map((area) => {
-    const unlocked = isAreaUnlocked(area, visited, badges);
+    const unlocked = isAreaUnlocked(area, visited, badges, beaten);
     const p = posOf(area);
     const lvl = area.species?.length ? ` · Lv ${area.recommendedLevel}` : "";
     return `
@@ -281,11 +287,12 @@ function updateStates(root) {
   const activeId = getActiveAreaId();
   const visited = visitedAreas();
   const badges = earnedBadges();
+  const beaten = defeatedTrainers();
   const reveal = devReveal();
   for (const btn of root.querySelectorAll(".map-node")) {
     const area = getArea(btn.dataset.area);
     if (!area) continue;
-    const unlocked = isAreaUnlocked(area, visited, badges);
+    const unlocked = isAreaUnlocked(area, visited, badges, beaten);
     // Hráč vidí jen odemčené; zamčené se skryjí (mimo edit režim a dev „reveal").
     const visible = unlocked || editMode || reveal;
     const p = posOf(area);

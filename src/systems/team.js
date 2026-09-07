@@ -9,6 +9,7 @@ import { getState, commit, MAX_TEAM_SIZE } from "../core/state.js";
 import { createPokemon, STAT_KEYS, emptyEvs } from "./pokemonSystem.js";
 import { pokemonEngagement } from "./buildingSystem.js";
 import { ensureStartersSeen } from "./pokedex.js";
+import { STARTER_IDS } from "../../data/pokemon.js";
 
 /**
  * Výběr startovního Pokémona – jen dokud je kolekce prázdná.
@@ -21,9 +22,23 @@ export function chooseStarter(speciesId) {
   const p = createPokemon(speciesId, 5, { caughtBall: "poke" }); // startér přichází v Poké Ballu
   s.collection.push(p);
   s.team.push(p.uid);
+  // Zapamatuj volbu startera explicitně (rival si podle ní bere counter-startera).
+  if (s.player) s.player.starterId = speciesId;
   ensureStartersSeen(); // všechny startéry jsme viděli na výběrové obrazovce
   commit();
   return true;
+}
+
+/**
+ * Druh hráčova startera. Primárně z `state.player.starterId` (ukládá chooseStarter);
+ * fallback pro starší save = první jedinec v kolekci, jehož druh je mezi startéry.
+ * @returns {string|null}
+ */
+export function getStarterSpeciesId() {
+  const s = getState();
+  if (s.player?.starterId) return s.player.starterId;
+  const starter = (s.collection ?? []).find((p) => STARTER_IDS.includes(p.speciesId));
+  return starter?.speciesId ?? null;
 }
 
 /** Máš už tento druh v kolekci? (Každý druh lze vlastnit jen 1×.) */

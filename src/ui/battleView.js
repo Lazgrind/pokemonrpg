@@ -40,6 +40,8 @@ import { getTeamPokemon } from "../systems/team.js";
 import { computeStats } from "../systems/pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getMove } from "../../data/moves.js";
+import { trainerSpriteUrl } from "../../data/trainers.js";
+import { getBadge } from "../../data/badges.js";
 import { isCaught } from "../systems/pokedex.js";
 import { typeColor, typeBadge } from "./typeColors.js";
 import { statusBadge } from "./statusBadge.js";
@@ -317,7 +319,7 @@ function headHtml(b) {
     <div class="battle-toggles">
       ${pauseBtn}
       ${catchBtn}
-      <label class="tg"><input type="checkbox" id="tg-autobattle" ${getAutoBattle() ? "checked" : ""}/> Auto battle</label>
+      <label class="tg ${b?.forceManual ? "tg-disabled" : ""}" title="${b?.forceManual ? "Gym battles are manual only." : ""}"><input type="checkbox" id="tg-autobattle" ${getAutoBattle() ? "checked" : ""} ${b?.forceManual ? "disabled" : ""}/> Auto battle</label>
       <label class="tg"><input type="checkbox" id="tg-autocatch" ${ac.enabled ? "checked" : ""}/> Auto catch</label>
       ${acMode}
       ${acBall}
@@ -376,12 +378,15 @@ function enemyInfoHtml(b) {
   const head = `<div class="cmd-enemy-head"><strong>${name}</strong> · Lv ${e.ref.level}</div>`;
 
   if (!caught) {
+    const note = b.trainer
+      ? "Not in your Pokédex yet — its type and base stats stay hidden."
+      : "Not in your Pokédex yet — catch one to reveal its type and base stats.";
     return `<div class="cmd-enemy">
       ${sprite}
       <div class="cmd-enemy-info">
         ${head}
         <div class="cmd-enemy-types"><span class="type">???</span></div>
-        <p class="placeholder cmd-enemy-note">Not in your Pokédex yet — catch one to reveal its type and base stats.</p>
+        <p class="placeholder cmd-enemy-note">${note}</p>
       </div>
     </div>`;
   }
@@ -473,8 +478,11 @@ function bagMenuHtml(b) {
   }
 
   // Sekce Poké Bally (může být prázdná – itemy jsou pořád k dispozici).
+  // U trenérů NEJDE chytat cizí Pokémony → místo pickeru jen poznámka.
   let ballSection;
-  if (!owned.length) {
+  if (b.trainer) {
+    ballSection = `<p class="placeholder bag-note">You can't catch another Trainer's Pokémon!</p>`;
+  } else if (!owned.length) {
     ballSection = `<p class="placeholder bag-note">No Poké Balls — buy some in the Poké Mart.</p>`;
   } else {
     const chips = owned
@@ -581,6 +589,32 @@ function interludeHtml(b) {
       <div class="result-name">${enemyName} <span class="placeholder">Lv ${e.level}</span></div>
       <p class="result-sub">${sub}</p>
       <button class="btn over-btn" id="next-encounter">Next battle ▶</button>
+    </div>`;
+  }
+
+  if (il.kind === "trainer-win") {
+    const t = il.trainer ?? {};
+    const rw = il.rewards ?? {};
+    const tSprite = trainerSpriteUrl({ id: t.id, class: t.class, kind: t.kind });
+    const rows = [];
+    if (rw.gold) rows.push(`<li>💰 <b>+${rw.gold}</b> gold</li>`);
+    if (rw.badge) {
+      const bname = getBadge(rw.badge)?.name ?? rw.badge;
+      rows.push(
+        `<li class="badge-won"><img class="badge-icon" src="assets/badges/${rw.badge}.png" alt="${bname}" onerror="this.style.display='none'"> Earned the <b>${bname}</b>!</li>`
+      );
+    }
+    if (rw.alreadyBeaten) rows.push(`<li class="placeholder">Already defeated — no reward this time.</li>`);
+    if (!rows.length) rows.push(`<li class="placeholder">No reward.</li>`);
+    const done = il.endAfter;
+    return `<div class="battle-result is-win is-trainer-win">
+      <div class="result-title">${t.kind === "gym-leader" ? "Gym cleared!" : "Trainer defeated!"}</div>
+      <div class="result-enemy">
+        <span class="result-mon"><img class="result-trainer-sprite" src="${tSprite}" alt="${t.name ?? "Trainer"}" onerror="this.style.visibility='hidden'"></span>
+        <span class="result-name">${t.name ?? "Trainer"} defeated</span>
+      </div>
+      <ul class="result-rewards">${rows.join("")}</ul>
+      <button class="btn over-btn" id="next-encounter">${done ? "Done ✓" : "Next battle ▶"}</button>
     </div>`;
   }
 

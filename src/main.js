@@ -88,6 +88,13 @@ function renderResourceBar(root) {
   const balls = s.resources.balls ?? {};
   const totalBalls = Object.values(balls).reduce((a, b) => a + b, 0);
   const items = [
+    {
+      icon: "👤",
+      label: "Profile",
+      value: s.player?.name ?? "Trainer",
+      // Klik otevře záložku Profile (trainer card) v hlavním panelu.
+      action: "profile",
+    },
     { icon: "💰", label: "Gold", value: s.resources.gold },
     {
       iconHtml: ballIconHtml("poke", { size: 18 }),
@@ -115,10 +122,11 @@ function renderResourceBar(root) {
     )
     .join("");
 
-  // Klikatelné položky lišty (zatím jen ikona Pokédexu → otevře záložku).
+  // Klikatelné položky lišty (Profile a Pokédex → otevřou svou záložku).
   root.querySelectorAll(".resource-clickable").forEach((node) => {
     const open = () => {
       if (node.dataset.action === "pokedex") openMainTab("pokedex");
+      else if (node.dataset.action === "profile") openMainTab("profile");
     };
     node.addEventListener("click", open);
     node.addEventListener("keydown", (e) => {

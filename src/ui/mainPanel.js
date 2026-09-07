@@ -17,14 +17,22 @@
 import { renderCity } from "./cityView.js";
 import { renderPokedexTab } from "./pokedexView.js";
 import { renderPcTab } from "./pcView.js";
+import { renderProfileTab } from "./profileView.js";
 import { renderBattle } from "./battleView.js";
+import { renderGymTab } from "./gymView.js";
+import { renderRivalTab } from "./rivalView.js";
 import { getActiveArea } from "../systems/battleSystem.js";
+import { getGymForCity } from "../../data/gyms.js";
+import { rivalForArea } from "../../data/trainers.js";
 
 const ALL_TABS = [
   { id: "battle", label: "Battle" },
+  { id: "gym", label: "Gym" },
+  { id: "rival", label: "Rival" },
   { id: "city", label: "City" },
   { id: "pc", label: "PC" },
   { id: "pokedex", label: "Pokédex" },
+  { id: "profile", label: "Profile" },
 ];
 
 /** Aktivní záložka přežívá překreslení (modulová proměnná). */
@@ -35,10 +43,23 @@ let built = false;
 let rootRef = null;
 let statusRef = () => {};
 
-/** Záložky viditelné teď. City jen ve městě; ostatní vždy. */
+/**
+ * Záložky viditelné v LIŠTĚ teď. City jen ve městě. Profile v liště NENÍ –
+ * otevírá se tlačítkem v horní liště (renderResourceBar → openMainTab("profile")),
+ * ale zůstává platnou „skrytou" záložkou (viz ALL_TABS + render switch níže).
+ */
 function visibleTabs() {
-  const inCity = getActiveArea()?.type === "city";
-  return ALL_TABS.filter((t) => t.id !== "city" || inCity);
+  const area = getActiveArea();
+  const inCity = area?.type === "city";
+  const hasGym = inCity && !!getGymForCity(area?.id);
+  const hasRival = !!rivalForArea(area?.id);
+  return ALL_TABS.filter((t) => {
+    if (t.id === "profile") return false; // skrytá – jen z horní lišty
+    if (t.id === "city") return inCity;
+    if (t.id === "gym") return hasGym; // jen ve městě s gymem
+    if (t.id === "rival") return hasRival; // jen na oblasti s rival gate
+    return true;
+  });
 }
 
 /**
@@ -61,8 +82,12 @@ export function renderMainPanel(root, onStatus = () => {}) {
   rootRef = root;
   statusRef = onStatus;
   const tabs = visibleTabs();
-  // Když aktivní záložka zmizí (City po opuštění města), spadni na Battle.
-  if (!tabs.some((t) => t.id === activeTab)) activeTab = "battle";
+  // Mizící záložky (City/Gym/Rival dle lokace) → spadni na Battle, když už nejsou
+  // viditelné. Profile je skrytá záložka z horní lišty, tu neresetujeme (není v `tabs`).
+  const conditional = new Set(["city", "gym", "rival"]);
+  if (conditional.has(activeTab) && !tabs.some((t) => t.id === activeTab)) {
+    activeTab = "battle";
+  }
 
   // Skeleton jen jednou – battle podpanel si dál drží vlastní DOM/odběry.
   if (!built) {
@@ -100,5 +125,8 @@ export function renderMainPanel(root, onStatus = () => {}) {
     if (activeTab === "pc") renderPcTab(restPane, onStatus);
     else if (activeTab === "pokedex") renderPokedexTab(restPane, onStatus);
     else if (activeTab === "city") renderCity(restPane, onStatus);
+    else if (activeTab === "gym") renderGymTab(restPane, onStatus);
+    else if (activeTab === "rival") renderRivalTab(restPane, onStatus);
+    else if (activeTab === "profile") renderProfileTab(restPane, onStatus);
   }
 }

@@ -47,10 +47,12 @@
  *                                     Uspořádání drží hráč (drag & drop); pcSystem.reconcile()
  *                                     zaručí, že každý vlastněný jedinec mimo tým je právě v 1 slotu.
  * @property {Array<{ id: string, speciesId: string }>} eggs  nalezená vejce (líhnou se ve Školce)
- * @property {{ tier: number, activeAreaId: string, visited: string[], badges: string[] }} progress  postup světem:
+ * @property {{ tier: number, activeAreaId: string, visited: string[], badges: string[], defeatedTrainers: string[] }} progress  postup světem:
  *   tier (odemyká typy ballů), activeAreaId (aktuální oblast na mapě – kde se bojuje),
  *   visited (id navštívených oblastí → odemykají další uzly mapy, viz data/areas.js),
- *   badges (získané odznaky z gymů; gym gating přibude později)
+ *   badges (získané odznaky z gymů; unlock.badge gatuje oblasti, viz data/areas.js),
+ *   defeatedTrainers (id poražených trenérů → jednorázová odměna + sekvenční postup
+ *   gymem; viz data/trainers.js a battleSystem)
  * @property {Array<{ uid: string, moveId: string }>} moveLearnQueue  čekající nabídky naučení tahu
  *                                     (jedinec chce nový tah, ale má plné 4 sloty → hráč volí nahrazení)
  * @property {{ seen: string[] }} pokedex  druhy potkané v souboji (chycené se odvozují z kolekce)
@@ -67,7 +69,7 @@
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 24;
+export const CURRENT_SAVE_VERSION = 25;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
@@ -98,7 +100,7 @@ export function createNewGame() {
     eggs: [], // nalezená vejce; líhnou se ve Školce (viz eggSystem)
     // Start doma v Pallet Townu; Route 1 je odemčená (start), vstup na ni odemkne
     // Viridian City atd. (řetěz viz data/areas.js). visited = kde už hráč byl.
-    progress: { tier: 1, activeAreaId: "pallet-town", visited: ["pallet-town"], badges: [] },
+    progress: { tier: 1, activeAreaId: "pallet-town", visited: ["pallet-town"], badges: [], defeatedTrainers: [] },
     // Override pozic uzlů na mapě (areaId → {x,y} v %). Prázdné = použijí se
     // výchozí pozice z data/areas.js. Plní je "režim umístění" v mapView.
     mapPositions: {},

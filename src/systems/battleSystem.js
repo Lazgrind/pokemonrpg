@@ -11,10 +11,10 @@
 
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
-import { getTeamPokemon, ownsSpecies, acquirePokemon, releasePokemon } from "./team.js";
+import { getTeamPokemon, ownsSpecies, acquirePokemon, releasePokemon, getStarterSpeciesId } from "./team.js";
 import { getPokeball, POKEBALLS } from "../../data/pokeballs.js";
 import { ballMultiplier } from "./pokeballSystem.js";
-import { createPokemon, computeStats } from "./pokemonSystem.js";
+import { createPokemon, computeStats, STAT_KEYS } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getMove } from "../../data/moves.js";
 import { typeMultiplier } from "../../data/types.js";
@@ -27,6 +27,17 @@ import { getItem, ITEMS } from "../../data/items.js";
 import { markSeen } from "./pokedex.js";
 import { AREAS, getArea, isAreaUnlocked } from "../../data/areas.js";
 import { biomeBackgrounds } from "../../data/backgrounds.js";
+import {
+  getTrainer,
+  routeTrainersFor,
+  ROUTE_TRAINER_CHANCE,
+  trainerDifficulty,
+  resolveTrainerTeam,
+  COUNTER_STARTER,
+  COUNTER_STARTER_FINAL,
+} from "../../data/trainers.js";
+import { getBadge } from "../../data/badges.js";
+import { NATURES } from "../../data/natures.js";
 
 /** Záložní druhy nepřátel, kdyby oblast neměla vlastní species pool. */
 const FALLBACK_SPECIES = ["pidgey", "rattata"];
@@ -241,6 +252,10 @@ function emit() {
 /** Serializuje běhový souboj do prostého objektu (nebo null). */
 export function serialize() {
   if (!battle) return null;
+  // Trenérské souboje jsou čistě běhové – neserializujeme je (po refreshi se
+  // prostě neobnoví; defeatedTrainers se zapisuje až po plné výhře, takže se nic
+  // neztratí a nic nerozbije). Divoké souboje se ukládají normálně.
+  if (battle.trainer) return null;
   return {
     areaId: battle.area.id,
     running: battle.running,
@@ -1201,6 +1216,7 @@ function tick() {
   const ballId = resolveAutocatchBall();
   if (
     getAutocatch().enabled &&
+    !battle.trainer && // trenérovy Pokémony nelze chytat
     ballId &&
     battle.enemy &&
     battle.enemy.hp > 0 &&
@@ -1639,6 +1655,13 @@ function replaceEnemyBlownAway() {
 /** Nasadí dalšího divokého nepřítele (nové setkání) a zaloguje ho. */
 function spawnNext() {
   battle.log = []; // log drží jen aktuální souboj – nové setkání začíná načisto
+  // ~15 % šance, že místo divokého naskočí route trenér (jen na routách,
+  // jen neporažený). battle.trainer už tu není (finish ho vynuloval).
+  const routeTrainer = pickRouteTrainer(battle.area);
+  if (routeTrainer) {
+    beginRouteTrainer(routeTrainer);
+    return;
+  }
   battle.enemy = spawnEnemy(battle.area);
   battle.background = pickBackground(battle.area); // pozadí se mění souboj od souboje
   battle.turn = 0; // nové setkání (kvůli Quick/Timer Ball)
@@ -1675,6 +1698,11 @@ function pauseForInterlude(interlude) {
 /** Zpracuje vyřazení – „winner“ je ten, kdo zasadil poslední ránu. */
 function handleFaint(winner) {
   if (winner === "player") {
+    // Trenérský souboj má vlastní tok (fronta soupeřů, odměna po posledním).
+    if (battle.trainer) {
+      handleTrainerEnemyDown();
+      return;
+    }
     const enemy = battle.enemy;
     const { xp, gold } = battleRewards(enemy.ref.level);
     // Auto battle → tahy se při plných slotech přepíšou samy; manuál → dozeptá se.
@@ -1754,6 +1782,238 @@ function handleFaint(winner) {
       battle.running = false;
       pushLog("Your whole team has fainted. Defeat.", "enemy");
     }
+  }
+}
+
+/* ----------------------------- Trenéři ----------------------------- */
+/*
+ * Trenérský souboj používá STEJNÝ engine jako divoký – jen `battle.trainer` drží
+ * frontu soupeřů. Po každém KO nastupuje další Pokémon trenéra (žádné divoké
+ * setkání), po posledním se trenér označí za poraženého (jednorázová odměna +
+ * případný odznak). U trenérů NEJDE chytat. Gym trenéři se spouští z gym tabu
+ * (startTrainerBattle), route trenéři naskočí ~15 % místo divokého (spawnNext).
+ */
+
+/** Druh Pokémona trenéra (vyřeší counter-startera dle hráčova startera). */
+function resolveTrainerSpecies(mon) {
+  if (mon?.counterStarterFinal) {
+    const starter = getStarterSpeciesId();
+    return COUNTER_STARTER_FINAL[starter] ?? "pidgeot"; // fallback, kdyby starter chyběl
+  }
+  if (mon?.counterStarter) {
+    const starter = getStarterSpeciesId();
+    return COUNTER_STARTER[starter] ?? "pidgey"; // fallback, kdyby starter chyběl
+  }
+  return mon.speciesId;
+}
+
+/** Hlavní útočný stat druhu (physical vs special) dle base statů. */
+function offenseStatOf(speciesId) {
+  const bs = getSpecies(speciesId)?.baseStats ?? {};
+  return (bs.attack ?? 0) >= (bs.spAttack ?? 0) ? "attack" : "spAttack";
+}
+
+/** Sestaví opts pro createPokemon dle odstupňované obtížnosti trenéra. */
+function buildTrainerOpts(trainer, speciesId) {
+  const diff = trainerDifficulty(trainer);
+  const opts = {};
+  if (diff.ivFixed != null) {
+    opts.ivs = {};
+    for (const k of STAT_KEYS) opts.ivs[k] = diff.ivFixed;
+  }
+  if (diff.evOffense || diff.evSpeed) {
+    const offenseKey = offenseStatOf(speciesId);
+    const evs = {};
+    for (const k of STAT_KEYS) evs[k] = 0;
+    evs[offenseKey] = Math.min(252, diff.evOffense);
+    evs.speed = Math.min(252, diff.evSpeed);
+    opts.evs = evs;
+  }
+  if (diff.optimizeNature) {
+    const offenseKey = offenseStatOf(speciesId);
+    const nat = NATURES.find(
+      (n) => n.up === offenseKey && n.down && n.down !== offenseKey && n.down !== "hp"
+    );
+    if (nat) opts.nature = nat.id;
+  }
+  return opts;
+}
+
+/** Vytvoří combatanta pro Pokémona trenéra na dané pozici fronty. */
+function spawnTrainerMon(trainer, index) {
+  const mon = trainer.team[index];
+  const speciesId = resolveTrainerSpecies(mon);
+  const opts = buildTrainerOpts(trainer, speciesId);
+  markSeen(speciesId);
+  const owned = createPokemon(speciesId, mon.level, opts);
+  // Volitelné konkrétní tahy trenéra (jinak defaultMovesFor z createPokemon).
+  if (Array.isArray(mon.moves) && mon.moves.length) {
+    const set = mon.moves
+      .map((id) => {
+        const mv = getMove(id);
+        return mv ? { id, pp: mv.pp ?? 0, maxPp: mv.pp ?? 0 } : null;
+      })
+      .filter(Boolean);
+    if (set.length) {
+      owned.moves = set;
+      owned.hp = computeStats(owned).maxHp;
+    }
+  }
+  return makeCombatant(owned);
+}
+
+/** Runtime kopie trenéra do battle.trainer (drží frontu + kurzor). U procedurálních
+ * (route) trenérů se tým vygeneruje ČERSTVĚ teď (resolveTrainerTeam) a odměna se
+ * dopočítá z něj; fixní trenéři (gym/leader/rival) mají tým i odměnu napevno. */
+function makeTrainerState(trainer, { gymId = null, returnToWild = false } = {}) {
+  const { team, reward } = resolveTrainerTeam(trainer);
+  return {
+    id: trainer.id,
+    name: trainer.name,
+    class: trainer.class,
+    kind: trainer.kind,
+    reward,
+    badge: trainer.badge ?? null,
+    team,
+    cursor: 0,
+    gymId,
+    returnToWild,
+  };
+}
+
+/**
+ * Spustí souboj proti konkrétnímu trenérovi (gym tab). Manuální i auto mód
+ * ho zvládnou; chytání je vypnuté. `gymId` = kontext gymu (návrat do gym tabu).
+ * @param {string} trainerId
+ * @param {{ gymId?: string|null }} [opts]
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function startTrainerBattle(trainerId, { gymId = null } = {}) {
+  const trainer = getTrainer(trainerId);
+  if (!trainer) return { ok: false, reason: "Unknown trainer." };
+  const team = getTeamPokemon();
+  if (team.length === 0) return { ok: false, reason: "You have no Pokémon in your team." };
+  const firstAlive = team.findIndex((p) => hpOf(p) > 0);
+  if (firstAlive < 0) {
+    return { ok: false, reason: "Your whole team has fainted — heal at the Poké Center." };
+  }
+  const area = getActiveArea();
+  battle = {
+    running: true,
+    log: [],
+    area,
+    teamCursor: firstAlive,
+    turn: 0,
+    result: null,
+    background: pickBackground(area),
+    interlude: null,
+    resolving: false,
+    weather: null,
+    tailwind: { player: 0, enemy: 0 },
+    player: makeCombatant(team[firstAlive]),
+    enemy: null,
+    trainer: makeTrainerState(trainer, { gymId, returnToWild: false }),
+    // Gym souboje jsou POVINNĚ manuální – auto battle je v nich zakázané.
+    forceManual: !!gymId,
+  };
+  battle.enemy = spawnTrainerMon(battle.trainer, 0);
+  if (trainer.quote) pushLog(`${trainer.name}: ${trainer.quote}`);
+  pushLog(`${trainer.name} sent out ${battle.enemy.name}!`, "enemy");
+  emit();
+  schedule();
+  return { ok: true };
+}
+
+/** Vybere route trenéra pro oblast (~15 %, jen neporažené, jen na routách). */
+function pickRouteTrainer(area) {
+  if (!area || area.type !== "route") return null;
+  if (Math.random() >= ROUTE_TRAINER_CHANCE) return null;
+  const defeated = getState().progress?.defeatedTrainers ?? [];
+  const pool = routeTrainersFor(area.id).filter((t) => !defeated.includes(t.id));
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+/** Nasadí route trenéra místo divokého setkání (v rámci wild loopu). */
+function beginRouteTrainer(trainer) {
+  battle.trainer = makeTrainerState(trainer, { returnToWild: true });
+  battle.enemy = spawnTrainerMon(battle.trainer, 0);
+  battle.background = pickBackground(battle.area);
+  battle.turn = 0;
+  if (trainer.quote) pushLog(`${trainer.name}: ${trainer.quote}`);
+  pushLog(`Trainer ${trainer.name} wants to battle! Sent out ${battle.enemy.name}!`, "enemy");
+}
+
+/**
+ * Padl Pokémon trenéra (hráč vyhrál kolo). Udělí XP za KO (bez wild loot/gold),
+ * a buď nasadí dalšího z fronty, nebo trenéra dokončí. Volá se z handleFaint.
+ */
+function handleTrainerEnemyDown() {
+  const t = battle.trainer;
+  const enemy = battle.enemy;
+  const { xp } = battleRewards(enemy.ref.level);
+  const leveled = grantXp(battle.player.ref, xp, { auto: getAutoBattle() });
+  commit();
+  pushLog(`${enemy.name} fainted! +${xp} XP`, "player");
+  if (leveled) {
+    // Recompute statů, ale BEZ full-healu uprostřed trenérského souboje (obtížnost).
+    battle.player.stats = computeStats(battle.player.ref);
+    battle.player.hp = Math.min(battle.player.hp, battle.player.stats.maxHp);
+    pushLog(`${battle.player.name} reached Lv ${battle.player.ref.level}!`, "player");
+  }
+  if (t.cursor + 1 < t.team.length) {
+    t.cursor++;
+    battle.enemy = spawnTrainerMon(t, t.cursor);
+    battle.turn = 0;
+    pushLog(`${t.name} sent out ${battle.enemy.name}!`, "enemy");
+    // Pokračuje se dál: manuál ukáže povelové menu (running, bez interlude),
+    // auto navazuje dalším tikem. Caller po návratu udělá emit().
+  } else {
+    finishTrainerBattle(t, enemy);
+  }
+}
+
+/** Trenér poražen: jednorázová odměna (gold + odznak), evidence, interlude/konec. */
+function finishTrainerBattle(t, lastEnemy) {
+  const s = getState();
+  if (!Array.isArray(s.progress.defeatedTrainers)) s.progress.defeatedTrainers = [];
+  const already = s.progress.defeatedTrainers.includes(t.id);
+  let goldGain = 0;
+  let badgeGain = null;
+  if (!already) {
+    s.progress.defeatedTrainers.push(t.id);
+    goldGain = t.reward ?? 0;
+    if (goldGain) s.resources.gold += goldGain;
+    if (t.badge) {
+      if (!Array.isArray(s.progress.badges)) s.progress.badges = [];
+      if (!s.progress.badges.includes(t.badge)) {
+        s.progress.badges.push(t.badge);
+        badgeGain = t.badge;
+      }
+    }
+  }
+  commit();
+  pushLog(`${t.name} was defeated!`, "player");
+  if (goldGain) pushLog(`You received ${goldGain} gold!`, "player");
+  if (badgeGain) {
+    const bname = getBadge(badgeGain)?.name ?? badgeGain;
+    pushLog(`🏅 You earned the ${bname}!`, "player");
+  }
+  const interlude = {
+    kind: "trainer-win",
+    trainer: { id: t.id, name: t.name, class: t.class, kind: t.kind },
+    enemy: enemySnapshot(lastEnemy),
+    rewards: { gold: goldGain, badge: badgeGain, alreadyBeaten: already },
+    gymId: t.gymId ?? null,
+    endAfter: !t.returnToWild, // gym trenér → po zavření okna souboj skončí
+  };
+  battle.trainer = null;
+  if (t.returnToWild && getAutoBattle()) {
+    // Auto route grind: rovnou pokračuj dalším divokým setkáním.
+    spawnNext();
+  } else {
+    battle.interlude = interlude;
+    battle.running = false;
   }
 }
 
@@ -1921,6 +2181,7 @@ function doCatch(ballId) {
  */
 export function attemptCatch(ballId = getSelectedBall()) {
   if (!battle || battle.result) return { ok: false, reason: "No active battle." };
+  if (battle.trainer) return { ok: false, reason: "You can't catch another Trainer's Pokémon!" };
   if (!battle.enemy || battle.enemy.hp <= 0) return { ok: false, reason: "No enemy to catch." };
   const nzBlock = nuzlockeCatchBlock();
   if (nzBlock) return { ok: false, reason: nzBlock };
@@ -1966,7 +2227,7 @@ export function setActiveArea(areaId) {
   const s = getState();
   if (!s.progress) s.progress = { tier: 1, visited: [], badges: [] };
   if (!Array.isArray(s.progress.visited)) s.progress.visited = [];
-  if (!isAreaUnlocked(area, s.progress.visited, earnedBadges())) {
+  if (!isAreaUnlocked(area, s.progress.visited, earnedBadges(), s.progress.defeatedTrainers ?? [])) {
     return { ok: false, reason: "This area is locked — reach it through the previous area first." };
   }
   s.progress.activeAreaId = areaId;
@@ -1975,7 +2236,10 @@ export function setActiveArea(areaId) {
 
   // Běžící souboj přizpůsobit nové oblasti.
   if (battle && battle.running) {
-    if (area.species?.length) {
+    if (battle.trainer) {
+      // Odchod z trenérského souboje = útěk; trenér zůstane neporažený.
+      stopBattle();
+    } else if (area.species?.length) {
       battle.area = area;
       battle.enemy = spawnEnemy(area);
       battle.background = pickBackground(area);
@@ -2136,6 +2400,7 @@ export function playerSwitch(uid) {
 export function playerCatch(ballId = getSelectedBall()) {
   const guard = canManualAct();
   if (!guard.ok) return guard;
+  if (battle.trainer) return { ok: false, reason: "You can't catch another Trainer's Pokémon!" };
   const nzBlock = nuzlockeCatchBlock();
   if (nzBlock) return { ok: false, reason: nzBlock };
   if (ballCount(ballId) <= 0) {
@@ -2204,6 +2469,13 @@ export function playerUseItem(itemId, targetUid) {
 export function nextEncounter() {
   if (!battle || battle.result) return { ok: false, reason: "No active battle." };
   if (!battle.interlude) return { ok: false, reason: "No pending result." };
+  // Gym trenér/leader: po zavření okna souboj skončí (návrat do gym tabu),
+  // nespouští se žádné divoké setkání.
+  if (battle.interlude.endAfter) {
+    battle.interlude = null;
+    stopBattle();
+    return { ok: true };
+  }
   battle.interlude = null;
   spawnNext();
   battle.running = true;
@@ -2242,6 +2514,9 @@ export function setSpeed(mult) {
  * Opak (manuální boj) doděláme později.
  */
 export function getAutoBattle() {
+  // Gym souboj = jen manuál: auto je zakázané bez ohledu na uložené nastavení
+  // (hráčova preference zůstane netknutá, po gymu se auto zas řídí nastavením).
+  if (battle && battle.forceManual) return false;
   // Výchozí je MANUÁLNÍ (normální) souboj – Auto battle si hráč zapíná sám.
   return getState().settings?.autoBattle ?? false;
 }
