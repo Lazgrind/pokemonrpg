@@ -4,10 +4,61 @@ Do každé složky `assets/pokemon/<id>/` patří: `front.png`, `back.png`, `shi
 (+ `-f` samičí varianty u druhů s viditelným pohlavním dimorfismem). Vše prohnat přes `tools/prep_sprite.py`
 (256×256, průhledné pozadí, obsah 232 px). Zatím fallback „?".
 
+---
+
+# Sprity – trenéři, gymy, odznaky, pozadí (pro systém Trainers/Gyms)
+
+Struktura složek **připravena 2026-09-07** (prázdné, s `.gitkeep`). Konvence = stejná
+jako u Pokémonů: **jedna složka na entitu**, cesta se odvozuje z ID (kód nic
+neregistruje – jakmile soubor nahraješ, objeví se sám). Chybějící sprite → fallback.
+Detail designu viz [BACKLOG.md](BACKLOG.md) sekce „Trenéři, Gymy a vícevrstvý gating".
+
+## ⬜ Gym leadeři (8) — `assets/gym-leaders/<id>/front.png`
+Čelní pohled (leader stojí na straně soupeře, vyhodí Poké Ball a zůstane v pozadí).
+- [ ] `brock` — Pewter City (Rock) → odznak **Boulder**
+- [ ] `misty` — Cerulean City (Water) → odznak **Cascade**
+- [ ] `lt-surge` — Vermilion City (Electric) → odznak **Thunder**
+- [ ] `erika` — Celadon City (Grass) → odznak **Rainbow**
+- [ ] `koga` — Fuchsia City (Poison) → odznak **Soul**
+- [ ] `sabrina` — Saffron City (Psychic) → odznak **Marsh**
+- [ ] `blaine` — Cinnabar Island (Fire) → odznak **Volcano**
+- [ ] `giovanni` — Viridian City (Ground) → odznak **Earth**
+
+## ⬜ Odznaky (8) — `assets/badges/<id>.png` (plochý soubor, cca 64–128 px)
+- [ ] `boulder-badge` · `cascade-badge` · `thunder-badge` · `rainbow-badge`
+- [ ] `soul-badge` · `marsh-badge` · `volcano-badge` · `earth-badge`
+
+## ⬜ Trenérské třídy (33) — `assets/trainers/<class>/front.png`
+Čelní pohled (trenér na straně soupeře). Zatím stačí `front.png` na třídu.
+`rival` = speciální gate-mini-boss (blokuje postup). Seznam je **rozšiřitelný** –
+až se v `data/trainers.js` (fáze 1) přiřadí konkrétní trenéři na routy, doplní se
+chybějící třídy.
+- [ ] `bug-catcher` · `youngster` · `lass` · `camper` · `picnicker` · `hiker`
+- [ ] `fisherman` · `sailor` · `swimmer-m` · `swimmer-f` · `super-nerd` · `scientist`
+- [ ] `engineer` · `gambler` · `rocker` · `biker` · `cue-ball` · `juggler` · `tamer`
+- [ ] `bird-keeper` · `black-belt` · `psychic` · `beauty` · `gentleman` · `burglar`
+- [ ] `pokemaniac` · `channeler` · `jr-trainer-m` · `jr-trainer-f` · `cooltrainer-m`
+- [ ] `cooltrainer-f` · `rocket-grunt` · `rival`
+
+## ⬜ Pozadí soubojů – nová biome — `assets/backgrounds/<biome>-<name>.png`
+Existuje jen `grassland` (grass-forest/grass-path/grass-field). Chybí biome pro nové
+oblasti Kanta. Stačí 1–3 soubory na biome (náhodně se střídají). **Po dodání zapíšu
+biome + soubory do `data/backgrounds.js` a `biome:` k oblastem v `data/areas.js`.**
+- [ ] `cave` (Mt. Moon, Rock Tunnel, Victory Road, Cerulean Cave, Diglett's Cave) — např. `cave-stone.png`, `cave-dark.png`
+- [ ] `water` (mořské routy, Seafoam) — např. `water-ocean.png`, `water-beach.png`
+- [ ] `forest` (Viridian Forest) — např. `forest-deep.png`
+- [ ] `mountain` (skalnaté routy 9/10/23) — např. `mountain-ridge.png`
+- [ ] `building` (interiéry: Power Plant, Pokémon Tower, Silph, gymy) — např. `building-interior.png`
+- [ ] `city` (souboje ve/u měst, volitelné) — např. `city-street.png`
+
+---
+
+# Sprity Pokémonů (Kanto 151)
+
 ## ✅ Hotové (15)
 #001 Bulbasaur · #002 Ivysaur · #003 Venusaur · #004 Charmander · #005 Charmeleon · #006 Charizard ·
 #007 Squirtle · #008 Wartortle · #009 Blastoise · #016 Pidgey · #017 Pidgeotto · #018 Pidgeot ·
-#019 Rattata · #020 Raticate · #132 Ditto
+#019 Rattata · #020 Raticate · 
 
 ## ⬜ Chybí (136)
 
@@ -128,6 +179,7 @@ Do každé složky `assets/pokemon/<id>/` patří: `front.png`, `back.png`, `shi
 - [ ] #129 Magikarp — `magikarp`
 - [ ] #130 Gyarados — `gyarados`
 - [ ] #131 Lapras — `lapras`
+- [ ] #132 Ditto — `ditto`
 - [ ] #133 Eevee — `eevee`
 - [ ] #134 Vaporeon — `vaporeon`
 - [ ] #135 Jolteon — `jolteon`

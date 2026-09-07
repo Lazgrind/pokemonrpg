@@ -6,6 +6,35 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.67.0] – 2026-09-07 · Trenéři a gymy na celém Kantu
+### Added
+- **Všech 8 gymů Kanta.** Kromě Pewteru (Brock) teď fungují i Cerulean (Misty), Vermilion (Lt. Surge), Celadon (Erika), Fuchsia (Koga), Saffron (Sabrina), Cinnabar (Blaine) a Viridian (Giovanni). Každý gym = záložka „Gym" ve svém městě, sekvence gym trenérů → leader, poražení leadera dá odznak. Rostery a levely leaderů vycházejí z kánonu FRLG (přibližně). Souboje v gymu jsou dál **jen manuální**.
+- **Route trenéři po celém regionu (procedurální).** Na routách se teď (~15 % místo divokého setkání) objevují trenéři s **náhodně generovaným týmem**. Druhy se losují **hlavně z divokých druhů dané routy**, občas z **nižších rout** – a každý kus se **vyvine nahoru, kam vylosovaný level dovolí** (takže na pozdějších routách potkáš vyvinuté formy). Level odpovídá zhruba kánonu té oblasti. Počet trenérů (3–5) i velikost jejich týmu (2–5) roste s významem routy. Třída trenéra (a jeho sprite) se odvíjí od biomu: jeskyně → Hiker/Poké Maniac, voda → Swimmer/Fisherman, tráva → Youngster/Lass/Bug Catcher atd.
+- **Badge-gate k Victory Road.** Vstup na Route 23 (k Victory Road) nově vyžaduje **Earth Badge** od Giovanniho – kanonická „badge check" před Ligou. Route 3 dál vyžaduje Boulder Badge.
+### Changed
+- **Route trenéři už nejsou pojmenované fixní rostery** – nahradil je výše popsaný generátor. Odměna route trenéra se dopočítává z jeho týmu. Gymy, leadeři a rival zůstávají pevné (signature soupeři).
+### Notes
+- Zóny bez trenérů dle kánonu (Diglett's Cave, Power Plant, Safari Zone, Seafoam Islands, Cerulean Cave) route trenéry nemají.
+- Sprity trenérů/leaderů/odznaků se teprve dodají – zatím fallback (skryje se, dokud obrázek chybí).
+
+## [0.66.0] – 2026-09-07 · Trenéři, gymy a rival (řez po Pewter City)
+### Added
+- **Souboje s trenéry.** Trenér = předdefinovaná fronta konkrétních Pokémonů pro stávající bojový engine (žádný nový režim). Bojuje se popořadě přes celý jeho tým; **cizí Pokémony u trenérů nejde chytat** (batoh to během trenérského souboje zakáže). Za KO padá XP jako obvykle, ale **bez léčení mezi Pokémony** – trenér je náročnější než divočina. První výhra dá jednorázovou odměnu ve zlatě a zapíše se, takže se neopakuje.
+- **Route trenéři.** Na routách se občas (~15 %) místo divokého setkání objeví route trenér. V tomto řezu: **Viridian Forest = dva Bug Catcheři**. Poražení se pamatuje – jednou poraženého route trenéra už znovu nepotkáš.
+- **Gym = samostatná záložka.** Když jsi ve městě s gymem, objeví se nahoře **nová záložka „Gym"** (ne sekce v City). V ní procházíš sekvenci trenérů **striktně po pořadí** (odemčený je vždy jen další neporažený). **Pewter City Gym**: Camper Liam → **Leader Brock** (Geodude Lv 12, Onix Lv 14). Poražením Brocka získáš **Boulder Badge** – a ta odemyká **Route 3** za Pewterem.
+- **Souboje v gymu jsou jen MANUÁLNÍ.** Auto battle je v gymovém souboji vypnutý a přepínač zašedlý – gym leadera musíš porazit ručně. (Tvoje globální nastavení Auto battle to nemění, po gymu platí zas.)
+- **Rival = klikací záložka „Rival Battle" (gateway).** Na místě s rivalem (v tomto řezu **Route 22**) je nahoře **nová záložka „Rival Battle"**, kterou si souboj **spustíš sám** – hra ti ho nevnucuje náhodně. Na routě přitom dál můžeš normálně bojovat s divokými. Rival je **předligový** soupeř: **plný tým na vysokých úrovních** (Pidgeot, Alakazam, Rhydon, Gyarados, Arcanine + **plně vyvinutý** counter-starter proti tvému startovnímu Pokémonovi, Lv 45–50). Volba startera se pamatuje explicitně.
+- **Vícevrstvý gating oblastí – `unlock.trainer`.** Odemčení oblasti umí navíc vyžadovat **poražení konkrétního trenéra** (platí zároveň s návštěvou a odznakem – vše musí platit). Mechanismus je zapojený; konkrétní trenérský gate se rozdá až s expanzí do celého Kanta.
+- **Odstupňovaná obtížnost trenérů.** Čím důležitější soupeř, tím lepší staty: route = kánon (náhodné IV, 0 EV), gym/rival = slušné IV + část EV do útoku a rychlosti + vhodná povaha, gym-leader = vysoké IV + plné EV + vhodná povaha.
+### Changed
+- **Save v24 → v25:** doplněno `progress.defeatedTrainers` (evidence poražených trenérů/leaderů). Nová hra začíná s prázdným seznamem.
+
+## [0.65.0] – 2026-09-07 · Profile (trainer card) + příprava trenérů/gymů
+### Added
+- **Profile (trainer card).** Nové tlačítko **👤 v horní liště** (vlevo vedle Goldu, ukazuje jméno hráče) otevře přehled hráče na jednom místě: **badge case** (8 slotů odznaků – získané barevné, chybějící „???" ztmavené), souhrn Pokédexu (chyceno / z 151 + viděno), počet shiny, gold a odehraný čas. Jméno hráče lze přejmenovat klikem.
+- **Kanonická data odznaků (`data/badges.js`)** – 8 gym odznaků Kanta (jméno, vůdce, město, typ) jako zdroj pravdy pro badge case (a budoucí gym systém). Ikony se načítají z `assets/badges/<id>.png`; dokud sprity nedodáme, ukáže se glyf-fallback.
+- **Připravená struktura složek pro sprity trenérů/gymů:** `assets/gym-leaders/` (8 leaderů), `assets/trainers/` (33 tříd vč. `rival`), `assets/badges/`. Kompletní checklist v `docs/SPRITES-TODO.md`.
+
 ## [0.64.0] – 2026-09-04 · klikací mapa + nové rozvržení panelů
 ### Added
 - **Klikací mapa světa (à la PokeClicker / nintendo).** Panel Mapy je nově interaktivní art mapa Kanta s klikacími uzly (města i routy). Klik na uzel tě „přesune" – nastaví aktivní oblast a souboje pak spawnují nepřátele odsud. Aktivní oblast je zvýrazněná (pulzující marker), aktuální lokace se ukazuje pod mapou.

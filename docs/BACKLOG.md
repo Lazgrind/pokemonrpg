@@ -339,20 +339,35 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
   mapa vpravo). `leftPanel.js` smazán. **Badge-gating základ** připraven
   (`isAreaUnlocked(area, visited, badges)` + `unlock.badge`), zatím nevyužit.
 
-### DALŠÍ KROKY (pokračování v úterý 2026-09-08) — priorita shora
-1. ⚪ **Vizuální ověření uživatelem** nového layoutu ve hře (velikost mapy 48vh,
-   vejde-li se team-grid 3×2, přepínání tabů, City tab jen ve městě, Battle tab
-   i ve městě). Doladit CSS podle oka.
-2. ⚪ **Doladit pozice markerů** – uživatel v placement módu naskládá uzly a
-   pošle **positionsDump** → zadrátovat `x`/`y` do `data/areas.js`.
-3. ⚪ **Skutečné GYMY.** Ve City tabu tlačítko/budova Gym → přepnutí na **Battle
-   tab** → gym souboj (vůdce + jeho tým/level cap) → po výhře **udělit badge**
-   (`progress.badges.push(...)`). Badge pak odemyká další route přes `unlock.badge`
-   (mechanika už připravená). První: Pewter City (Brock).
-4. ⚪ **Trenéři na routách** – náhodná/pevná setkání s trenéry (tým, odměna),
-   odděleně od divokých Pokémonů.
-5. ⚪ **Odemknout fázi 5 Kanto** (spawny nových druhů dle oblastí) z
-   alldex-data-strategy – navázat na postup po mapě + `progress.tier` pro bally.
+### DALŠÍ KROKY — POŘADNÍK (priorita shora, aktualizováno 2026-09-07)
+1. ✅ **Player Profile / Trainer Card (nový tab) — HOTOVO (čeká vizuální ověření).**
+   Profile view (`src/ui/profileView.js`) – **otevírá se tlačítkem 👤 v horní liště**
+   (vedle Goldu, `main.js` renderResourceBar → `openMainTab("profile")`); v liště tabů
+   NENÍ (skrytá záložka v `mainPanel.js`).
+   Trainer card: jméno hráče (klik = přejmenovat), souhrn (Pokédex caught/total, Seen,
+   Badges n/8, Shiny caught, Gold, Play time) + **badge case** (8 slotů z `data/badges.js`,
+   získané barevné / chybějící „???" ztmavené; ikona `assets/badges/<id>.png` s glyf-
+   fallbackem). CSS v `css/main.css` (sekce „Profile"). Nová data: **`data/badges.js`**
+   (8 kanonických odznaků – využije i gym systém). Scroll řešen přes scrollPreserve.
+2. ⚪ **Trenéři + Gymy — FÁZE 1: data** — `data/trainers.js` (+ gymy), rozšíření
+   `area.unlock` o `trainer`, `progress.defeatedTrainers` + gym-progres, save migrace.
+   Design hotový, viz sekce **„Trenéři, Gymy a vícevrstvý gating"**. První gym: Brock.
+3. ⚪ **Trenéři + Gymy — FÁZE 2: engine** — trenérský souboj (fronta, bez chytání/
+   útěku, pravidla léčení, ball ukazatel, auto-odklik textů), výhra/odměna/badge,
+   ~15 % spawn, gym sekvence, vícevrstvý `isAreaUnlocked`.
+4. ⚪ **Trenéři + Gymy — FÁZE 3: UI** — gym tab v Battle Areně (sekvence), route
+   sekce Trainers (✓/✗), hláška u zamčeného uzlu.
+5. ⚪ **Sprity (uživatel dodá)** — trenérské třídy, 8 gym leaderů, 8 odznaků, nová
+   pozadí/biome. Složky připravené (viz `docs/SPRITES-TODO.md`).
+6. ⚪ **Trenéři + Gymy — FÁZE 5: badge-gaty** na kanonická místa (zapne odložený
+   badge-gating; hlavní: Victory Road / Route 23 = 8 odznaků).
+7. ⚪ **Odemknout fázi 5 Kanto** (spawny nových druhů dle oblastí) z
+   alldex-data-strategy — navázat na postup po mapě + `progress.tier` pro bally.
+8. ⚪ **Vizuální ověření layoutu** ve hře (mapa, team-grid 3×2, přepínání tabů) —
+   doladit CSS podle oka, průběžně.
+
+**Později (bez pevného pořadí):** TM odměny za gymy, HM systém, mapa per generace
+(viz příslušné sekce).
 
 - ⚪ **Mapa vpravo dole (původní návrh, R-028).** V pravém panelu (nebo jeho spodní
   části) reálný obrázek oblasti s vyznačením, **kde postava je**. Cíl přesunu
@@ -383,6 +398,97 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
   - **Nové evoluce/baby formy** představené později = **vlastní druh s vlastním
     `gen`** (ne duplikát). **Regionální formy** (Alolan…) = řešit přes samostatné
     `id` / pole „forma", ne přes `gen`.
+
+## Trenéři, Gymy a vícevrstvý gating
+
+Kompletní design odsouhlasen s uživatelem 2026-09-07 (sekce A), detail rozhodnutí v
+[NOTES.md](NOTES.md). **Zatím NIC v kódu** (⚪) – čeká i na sprity od uživatele.
+Klíč: **trenér = jen „scénář" (fronta soupeřů) pro STÁVAJÍCÍ battle engine**, žádný
+nový bojový mód. Auto AI odbojuje frontu; autocatch se u trenéra vypne.
+
+### Route trenéři (⚪ jen rozhodnuto)
+- **`data/trainers.js`**: `{ id, name, class, sprite, areaId, team:[{speciesId,level}],
+  reward:{gold}, gate?:bool }`.
+- **Objevení = fixní ~15 %** místo divokého encounteru; losuje se jen z **nezdolaných**
+  trenérů poolu routy. **Max 5 trenérů/routa.**
+- **Týmy = reprezentativní pool s chronologickým omezením:** trenér na routě N smí mít
+  jen druhy dostupné z rout ≤ N **+ jejich evoluce, pokud level dovolí**. **Max level =
+  dle levelu následujícího gym bosse.**
+- Souboj: fronta soupeřů (po KO další), HP/PP se přenáší; **léčení = itemy + switch ANO,
+  „Heal team" NE**; **nejde chytat ani utéct**; **autocatch vypnut**.
+- **1. porážka** = prize money (kanonicky, base třídy × top level) + XP + zápis do
+  `progress.defeatedTrainers`. **Rematch** (po zdolání poolu) = jen XP, **lehce nad
+  úrovní divokých Pokémonů routy** (bez peněz – ekonomika nerozbitá).
+- **Prohra = bez postihu** (padne celý tým → jen „zkus znovu"; kvůli idle).
+
+### Gym = samostatný tab v Battle Areně, sekvenční progres (⚪ jen rozhodnuto)
+- Když je hráč **v gym-městě a lze do gymu vstoupit** → na Battle Areně se objeví
+  **nový tab „Gym"**. V něm **řada trenérů + gym leader na konci.**
+- **Progres uvnitř gymu:** odemčený jen 1. trenér → po výhře další → … → nakonec
+  **gym leader.** Počet gym trenérů **dle kánonu**, **všichni POVINNÍ**. Souboje =
+  **manual mode.** Stav progrese uvnitř gymu se drží v save.
+- **Gym leadeři = věrné kopie kánonu, ale těžší: plné IV (31) + EV (252/252)**,
+  kanonické levely. Tým **tématický** (Brock=Rock…), **kanonické pořadí** 8 gymů.
+- **Výhra nad leaderem = odznak** (`progress.badges`, **kanonická jména odznaků**) +
+  peníze. **MVP odměna = jen odznak + peníze.**
+- **„Překvapení týmu"** – hráč dopředu nevidí soupeřův tým.
+- Datově: gym = uzel s uspořádaným seznamem trenérů + leader (`data/gyms.js` nebo
+  příznak `gym:true` v `data/trainers.js`), `{ cityId, type, badge:"<id>", trainers:[...],
+  leader:{...} }`.
+
+### Vícevrstvý gating oblastí (⚪ jen rozhodnuto)
+- `area.unlock` rozšířit na skládatelné podmínky (AND):
+  ```
+  unlock: { start?, visited?:"<areaId>", trainer?:"<trainerId>", badge?:"<badgeId>", /* budoucí: hm?, item? */ }
+  ```
+- `isAreaUnlocked(area, {visited, defeatedTrainers, badges})` – rozšířit stávající
+  signaturu (teď bere `visited, badges`).
+- **Blokace postupu = JEDEN mini-boss / gate trenér** na gatující routě (ostatní trenéři
+  = volitelný bonus). Uzel se **zobrazí** po visited, **vstup** až po poražení gate.
+- **Gating dle kánonu**; hlavní badge-gate = **Victory Road / Route 23 = 8 odznaků**.
+- 🟢 **Forma mini-bosse (A2b) – SCHVÁLENO:** rival = speciální třída gate-mini-bosse.
+  Na kanonických místech rivala je gate **rival**, jinde **silný trenér** na uzlu před
+  gym-městem. Jeden gate-mini-boss = jedna podmínka `unlock.trainer`.
+
+### UX souboje s trenérem (⚪ jen rozhodnuto)
+- **Ukazatel Poké Ballů** u soupeřova HP: barevné = zbývající Pokémoni, ztmavené =
+  poražení.
+- **Texty souboje:** auto mód je **auto-odklikává po chvilce**, manuál **kliká hráč**.
+- **Scéna:** uvidíš trenéra, **vyhodí Poké Ball**, a **trenér zůstane v pozadí** za
+  svým aktuálním Pokémonem.
+
+### Implementační fáze (pořadí)
+1. **Data:** `data/trainers.js` (+ gymy), rozšíření `area.unlock` o `trainer`,
+   `progress.defeatedTrainers` + gym-progres, save migrace.
+2. **Engine:** trenérský souboj (fronta, bez chytání/útěku, pravidla léčení, ball
+   ukazatel, auto-odklik textů), výhra/odměna/badge, ~15 % spawn v proudu, gym
+   sekvence, vícevrstvý `isAreaUnlocked`.
+3. **UI:** route panel sekce Trainers (✓/✗), **gym tab v Battle Areně** (sekvence),
+   hláška u zamčeného uzlu.
+4. **Sprity (uživatel dodá):** trenérské třídy + 8 gym leaderů + 8 ikon odznaků + pozadí.
+5. **Badge-gaty** na kanonická místa (zapne odložený badge-gating).
+
+### Budoucí rozšíření (⚪ zapsat, dělat časem)
+- ⚪ **TM odměny za gymy** – v MVP gym dává jen odznak + peníze; časem přidat TM
+  (technický stroj) jako odměnu za gym leadera (dle kánonu každý leader dává TM).
+  Předpokládá TM/HM item systém.
+- ⚪ **HM systém a jeho role v progresu** – vymyslet, jak fungují HMka (Cut/Surf/
+  Strength/Flash/Fly/…) a co blokují (stromy, vodní plochy, Rock Tunnel, Cycling Road…).
+  Zatím HM oblasti nechány **volně (jen visited)**. Až bude HM systém, převést kanonické
+  HM/item gaty do `unlock.hm`/`unlock.item`.
+
+## Player Profile / Trainer Card (nový tab)
+
+- ⚪ **Tab „Profile" (trainer card)** – nápad uživatele 2026-09-07. Samostatný tab
+  v layoutu (`src/ui/mainPanel.js`) s přehledem hráče:
+  - **Badge case** – 8 slotů odznaků, získané barevné (`progress.badges`), chybějící
+    ztmavené; ikony z `assets/badges/<id>.png`. (Přirozený domov pro odznaky z gymů.)
+  - **Pokédex souhrn** – chyceno / viděno / z 151 (`collection`, `pokedex.seen`).
+  - **Peníze** (`resources`), **jméno hráče**, **odehraný čas**.
+  - Volitelně později: portrét hráče, statistiky (nachyceno shiny, počet evolucí,
+    poražených trenérů…), přejmenování hráče.
+  - Levné: všechna data už v `state`, jde hlavně o čtení + vykreslení (žádná nová
+    herní logika). Váže se na badge systém z gymů (sekce výše).
 
 ## Souboj – přepracování (sprity + reálný boj)
 

@@ -2526,3 +2526,166 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 /* Vyskakovací okno s výpisem pozic (📋 Výpis pozic v place módu) – širší, ať
    se řádky nezalamují; text-align:left kvůli monospace výpisu. */
 .map-pos-card { width: min(520px, 94vw); text-align: left; }
+
+/* ---- Profile (trainer card) ---- */
+.profile-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.profile-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--accent);
+  cursor: pointer;
+  align-self: flex-start;
+}
+.profile-name .pn-edit { font-size: 13px; color: var(--text-dim); }
+.profile-name:hover .pn-edit { color: var(--accent); }
+.profile-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 6px 16px;
+}
+.profile-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 13px;
+}
+.profile-stat .ps-label { color: var(--text-dim); }
+.profile-stat .ps-value { font-weight: 600; }
+
+.profile-subtitle {
+  margin: 14px 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text-dim);
+}
+.badge-case {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(88px, 1fr));
+  gap: 8px;
+}
+.badge-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 10px 6px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  text-align: center;
+}
+.badge-slot.locked { opacity: 0.45; }
+.badge-icon-wrap {
+  position: relative;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+}
+.badge-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  position: relative;
+  z-index: 1;
+}
+.badge-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  line-height: 1;
+}
+.badge-slot.earned .badge-fallback { color: var(--accent); }
+.badge-slot.locked .badge-fallback { color: var(--text-dim); }
+.badge-label {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+.badge-slot.locked .badge-label { color: var(--text-dim); font-weight: 500; }
+
+/* ── Gym sekce (uvnitř panelu Města) ─────────────────────────────────────── */
+.gym-section {
+  margin-top: 16px;
+  padding: 12px;
+  border: 1px solid var(--border, #333);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.15);
+}
+.gym-title { margin: 0 0 6px; font-size: 15px; }
+.gym-badge-row { margin-bottom: 10px; font-size: 12px; }
+.gym-badge-won {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  color: var(--accent-2, #7fc97f);
+}
+.gym-badge-won .badge-icon,
+.badge-won .badge-icon { width: 22px; height: 22px; }
+.gym-trainer-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.gym-trainer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--border, #333);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+.gym-trainer.is-next { border-color: var(--accent, #e0a030); }
+.gym-trainer.is-locked { opacity: 0.55; }
+.gym-trainer.is-leader { background: rgba(224, 160, 48, 0.08); }
+.gym-trainer-sprite { width: 40px; height: 40px; object-fit: contain; image-rendering: pixelated; }
+.gym-trainer-info { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.gym-trainer-name { font-weight: 600; font-size: 13px; }
+.gym-trainer-team { font-size: 11px; }
+.gym-status { font-size: 12px; white-space: nowrap; }
+.gym-status.done { color: var(--accent-2, #7fc97f); font-weight: 700; }
+.gym-status.locked { color: var(--text-dim); }
+.gym-fight { white-space: nowrap; }
+
+/* Výherní okno proti trenérovi (battleView interlude kind "trainer-win"). */
+.battle-result.is-trainer-win .result-trainer-sprite {
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.battle-result .badge-won { display: flex; align-items: center; gap: 6px; }
+
+/* Zakázaný přepínač (Auto battle v gym souboji). */
+.tg.tg-disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ── Rival „gateway" tab ─────────────────────────────────────────────────── */
+.rival-section { padding: 4px; }
+.rival-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--accent, #e0a030);
+  border-radius: 10px;
+  background: rgba(224, 160, 48, 0.08);
+}
+.rival-sprite { width: 88px; height: 88px; object-fit: contain; image-rendering: pixelated; }
+.rival-meta { flex: 1 1 auto; min-width: 0; }
+.rival-name { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.rival-team { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, 1fr); gap: 2px 12px; }
+.rival-mon { font-size: 12px; }
+.rival-mon-name { font-weight: 600; }
+.rival-cleared { color: var(--accent-2, #7fc97f); font-weight: 700; margin-top: 8px; }
+.rival-fight { margin-top: 6px; }

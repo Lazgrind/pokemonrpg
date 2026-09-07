@@ -261,6 +261,15 @@ function migrate(data) {
     }
     data.saveVersion = 24;
   }
+  // v24 → v25: trenéři/gymy – evidence poražených trenérů (jednorázová odměna +
+  // sekvenční postup gymem). Staré save začínají bez poražených trenérů.
+  if (data.saveVersion < 25) {
+    if (!data.progress) data.progress = { tier: 1, badges: [], visited: [] };
+    if (!Array.isArray(data.progress.defeatedTrainers)) {
+      data.progress.defeatedTrainers = [];
+    }
+    data.saveVersion = 25;
+  }
   return data;
 }
 
