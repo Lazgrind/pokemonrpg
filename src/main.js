@@ -25,6 +25,8 @@ import { initTitleScreen } from "./ui/titleScreen.js";
 import { openChangelog } from "./ui/changelogView.js";
 import { initMoveLearnPrompts } from "./ui/moveLearnView.js";
 import { initStarterPrompt } from "./ui/starterModal.js";
+import { startIntro } from "./ui/introScene.js";
+import { showPopup } from "./ui/popup.js";
 import { ballIconHtml } from "./ui/ballIcon.js";
 import { scrollAware, preserveWindowScroll } from "./ui/scrollPreserve.js";
 import { POKEBALLS } from "../data/pokeballs.js";
@@ -228,6 +230,12 @@ function init() {
     setStatus(`✨ ${e.fromName} evolved into ${e.toName}!`);
   });
 
+  // Příběhové vyskakovací okno na žádost systémové vrstvy (např. po poražení
+  // Brocka). NIKDY nedáváme takový text pod mapu – vždy do popupu (viz popup.js).
+  bus.on(EVENTS.STORY_POPUP, (p) => {
+    if (p) showPopup(p);
+  });
+
   // 6) Offline zisky jsou už APLIKOVÁNY na stav (výše); hned ulož (reset
   // lastSaved → žádné dvojí počítání). Uživatelský SOUHRN se ale ukáže až po
   // Continue (title screen je brána – viz 6d), ať se nevynoří pod úvodní
@@ -259,8 +267,15 @@ function init() {
     }
     // Nabídky naučení tahu (plné sloty) – sleduje frontu i položky z offline.
     initMoveLearnPrompts();
-    // Výběr startéra při nové hře (prázdná kolekce) – modální okno.
-    initStarterPrompt();
+    // Nová hra: nejdřív krátké intro + pojmenování rivala, teprve pak výběr
+    // startéra. Rozehraná/starší hra (kolekce plná nebo už zadaný rival) intro
+    // přeskočí a jde rovnou na starter prompt (ten se stejně otevře jen u prázdné kolekce).
+    const st = getState();
+    if (st.collection.length === 0 && !st.player?.rivalName) {
+      startIntro(() => initStarterPrompt());
+    } else {
+      initStarterPrompt();
+    }
   });
 
   // Indikator nacitani na title screenu → hotovo (hra je pod overlayem pripravena).

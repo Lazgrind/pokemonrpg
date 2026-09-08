@@ -6,6 +6,106 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.72.0] – 2026-09-08 · Věrný Kanto příběh – Krok 5: Cerulean → Vermilion (Bill, fosílie, S.S. Anne, HM Cut)
+### Added
+- **Bill na Route 25.** Při dojití na konec **Route 25** pomůžeš **Billovi** z jeho teleportéru a dostaneš **S.S. Anne Ticket** (nový klíčový item). Jednorázově (flag `billHelped`).
+- **Oživení fosílií.** V **Museum of Science** (Pewter) můžeš nechat oživit **Helix Fossil → Omanyte** nebo **Dome Fossil → Kabuto** (lv 20). Fosílie se spotřebuje, Pokémon přibude do kolekce.
+- **Cesta do Vermilion.** Řetěz Cerulean → Route 5 → Route 6 → **Vermilion City**. Vermilion má nově vlastní roster budov (**Poké Center + Poké Mart + S.S. Anne**) a **popup při příchodu** (navede na loď + upozorní na strom u Gymu).
+- **S.S. Anne + souboj s rivalem.** Příběhová budova **S.S. Anne** (v City tabu) – s lodním lístkem nastoupíš na palubu, kde tě vyzve **rival** (Pidgeotto, Raticate + jeho starter v prostřední evoluci). Výhra dá **HM01 Cut** (nový klíčový item, flag `hasCut`).
+- **HM Cut gate na Vermilion Gym.** Vchod do **Vermilion Gymu** (Lt. Surge) blokuje strom – Gym tab ukáže ceduli, dokud nemáš **HM Cut**. Po jeho zisku je Gym přístupný.
+### Changed
+- Rozšířen counter-starter systém o **prostřední evoluci** (`counterStarterMid` – Charmeleon/Wartortle/Ivysaur) pro mid-game rivaly (S.S. Anne).
+- **Dev „Skip to".** Přidán checkpoint **⑧ Vermilion City · S.S. Anne + HM Cut** (Bill, ticket, rival poražen, HM Cut, gym odemčen).
+### Notes
+- Migrace **save v30**: kdo už porazil kteréhokoli trenéra Vermilion Gymu, se automaticky „propustí" (nastaví `hasCut`) – žádná regrese.
+- Bez nových spritů: rival používá existující třídu `rival`, příběhové budovy (S.S. Anne) používají CSS ikonu (jako ostatní story budovy).
+
+## [0.71.0] – 2026-09-08 · Mt. Moon – povinný Team Rocket gauntlet + oprava 8 tahů
+### Added
+- **Mt. Moon – povinné souboje s Team Rocket.** Nová záložka **Rockets** (jako Gym/Rival) se ukáže, když jsi v Mt. Moon. Je to **fronta 5 grunts** (striktní pořadí, odemčený je vždy jen další neporažený), **povinně manuální** souboje. Poražení **všech pěti** odemkne cestu dál na **Route 4** a Cerulean City (+ jednorázový bonus **1000₽** a payoff okno).
+- Route 4 je nově **gated** na poražení celého gauntletu (`story.mtMoonRocketsCleared`). Staré savy, které už jsou za Mt. Moon, se automaticky „propustí" (migrace save v29 – žádná regrese).
+### Fixed
+- **Bug „8 útoků místo 4".** Fronta nabídek naučení tahu mohla přidat tah do už plných 4 slotů bez capu → jedinci nasbírali víc než 4 tahy. Opraveno v jádře (`resolveMoveLearn` už respektuje `MAX_MOVES`) i zpětně: migrace save (v28) ořeže existující přebujelé sady na první 4 unikátní tahy.
+### Changed
+- **Dev „Skip to".** Checkpoint **⑦ Cerulean City** teď navíc označí Rocket gauntlet za dokončený (grunts poraženi + flag), aby skok za Mt. Moon dával konzistentní stav.
+### Notes
+- Grunti používají existující sprity třídy `rocket-grunt` (`assets/trainers/rocket-grunt/1.png`, `2.png` – 2 varianty, náhodně se střídají).
+
+## [0.70.0] – 2026-09-08 · Věrný Kanto příběh – Krok 4: Route 3 → Mt. Moon → Cerulean City
+### Added
+- **Mt. Moon – Team Rocket.** Při prvním vstupu do jeskyně vyskočí okno: **Team Rocket** obsadil Mt. Moon a kope tu po fosíliích a Moon Stonech.
+- **Volba fosílie (Helix vs Dome).** Po průchodu Mt. Moon (příchod na Route 4) si hráč **jednorázově a nevratně** vybere jednu fosílii – 🐚 **Helix Fossil** (→ Omanyte) nebo 🗿 **Dome Fossil** (→ Kabuto). Item se uloží do batohu (nová kategorie **Special**); oživení fosílie doděláme později.
+- **Cerulean City – příběhová vrstva.** Město má nově vlastní roster budov (**Poké Center + Poké Mart**) a **popup při příchodu**, který navede do Gymu (**Misty**, Water typ – ber Grass/Electric). Cerulean Gym (Misty, Cascade Badge) funguje beze změny (v0.67.0).
+- **Nugget Bridge (Route 24).** Při prvním vstupu na Route 24 dostaneš **Nugget**, který rovnou zpeněžíš (**+1000₽**), a odmítneš náborového agenta **Team Rocket**.
+- **Popup okno s volbou.** `showPopup` umí nově tlačítka volby (`choices`) – použito pro nevratnou volbu fosílie (okno bez zavření křížkem).
+### Changed
+- **Dev „Skip to".** Přidány checkpointy **⑥ Brock poražen · Boulder Badge · Route 3** a **⑦ Cerulean City · u Misty**. Reset postupu při skoku je teď **plně deterministický** – maže i nové příběhové flagy (fosílie, nugget, Rocket eventy…), takže se dají znovu otestovat.
+- Popis Pewter City už neříká „Gym coming soon" (Brock funguje od v0.69.0).
+
+## [0.69.0] – 2026-09-08 · Věrný Kanto příběh – Krok 3: Viridian Forest → Pewter City
+### Added
+- **Pewter City – příběhová vrstva.** Město má nově vlastní roster budov: **Poké Center + Poké Mart + Museum of Science** (příběhová budova). Gym (Brock) má dál vlastní tab.
+- **Museum of Science.** Příběhová budova s flavour (fosilie, Moon Stone, kus rakety) a **jednorázovou uvítací odměnou** (3× Potion).
+- **Popup při příchodu do Pewteru.** Když dorazíš do Pewteru a ještě jsi neporazil Brocka, vyskočí okno, které tě navede do **Gymu** (Brock = Rock typ, ber Grass/Water) a upozorní na Museum.
+- **Event po poražení Brocka.** První zisk **Boulder Badge** spustí gratulační okno + **drobnou odměnu** (5× Poké Ball + 500 gold) a připomene otevřenou **Route 3** (k Mt. Moon).
+- **Viridian Forest – jednorázový pickup.** Při prvním vstupu do lesa najdeš na zemi **Potion + Antidote** (věrné kánonu) a naskočí okno s tipem na vzácného **Pikachu**.
+- **Sběrnicová událost `STORY_POPUP`.** Systémová vrstva umí požádat UI o vyskakovací okno bez přímé závislosti na UI (napojeno v `main.js`).
+### Notes
+- Route 2, Viridian Forest i Route 3 dál používají divoké druhy + procedurální trenéry (viz v0.67.0); Krok 3 přidává hlavně **věrnou příběhovou vrstvu** kolem nich. Route 3 zůstává gated na Boulder Badge.
+- Nové dev checkpointy: ⑤ Pewter City tě dá k Brockovi (odznak zatím nemáš), takže jde otestovat celý příchod i souboj.
+
+## [0.68.5] – 2026-09-08 · Dev: deterministický „Skip to"
+### Fixed
+- **„Skip to" byl jen kumulativní dopředu** – když jsi předtím skočil na vyšší milník, návrat na nižší (např. ③ Viridian) postup nevrátil, takže zůstalo otevřeno až po Pewter a Parcel se tvářil jako doručený. Skok teď **nejdřív vynuluje příběhový postup** (visited, defeatedTrainers, badges, parcel flagy, aktivní oblast) a pak nastaví přesně zvolený milník → **skok na X tě dá přesně na X**. Kolekce, tým, zlato a itemy zůstávají nedotčené.
+
+## [0.68.4] – 2026-09-08 · Dev: Story checkpointy (přeskočení začátku)
+### Added
+- **Dev „Skip to" (Nastavení → 🔧 Dev tools).** Tester může jedním klikem přeskočit na daný bod příběhu bez procházení intra a celého úvodu. Milníky jsou **kumulativní** (zvolený nastaví i vše před ním): ① Pallet (máš startéra), ② Rival poražen / Route 1, ③ Viridian / Parcel quest připraven, ④ Parcel doručen / Route 2, ⑤ Pewter City. Skok nastaví startéra (fallback Bulbasaur), jméno rivala (fallback „Blue"), story-flagy, navštívené oblasti i poražené trenéry. Přidání dalšího kroku Kanta = jen položka v `DEV_CHECKPOINTS`.
+### Notes
+- Skok jde spustit i z **title screenu** (⚙ Settings) ještě před vstupem do hry – tím se přeskočí i intro s pojmenováním rivala.
+
+## [0.68.3] – 2026-09-08 · Oak's Parcel – vyskakovací okna (žádný text pod mapou)
+### Added
+- **Nové znovupoužitelné vyskakovací okno** (`src/ui/popup.js`) pro krátká příběhová sdělení (OK / ✕ / klik mimo / Esc).
+### Changed
+- **Žádný příběhový text pod mapou.** Po příchodu do Viridianu vyskočí **okno**, které tě navede na **modrou budovu (Poké Mart)** – místo hlášky pod mapou.
+- **Oak's Parcel dostaneš až v Poké Martu.** Klik na Mart ve Viridianu otevře okno, kde tě **clerk poprosí o doručení balíčku Oakovi**; potvrzením **OK přijmeš quest** (`oakParcelGiven`) a Mart se pak otevře normálně. Doručení dál probíhá v Oak's Lab v Pallet Townu (→ 5 Poké Ballů, odemčení Route 2).
+
+## [0.68.2] – 2026-09-08 · Oak's Parcel – robustní spuštění
+### Fixed
+- **Oak's Parcel se nespouštěl.** Předání balíčku ve Viridianu už nezávisí na „první návštěvě" (`firstVisit`) – řídí ho **pouze story-flagy**, takže se předá i savům, které Viridian už dřív navštívily, dokud ho hráč nemá/nedoručil.
+- **Trvalá připomínka:** při každém příchodu do Viridianu s nedoručeným balíčkem naskočí hláška „You're still carrying Oak's Parcel…", ať je pořád jasné, co dělat (doručit Oakovi v Pallet).
+### Changed (save)
+- **Save v26 → v27:** oprava chybného „propuštění" z v0.68.0 – savy, které dostaly `oakParcelDelivered=true`, aniž kdy vyrazily na sever, se vrátí do stavu s aktivním questem (`oakParcelGiven`).
+
+## [0.68.1] – 2026-09-08 · Oprava Viridian Gym gating + Oak's Parcel
+### Fixed
+- **Viridian Gym šel dřív odehrát** (zbytek z v0.67.0, kdy byly aktivní všechny gymy). Nově je **zamčený a gatekeepovaný na 7 odznaků** (Giovanni až úplně na konci). Záložka **Gym zůstává viditelná**, ale místo souboje ukáže ceduli „doors are firmly shut" + průběh sběru odznaků (`x / 7`).
+- **Oak's Parcel quest se u některých hráčů nespustil**: bezpečnostní migrace v25→v26 dřív „propustila" každý save, který už Viridian navštívil (nastavila `oakParcelDelivered`). Nově se auto-doručení uplatní **jen na save, který už vyrazil na sever** (Route 2 / Viridian Forest / Pewter); save pouze ve Viridianu dostane rovnou **quest** (`oakParcelGiven`).
+### Removed
+- Odstraněna redundantní „viridian-gym" story budova z City rosteru – zavřený gym řeší výhradně **Gym tab** (jeden zdroj pravdy).
+### Notes
+- Save už na v26 migraci znovu nepřehraje. Pro otestování čerstvého Parcel questu je nutná **nová hra**.
+
+## [0.68.0] – 2026-09-08 · Věrný Kanto příběh – Intro, Pallet Town, Viridian City
+### Added
+- **Úvodní scéna (intro).** Nová hra začíná krátkou **přeskočitelnou** textovou scénou: profesor Oak (sprite) přivítá hráče a Mew vyskočí z **Master Ballu**. Na konci si hráč **pojmenuje svého rivala** – jméno se používá celý playthrough (Rival tab, budovy).
+- **Skrytý 4. starter (Pikachu).** V okně výběru startéra se volba nově **potvrzuje (Ano/Ne)**; když odmítneš všechny tři nabízené, Oak odhalí čtvrtou **skrytou volbu – Pikachu**.
+- **Budovy per město + příběhové (interakční) budovy.** Roster budov je nově **per-oblast** (upgrade levely zůstávají globální – žádná riziková migrace). Pallet Town = **Oak's Lab** (výběr startéra + Pokédex), **Tvůj domov** (máma jednorázově dá 5 Potionů; nově i **bezplatné doléčení týmu** jako pojistka proti soft-locku) a **Rivalův dům**. Pallet **nemá Center ani Mart** (věrné kánonu).
+- **Rival v Pallet Town.** První souboj s rivalem (**Eevee**) přes klikací **Rival tab**. Je záměrně **snadný** (0 IV/0 EV, Lv 4, slabé tahy) a hlavně **nepovinný na výsledek** – Route 1 se odemkne, ať **vyhraješ, nebo prohraješ** (věrné kánonu; při prohře se rival vysměje a odejde).
+- **Viridian City.** První skutečné služby: **Poké Center + Poké Mart**. **Viridian Gym** je zatím **zavřený** (cedule „Leader away" – Giovanni až později).
+- **Oak's Parcel quest (věrné).** Při **prvním příchodu** do Viridianu ti v Martu předají **Oak's Parcel**; **doručením Oakovi** v Pallet Town získáš **5 Poké Ballů** a **odemkne se sever (Route 2)**. Do té doby je Route 2 zavřená; **Route 22** (západ, rival grinding) je dostupná hned.
+- **Story-flag gating oblastí (`unlock.story`).** Odemčení oblasti umí nově vyžadovat **příběhový flag** (platí zároveň s visited/badge/trainer).
+### Changed
+- **Obtížnost trenéra lze ladit per-kus (`trainer.difficulty`)** nad rámec profilu podle `kind` (merge). Využívá to snadný první rival.
+- **Manuální souboj:** sprite Pokémonů má teď **stejnou velikost jako v auto battle** (oprava CSS `max-width` vs `width` na `img`).
+### Fixed
+- **Prohraný první rival** už nehlásí falešné „beaten your Rival" – ukáže korektní prohru (rival se vysměje a odejde), ale cestu dál stejně otevře.
+### Changed (save)
+- **Save v25 → v26:** přidán kontejner `state.story` + migrace, která „propustí" starší save, jenž už Viridian navštívil (nastaví `oakParcelDelivered`), aby nikomu sever nezůstal zamčený (žádná regrese).
+### Notes
+- **Celý herní text je anglicky** (kódové komentáře zůstávají česky). Nový sprite profesora Oaka: `assets/npc/oak.png` (prohnaný `tools/prep_sprite.py`).
+
 ## [0.67.0] – 2026-09-07 · Trenéři a gymy na celém Kantu
 ### Added
 - **Všech 8 gymů Kanta.** Kromě Pewteru (Brock) teď fungují i Cerulean (Misty), Vermilion (Lt. Surge), Celadon (Erika), Fuchsia (Koga), Saffron (Sabrina), Cinnabar (Blaine) a Viridian (Giovanni). Každý gym = záložka „Gym" ve svém městě, sekvence gym trenérů → leader, poražení leadera dá odznak. Rostery a levely leaderů vycházejí z kánonu FRLG (přibližně). Souboje v gymu jsou dál **jen manuální**.

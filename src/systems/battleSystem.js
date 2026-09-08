@@ -33,8 +33,11 @@ import {
   ROUTE_TRAINER_CHANCE,
   trainerDifficulty,
   resolveTrainerTeam,
+  randomTrainerVariant,
   COUNTER_STARTER,
+  COUNTER_STARTER_MID,
   COUNTER_STARTER_FINAL,
+  rocketGauntletForArea,
 } from "../../data/trainers.js";
 import { getBadge } from "../../data/badges.js";
 import { NATURES } from "../../data/natures.js";
@@ -1781,6 +1784,21 @@ function handleFaint(winner) {
       battle.result = "defeat";
       battle.running = false;
       pushLog("Your whole team has fainted. Defeat.", "enemy");
+      // Story-gate trenér (např. první rival): stačí souboj ODEHRÁT, takže i
+      // prohra odemkne návaznou oblast. Bez odměny – zapíšeme „prošlo" a navíc
+      // story-flag „gateLost:<id>", ať UI (rivalView) ukáže prohru, ne výhru.
+      if (battle.trainer?.gateOnFight) {
+        const s = getState();
+        if (!Array.isArray(s.progress.defeatedTrainers)) s.progress.defeatedTrainers = [];
+        if (!s.progress.defeatedTrainers.includes(battle.trainer.id)) {
+          s.progress.defeatedTrainers.push(battle.trainer.id);
+        }
+        if (!s.story) s.story = {};
+        s.story[`gateLost:${battle.trainer.id}`] = true;
+        commit();
+        const rname = s.player?.rivalName?.trim() || battle.trainer.name;
+        pushLog(`${rname} smirked at you and set off on their own journey...`, "enemy");
+      }
     }
   }
 }
@@ -1799,6 +1817,10 @@ function resolveTrainerSpecies(mon) {
   if (mon?.counterStarterFinal) {
     const starter = getStarterSpeciesId();
     return COUNTER_STARTER_FINAL[starter] ?? "pidgeot"; // fallback, kdyby starter chyběl
+  }
+  if (mon?.counterStarterMid) {
+    const starter = getStarterSpeciesId();
+    return COUNTER_STARTER_MID[starter] ?? "pidgeotto"; // fallback, kdyby starter chyběl
   }
   if (mon?.counterStarter) {
     const starter = getStarterSpeciesId();
@@ -1872,8 +1894,13 @@ function makeTrainerState(trainer, { gymId = null, returnToWild = false } = {}) 
     name: trainer.name,
     class: trainer.class,
     kind: trainer.kind,
+    // Sprite se losuje JEDNOU tady (per-battle kopie), aby byl stálý napříč tiky
+    // a nový každý souboj (leader má 1 sprite → varianta se nepoužije).
+    spriteVariant: randomTrainerVariant(trainer.class),
     reward,
     badge: trainer.badge ?? null,
+    // Story-gate: odemyká cílovou oblast už odehráním souboje (výhra i prohra).
+    gateOnFight: !!trainer.gateOnFight,
     team,
     cursor: 0,
     gymId,
@@ -1888,7 +1915,7 @@ function makeTrainerState(trainer, { gymId = null, returnToWild = false } = {}) 
  * @param {{ gymId?: string|null }} [opts]
  * @returns {{ ok: boolean, reason?: string }}
  */
-export function startTrainerBattle(trainerId, { gymId = null } = {}) {
+export function startTrainerBattle(trainerId, { gymId = null, forceManual = false } = {}) {
   const trainer = getTrainer(trainerId);
   if (!trainer) return { ok: false, reason: "Unknown trainer." };
   const team = getTeamPokemon();
@@ -1913,8 +1940,8 @@ export function startTrainerBattle(trainerId, { gymId = null } = {}) {
     player: makeCombatant(team[firstAlive]),
     enemy: null,
     trainer: makeTrainerState(trainer, { gymId, returnToWild: false }),
-    // Gym souboje jsou POVINNĚ manuální – auto battle je v nich zakázané.
-    forceManual: !!gymId,
+    // Gym i Rocket gauntlet souboje jsou POVINNĚ manuální – auto battle je v nich zakázané.
+    forceManual: !!gymId || forceManual,
   };
   battle.enemy = spawnTrainerMon(battle.trainer, 0);
   if (trainer.quote) pushLog(`${trainer.name}: ${trainer.quote}`);
@@ -1991,6 +2018,72 @@ function finishTrainerBattle(t, lastEnemy) {
         badgeGain = t.badge;
       }
     }
+    // Věrný Kanto: první zisk Boulder Badge (Brock) = drobná odměna + gratulace
+    // v samostatném okně (info o otevřené Route 3). Jednorázově (story flag).
+    if (badgeGain === "boulder-badge") {
+      if (!s.story) s.story = {};
+      if (!s.story.brockCleared) {
+        s.story.brockCleared = true;
+        const BROCK_GOLD = 500;
+        const BROCK_BALLS = 5;
+        s.resources.gold += BROCK_GOLD;
+        goldGain += BROCK_GOLD; // ať se objeví i v přehledu výhry
+        if (!s.resources.balls) s.resources.balls = {};
+        s.resources.balls.poke = (s.resources.balls.poke ?? 0) + BROCK_BALLS;
+        pushLog(`Brock's gift: +${BROCK_BALLS}× Poké Ball!`, "player");
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "🥇 Boulder Badge!",
+          body: `<p class="story-text">Brock: "I took you for granted... As proof of your victory, here is the <strong>Boulder Badge</strong>!"</p>
+            <p class="story-text">He also hands you a small reward — <strong>${BROCK_BALLS}× Poké Ball</strong> and some prize money.</p>
+            <p class="story-text">The path <strong>east to Route 3</strong> (toward Mt. Moon) is open now. Good luck out there!</p>`,
+          okLabel: "Onward!",
+        });
+      }
+    }
+    // Věrný Kanto: Team Rocket gauntlet (Mt. Moon) – poražení VŠECH grunts
+    // odemkne další cestu (story flag) + jednorázový bonus a payoff popup.
+    if (t.kind === "rocket") {
+      if (!s.story) s.story = {};
+      const gaunt = rocketGauntletForArea(getActiveArea()?.id);
+      if (gaunt && !s.story[gaunt.clearFlag]) {
+        const allBeaten = gaunt.trainerIds.every((id) => s.progress.defeatedTrainers.includes(id));
+        if (allBeaten) {
+          s.story[gaunt.clearFlag] = true;
+          const bonus = gaunt.clearReward?.gold ?? 0;
+          if (bonus) {
+            s.resources.gold += bonus;
+            goldGain += bonus; // ať se objeví i v přehledu výhry
+          }
+          bus.emit(EVENTS.STORY_POPUP, {
+            title: "🚫 Team Rocket driven out!",
+            body: `<p class="story-text">The last grunt scrambles away into the dark: "You haven't seen the last of Team Rocket!"</p>
+              <p class="story-text">With the thugs gone, the tunnel deeper into Mt. Moon is clear at last.</p>
+              ${bonus ? `<p class="story-text">You recover <strong>${bonus}₽</strong> the grunts had stolen.</p>` : ""}
+              <p class="story-text">The path onward to <strong>Route 4</strong> and Cerulean City is open now.</p>`,
+            okLabel: "Onward!",
+          });
+        }
+      }
+    }
+    // Věrný Kanto: souboj s rivalem na S.S. Anne – výhra dá HM01 Cut (od kapitána)
+    // a odemkne kácení stromu před Vermilion Gymem. Jednorázově (story flag).
+    if (t.id === "rival-ss-anne") {
+      if (!s.story) s.story = {};
+      if (!s.story.ssAnneCleared) {
+        s.story.ssAnneCleared = true;
+        s.story.hasCut = true;
+        if (!s.resources.items) s.resources.items = {};
+        s.resources.items["hm01-cut"] = (s.resources.items["hm01-cut"] ?? 0) + 1;
+        pushLog("The S.S. Anne captain gave you HM01 Cut!", "player");
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "🌿 HM01 Cut!",
+          body: `<p class="story-text">With the rival gone, you help the ship's seasick captain feel better. Grateful, he hands you a Hidden Machine.</p>
+            <p class="story-text">You received <strong>HM01 Cut</strong>! It can slice down small trees blocking the way.</p>
+            <p class="story-text">A leafy tree was blocking the <strong>Vermilion Gym</strong> — now you can cut it down and challenge <strong>Lt. Surge</strong>!</p>`,
+          okLabel: "Onward!",
+        });
+      }
+    }
   }
   commit();
   pushLog(`${t.name} was defeated!`, "player");
@@ -2001,7 +2094,7 @@ function finishTrainerBattle(t, lastEnemy) {
   }
   const interlude = {
     kind: "trainer-win",
-    trainer: { id: t.id, name: t.name, class: t.class, kind: t.kind },
+    trainer: { id: t.id, name: t.name, class: t.class, kind: t.kind, spriteVariant: t.spriteVariant },
     enemy: enemySnapshot(lastEnemy),
     rewards: { gold: goldGain, badge: badgeGain, alreadyBeaten: already },
     gymId: t.gymId ?? null,
@@ -2227,12 +2320,63 @@ export function setActiveArea(areaId) {
   const s = getState();
   if (!s.progress) s.progress = { tier: 1, visited: [], badges: [] };
   if (!Array.isArray(s.progress.visited)) s.progress.visited = [];
-  if (!isAreaUnlocked(area, s.progress.visited, earnedBadges(), s.progress.defeatedTrainers ?? [])) {
+  if (!isAreaUnlocked(area, s.progress.visited, earnedBadges(), s.progress.defeatedTrainers ?? [], s.story ?? {})) {
     return { ok: false, reason: "This area is locked — reach it through the previous area first." };
   }
   s.progress.activeAreaId = areaId;
   // Návštěva uzlu odemyká navazující uzly (viz data/areas.js unlock.visited).
   if (!s.progress.visited.includes(areaId)) s.progress.visited.push(areaId);
+
+  // Story event (Oak's Parcel): balíček se NEPŘEDÁVÁ automaticky ani se nic
+  // nepíše pod mapu. Když hráč dorazí do Viridianu a ještě nemá/nedoručil balíček,
+  // vrátíme jen signál `event`, na který UI (mapView) ukáže vyskakovací okno
+  // navádějící do Poké Martu. Samotné předání questu řeší až klik na Mart
+  // (viz cityView → clerk popup), doručení pak Oak's Lab v Pallet Townu.
+  let event = null;
+  if (!s.story) s.story = {};
+  const story = s.story;
+  const beaten = s.progress.defeatedTrainers ?? [];
+  if (areaId === "viridian-city" && !story.oakParcelDelivered && !story.oakParcelGiven) {
+    event = "viridian-parcel-hint";
+  } else if (areaId === "pewter-city" && !beaten.includes("brock")) {
+    // Příchod do Pewteru s dosud neporaženým Brockem → navedeme hráče do Gymu.
+    event = "pewter-gym-hint";
+  } else if (areaId === "viridian-forest" && !story.viridianForestItem) {
+    // Věrný Kanto: v lese leží na zemi Potion a Antidote – jednorázový pickup.
+    story.viridianForestItem = true;
+    if (!s.resources.items) s.resources.items = {};
+    s.resources.items.potion = (s.resources.items.potion ?? 0) + 1;
+    s.resources.items.antidote = (s.resources.items.antidote ?? 0) + 1;
+    event = "viridian-forest-item";
+  } else if (areaId === "mt-moon" && !story.mtMoonEntered) {
+    // Věrný Kanto: Mt. Moon obsadil Team Rocket – flavour popup při vstupu.
+    story.mtMoonEntered = true;
+    event = "mt-moon-rocket";
+  } else if (areaId === "route-04" && !story.fossilChosen) {
+    // Vynořil ses z Mt. Moon → jednorázová volba fosílie (Helix/Dome).
+    // Samotné předání itemu řeší až klik na volbu (viz mapView → applyFossilChoice).
+    event = "mt-moon-fossil";
+  } else if (areaId === "cerulean-city" && !beaten.includes("misty")) {
+    // Příchod do Cerulean s dosud neporaženou Misty → navedeme hráče do Gymu.
+    event = "cerulean-arrival";
+  } else if (areaId === "route-24" && !story.nuggetBridge) {
+    // Nugget Bridge: trenér ti dá Nugget – rovnou ho zpeněžíme (žádný mrtvý item).
+    story.nuggetBridge = true;
+    const NUGGET_GOLD = 1000;
+    s.resources.gold = (s.resources.gold ?? 0) + NUGGET_GOLD;
+    event = "nugget-bridge";
+  } else if (areaId === "route-25" && !story.billHelped) {
+    // Věrný Kanto: na konci Route 25 bydlí Bill. Pomůžeš mu z jeho teleportéru
+    // a on ti dá lodní lístek na S.S. Anne. Jednorázově (story flag).
+    story.billHelped = true;
+    if (!s.resources.items) s.resources.items = {};
+    s.resources.items["ss-anne-ticket"] = (s.resources.items["ss-anne-ticket"] ?? 0) + 1;
+    event = "bill-route-25";
+  } else if (areaId === "vermilion-city" && !story.vermilionArrival) {
+    // Příchod do Vermilion → navedeme hráče na S.S. Anne (a k Lt. Surgeovi).
+    story.vermilionArrival = true;
+    event = "vermilion-arrival";
+  }
 
   // Běžící souboj přizpůsobit nové oblasti.
   if (battle && battle.running) {
@@ -2251,7 +2395,26 @@ export function setActiveArea(areaId) {
   }
   commit(); // → STATE_CHANGED (překreslí mapu = zvýrazní aktivní oblast)
   bus.emit(EVENTS.BATTLE_UPDATE);
-  return { ok: true };
+  return { ok: true, event };
+}
+
+/**
+ * Věrný Kanto: v Mt. Moon si hráč vybere JEDNU fosílii (jednorázově).
+ * Helix → Omanyte, Dome → Kabuto. Uloží item do batohu a nastaví story-flag.
+ * Oživení fosílie doděláme později (Museum/Lab).
+ * @param {"helix"|"dome"} kind
+ * @returns {{ ok: boolean, item?: string }}
+ */
+export function applyFossilChoice(kind) {
+  const s = getState();
+  if (!s.story) s.story = {};
+  if (s.story.fossilChosen) return { ok: false };
+  if (!s.resources.items) s.resources.items = {};
+  const itemId = kind === "dome" ? "dome-fossil" : "helix-fossil";
+  s.resources.items[itemId] = (s.resources.items[itemId] ?? 0) + 1;
+  s.story.fossilChosen = kind;
+  commit();
+  return { ok: true, item: itemId };
 }
 
 export function startBattle() {

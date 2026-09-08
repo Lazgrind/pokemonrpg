@@ -61,7 +61,7 @@ export function openBag(onStatus = () => {}) {
   /** Seznam vlastněných consumable itemů (bez held itemů, bez evolučních). */
   function consumablesListHtml() {
     const items = ITEMS
-      .filter((it) => !isHeldItem(it.id) && it.category !== "evolution" && itemCount(it.id) > 0)
+      .filter((it) => !isHeldItem(it.id) && it.category !== "evolution" && it.category !== "special" && itemCount(it.id) > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
 
     const rows = items
@@ -79,6 +79,26 @@ export function openBag(onStatus = () => {}) {
       )
       .join("");
     return rows ? rows : `<p class="placeholder">No consumables.</p>`;
+  }
+
+  /** Seznam klíčových/příběhových itemů (kategorie "special", např. fosílie).
+   * Read-only – nedají se použít ani prodat, jen se drží do budoucího využití. */
+  function keyItemsListHtml() {
+    const items = ITEMS
+      .filter((it) => it.category === "special" && itemCount(it.id) > 0)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    const rows = items
+      .map(
+        (it) => `<div class="bag-item-row-wrapper">
+          <div class="bag-item-row" title="${it.desc}">
+            <span>${it.icon} <strong>${it.name}</strong> <span class="placeholder">— ${it.desc}</span></span>
+            <span class="bag-count">×${itemCount(it.id)}</span>
+          </div>
+        </div>`
+      )
+      .join("");
+    return rows ? rows : `<p class="placeholder">No key items.</p>`;
   }
 
   /** Seznam evolučních kamenů a Linking Cord. */
@@ -153,9 +173,15 @@ export function openBag(onStatus = () => {}) {
 
   /** Hlavní seznam itemů – consumables, evoluční itemy a held items v sekcích. */
   function itemListHtml() {
+    // Sekci Key Items ukážeme jen když nějaké klíčové itemy fakt vlastníš.
+    const hasKeyItems = ITEMS.some((it) => it.category === "special" && itemCount(it.id) > 0);
+    const keyItemsSection = hasKeyItems
+      ? `<h3 class="shop-cat">🔑 Key Items</h3>${keyItemsListHtml()}`
+      : "";
     const body = `
       <h3 class="shop-cat">🧴 Consumables</h3>
       ${consumablesListHtml()}
+      ${keyItemsSection}
       <h3 class="shop-cat">🪨 Evolution Items</h3>
       ${evolutionItemsListHtml()}
       <h3 class="shop-cat">💎 Held Items</h3>

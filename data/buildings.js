@@ -20,6 +20,8 @@
  * @property {{ baseEv: number, perLevel: number, goldCost: number }} [training]  trénink EV (Training Grounds): kolik EV za jednu placenou lekci (+perLevel za úroveň) a cena lekce v goldu
  * @property {boolean} [moveTutor]  Move Tutor: budova umožní přeskládat aktivní tahy z celého level-up movepoolu (bez efektu na cenu/level)
  * @property {Record<string, TrackDef>} [tracks]  samostatné upgrade linie budovy (vlastní úroveň i cena)
+ * @property {string} [story]  klíč story-handleru (interakční budova BEZ upgradu/levelu; viz src/ui/storyBuildingView.js).
+ *   Story budovy se nezobrazují s „Lv X" a klik je nevede do buildingView, ale do příběhové interakce.
  *
  * @typedef {Object} TrackDef
  * @property {string} name          zobrazovaný název linie
@@ -109,10 +111,93 @@ export const BUILDINGS = [
 ];
 
 /**
- * Najde definici budovy podle id.
+ * Story/interakční budovy (věrné Kanto). Nemají upgrade ani level – klik otevře
+ * příběhovou interakci (viz src/ui/storyBuildingView.js). Pole `story` = klíč handleru.
+ * Sprity zatím nejsou (necháme CSS domeček s ikonou; radši prázdno než cizí obrázek).
+ * @type {BuildingDef[]}
+ */
+export const STORY_BUILDINGS = [
+  {
+    id: "oak-lab",
+    name: "Oak's Lab",
+    icon: "🔬",
+    color: "#c9a24b",
+    description: "Professor Oak's laboratory. Here you chose your starter and received your Pokédex.",
+    story: "oak-lab",
+  },
+  {
+    id: "player-home",
+    name: "Your Home",
+    icon: "🏠",
+    color: "#6fae54",
+    description: "Your house in Pallet Town. Mom is waiting inside.",
+    story: "player-home",
+  },
+  {
+    id: "rival-home",
+    name: "Rival's Home",
+    icon: "🏡",
+    color: "#b06a4b",
+    description: "Your rival's house, right next door.",
+    story: "rival-home",
+  },
+  {
+    id: "pewter-museum",
+    name: "Museum of Science",
+    icon: "🏛️",
+    color: "#7c8aa0",
+    description: "Pewter's famous Museum of Science — fossils, a moon stone, and a space exhibit. Bring a fossil here to have it revived.",
+    story: "pewter-museum",
+  },
+  {
+    id: "ss-anne",
+    name: "S.S. Anne",
+    icon: "🚢",
+    color: "#4a7bb5",
+    description: "A luxury liner docked at Vermilion City. Board it with the S.S. Anne Ticket.",
+    story: "ss-anne",
+  },
+];
+
+/**
+ * Roster budov pro konkrétní město (areaId → seznam id budov v pořadí). Města,
+ * která tu NEJSOU uvedená, dostanou výchozí idle pětici (BUILDINGS). Věrnost
+ * Kanto: Pallet Town nemá Poké Center ani Mart – jen laboratoř a domy.
+ * @type {Record<string, string[]>}
+ */
+export const CITY_BUILDINGS = {
+  "pallet-town": ["oak-lab", "player-home", "rival-home"],
+  // Viridian City: první skutečné služby (Center + Mart). Gym má vlastní tab
+  // (zatím zavřený, viz gymView isGymOpen) – ne jako budova v City rosteru.
+  "viridian-city": ["poke-center", "poke-mart"],
+  // Pewter City: služby + příběhové Museum of Science. Gym (Brock) má vlastní tab.
+  "pewter-city": ["poke-center", "poke-mart", "pewter-museum"],
+  // Cerulean City: služby (Center + Mart). Gym (Misty) má vlastní tab.
+  "cerulean-city": ["poke-center", "poke-mart"],
+  // Vermilion City: služby + příběhová S.S. Anne (loď). Gym (Lt. Surge) má vlastní
+  // tab, ale je zamčený stromem dokud hráč nemá HM Cut (viz gyms.js requiresStory).
+  "vermilion-city": ["poke-center", "poke-mart", "ss-anne"],
+};
+
+/** Všechny známé budovy (idle + story) pro vyhledávání podle id. */
+const ALL_BUILDINGS = [...BUILDINGS, ...STORY_BUILDINGS];
+
+/**
+ * Budovy zobrazené v daném městě. Neznámé/neuvedené město → výchozí idle pětice.
+ * @param {string} [cityId]
+ * @returns {BuildingDef[]}
+ */
+export function buildingsForCity(cityId) {
+  const ids = CITY_BUILDINGS[cityId];
+  if (!ids) return BUILDINGS;
+  return ids.map((id) => ALL_BUILDINGS.find((b) => b.id === id)).filter(Boolean);
+}
+
+/**
+ * Najde definici budovy podle id (idle i story).
  * @param {string} id
  * @returns {BuildingDef | undefined}
  */
 export function getBuilding(id) {
-  return BUILDINGS.find((b) => b.id === id);
+  return ALL_BUILDINGS.find((b) => b.id === id);
 }

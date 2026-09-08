@@ -219,8 +219,14 @@ export function resolveMoveLearn(uid, moveId, replaceIndex = null) {
   if (!Array.isArray(owned.moves)) owned.moves = [];
   if (owned.moves.some((m) => m.id === moveId)) return { ok: true, replaced: false }; // mezitím už umí
   const slot = { id: moveId, pp: mv.pp, maxPp: mv.pp };
-  if (replaceIndex >= owned.moves.length) owned.moves.push(slot);
-  else owned.moves[replaceIndex] = slot;
+  if (replaceIndex >= owned.moves.length) {
+    // Přidat do volného slotu jen když je fakt místo – NIKDY nepřekročit MAX_MOVES.
+    // (Jinak by fronta nabídek mohla jedinci naskládat 5+ tahů.)
+    if (owned.moves.length < MAX_MOVES) owned.moves.push(slot);
+    else return { ok: true, replaced: false }; // plno → nic (UI má nabídnout replace slot 0–3)
+  } else {
+    owned.moves[replaceIndex] = slot;
+  }
   return { ok: true, replaced: true };
 }
 

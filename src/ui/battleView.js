@@ -35,7 +35,7 @@ import { ITEMS, getItem } from "../../data/items.js";
 import { canUseItem } from "../systems/itemSystem.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { ballIconHtml } from "./ballIcon.js";
-import { spriteImg, spriteScaleForHeight } from "./sprites.js";
+import { spriteImg } from "./sprites.js";
 import { getTeamPokemon } from "../systems/team.js";
 import { computeStats } from "../systems/pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
@@ -236,8 +236,8 @@ function combatantHtml(c, side, view, showXp = false, animated = false) {
   const name = `${c.ref.shiny ? "✨ " : ""}${c.name}`;
   const status = statusBadge(c.status);
 
-  // Velikost spritu ve scéně škálujeme podle výšky druhu (Pidgey ≠ Charizard).
-  const spScale = spriteScaleForHeight(getSpecies(c.ref.speciesId)?.height);
+  // Všichni Pokémoni mají JEDNOTNOU velikost (plné --sprite) – škálování podle
+  // výšky dělalo malé druhy v manuálním souboji nečitelné.
   const sprite = spriteImg(c.ref.speciesId, {
     view,
     shiny: !!c.ref.shiny,
@@ -245,7 +245,6 @@ function combatantHtml(c, side, view, showXp = false, animated = false) {
     animated,
     alt: c.name,
     extraClass: "battle-sprite",
-    scale: spScale,
   });
 
   let xpHtml = "";
@@ -595,7 +594,7 @@ function interludeHtml(b) {
   if (il.kind === "trainer-win") {
     const t = il.trainer ?? {};
     const rw = il.rewards ?? {};
-    const tSprite = trainerSpriteUrl({ id: t.id, class: t.class, kind: t.kind });
+    const tSprite = trainerSpriteUrl({ id: t.id, class: t.class, kind: t.kind, spriteVariant: t.spriteVariant });
     const rows = [];
     if (rw.gold) rows.push(`<li>💰 <b>+${rw.gold}</b> gold</li>`);
     if (rw.badge) {

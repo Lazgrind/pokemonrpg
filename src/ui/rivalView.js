@@ -27,6 +27,8 @@ export function renderRivalTab(root, onStatus = () => {}) {
   const defeated = (getState().progress?.defeatedTrainers ?? []).includes(rival.id);
   const maxLv = Math.max(...rival.team.map((m) => m.level ?? 1));
   const sprite = trainerSpriteUrl({ id: rival.id, class: rival.class, kind: rival.kind });
+  // Jméno rivala zvolené hráčem v úvodním intru (drží se celý playthrough).
+  const displayName = getState().player?.rivalName?.trim() || rival.name;
 
   // Náhled týmu (bez counter-starter kusů – ty se dopočítají za běhu).
   const teamPreview = rival.team
@@ -36,8 +38,13 @@ export function renderRivalTab(root, onStatus = () => {}) {
     })
     .join("");
 
+  // Story-gate prohra (jen první rival): souboj prošel i bez výhry – ukaž prohru,
+  // ne falešné „beaten". Flag nastavuje battleSystem při prohře (gateOnFight).
+  const lost = !!getState().story?.[`gateLost:${rival.id}`];
   const action = defeated
-    ? `<div class="rival-cleared">✓ You've beaten your Rival here — the path ahead is open.</div>`
+    ? lost
+      ? `<div class="rival-cleared rival-lost">You lost... ${displayName} smirked and set off on their own journey. The road ahead is open all the same.</div>`
+      : `<div class="rival-cleared">✓ You've beaten your Rival here — the path ahead is open.</div>`
     : `<button class="btn rival-fight" data-trainer="${rival.id}">⚔ Challenge your Rival</button>`;
 
   root.innerHTML = `
@@ -45,9 +52,9 @@ export function renderRivalTab(root, onStatus = () => {}) {
       <h2 class="panel-title">🔥 Rival Battle</h2>
       <p class="placeholder">Your Rival blocks the way forward. Beat them to pass — you can still battle wild Pokémon here anytime.</p>
       <div class="rival-card">
-        <img class="rival-sprite" src="${sprite}" alt="${rival.name}" onerror="this.style.visibility='hidden'">
+        <img class="rival-sprite" src="${sprite}" alt="${displayName}" onerror="this.style.visibility='hidden'">
         <div class="rival-meta">
-          <div class="rival-name">${rival.name} <span class="placeholder">· up to Lv ${maxLv}</span></div>
+          <div class="rival-name">${displayName} <span class="placeholder">· up to Lv ${maxLv}</span></div>
           <ul class="rival-team">${teamPreview}</ul>
         </div>
       </div>

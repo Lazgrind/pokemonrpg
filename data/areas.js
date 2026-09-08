@@ -76,7 +76,9 @@ export const AREAS = [
     order: 1,
     x: 24,
     y: 56.5,
-    unlock: { start: true },
+    // Nejdřív povinný souboj s rivalem v Pallet Town (stačí ho odehrát – viz
+    // gateOnFight u rival-pallet); teprve pak se Route 1 otevře.
+    unlock: { start: true, trainer: "rival-pallet" },
     recommendedLevel: 1,
     description: "A calm grassy path just outside town. Perfect for your first expedition.",
     species: ["pidgey", "rattata"],
@@ -121,7 +123,9 @@ export const AREAS = [
     order: 4,
     x: 24.3,
     y: 39.3,
-    unlock: { visited: "viridian-city" },
+    // Sever z Viridianu je zavřený, dokud nedoručíš Oak's Parcel (věrné kánonu –
+    // spící stařík tě jinak nepustí). Story-flag nastaví Oak's Lab po doručení.
+    unlock: { visited: "viridian-city", story: "oakParcelDelivered" },
     recommendedLevel: 4,
     description: "The path north of Viridian, leading toward Viridian Forest.",
     species: ["caterpie", "weedle", "pidgey", "rattata"],
@@ -155,7 +159,7 @@ export const AREAS = [
     y: 20.5,
     unlock: { visited: "viridian-forest" },
     recommendedLevel: 8,
-    description: "A city of stone. Home to the first Gym — Leader Brock — coming soon.",
+    description: "A city of stone. Home to the first Gym — challenge Leader Brock for the Boulder Badge.",
     species: [],
     drops: [],
   },
@@ -201,7 +205,7 @@ export const AREAS = [
     order: 9,
     x: 54.3,
     y: 17.7,
-    unlock: { visited: "mt-moon" },
+    unlock: { visited: "mt-moon", story: "mtMoonRocketsCleared" },
     recommendedLevel: 11,
     description: "A desert-like passage on the far side of Mt. Moon.",
     species: ["rattata", "spearow", "ekans", "sandshrew", "mankey"],
@@ -749,16 +753,19 @@ export function getArea(id) {
  * @param {string[]} visited  id navštívených oblastí (state.progress.visited)
  * @param {string[]} badges   získané odznaky (state.progress.badges)
  * @param {string[]} defeatedTrainers  poražení trenéři (state.progress.defeatedTrainers)
+ * @param {Record<string, boolean>} story  příběhové flagy (state.story) – pro `unlock.story`
  * @returns {boolean}
  */
-export function isAreaUnlocked(area, visited = [], badges = [], defeatedTrainers = []) {
+export function isAreaUnlocked(area, visited = [], badges = [], defeatedTrainers = [], story = {}) {
   if (!area) return false;
   const u = area.unlock ?? {};
   // Odznak (gym gating) musí sedět vždy, když je požadovaný.
   if (u.badge && !(badges ?? []).includes(u.badge)) return false;
   // Gate mini-boss (rival/trenér) musí být poražen, když je požadovaný.
   if (u.trainer && !(defeatedTrainers ?? []).includes(u.trainer)) return false;
+  // Příběhová podmínka (jednorázový event, např. doručení Oak's Parcel).
+  if (u.story && !(story ?? {})[u.story]) return false;
   if (u.start) return true;
   if (u.visited) return (visited ?? []).includes(u.visited);
-  return true; // bez podmínky = dostupné (jen odznak/trenér už prošli výše)
+  return true; // bez podmínky = dostupné (jen odznak/trenér/story už prošli výše)
 }

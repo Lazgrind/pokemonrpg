@@ -1,0 +1,43 @@
+name: Počet řádků (README)
+
+# Při každém pushi na main / release/** přepočítá řádky a commitne aktualizované
+# README zpět. Vlastní commit má v hlášce [skip ci] – GitHub Actions ho díky tomu
+# NEspustí znovu (žádná nekonečná smyčka).
+on:
+  push:
+    branches:
+      - main
+      - 'release/**'
+
+# Bot musí smět commitovat zpět do repa.
+permissions:
+  contents: write
+
+jobs:
+  count-lines:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (na správnou větev, ať jde pushnout zpět)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Nastav Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Přepočti řádky do README
+        run: python tools/count_lines.py
+
+      - name: Commitni změnu README (jen když se něco změnilo)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- README.md; then
+            echo "README beze změny – necommituju."
+          else
+            git add README.md
+            git commit -m "chore: aktualizace počtu řádků v README [skip ci]"
+            git push
+          fi
