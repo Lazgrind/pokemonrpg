@@ -45,4 +45,6 @@ export const EVENTS = {
   EGG_HATCHED: "egg:hatched",
   EGG_BRED: "egg:bred",
   POKEMON_EVOLVED: "pokemon:evolved",
+  // Systémová vrstva požádá UI o příběhové vyskakovací okno (payload: {title, body, okLabel?}).
+  STORY_POPUP: "story:popup",
 };

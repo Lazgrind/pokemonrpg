@@ -18,9 +18,10 @@
  *       - třída trenéra se odvodí z biomu routy (cave→hiker, water→swimmer…).
  *     `id` route trenéra je STABILNÍ (kvůli defeatedTrainers) – rolí se jen tým.
  *
- * Sprity (zatím chybí → fallback): odvozují se z `class` / `id`, viz
- * `trainerSpriteUrl()`. `kind === "gym-leader"` → assets/gym-leaders/<id>/front.png,
- * ostatní → assets/trainers/<class>/front.png. Konvence viz docs/SPRITES-TODO.md.
+ * Sprity: odvozují se z `class` / `id`, viz `trainerSpriteUrl()`.
+ * `kind === "gym-leader"` → assets/gym-leaders/<id>/front.png (1 sprite),
+ * ostatní → assets/trainers/<class>/<n>.png (1+ variant, náhodně při souboji;
+ * počty drží AUTO-GENEROVANÝ data/spriteVariants.js). Konvence viz docs/SPRITES-TODO.md.
  *
  * ⚠️ ROZSAH: celé Kanto (BASIC). Gymy = 8 leaderů + pár gym trenérů (kánon FRLG,
  * přibližně). Route trenéři = procedurální, na všech routách kromě zón bez trenérů
@@ -29,6 +30,7 @@
 
 import { AREAS, getArea } from "./areas.js";
 import { getSpecies } from "./pokemon.js";
+import { TRAINER_SPRITE_COUNTS } from "./spriteVariants.js";
 
 /**
  * @typedef {Object} TrainerMon
@@ -52,7 +54,7 @@ import { getSpecies } from "./pokemon.js";
 /**
  * @typedef {Object} Trainer
  * @property {string} id        unikátní id (klíč do state.progress.defeatedTrainers)
- * @property {"route"|"gym"|"gym-leader"|"rival"} kind  druh trenéra
+ * @property {"route"|"gym"|"gym-leader"|"rival"|"rocket"} kind  druh trenéra
  * @property {string} class     trenérská třída (složka spritu, viz trainerSpriteUrl)
  * @property {string} name      zobrazované jméno (vč. třídy, např. "Bug Catcher Rick")
  * @property {TrainerMon[]} [team]  fronta Pokémonů (fixní trenéři); u route trenérů chybí
@@ -86,6 +88,41 @@ const FIXED_TRAINERS = [
     ],
     reward: 5000,
     quote: "Smell ya later! ...Just kidding. Let's see if you're ready for the League!",
+  },
+  // První setkání s rivalem v Pallet Townu (věrné hře): rival má Eevee. NENÍ to
+  // tvrdá brána (Route 1 je otevřená od startu) – jen příběhový souboj přes Rival
+  // tab. Jméno se bere z playthrough (viz rivalView → player.rivalName).
+  {
+    id: "rival-pallet",
+    kind: "rival",
+    class: "rival",
+    name: "Rival",
+    // Level 4 a jen slabé tahy (bez „covet" 60 BP STAB, který jinak dává default
+    // movepool) – aby šel porazit i v manuálu hned na startu.
+    team: [{ speciesId: "eevee", level: 4, moves: ["tackle", "tail-whip"] }],
+    reward: 200,
+    quote: "I'll take the strongest one! Show me what you've got!",
+    // Úplně první souboj: záměrně hodně snadný (0 IV, 0 EV, žádná optim. povaha),
+    // aby šel porazit i v manuálním režimu hned na startu. Přebíjí profil `rival`.
+    difficulty: { ivFixed: 0, evOffense: 0, evSpeed: 0, optimizeNature: false },
+    // Story-gate: odemyká Route 1 už tím, že se souboj ODEHRAJE (výhra i prohra).
+    gateOnFight: true,
+  },
+  // Souboj s rivalem na palubě S.S. Anne (Vermilion, Krok 5). Věrné hře: rival má
+  // Pidgeotta, Raticate a svého startera v PROSTŘEDNÍ evoluci. NENÍ v RIVAL_GATES –
+  // spouští se z příběhové budovy S.S. Anne (ssAnneView). Výhra → HM01 Cut.
+  {
+    id: "rival-ss-anne",
+    kind: "rival",
+    class: "rival",
+    name: "Rival",
+    team: [
+      { speciesId: "pidgeotto", level: 18 },
+      { speciesId: "raticate", level: 16 },
+      { speciesId: null, level: 20, counterStarterMid: true },
+    ],
+    reward: 1330,
+    quote: "What?! You beat me again?! ...Take this, it fell out of my bag. Smell ya later!",
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -395,6 +432,74 @@ const FIXED_TRAINERS = [
     quote:
       "So! I must say, I am impressed you got here. I am Giovanni, Viridian's Gym Leader. This is our final battle!",
   },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  TEAM ROCKET GRUNTS (kind "rocket") – POVINNÝ gauntlet (viz ROCKET_GAUNTLETS).
+  //  Vlastní klikací tab „Rockets" (rocketView), stejná fronta jako gym, ale bez
+  //  odznaku. Poražení VŠECH v gauntletu odemkne další cestu (story flag).
+  //  Sprity: class "rocket-grunt" (assets/trainers/rocket-grunt/<n>.png; dodá uživatel).
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: "mt-moon-rocket-1",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Team Rocket Grunt",
+    team: [
+      { speciesId: "rattata", level: 11 },
+      { speciesId: "zubat", level: 11 },
+    ],
+    reward: 350,
+    quote: "This cave belongs to Team Rocket now. Beat it, kid!",
+  },
+  {
+    id: "mt-moon-rocket-2",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Team Rocket Grunt",
+    team: [
+      { speciesId: "sandshrew", level: 12 },
+      { speciesId: "zubat", level: 12 },
+    ],
+    reward: 380,
+    quote: "We're digging for fossils here. Get lost!",
+  },
+  {
+    id: "mt-moon-rocket-3",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Team Rocket Grunt",
+    team: [
+      { speciesId: "ekans", level: 12 },
+      { speciesId: "zubat", level: 13 },
+    ],
+    reward: 400,
+    quote: "You've got guts coming down here alone.",
+  },
+  {
+    id: "mt-moon-rocket-4",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Team Rocket Grunt",
+    team: [
+      { speciesId: "grimer", level: 13 },
+      { speciesId: "koffing", level: 13 },
+    ],
+    reward: 430,
+    quote: "You'll never take the fossils from us!",
+  },
+  {
+    id: "mt-moon-rocket-5",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Team Rocket Grunt",
+    team: [
+      { speciesId: "raticate", level: 14 },
+      { speciesId: "ekans", level: 14 },
+      { speciesId: "zubat", level: 14 },
+    ],
+    reward: 500,
+    quote: "I'm the last one standing. There's no way past me!",
+  },
 ];
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -631,6 +736,16 @@ export const COUNTER_STARTER = {
 };
 
 /**
+ * Counter-starter v PROSTŘEDNÍ evoluci (mid-game rival, např. S.S. Anne).
+ *  - Bulbasaur → Charmeleon, Charmander → Wartortle, Squirtle → Ivysaur
+ */
+export const COUNTER_STARTER_MID = {
+  bulbasaur: "charmeleon",
+  charmander: "wartortle",
+  squirtle: "ivysaur",
+};
+
+/**
  * Counter-starter ve FINÁLNÍ evoluci (endgame rival před Ligou).
  *  - Bulbasaur → Charizard, Charmander → Blastoise, Squirtle → Venusaur
  */
@@ -654,9 +769,15 @@ export const TRAINER_DIFFICULTY = {
   "gym-leader": { ivFixed: 30, evOffense: 252, evSpeed: 252, optimizeNature: true },
 };
 
-/** Obtížnostní profil pro daného trenéra (fallback = kánon/route). */
+/**
+ * Obtížnostní profil pro daného trenéra. Per-trenér override `trainer.difficulty`
+ * (částečný objekt) má přednost před profilem podle `kind` – používá se např. na
+ * úplně první rival souboj v Pallet Town, který má být hodně snadný (0 IV/0 EV).
+ * Fallback = kánon/route.
+ */
 export function trainerDifficulty(trainer) {
-  return TRAINER_DIFFICULTY[trainer?.kind] ?? TRAINER_DIFFICULTY.route;
+  const base = TRAINER_DIFFICULTY[trainer?.kind] ?? TRAINER_DIFFICULTY.route;
+  return trainer?.difficulty ? { ...base, ...trainer.difficulty } : base;
 }
 
 /** Rychlé vyhledání trenéra podle id (Map kvůli O(1) v enginu). */
@@ -678,6 +799,7 @@ export const ROUTE_TRAINERS = ROUTE_TRAINERS_MAP;
  * setkání – je to samostatný klikací tab „Rival" (jen když jsi na dané oblasti).
  */
 export const RIVAL_GATES = {
+  "pallet-town": "rival-pallet",
   "route-22": "rival-route-22",
 };
 
@@ -685,6 +807,39 @@ export const RIVAL_GATES = {
 export function rivalForArea(areaId) {
   const id = RIVAL_GATES[areaId];
   return id ? getTrainer(id) : null;
+}
+
+/**
+ * POVINNÉ gauntlety (fronta trenérů jako gym, ale bez odznaku). Klikací tab
+ * „Rockets" (rocketView). Poražení VŠECH `trainerIds` v pořadí nastaví `clearFlag`
+ * ve `state.story` a odemkne další cestu (viz data/areas.js unlock.story).
+ *   - areaId    oblast, kde se tab zobrazí (a kde se gauntlet odehrává)
+ *   - trainerIds  fronta trenérů (striktní pořadí, jako gym)
+ *   - clearFlag   story flag nastavený po poražení všech
+ *   - clearReward jednorázová odměna po dokončení (gold)
+ */
+export const ROCKET_GAUNTLETS = {
+  "mt-moon": {
+    id: "mt-moon-rockets",
+    areaId: "mt-moon",
+    title: "Team Rocket",
+    intro:
+      "Team Rocket grunts have overrun Mt. Moon, hunting for the rare fossils. Drive out all five of them to clear the path deeper into the cave!",
+    clearFlag: "mtMoonRocketsCleared",
+    trainerIds: ["mt-moon-rocket-1", "mt-moon-rocket-2", "mt-moon-rocket-3", "mt-moon-rocket-4", "mt-moon-rocket-5"],
+    clearReward: { gold: 1000 },
+  },
+};
+
+/** Gauntlet (objekt) navázaný na oblast, nebo null. */
+export function rocketGauntletForArea(areaId) {
+  return ROCKET_GAUNTLETS[areaId] ?? null;
+}
+
+/** Trenéři (objekty) gauntletu dané oblasti; prázdné pole, když žádný gauntlet. */
+export function rocketTrainers(gauntlet) {
+  if (!gauntlet) return [];
+  return gauntlet.trainerIds.map((id) => getTrainer(id)).filter(Boolean);
 }
 
 /** Šance, že se při novém setkání na routě objeví route trenér místo divokého. */
@@ -695,14 +850,33 @@ export function routeTrainersFor(areaId) {
   return (ROUTE_TRAINERS[areaId] ?? []).map((id) => getTrainer(id)).filter(Boolean);
 }
 
+/** Počet spritů dané trenérské třídy (0 = žádný nahraný). */
+export function trainerSpriteCount(cls) {
+  return TRAINER_SPRITE_COUNTS[cls] ?? 0;
+}
+
+/**
+ * Náhodná varianta spritu (1..count) pro trenérskou třídu. Vybírá se JEDNOU
+ * při vzniku soupeře (makeTrainerState), ne při každém renderu – jinak by sprite
+ * blikal každý tik. Když třída nemá žádný sprite, vrací 1 (→ fallback glyph).
+ */
+export function randomTrainerVariant(cls) {
+  const n = trainerSpriteCount(cls);
+  return n > 0 ? 1 + Math.floor(Math.random() * n) : 1;
+}
+
 /**
  * Cesta ke spritu trenéra (fallback řeší UI přes onerror).
- * Leader → assets/gym-leaders/<id>/front.png; ostatní → assets/trainers/<class>/front.png.
+ * Leader → assets/gym-leaders/<id>/front.png (1 sprite).
+ * Ostatní → assets/trainers/<class>/<n>.png, kde n = `trainer.spriteVariant`
+ * (náhodně zvolená při souboji); bez ní se použije varianta 1 (stálý náhled
+ * v gym rosteru / rival panelu).
  */
 export function trainerSpriteUrl(trainer) {
   if (!trainer) return "";
   if (trainer.kind === "gym-leader") {
     return `assets/gym-leaders/${trainer.id}/front.png`;
   }
-  return `assets/trainers/${trainer.class}/front.png`;
+  const n = trainer.spriteVariant > 0 ? trainer.spriteVariant : 1;
+  return `assets/trainers/${trainer.class}/${n}.png`;
 }

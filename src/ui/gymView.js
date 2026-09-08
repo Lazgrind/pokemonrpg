@@ -9,7 +9,7 @@
  * souboje jsou POVINNĚ manuální (auto zakázáno – řeší engine přes forceManual).
  */
 
-import { getGymForCity, gymTrainers } from "../../data/gyms.js";
+import { getGymForCity, gymTrainers, isGymOpen } from "../../data/gyms.js";
 import { trainerSpriteUrl } from "../../data/trainers.js";
 import { getBadge } from "../../data/badges.js";
 import { getState } from "../core/state.js";
@@ -24,12 +24,33 @@ export function renderGymTab(root, onStatus = () => {}) {
     root.innerHTML = `<h2 class="panel-title">Gym</h2><p class="placeholder">There's no Gym here.</p>`;
     return;
   }
+  // Zavřený gym (např. Viridian bez 7 odznaků) – tab se zobrazí, ale místo
+  // souboje jen cedule + průběh sběru odznaků (gatekeeping).
+  const ownedBadges = getState().progress?.badges ?? [];
+  if (!isGymOpen(gym, ownedBadges)) {
+    const need = gym.requiresBadges ?? 0;
+    const have = ownedBadges.filter((b) => b !== gym.badge).length;
+    root.innerHTML = `<h2 class="panel-title">🔒 ${gym.name}</h2>
+      <p class="story-text">The Gym's doors are firmly shut.</p>
+      <p class="placeholder">A notice reads: "The Leader is away. Return once you've proven yourself across Kanto — earn the other ${need} Gym Badges first."</p>
+      <p class="placeholder">Badges earned: ${have} / ${need}</p>`;
+    return;
+  }
 
   const defeated = getState().progress?.defeatedTrainers ?? [];
   const trainers = gymTrainers(gym);
   // Index dalšího neporaženého trenéra (odemčený). -1 = celý gym hotový.
   const nextIdx = trainers.findIndex((t) => !defeated.includes(t.id));
   const cleared = nextIdx === -1;
+
+  // Story-gate (např. Vermilion: vchod blokuje strom, potřebuješ HM Cut). Blokuje
+  // JEN dokud gym není vyčištěný – staré savy s poraženým gymem se nezamknou.
+  if (gym.requiresStory && !cleared && !getState().story?.[gym.requiresStory]) {
+    root.innerHTML = `<h2 class="panel-title">🌳 ${gym.name}</h2>
+      <p class="story-text">A thick, leafy tree blocks the Gym's entrance.</p>
+      <p class="placeholder">You'll need <strong>HM Cut</strong> to clear it. Board the <strong>S.S. Anne</strong> in the City tab and help out to earn it.</p>`;
+    return;
+  }
   const badge = getBadge(gym.badge);
 
   const rows = trainers

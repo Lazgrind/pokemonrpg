@@ -57,6 +57,16 @@ export const ITEMS = [
   { id: "oran-berry", name: "Oran Berry", icon: "🍒", desc: "When HP drops below 50%, restores 10 HP. Consumed on use.", price: 100, category: "held", effect: { kind: "heal", amount: 10 }, held: { kind: "lowHpHeal", threshold: 0.5, amount: 10 } },
   { id: "everstone", name: "Everstone", icon: "🪨", desc: "A held Pokémon won't evolve. If it's a breeding parent, the baby inherits its Nature.", price: 300, category: "held" },
   { id: "destiny-knot", name: "Destiny Knot", icon: "🪢", desc: "If it's a breeding parent, the baby inherits 5 IVs instead of 3.", price: 2000, category: "held" },
+
+  // --- Special: příběhové/klíčové předměty (neprodejné v Martu, jen z eventů) ---
+  // Fosílie z Mt. Moon – hráč si vybere jednu. Oživení (na Omanyte/Kabuto)
+  // doděláme později (Museum/Lab); zatím drží místo v batohu jako klíčový item.
+  { id: "helix-fossil", name: "Helix Fossil", icon: "🐚", desc: "A fossil of an ancient sea Pokémon. It can be revived into Omanyte at the Museum of Science.", price: 0, category: "special" },
+  { id: "dome-fossil", name: "Dome Fossil", icon: "🗿", desc: "A fossil of an ancient sea Pokémon. It can be revived into Kabuto at the Museum of Science.", price: 0, category: "special" },
+
+  // Klíčové předměty z Kroku 5 (Cerulean → Vermilion).
+  { id: "ss-anne-ticket", name: "S.S. Anne Ticket", icon: "🎫", desc: "A ticket that grants passage aboard the luxury liner S.S. Anne, docked at Vermilion City.", price: 0, category: "special" },
+  { id: "hm01-cut", name: "HM01 Cut", icon: "🌿", desc: "A Hidden Machine that teaches Cut. Also used to clear small trees blocking the way.", price: 0, category: "special" },
 ];
 
 /**
@@ -75,6 +85,10 @@ export const ITEM_CATEGORIES = [
   { key: "revive", name: "Revives", icon: "✨" },
   { key: "evolution", name: "Evolution", icon: "🪨" },
   { key: "held", name: "Held Items", icon: "💎" },
+  // Pozn.: kategorie "special" (klíčové/příběhové itemy jako fosílie) ZÁMĚRNĚ
+  // není v tomto seznamu – Poké Mart iteruje přes ITEM_CATEGORIES, takže se
+  // neprodejné příběhové itemy v obchodě neobjeví. Batoh je ukazuje ve vlastní
+  // read-only sekci „Key Items" (viz bagView.js).
 ];
 
 /**

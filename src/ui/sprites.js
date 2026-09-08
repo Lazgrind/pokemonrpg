@@ -19,22 +19,6 @@ export function spriteUrl(speciesId, view = "front", ext = "png") {
 }
 
 /**
- * Poměrová velikost spritu odvozená z výšky druhu (v metrech) – aby Pidgey
- * nebyl ve scéně stejně velký jako Charizard. Reálné výšky mají obrovský rozptyl
- * (Diglett 0,2 m … Onix 8,8 m), takže je KOMPRIMUJEME mocninou < 1 a ořízneme
- * do rozumného pásma, ať se malí neztratí a velcí nezaberou celou scénu.
- *
- * Kotva: 1 m ≈ scale 1,0 (výchozí velikost `--sprite`).
- * @param {number} [heightMeters]  výška druhu; chybí → 1 (neutrální scale)
- * @returns {number} násobitel velikosti spritu v pásmu [0.55, 1.5]
- */
-export function spriteScaleForHeight(heightMeters) {
-  const h = typeof heightMeters === "number" && heightMeters > 0 ? heightMeters : 1;
-  const scale = Math.pow(h, 0.35); // komprese širokého rozptylu výšek
-  return Math.min(1.5, Math.max(0.55, Math.round(scale * 100) / 100));
-}
-
-/**
  * HTML jednoho spritu jako <img> s fallbackem. Dokud se obrázek nenačte, je
  * vidět zástupný glyph; po načtení se glyph skryje, při chybě se skryje <img>.
  *
@@ -55,7 +39,7 @@ export function spriteScaleForHeight(heightMeters) {
  * @param {string} [opts.alt]
  * @param {string} [opts.extraClass]
  * @param {number} [opts.scale]  poměrová velikost (CSS proměnná --mon-scale);
- *                               výchozí 1 = beze změny (viz spriteScaleForHeight)
+ *                               výchozí 1 = jednotná velikost pro všechny druhy
  * @returns {string}
  */
 export function spriteImg(speciesId, { view = "front", shiny = false, gender = null, animated = false, alt = "", extraClass = "", scale = 1 } = {}) {

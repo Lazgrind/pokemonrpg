@@ -1,0 +1,40 @@
+/**
+ * spriteVariants.js – AUTO-GENEROVÁNO tools/gen_sprite_manifest.py.
+ * Počet spritů (`<n>.png`) na trenérskou třídu v assets/trainers/.
+ * NEUPRAVUJ ručně – přidej soubor a spusť: python tools/gen_sprite_manifest.py
+ */
+export const TRAINER_SPRITE_COUNTS = {
+  "beauty": 3,
+  "biker": 3,
+  "bird-keeper": 2,
+  "black-belt": 3,
+  "bug-catcher": 3,
+  "burglar": 2,
+  "camper": 2,
+  "channeler": 1,
+  "cooltrainer-f": 2,
+  "cooltrainer-m": 2,
+  "cue-ball": 1,
+  "engineer": 2,
+  "fisherman": 2,
+  "gambler": 1,
+  "gentleman": 2,
+  "hiker": 2,
+  "jr-trainer-f": 2,
+  "jr-trainer-m": 3,
+  "juggler": 2,
+  "lass": 3,
+  "picnicker": 2,
+  "pokemaniac": 3,
+  "psychic": 3,
+  "rival": 1,
+  "rocker": 3,
+  "rocket-grunt": 2,
+  "sailor": 1,
+  "scientist": 2,
+  "super-nerd": 1,
+  "swimmer-f": 3,
+  "swimmer-m": 1,
+  "tamer": 1,
+  "youngster": 2,
+};

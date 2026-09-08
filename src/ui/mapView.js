@@ -14,9 +14,10 @@
  */
 
 import { AREAS, getArea, isAreaUnlocked } from "../../data/areas.js";
-import { setActiveArea, getActiveAreaId } from "../systems/battleSystem.js";
+import { setActiveArea, getActiveAreaId, applyFossilChoice } from "../systems/battleSystem.js";
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
+import { showPopup } from "./popup.js";
 
 const MAP_IMG = "assets/map/kanto.webp";
 
@@ -54,6 +55,11 @@ function defeatedTrainers() {
   return getState().progress?.defeatedTrainers ?? [];
 }
 
+/** Příběhové flagy (gatují uzly s unlock.story, viz data/areas.js). */
+function storyFlags() {
+  return getState().story ?? {};
+}
+
 /** Dev přepínač „ukázat všechny uzly" (i zamčené) – řídí ho Dev sekce v Nastavení. */
 function devReveal() {
   return !!getState().settings?.mapReveal;
@@ -86,8 +92,9 @@ export function renderMap(root) {
 
   const badges = earnedBadges();
   const beaten = defeatedTrainers();
+  const story = storyFlags();
   const nodesHtml = AREAS.map((area) => {
-    const unlocked = isAreaUnlocked(area, visited, badges, beaten);
+    const unlocked = isAreaUnlocked(area, visited, badges, beaten, story);
     const p = posOf(area);
     const lvl = area.species?.length ? ` · Lv ${area.recommendedLevel}` : "";
     return `
@@ -182,10 +189,107 @@ export function renderMap(root) {
       flash(info, res.reason ?? "Can't go there.");
       return;
     }
+    // Příběhový event → vyskakovací okno (NIKDY nic pod mapu). Zatím: příchod do
+    // Viridianu s nevyřízeným Oak's Parcel navede hráče do Poké Martu.
+    if (res.event === "viridian-parcel-hint") {
+      showPopup({
+        title: "🏙️ Viridian City",
+        body: `<p class="story-text">You step into Viridian City. A townsperson points down the street:</p>
+          <p class="story-text">"See that <strong>blue-roofed building</strong>? That's the <strong>Poké Mart</strong> — the clerk there was just asking about you. You should go take a look inside."</p>
+          <p class="placeholder">Open the <strong>City</strong> tab and click the Poké Mart.</p>`,
+        okLabel: "Head into town",
+      });
+      return;
+    }
+    if (res.event === "pewter-gym-hint") {
+      showPopup({
+        title: "🪨 Pewter City",
+        body: `<p class="story-text">You arrive in Pewter City, a town of grey stone nestled against the mountains.</p>
+          <p class="story-text">A local nods toward the large building at the north end: "That's our <strong>Pewter Gym</strong> — Leader <strong>Brock</strong> uses <strong>Rock-type</strong> Pokémon. Grass or Water types will serve you well against him."</p>
+          <p class="placeholder">Open the <strong>Gym</strong> tab to challenge Brock. Don't miss the <strong>Museum of Science</strong> in the City tab!</p>`,
+        okLabel: "Let's explore",
+      });
+      return;
+    }
+    if (res.event === "viridian-forest-item") {
+      showPopup({
+        title: "🌳 Viridian Forest",
+        body: `<p class="story-text">The forest is a maze of towering trees, alive with the buzz of Bug Pokémon.</p>
+          <p class="story-text">Among the roots you spot some items left behind by other trainers — you pick up a <strong>Potion</strong> and an <strong>Antidote</strong>!</p>
+          <p class="placeholder">Tip: a rare <strong>Pikachu</strong> is said to live here.</p>`,
+        okLabel: "Take them",
+      });
+      return;
+    }
+    if (res.event === "mt-moon-rocket") {
+      showPopup({
+        title: "🌑 Mt. Moon",
+        body: `<p class="story-text">You enter Mt. Moon — a pitch-black cave echoing with the screech of Zubat.</p>
+          <p class="story-text">Shady figures in black uniforms block the tunnels: <strong>Team Rocket</strong> has taken over the cave, digging for rare fossils and Moon Stones!</p>
+          <p class="story-text">Five grunts stand between you and the way onward. Open the <strong>Rockets</strong> tab and beat every one of them to clear the path.</p>`,
+        okLabel: "Press on",
+      });
+      return;
+    }
+    if (res.event === "mt-moon-fossil") {
+      showPopup({
+        title: "🦴 A Mysterious Fossil",
+        body: `<p class="story-text">Deep in Mt. Moon, after driving off the Rockets, you find <strong>two ancient fossils</strong> resting on a stone table.</p>
+          <p class="story-text">You can only carry one. Choose carefully — this choice is permanent!</p>
+          <p class="placeholder">🐚 Helix Fossil → Omanyte · 🗿 Dome Fossil → Kabuto</p>`,
+        dismissible: false, // hráč si MUSÍ vybrat
+        choices: [
+          { label: "🐚 Helix Fossil", onPick: () => pickFossil("helix") },
+          { label: "🗿 Dome Fossil", onPick: () => pickFossil("dome") },
+        ],
+      });
+      return;
+    }
+    if (res.event === "cerulean-arrival") {
+      showPopup({
+        title: "🌊 Cerulean City",
+        body: `<p class="story-text">You reach Cerulean City, a bright town of bridges and shimmering waterfalls.</p>
+          <p class="story-text">A local waves toward the Gym by the water: "That's <strong>Misty's</strong> Gym — she uses <strong>Water-type</strong> Pokémon. Grass or Electric types will give you the edge."</p>
+          <p class="placeholder">Open the <strong>Gym</strong> tab to challenge Misty for the Cascade Badge.</p>`,
+        okLabel: "Let's explore",
+      });
+      return;
+    }
+    if (res.event === "nugget-bridge") {
+      showPopup({
+        title: "🌉 Nugget Bridge",
+        body: `<p class="story-text">You battle your way across Nugget Bridge, beating trainer after trainer.</p>
+          <p class="story-text">At the far end, an impressed man hands you a shiny <strong>Nugget</strong> — you sell it on the spot for <strong>1000₽</strong>!</p>
+          <p class="story-text">He then reveals himself as a <strong>Team Rocket</strong> recruiter... and you turn him down flat.</p>`,
+        okLabel: "Keep going",
+      });
+      return;
+    }
+    if (res.event === "bill-route-25") {
+      showPopup({
+        title: "🏠 Bill's Cottage",
+        body: `<p class="story-text">At the end of Route 25 you find <strong>Bill</strong>, the famous Pokémon researcher — accidentally fused with a Pokémon by his own teleporter!</p>
+          <p class="story-text">You help him split back apart. Grateful, he hands you a <strong>S.S. Anne Ticket</strong>.</p>
+          <p class="story-text">"The luxury liner <strong>S.S. Anne</strong> is docked at <strong>Vermilion City</strong> to the south. This ticket will get you aboard!"</p>`,
+        okLabel: "Thanks, Bill!",
+      });
+      return;
+    }
+    if (res.event === "vermilion-arrival") {
+      showPopup({
+        title: "⚓ Vermilion City",
+        body: `<p class="story-text">You arrive in Vermilion City, a sunny port town on the southern coast.</p>
+          <p class="story-text">The luxury liner <strong>S.S. Anne</strong> is docked at the harbor — your ticket will get you aboard. Open the <strong>City</strong> tab and visit the ship!</p>
+          <p class="placeholder">The <strong>Vermilion Gym</strong> (Lt. Surge, Electric) is blocked by a small tree — you'll need <strong>HM Cut</strong> to reach it.</p>`,
+        okLabel: "Explore the port",
+      });
+      return;
+    }
+    // Běžný přesun – jen krátká informační hláška (žádný příběh).
     flash(
       info,
       area.type === "city"
-        ? `🏙️ ${area.name} — shops & Gym coming soon.`
+        ? `🏙️ ${area.name} — visit its buildings in the City tab.`
         : `📍 Now battling at ${area.name}.`
     );
   });
@@ -194,6 +298,22 @@ export function renderMap(root) {
   updateStates(root);
   if (unsub) unsub();
   unsub = bus.on(EVENTS.STATE_CHANGED, () => updateStates(root));
+}
+
+/**
+ * Zpracuje výběr fosílie z Mt. Moon: uloží item a potvrdí druhým popupem.
+ * @param {"helix"|"dome"} kind
+ */
+function pickFossil(kind) {
+  applyFossilChoice(kind);
+  const name = kind === "dome" ? "Dome Fossil" : "Helix Fossil";
+  const mon = kind === "dome" ? "Kabuto" : "Omanyte";
+  showPopup({
+    title: "🦴 Fossil Obtained",
+    body: `<p class="story-text">You carefully pack the <strong>${name}</strong> into your bag.</p>
+      <p class="placeholder">One day it might be revived into <strong>${mon}</strong>…</p>`,
+    okLabel: "Nice!",
+  });
 }
 
 /* ---------- DEV-PLACEMENT-START (celý blok lze při releasu smazat) ---------- */
@@ -288,11 +408,12 @@ function updateStates(root) {
   const visited = visitedAreas();
   const badges = earnedBadges();
   const beaten = defeatedTrainers();
+  const story = storyFlags();
   const reveal = devReveal();
   for (const btn of root.querySelectorAll(".map-node")) {
     const area = getArea(btn.dataset.area);
     if (!area) continue;
-    const unlocked = isAreaUnlocked(area, visited, badges, beaten);
+    const unlocked = isAreaUnlocked(area, visited, badges, beaten, story);
     // Hráč vidí jen odemčené; zamčené se skryjí (mimo edit režim a dev „reveal").
     const visible = unlocked || editMode || reveal;
     const p = posOf(area);

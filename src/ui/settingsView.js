@@ -13,7 +13,7 @@ import { bus, EVENTS } from "../core/events.js";
 import { getState, commit } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getSpeed, setSpeed } from "../systems/battleSystem.js";
-import { devAddEgg, devAddPokemon, devAddMoney } from "../systems/devTools.js";
+import { devAddEgg, devAddPokemon, devAddMoney, devApplyCheckpoint, DEV_CHECKPOINTS } from "../systems/devTools.js";
 import { devSetLevel, devToggleShiny } from "../systems/evolutionSystem.js";
 import { scrollAware } from "./scrollPreserve.js";
 
@@ -97,6 +97,14 @@ function devSectionHtml() {
         <button class="btn btn-sm" data-map-reveal>${
           getState().settings?.mapReveal ? "👁 Nodes: show all" : "🧭 Nodes: by progress"
         }</button>
+      </div>
+
+      <div class="dev-row">
+        <span class="dev-sublabel">Skip to</span>
+        <select class="dev-select" data-checkpoint>${DEV_CHECKPOINTS.map(
+          (c) => `<option value="${c.key}">${c.label}</option>`
+        ).join("")}</select>
+        <button class="btn btn-sm" data-checkpoint-go>⏩ Jump</button>
       </div>
 
       <div class="dev-feedback placeholder">${lastDevMsg}</div>
@@ -288,6 +296,14 @@ export function openSettingsModal() {
         }
       })
     );
+
+    // Skok na story milník (přeskočí začátek hry pro testování).
+    const cpBtn = bodyEl.querySelector("[data-checkpoint-go]");
+    if (cpBtn) cpBtn.addEventListener("click", () => {
+      const sel = bodyEl.querySelector("[data-checkpoint]");
+      const r = devApplyCheckpoint(sel?.value); // commit uvnitř → re-render
+      showDevMsg(r.ok ? `⏩ Skočeno na: ${r.label}` : "Skok selhal.");
+    });
 
     // Přepínač viditelnosti uzlů na mapě: vše (dev) ↔ jen odemčené (reálný postup).
     const mapBtn = bodyEl.querySelector("[data-map-reveal]");

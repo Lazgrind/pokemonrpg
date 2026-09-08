@@ -37,8 +37,8 @@
  *                                  a dobu líhnutí (přes tabulku v systému).
  * @property {string|null} evolvesTo   id druhu, na který se vyvine (null = nevyvíjí se)
  * @property {number|null} evolutionLevel   level, na kterém evoluce nastane (null = žádná)
- * @property {number} height        výška druhu v metrech (z PokeAPI). Řídí i
- *                                  velikost spritu v Battle Area (spriteScaleForHeight).
+ * @property {number} height        výška druhu v metrech (z PokeAPI; jen info,
+ *                                  velikost spritu v Battle Area je jednotná).
  * @property {number} weight        hmotnost druhu v kilogramech (z PokeAPI)
  * @property {string} genus         angl. druhový popisek (např. "Seed Pokémon")
  * @property {string} dexEntry      angl. Pokédex flavor text (vyčištěný)

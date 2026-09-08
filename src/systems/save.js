@@ -12,7 +12,7 @@ import {
   createNewGame,
   CURRENT_SAVE_VERSION,
 } from "../core/state.js";
-import { randomIvs, emptyEvs, rollGender, computeStats, defaultMovesFor, randomNature, repairWeakMoveset } from "./pokemonSystem.js";
+import { randomIvs, emptyEvs, rollGender, computeStats, defaultMovesFor, randomNature, repairWeakMoveset, MAX_MOVES } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { AREAS } from "../../data/areas.js";
 
@@ -269,6 +269,95 @@ function migrate(data) {
       data.progress.defeatedTrainers = [];
     }
     data.saveVersion = 25;
+  }
+  // v25 → v26: věrný Kanto krok 2 – Route 2 se nově gatuje na doručení Oak's
+  // Parcel (state.story.oakParcelDelivered). Kdo už Viridian navštívil PŘED touto
+  // změnou (nemá žádné parcel flagy), toho „propustíme" (doručeno = true), ať
+  // nikomu nezůstane sever zamčený – žádná regrese.
+  if (data.saveVersion < 26) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    const visited = Array.isArray(data.progress?.visited) ? data.progress.visited : [];
+    // Kdo už prošel NA SEVER od Viridianu (Route 2 dál), toho „propustíme"
+    // (doručeno), ať se nezablokuje. Kdo jen stojí ve Viridianu (nebo dřív),
+    // dostane quest normálně (žádný flag → parcel naskočí příště v Oak's Lab
+    // nebo se předá při dalším příchodu do Viridianu).
+    const wentNorth = ["route-02", "viridian-forest", "pewter-city"].some((id) =>
+      visited.includes(id)
+    );
+    if (wentNorth && !data.story.oakParcelDelivered) {
+      data.story.oakParcelDelivered = true;
+    } else if (visited.includes("viridian-city") && !data.story.oakParcelDelivered) {
+      // Stojí ve Viridianu, ale ještě nešel na sever → má u sebe balíček k doručení.
+      data.story.oakParcelGiven = true;
+    }
+    data.saveVersion = 26;
+  }
+  // v26 → v27: oprava bugu z v0.68.0, kde PŮVODNÍ v25→v26 migrace „propustila"
+  // (oakParcelDelivered=true) KAŽDÝ save, který jen navštívil Viridian – i když
+  // hráč nikdy nešel na sever. Takovým savům parcel doručení zrušíme a (pokud
+  // stojí ve Viridianu) vrátíme quest, aby se Oak's Parcel dal doopravdy odehrát.
+  if (data.saveVersion < 27) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    const visited = Array.isArray(data.progress?.visited) ? data.progress.visited : [];
+    const wentNorth = ["route-02", "viridian-forest", "pewter-city"].some((id) =>
+      visited.includes(id)
+    );
+    if (data.story.oakParcelDelivered && !wentNorth) {
+      // Chybně propuštěno – vrátit do stavu „quest běží / čeká na spuštění".
+      delete data.story.oakParcelDelivered;
+      if (visited.includes("viridian-city")) data.story.oakParcelGiven = true;
+    }
+    data.saveVersion = 27;
+  }
+  // v27 → v28: oprava bugu, kde jedinci mohli nasbírat VÍC než 4 tahy (fronta
+  // nabídek naučení tahu přidávala do plných slotů bez capu). Ořežeme každou
+  // sadu na MAX_MOVES: nejdřív pryč duplikáty (podle id), pak necháme prvních
+  // MAX_MOVES – přebytky bug přidával na KONEC, takže první čtyři jsou ta správná
+  // původní sada. PP/maxPp u zachovaných tahů zůstávají.
+  if (data.saveVersion < 28) {
+    for (const p of data.collection ?? []) {
+      if (!Array.isArray(p.moves)) continue;
+      const seen = new Set();
+      const trimmed = [];
+      for (const m of p.moves) {
+        if (!m || seen.has(m.id)) continue;
+        seen.add(m.id);
+        trimmed.push(m);
+        if (trimmed.length >= MAX_MOVES) break;
+      }
+      p.moves = trimmed;
+    }
+    data.saveVersion = 28;
+  }
+  // v28 → v29: Route 4 se nově gatuje na poražení Team Rocket gauntletu v Mt. Moon
+  // (story.mtMoonRocketsCleared). Kdo už je za Mt. Moon (navštívil Route 4 nebo
+  // dál), toho „propustíme" – nastavíme flag, ať mu sever nezůstane zamčený (žádná
+  // regrese; gauntlet se v UI ukáže jako hotový, protože grunts označíme za poražené).
+  if (data.saveVersion < 29) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    const visited = Array.isArray(data.progress?.visited) ? data.progress.visited : [];
+    if (visited.includes("route-04") || visited.includes("cerulean-city")) {
+      data.story.mtMoonRocketsCleared = true;
+      if (!Array.isArray(data.progress.defeatedTrainers)) data.progress.defeatedTrainers = [];
+      for (let i = 1; i <= 5; i++) {
+        const id = `mt-moon-rocket-${i}`;
+        if (!data.progress.defeatedTrainers.includes(id)) data.progress.defeatedTrainers.push(id);
+      }
+    }
+    data.saveVersion = 29;
+  }
+  // v29 → v30: Vermilion Gym se nově gatuje na HM Cut (story.hasCut ze S.S. Anne).
+  // Kdo už porazil kteréhokoli trenéra Vermilion Gymu, ten se evidentně dostal
+  // dovnitř – propustíme ho (nastavíme hasCut + ssAnneCleared), žádná regrese.
+  if (data.saveVersion < 30) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    const beaten = Array.isArray(data.progress?.defeatedTrainers) ? data.progress.defeatedTrainers : [];
+    const vermilionGymTrainers = ["vermilion-gym-sailor-dwayne", "vermilion-gym-gentleman-gregory", "lt-surge"];
+    if (vermilionGymTrainers.some((id) => beaten.includes(id))) {
+      data.story.hasCut = true;
+      data.story.ssAnneCleared = true;
+    }
+    data.saveVersion = 30;
   }
   return data;
 }

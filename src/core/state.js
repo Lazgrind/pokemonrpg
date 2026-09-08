@@ -38,7 +38,9 @@
  * @typedef {Object} GameState
  * @property {number} saveVersion
  * @property {{ createdAt: number, lastSaved: number }} meta
- * @property {{ name: string }} player
+ * @property {{ name: string, rivalName?: string, starterId?: string }} player  jméno trenéra,
+ *   jméno rivala (zvolené v intru, drží se celý playthrough) a id zvoleného startéra
+ * @property {Record<string, boolean>} [story]  jednorázové příběhové flagy (např. momGift = vzal dárek od mámy)
  * @property {{ gold: number, balls: Record<string, number>, items: Record<string, number> }} resources  balls/items: id → počet
  * @property {OwnedPokemon[]} collection
  * @property {string[]} team         uid jedinců v týmu (max 6)
@@ -69,7 +71,7 @@
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 25;
+export const CURRENT_SAVE_VERSION = 30;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
@@ -92,7 +94,7 @@ export function createNewGame() {
   return {
     saveVersion: CURRENT_SAVE_VERSION,
     meta: { createdAt: now, lastSaved: now },
-    player: { name: "Trainer" },
+    player: { name: "Trainer", rivalName: "" }, // rivalName zadá hráč v úvodním intru
     resources: { gold: 0, balls: { poke: 5 }, items: {} },
     collection: [],
     team: [],
@@ -125,6 +127,7 @@ export function createNewGame() {
     nuzlockeCaught: {},
     battle: null, // uložený běhový stav souboje (viz battleSystem.serialize)
     city: { buildings: {} }, // úrovně budov (viz buildingSystem)
+    story: {}, // jednorázové příběhové flagy (viz storyBuildingView) – např. momGift
   };
 }
 

@@ -866,13 +866,22 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
      battleView.applySpriteScale) – roste i klesá s celkovou velikostí battle
      areny. Fallback 160px, než ji JS nastaví. Strop max-width 44 % šířky
      bojovníka je pojistka na úzký panel, ať zbude místo na info panel.
-     --mon-scale (nastaví JS podle výšky druhu) ještě velikost poměrově upraví,
-     aby Pidgey nebyl stejně velký jako Charizard (viz spriteScaleForHeight). */
+     Všechny druhy mají JEDNOTNOU velikost; --mon-scale je obecný násobitel
+     (default 1) pro případné budoucí per-sprite úpravy. */
   width: calc(var(--sprite, 160px) * var(--mon-scale, 1));
   max-width: 44%;
   height: auto;
   aspect-ratio: 1 / 1;
   flex: 0 0 auto;
+}
+/* Obrázek vyplní celý čtvercový box (--sprite) I KDYŽ je zdroj malý. Bez toho
+   animovaný GIF (manuální souboj, intrinsic ~96 px) zůstal menší než připravené
+   PNG (auto, 256 px) – proto v manuálu vypadali Pokémoni titěrní. object-fit
+   contain drží poměr stran a malý sprite dopočítá nahoru na velikost boxu. */
+.battle-field .battle-sprite img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 /* Plovoucí poškození: červené „-N", které vylétne nad spritem a zmizí. */
@@ -1902,6 +1911,100 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   width: min(420px, 90vw);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
+
+/* ---- Story / intro okna (příběhové interakce budov + úvod) ---- */
+.story-modal, .intro-modal { position: relative; text-align: center; }
+.story-text {
+  margin: 10px 0 16px;
+  line-height: 1.5;
+  font-size: 14px;
+  color: var(--text, #e6ebf5);
+}
+.story-modal .btn, .intro-modal .btn { margin: 4px; }
+.story-sep { border: none; border-top: 1px solid var(--border); margin: 14px 0 10px; opacity: 0.6; }
+.popup-actions { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
+.modal-close {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: none;
+  color: var(--text-dim, #b8c0d0);
+  font-size: 16px;
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px;
+}
+.modal-close:hover { color: var(--text, #fff); }
+.intro-actions, .starter-confirm {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  margin-top: 14px;
+}
+.text-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  margin: 6px 0;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text, #e6ebf5);
+  font-size: 15px;
+  text-align: center;
+}
+.text-input:focus { outline: none; border-color: var(--accent-2, #5aa9e6); }
+/* „Ghost" tlačítko (méně důrazné – Přeskočit / Ne). */
+.btn.ghost { background: transparent; border-color: var(--border); opacity: 0.85; }
+.btn.ghost:hover { background: var(--bg-panel-2); opacity: 1; }
+/* Skrytý startér (Pikachu) – jemné zvýraznění po odhalení. */
+.starter-card.secret {
+  border-color: #f2c94c;
+  box-shadow: 0 0 12px rgba(242, 201, 76, 0.4);
+  animation: secret-pop 0.35s ease;
+}
+@keyframes secret-pop { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+/* ---- Vizuály intra (portrét Oaka + Mew vyskakující z Poké Ballu) ---- */
+.intro-visual {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 132px;
+  margin: 4px 0 2px;
+}
+.intro-portrait {
+  max-height: 160px;
+  max-width: 60%;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.35));
+}
+/* Mew scéna: Poké Ball dole, Mew nad ním s „pop" animací. */
+.mew-scene { position: relative; gap: 6px; }
+.intro-ball {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  align-self: flex-end;
+  transform-origin: bottom center;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.4));
+  animation: ball-shake 0.5s ease 0.1s 2;
+}
+.intro-mew-pop .intro-mon {
+  width: 120px;
+  height: 120px;
+  animation: mew-pop 0.6s cubic-bezier(0.2, 1.4, 0.4, 1) 0.35s both;
+}
+@keyframes mew-pop {
+  from { transform: translateY(20px) scale(0.2); opacity: 0; }
+  to { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes ball-shake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-18deg); }
+  75% { transform: rotate(18deg); }
+}
 /* ---- Karta Pokémona (modal) ---- */
 .mon-card { width: min(460px, 94vw); }
 .mon-card-body {
@@ -2688,4 +2791,5 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 .rival-mon { font-size: 12px; }
 .rival-mon-name { font-weight: 600; }
 .rival-cleared { color: var(--accent-2, #7fc97f); font-weight: 700; margin-top: 8px; }
+.rival-cleared.rival-lost { color: var(--text-dim, #b8c0d0); font-weight: 600; }
 .rival-fight { margin-top: 6px; }

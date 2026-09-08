@@ -53,6 +53,8 @@ export const GYMS = [
     type: "electric",
     badge: "thunder-badge",
     leaderId: "lt-surge",
+    // Věrný Kanto: vchod blokuje strom – hráč potřebuje HM Cut (ze S.S. Anne).
+    requiresStory: "hasCut",
     trainerOrder: [
       "vermilion-gym-sailor-dwayne",
       "vermilion-gym-gentleman-gregory",
@@ -110,6 +112,10 @@ export const GYMS = [
     type: "ground",
     badge: "earth-badge",
     leaderId: "giovanni",
+    // Věrné kánonu: Viridian Gym je zavřený, dokud nemáš ostatních 7 odznaků
+    // (Giovanni je poslední). Do té doby se Gym tab nezobrazí a v City tabu je
+    // jen zavřená story budova (viz storyBuildingView „viridian-gym").
+    requiresBadges: 7,
     trainerOrder: [
       "viridian-gym-cooltrainer-samson",
       "viridian-gym-toughguy-nick",
@@ -129,6 +135,21 @@ export function getGym(id) {
 /** Gym ve městě (podle cityId oblasti), nebo null. */
 export function getGymForCity(cityId) {
   return GYM_BY_CITY.get(cityId) ?? null;
+}
+
+/**
+ * Je gym otevřený? Většina gymů je vždy dostupná; některé (Viridian) vyžadují
+ * napřed jiné odznaky (`requiresBadges`). Vlastní odznak gymu se do počtu nepočítá.
+ * @param {Gym} gym
+ * @param {string[]} badges  získané odznaky (state.progress.badges)
+ * @returns {boolean}
+ */
+export function isGymOpen(gym, badges = []) {
+  if (!gym) return false;
+  const need = gym.requiresBadges ?? 0;
+  if (need <= 0) return true;
+  const owned = (badges ?? []).filter((b) => b !== gym.badge).length;
+  return owned >= need;
 }
 
 /** Trenéři gymu jako objekty v pořadí (poslední = leader). */

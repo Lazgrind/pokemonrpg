@@ -21,14 +21,16 @@ import { renderProfileTab } from "./profileView.js";
 import { renderBattle } from "./battleView.js";
 import { renderGymTab } from "./gymView.js";
 import { renderRivalTab } from "./rivalView.js";
+import { renderRocketsTab } from "./rocketView.js";
 import { getActiveArea } from "../systems/battleSystem.js";
 import { getGymForCity } from "../../data/gyms.js";
-import { rivalForArea } from "../../data/trainers.js";
+import { rivalForArea, rocketGauntletForArea } from "../../data/trainers.js";
 
 const ALL_TABS = [
   { id: "battle", label: "Battle" },
   { id: "gym", label: "Gym" },
   { id: "rival", label: "Rival" },
+  { id: "rockets", label: "Rockets" },
   { id: "city", label: "City" },
   { id: "pc", label: "PC" },
   { id: "pokedex", label: "Pokédex" },
@@ -51,13 +53,17 @@ let statusRef = () => {};
 function visibleTabs() {
   const area = getActiveArea();
   const inCity = area?.type === "city";
+  // Gym tab se ukáže vždy ve městě s gymem; zavřený gym (Viridian bez 7 odznaků)
+  // se pozná až uvnitř tabu hláškou (viz gymView isGymOpen).
   const hasGym = inCity && !!getGymForCity(area?.id);
   const hasRival = !!rivalForArea(area?.id);
+  const hasRockets = !!rocketGauntletForArea(area?.id);
   return ALL_TABS.filter((t) => {
     if (t.id === "profile") return false; // skrytá – jen z horní lišty
     if (t.id === "city") return inCity;
     if (t.id === "gym") return hasGym; // jen ve městě s gymem
     if (t.id === "rival") return hasRival; // jen na oblasti s rival gate
+    if (t.id === "rockets") return hasRockets; // jen na oblasti s Rocket gauntletem
     return true;
   });
 }
@@ -84,7 +90,7 @@ export function renderMainPanel(root, onStatus = () => {}) {
   const tabs = visibleTabs();
   // Mizící záložky (City/Gym/Rival dle lokace) → spadni na Battle, když už nejsou
   // viditelné. Profile je skrytá záložka z horní lišty, tu neresetujeme (není v `tabs`).
-  const conditional = new Set(["city", "gym", "rival"]);
+  const conditional = new Set(["city", "gym", "rival", "rockets"]);
   if (conditional.has(activeTab) && !tabs.some((t) => t.id === activeTab)) {
     activeTab = "battle";
   }
@@ -127,6 +133,7 @@ export function renderMainPanel(root, onStatus = () => {}) {
     else if (activeTab === "city") renderCity(restPane, onStatus);
     else if (activeTab === "gym") renderGymTab(restPane, onStatus);
     else if (activeTab === "rival") renderRivalTab(restPane, onStatus);
+    else if (activeTab === "rockets") renderRocketsTab(restPane, onStatus);
     else if (activeTab === "profile") renderProfileTab(restPane, onStatus);
   }
 }

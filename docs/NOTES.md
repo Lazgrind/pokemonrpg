@@ -13,6 +13,87 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-09-08 – Krok 5: Cerulean → Vermilion (Bill, fosílie, S.S. Anne, HM Cut) (v0.72.0)
+
+🟢 **SCHVÁLENO** (uživatel přes AskUserQuestion vybral všechny 4 části): Bill + Route 25, oživení fosílií, cesta do Vermilion, S.S. Anne + HM Cut.
+
+**Implementace:**
+- **Nové klíčové itemy** (`data/items.js`, kategorie `special`, read-only Key Items v batohu): `ss-anne-ticket`, `hm01-cut`.
+- **Bill (Route 25):** příchodový event `bill-route-25` v `setActiveArea` (flag `billHelped`, +ticket), popup v `mapView.js`.
+- **Oživení fosílií:** rozšířen `pewterMuseumView` v `storyBuildingView.js` – kdo drží Helix/Dome fosílii, může ji nechat oživit na Omanyte/Kabuto (lv 20, fosílie se spotřebuje, `acquirePokemon`).
+- **Cesta do Vermilion:** řetěz oblastí už existoval; přidán `vermilion-city` do `CITY_BUILDINGS` (Center+Mart+S.S. Anne) + event `vermilion-arrival`.
+- **S.S. Anne:** nová story budova `ss-anne` (`data/buildings.js` + `ssAnneView`), s lístkem spustí souboj s rivalem `rival-ss-anne` (nový trenér, `counterStarterMid` – prostřední evoluce startera). Výhra → `finishTrainerBattle` hook nastaví `ssAnneCleared`+`hasCut` a dá HM01 Cut.
+- **HM Cut gate:** `vermilion-gym` má `requiresStory:"hasCut"`; `gymView.js` ukáže „strom blokuje vchod", dokud nemáš Cut (a gym není už vyčištěný – žádná regrese).
+- **Migrace save v30:** kdo porazil trenéra Vermilion Gymu → `hasCut` (propuštění). Dev checkpoint **⑧ Vermilion**.
+
+**Návrh mechaniky counter-startera:** přidán `COUNTER_STARTER_MID` + flag `counterStarterMid` (Bulbasaur→Charmeleon, Charmander→Wartortle, Squirtle→Ivysaur), zpracování v `resolveTrainerSpecies`.
+
+---
+
+## 2026-09-08 – Mt. Moon: povinný Team Rocket gauntlet + oprava 8 tahů (v0.71.0)
+
+🟢 **SCHVÁLENO** (zadání uživatele): v Mt. Moon **povinné souboje s 5 Team Rocket grunts** jako samostatný **tab** (jako Gym/Rival). Povinné = musíš porazit všech 5; poražení všech **otevře další cestu** (Route 4). Sprity `rocket-grunt` už na disku JSOU (2 varianty), použijí se rovnou.
+
+**Implementace:**
+- Nový `kind:"rocket"` trenér + **`ROCKET_GAUNTLETS`** mapa v `data/trainers.js` (areaId → fronta trainerIds + `clearFlag` + `clearReward`) + helpery `rocketGauntletForArea()`/`rocketTrainers()`. Přidáno 5 fixních grunts `mt-moon-rocket-1..5` (class `rocket-grunt`, lv 11–14: Rattata/Zubat/Sandshrew/Ekans/Grimer/Koffing/Raticate).
+- Nový UI tab **Rockets** (`src/ui/rocketView.js`, model dle `gymView.js`) – fronta jako gym, bez odznaku. `mainPanel.js`: tab viditelný když `rocketGauntletForArea(area.id)`, v conditional setu (padá zpět na Battle).
+- `startTrainerBattle` má nově `forceManual` (Rocket souboje povinně manuální, stejně jako gym).
+- `finishTrainerBattle`: po poražení `kind:"rocket"` zkontroluje, zda jsou poraženi **všichni** z gauntletu → nastaví `story.mtMoonRocketsCleared`, přičte bonus 1000₽ a vyhodí payoff popup.
+- **Gate:** `data/areas.js` route-04 `unlock += story:"mtMoonRocketsCleared"`. Migrace save **v29**: kdo už je za Mt. Moon (visited route-04/cerulean), dostane flag + grunts označené za poražené (žádná regrese).
+- Dev checkpoint ⑦ Cerulean nastaví flag + grunts. Příchodový popup Mt. Moon nově navádí do tabu Rockets.
+
+🔧 **FIX – „pokémon má 8 útoků místo 4":** root cause `resolveMoveLearn` v `pokemonSystem.js` pushoval tah do plných slotů bez capu. Opraveno v jádře (respektuje `MAX_MOVES`) + migrace save **v28** ořeže existující sady na první 4 unikátní tahy.
+
+## 2026-09-08 – Krok 4: Route 3 → Mt. Moon → Cerulean City (v0.70.0)
+
+🟢 **SCHVÁLENO** (přes AskUserQuestion, u obou bodů plná varianta):
+- **Mt. Moon:** příchodový popup s **Team Rocket** (obsadili jeskyni) + **jednorázová nevratná volba fosílie** (Helix→Omanyte / Dome→Kabuto). Fosílie je item v nové kategorii **Special**; oživení doděláme později (Museum/Lab). Rocket zatím jako flavour popup, ne nucený souboj.
+- **Cerulean City:** vlastní budovy (Center + Mart), příchodový popup navádějící ke Gymu (Misty, Water) + **Nugget Bridge** na Route 24 (jednorázově +1000₽ za Nugget + odmítnutí Rocket náboráře).
+
+**Zjištěno při průzkumu (Haiku):** infrastruktura Kroku 4 už z velké části existovala – řetěz Route 3 → Mt. Moon → Route 4 → Cerulean se odemyká (Route 3 gated na Boulder Badge), spawn tabulky i procedurální route trenéři jsou nastavení, **Cerulean Gym (Misty, Cascade Badge) + 2 gym trenéři fungují** (od v0.67.0). Krok 4 tedy přidává hlavně **příběhovou vrstvu** (popupy, fosílie, nugget, budovy, dev checkpointy).
+
+**Technika:**
+- `showPopup` rozšířeno o `choices` (tlačítka volby); volba fosílie je okno bez zavření (`dismissible:false`), aby si hráč musel vybrat.
+- Nové story-flagy: `mtMoonEntered`, `fossilChosen` (drží `"helix"`/`"dome"`), `nuggetBridge`. Eventy vrací `setActiveArea` → `mapView` je promítne do popupů.
+- `applyFossilChoice(kind)` v `battleSystem.js` (uloží item + flag).
+- Dev checkpointy ⑥ (Brock/Boulder Badge/Route 3) + ⑦ (Cerulean/u Misty); `resetStoryProgress` teď maže **celý** `s.story` → plně deterministický skok.
+
+⚪ **DALŠÍ (Krok 5):** oživení fosílií (Museum/Lab), příp. Cerulean „robbed house" / Bill na Route 25, pak Vermilion (S.S. Anne, Lt. Surge). Nezačínat bez potvrzení.
+
+---
+
+## 2026-09-08 – Krok 3: Viridian Forest → Pewter City (v0.69.0)
+
+🟢 **SCHVÁLENO** (přes AskUserQuestion, plná varianta u všech tří bodů):
+- **Pewter City budovy:** Poké Center + Poké Mart + **Museum of Science** (příběhová budova) s jednorázovou odměnou (3× Potion). Gym (Brock) dál vlastní tab.
+- **Event po Brockovi:** gratulační popup + drobná odměna (5× Poké Ball + 500 gold) + info o otevřené Route 3.
+- **Viridian Forest:** jednorázový pickup Potion + Antidote + popup s tipem na Pikachu.
+
+Technika: nová sběrnicová událost **`STORY_POPUP`** (systémy → UI popup bez závislosti), napojená v `main.js`. Příchodové popupy jdou přes `setActiveArea` → `event` → `mapView` (žádný text pod mapou). Route 2/Forest/Route 3 dál wild + procedurální trenéři; přidali jsme jen příběhovou vrstvu. Route 3 gated na Boulder Badge (beze změny).
+
+Dev: „Skip to" checkpoint ⑤ Pewter City (u Brocka, bez odznaku) → testovatelný celý příchod i souboj.
+
+## 2026-09-08 – Věrný Kanto příběh, krok po kroku (Intro → Pallet → Viridian)
+
+Rozhodnutí: stavíme **věrnou příběhovou návaznost PRO Kanta město po městě**, vždy **jeden krok**, probíráme bod po bodu. „Kam jít/nejít" NEŘEŠÍME chozením – zůstává na **unlock systému oblastí**.
+
+### Krok 1 – Intro + Pallet Town (🟢 HOTOVO, v0.68.0)
+- 🟢 **Intro = krátká přeskočitelná textová scéna** (`src/ui/introScene.js`); na konci hráč **pojmenuje rivala** → `state.player.rivalName` (drží se celý playthrough). Přidán sprite **Oaka** (`assets/npc/oak.png`) a **Mew z Master Ballu**.
+- 🟢 **Pikachu = skrytá 4. volba** startéra (po odmítnutí všech tří; volba se potvrzuje Ano/Ne).
+- 🟢 **Budovy per město** (`CITY_BUILDINGS`, `buildingsForCity`) + **story/interakční budovy** (pole `story`, `storyBuildingView.js`); **upgrade levely zůstávají globální**. Pallet = Oak's Lab + Tvůj domov (5 Potionů + **heal** proti soft-locku) + Rivalův dům; **bez Center/Mart**.
+- 🟢 **První rival nepovinný na výsledek:** flag `gateOnFight` (jen `rival-pallet`) → Route 1 odemkne **výhra i prohra** (věrné – v kánonu první rival nejde „muset vyhrát"). Souboj **záměrně snadný** (per-trenér `difficulty` 0 IV/0 EV, Lv 4, slabé tahy). Prohra ukáže korektní hlášku (rival se vysměje a odejde).
+
+### Krok 2 – Route 1 → Viridian City (🟢 HOTOVO, v0.68.0)
+- 🟢 **Route 1** zůstává čistě průchozí (divoké Pidgey/Rattata), žádná story budova (věrné).
+- 🟢 **Viridian City** dostal **Poké Center + Poké Mart** (první idle služby) a **zavřený Viridian Gym** (story budova, „Leader away").
+- 🟢 **Oak's Parcel quest (plně věrné, s gate):** první příchod do Viridianu → v Martu ti předají balíček (auto event v `setActiveArea`, hláška přes `mapView`); doručení v Oak's Lab → **5 Poké Ballů** + **odemkne Route 2**. Realizováno novým `unlock.story` v `isAreaUnlocked` (story-flag `oakParcelDelivered`). **Route 22 (západ) dostupná hned**, sever až po doručení.
+- 🟢 **Save v25 → v26:** kontejner `state.story` + migrace grandfathers starší save (kdo už byl ve Viridianu → `oakParcelDelivered=true`), aby nikomu nezůstal sever zamčený.
+
+### Otevřené / odložené
+- ⚪ **−5 % zlata při prohře s rivalem** – potřebuje hook do defeat path v `battleSystem.js`. Samostatný mini-krok.
+- ⚪ **Sprite balíčku / NPC ve Viridianu** – zatím řešeno textem/eventem, bez vlastních assetů.
+- ⚪ Další krok: **Route 2 → Viridian Forest → Pewter City** (1. gym Brock už funguje z v0.66.0 – navázat story budovy).
+
 ## 2026-09-07 – Kompletní Kanto mapa + design trenérů, gymů a vícevrstvého gatingu
 
 ### Kanto mapa – datová vrstva HOTOVA (v0.64.0)
