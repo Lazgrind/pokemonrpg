@@ -24,7 +24,7 @@ import { rollEggDrop } from "./eggSystem.js";
 import { healPercent, ppRegenPercent } from "./buildingSystem.js";
 import { useItem, canUseItem, itemCount, heldItemOf } from "./itemSystem.js";
 import { getItem, ITEMS } from "../../data/items.js";
-import { markSeen } from "./pokedex.js";
+import { markSeen, dexCounts } from "./pokedex.js";
 import { AREAS, getArea, isAreaUnlocked } from "../../data/areas.js";
 import { biomeBackgrounds } from "../../data/backgrounds.js";
 import {
@@ -38,6 +38,7 @@ import {
   COUNTER_STARTER_MID,
   COUNTER_STARTER_FINAL,
   rocketGauntletForArea,
+  leagueForArea,
 } from "../../data/trainers.js";
 import { getBadge } from "../../data/badges.js";
 import { NATURES } from "../../data/natures.js";
@@ -180,10 +181,21 @@ export function makeCombatant(owned) {
 }
 
 /**
- * Náhodně vybere pozadí souboje z poolu prostředí oblasti (`area.biome`).
- * Vrací URL, nebo null když prostředí nemá obrázky (pak prosvítá fallback).
+ * Náhodně vybere pozadí souboje.
+ *
+ * Per-area override: speciální oblasti (Seafoam apod.) můžou mít vlastní pozadí
+ * v `area.background` (string nebo pole souborů v assets/backgrounds/), které má
+ * přednost před sdíleným poolem prostředí (`area.biome`). Bez override se vrátí
+ * náhodná varianta z biome poolu, nebo null (pak prosvítá fallback).
  */
 function pickBackground(area) {
+  if (area?.background) {
+    const files = Array.isArray(area.background) ? area.background : [area.background];
+    if (files.length) {
+      const f = files[Math.floor(Math.random() * files.length)];
+      return `assets/backgrounds/${f}`;
+    }
+  }
   const urls = biomeBackgrounds(area?.biome);
   if (!urls.length) return null;
   return urls[Math.floor(Math.random() * urls.length)];
@@ -266,6 +278,7 @@ export function serialize() {
     teamCursor: battle.teamCursor,
     turn: battle.turn ?? 0,
     background: battle.background,
+    forceManual: battle.forceManual ?? false, // legendární static souboj musí zůstat manuál i po refreshi
     interlude: battle.interlude ?? null, // výherní/chytací okno (manuální mód) přežije refresh
     log: battle.log.slice(-30),
     playerUid: battle.player.ref.uid,
@@ -322,6 +335,7 @@ export function restore(saved) {
     turn: saved.turn ?? 0,
     result: saved.result ?? null,
     background: saved.background ?? pickBackground(area),
+    forceManual: saved.forceManual ?? false, // obnov manuál-only (legendární static souboj)
     interlude: saved.interlude ?? null,
     player,
     enemy,
@@ -1784,6 +1798,22 @@ function handleFaint(winner) {
       battle.result = "defeat";
       battle.running = false;
       pushLog("Your whole team has fainted. Defeat.", "enemy");
+      // Věrný Kanto (Krok 10): prohra kdekoli v Lize = konec běhu a restart od
+      // Lorelei. Vypnutím leagueActive se zase odemkne léčení v Poké Centru.
+      if (battle.trainer && (battle.trainer.kind === "elite-four" || battle.trainer.kind === "champion")) {
+        const p = getState().progress;
+        if (p.leagueActive) {
+          p.leagueActive = false;
+          p.leagueStep = 0;
+          commit();
+          bus.emit(EVENTS.STORY_POPUP, {
+            title: "The League bests you...",
+            body: `<p class="story-text">Your team is spent. The League challenge ends here.</p>
+              <p class="story-text">In the Pokémon League there is no second wind — the run <strong>resets to the very first challenger</strong>. Heal up at the Poké Center, restock your Bag with Potions and Revives, and come back to face the Elite Four again from the start.</p>`,
+            okLabel: "Regroup",
+          });
+        }
+      }
       // Story-gate trenér (např. první rival): stačí souboj ODEHRÁT, takže i
       // prohra odemkne návaznou oblast. Bez odměny – zapíšeme „prošlo" a navíc
       // story-flag „gateLost:<id>", ať UI (rivalView) ukáže prohru, ne výhru.
@@ -1951,6 +1981,62 @@ export function startTrainerBattle(trainerId, { gymId = null, forceManual = fals
   return { ok: true };
 }
 
+/* ----------------------------- Pokémon League ----------------------------- */
+/*
+ * Liga (Elite Four + Champion) = zvláštní gauntlet na Indigo Plateau: souboje
+ * jdou JEDEN ZA DRUHÝM, mezi nimi se NELZE léčit v Poké Centru (healTeam je
+ * během běhu zablokovaný – jen bag itemy), HP se přenáší (owned.hp je trvalé).
+ * Prohra kdekoli v sekvenci = konec běhu a restart od Lorelei. Běh drží
+ * progress.leagueActive + progress.leagueStep; postup a payoff řeší
+ * finishTrainerBattle / handleFaint. UI = src/ui/leagueView.js.
+ */
+
+/** Stav Ligy pro aktuální oblast (nebo null, když tu Liga není). */
+export function leagueState() {
+  const league = leagueForArea(getActiveArea()?.id);
+  if (!league) return null;
+  const p = getState().progress;
+  return {
+    league,
+    active: !!p.leagueActive,
+    step: p.leagueStep ?? 0,
+    cleared: !!getState().story?.[league.clearFlag],
+  };
+}
+
+/** Zahájí nový běh Ligy (od Lorelei). Ověří živý tým. */
+export function startLeagueRun() {
+  const st = leagueState();
+  if (!st) return { ok: false, reason: "There is no League here." };
+  const team = getTeamPokemon();
+  if (!team.some((p) => hpOf(p) > 0)) {
+    return { ok: false, reason: "Your whole team has fainted — heal before the League." };
+  }
+  const p = getState().progress;
+  p.leagueActive = true;
+  p.leagueStep = 0;
+  commit();
+  return startTrainerBattle(st.league.order[0], { forceManual: true });
+}
+
+/** Pokračuje v běžícím běhu Ligy dalším soupeřem v pořadí. */
+export function continueLeagueRun() {
+  const st = leagueState();
+  if (!st || !st.active) return { ok: false, reason: "No League challenge is in progress." };
+  const id = st.league.order[st.step];
+  if (!id) return { ok: false, reason: "The League has already been cleared." };
+  return startTrainerBattle(id, { forceManual: true });
+}
+
+/** Vzdá běh Ligy (umožní zase léčení v Centru). Postup se zahodí. */
+export function forfeitLeagueRun() {
+  const p = getState().progress;
+  p.leagueActive = false;
+  p.leagueStep = 0;
+  commit();
+  return { ok: true };
+}
+
 /** Vybere route trenéra pro oblast (~15 %, jen neporažené, jen na routách). */
 function pickRouteTrainer(area) {
   if (!area || area.type !== "route") return null;
@@ -2040,12 +2126,122 @@ function finishTrainerBattle(t, lastEnemy) {
         });
       }
     }
-    // Věrný Kanto: Team Rocket gauntlet (Mt. Moon) – poražení VŠECH grunts
-    // odemkne další cestu (story flag) + jednorázový bonus a payoff popup.
-    if (t.kind === "rocket") {
+    // Věrný Kanto (Krok 6): první zisk Thunder Badge (Lt. Surge) = drobná odměna
+    // + gratulace v okně (rozcestí Route 11/Diglett's vs Route 9 → Lavender).
+    if (badgeGain === "thunder-badge") {
+      if (!s.story) s.story = {};
+      if (!s.story.surgeCleared) {
+        s.story.surgeCleared = true;
+        const SURGE_GOLD = 800;
+        s.resources.gold += SURGE_GOLD;
+        goldGain += SURGE_GOLD; // ať se objeví i v přehledu výhry
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "⚡ Thunder Badge!",
+          body: `<p class="story-text">Lt. Surge grins and slaps you on the back. "Whew! You're the real deal, kid. Take the <strong>Thunder Badge</strong> — you earned it!"</p>
+            <p class="story-text">It boosts your Pokémon's Speed, and even traded Pokémon up to Lv. 50 will now obey you.</p>
+            <p class="story-text">From here the road forks: <strong>Route 11</strong> and <strong>Diglett's Cave</strong> lead west, while <strong>Route 9</strong> heads toward <strong>Rock Tunnel</strong> and on to <strong>Lavender Town</strong>.</p>`,
+          okLabel: "Onward!",
+        });
+      }
+    }
+    // Věrný Kanto (Krok 7): první zisk Rainbow Badge (Erika, Celadon Gym) = odměna
+    // + navedení na Game Corner, za nímž se skrývá Team Rocket (Silph Scope).
+    if (badgeGain === "rainbow-badge") {
+      if (!s.story) s.story = {};
+      if (!s.story.erikaCleared) {
+        s.story.erikaCleared = true;
+        const ERIKA_GOLD = 1000;
+        s.resources.gold += ERIKA_GOLD;
+        goldGain += ERIKA_GOLD; // ať se objeví i v přehledu výhry
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "🌈 Rainbow Badge!",
+          body: `<p class="story-text">Erika smiles serenely. "Oh! I concede defeat. You are quite skilled — please accept the <strong>Rainbow Badge</strong>."</p>
+            <p class="story-text">It lets even traded Pokémon up to Lv. 70 obey you.</p>
+            <p class="story-text">Word around Celadon is that shady <strong>Team Rocket</strong> members lurk behind the <strong>Game Corner</strong>. Something's not right there...</p>`,
+          okLabel: "Investigate",
+        });
+      }
+    }
+    // Věrný Kanto (Krok 11): první zisk Marsh Badge (Sabrina, Saffron Gym) = odměna
+    // + gratulace. Gym se otevřel až po osvobození Silph Co od Team Rocket (silphCleared).
+    if (badgeGain === "marsh-badge") {
+      if (!s.story) s.story = {};
+      if (!s.story.sabrinaCleared) {
+        s.story.sabrinaCleared = true;
+        const SABRINA_GOLD = 1800;
+        s.resources.gold += SABRINA_GOLD;
+        goldGain += SABRINA_GOLD; // ať se objeví i v přehledu výhry
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "🔮 Marsh Badge!",
+          body: `<p class="story-text">Sabrina's stern gaze softens. "I foresaw my own defeat... and yet you still surprised me. Take the <strong>Marsh Badge</strong> — you have more than earned it."</p>
+            <p class="story-text">It makes even traded Pokémon obey you and lets you use HM Flash outside of battle.</p>
+            <p class="story-text">With Team Rocket driven from Silph Co. and Saffron at peace, the rest of Kanto's Gyms await. Press on toward your eighth and final badge!</p>`,
+          okLabel: "Onward!",
+        });
+      }
+    }
+    // Věrný Kanto (Krok 8): první zisk Soul Badge (Koga, Fuchsia Gym) = odměna
+    // + navedení do Safari Zone (za HM03 Surf) a k Wardenovi (Gold Teeth → Strength).
+    if (badgeGain === "soul-badge") {
+      if (!s.story) s.story = {};
+      if (!s.story.kogaCleared) {
+        s.story.kogaCleared = true;
+        const KOGA_GOLD = 1500;
+        s.resources.gold += KOGA_GOLD;
+        goldGain += KOGA_GOLD; // ať se objeví i v přehledu výhry
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "🥷 Soul Badge!",
+          body: `<p class="story-text">Koga vanishes in a puff of smoke, then reappears behind you. "A ninja must withstand a barrage of poison. You have proven your worth — take the <strong>Soul Badge</strong>."</p>
+            <p class="story-text">It boosts your Pokémon's Defense and lets traded Pokémon up to Lv. 70 obey you.</p>
+            <p class="story-text">The nearby <strong>Safari Zone</strong> teems with rare Pokémon — and rumor says a valuable <strong>HM</strong> is hidden inside. Next door, the <strong>Warden</strong> keeps mumbling about his lost <strong>Gold Teeth</strong>...</p>`,
+          okLabel: "To the Safari Zone!",
+        });
+      }
+    }
+    // Věrný Kanto (Krok 9): první zisk Volcano Badge (Blaine, Cinnabar Gym) = odměna
+    // + navedení zpět do Viridian Gymu (poslední, 8. odznak – Giovanni) a k Victory Road.
+    if (badgeGain === "volcano-badge") {
+      if (!s.story) s.story = {};
+      if (!s.story.blaineCleared) {
+        s.story.blaineCleared = true;
+        const BLAINE_GOLD = 2000;
+        s.resources.gold += BLAINE_GOLD;
+        goldGain += BLAINE_GOLD; // ať se objeví i v přehledu výhry
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "🌋 Volcano Badge!",
+          body: `<p class="story-text">Blaine wipes his brow, beaming. "Hah! You've quenched my fire! You've more than earned the <strong>Volcano Badge</strong>!"</p>
+            <p class="story-text">It raises your Pokémon's Special stat. Just one badge to go!</p>
+            <p class="story-text">The <strong>Viridian City Gym</strong> has finally reopened — its mysterious Leader awaits your challenge for the eighth and final Kanto badge.</p>`,
+          okLabel: "Onward!",
+        });
+      }
+    }
+    // Věrný Kanto (Krok 10): první zisk Earth Badge (Giovanni, Viridian Gym) =
+    // 8. a poslední odznak. Giovanni se odhalí jako šéf Team Rocket, rozpustí gang
+    // a odejde – otevře se cesta Route 22 → Victory Road → Indigo Plateau (Liga).
+    if (badgeGain === "earth-badge") {
+      if (!s.story) s.story = {};
+      if (!s.story.giovanniCleared) {
+        s.story.giovanniCleared = true;
+        const GIO_GOLD = 3000;
+        s.resources.gold += GIO_GOLD;
+        goldGain += GIO_GOLD; // ať se objeví i v přehledu výhry
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "🌍 Earth Badge!",
+          body: `<p class="story-text">Giovanni stares in disbelief. "Ha! That was a truly intense fight. You have won. As proof, here is the <strong>Earth Badge</strong>."</p>
+            <p class="story-text">Then he laughs coldly. "I am also the leader of <strong>Team Rocket</strong>. But you have beaten me... so I disband Team Rocket forever! I must become a true Pokémon trainer once more." With that, he vanishes — and the Gym stands empty.</p>
+            <p class="story-text">That's all <strong>8 Kanto badges</strong>! The road west through <strong>Route 22</strong> and <strong>Victory Road</strong> to the <strong>Indigo Plateau</strong> — home of the <strong>Pokémon League</strong> — is finally open. This is it. Give it everything!</p>`,
+          okLabel: "To the League!",
+        });
+      }
+    }
+    // Věrný Kanto: gauntlet (fronta soupeřů vázaná na oblast) – poražení VŠECH
+    // členů odemkne postup (clearFlag) + jednorázový bonus/item/flag a payoff popup.
+    // Členství řešíme přes trainerIds (ne přes t.kind), ať to platí i pro Hikery.
+    {
       if (!s.story) s.story = {};
       const gaunt = rocketGauntletForArea(getActiveArea()?.id);
-      if (gaunt && !s.story[gaunt.clearFlag]) {
+      if (gaunt && gaunt.trainerIds.includes(t.id) && !s.story[gaunt.clearFlag]) {
         const allBeaten = gaunt.trainerIds.every((id) => s.progress.defeatedTrainers.includes(id));
         if (allBeaten) {
           s.story[gaunt.clearFlag] = true;
@@ -2054,14 +2250,85 @@ function finishTrainerBattle(t, lastEnemy) {
             s.resources.gold += bonus;
             goldGain += bonus; // ať se objeví i v přehledu výhry
           }
-          bus.emit(EVENTS.STORY_POPUP, {
-            title: "🚫 Team Rocket driven out!",
-            body: `<p class="story-text">The last grunt scrambles away into the dark: "You haven't seen the last of Team Rocket!"</p>
-              <p class="story-text">With the thugs gone, the tunnel deeper into Mt. Moon is clear at last.</p>
-              ${bonus ? `<p class="story-text">You recover <strong>${bonus}₽</strong> the grunts had stolen.</p>` : ""}
-              <p class="story-text">The path onward to <strong>Route 4</strong> and Cerulean City is open now.</p>`,
-            okLabel: "Onward!",
-          });
+          if (gaunt.clearItem) {
+            if (!s.resources.items) s.resources.items = {};
+            s.resources.items[gaunt.clearItem] = (s.resources.items[gaunt.clearItem] ?? 0) + 1;
+          }
+          if (gaunt.clearStoryFlag) s.story[gaunt.clearStoryFlag] = true;
+
+          if (gaunt.id === "mt-moon-rockets") {
+            bus.emit(EVENTS.STORY_POPUP, {
+              title: "🚫 Team Rocket driven out!",
+              body: `<p class="story-text">The last grunt scrambles away into the dark: "You haven't seen the last of Team Rocket!"</p>
+                <p class="story-text">With the thugs gone, the tunnel deeper into Mt. Moon is clear at last.</p>
+                ${bonus ? `<p class="story-text">You recover <strong>${bonus}₽</strong> the grunts had stolen.</p>` : ""}
+                <p class="story-text">The path onward to <strong>Route 4</strong> and Cerulean City is open now.</p>`,
+              okLabel: "Onward!",
+            });
+          } else if (gaunt.id === "route-09-hikers") {
+            // Věrný Kanto (Krok 7): Flash dá Oakův pomocník až po poražení Hikerů
+            // A po registraci 10 druhů. Když druhů zatím není dost, Flash dostaneš
+            // až při návratu na Route 9 (viz setActiveArea) – žádný soft-lock.
+            const caught = dexCounts().caught;
+            if (caught >= 10 && !s.story.hasFlash) {
+              s.story.hasFlash = true;
+              if (!s.resources.items) s.resources.items = {};
+              s.resources.items["hm05-flash"] = (s.resources.items["hm05-flash"] ?? 0) + 1;
+              pushLog("Oak's aide gave you HM05 Flash!", "player");
+              bus.emit(EVENTS.STORY_POPUP, {
+                title: "🔦 HM05 Flash!",
+                body: `<p class="story-text">As the last Hiker yields, one of <strong>Professor Oak's aides</strong> steps out from the nearby rest house. "You beat the Route 9 Hikers AND registered 10 kinds of Pokémon — impressive!"</p>
+                  <p class="story-text">He rewards your dedication with <strong>HM05 Flash</strong>. It lights up pitch-dark caves like <strong>Rock Tunnel</strong>.</p>
+                  <p class="story-text">The way through Rock Tunnel toward <strong>Lavender Town</strong> is open now.</p>`,
+                okLabel: "Onward!",
+              });
+            } else {
+              bus.emit(EVENTS.STORY_POPUP, {
+                title: "⛏️ Hikers defeated!",
+                body: `<p class="story-text">You've cleared out the tough Route 9 Hikers! Oak's aide is impressed — but crosses his arms.</p>
+                  <p class="story-text">"HM05 Flash is for serious trainers. Come back once you've caught <strong>10 kinds</strong> of Pokémon."</p>
+                  <p class="story-text">You've registered <strong>${caught}/10</strong> so far. Return to <strong>Route 9</strong> when you're ready.</p>
+                  ${bonus ? `<p class="story-text">Prize money: <strong>${bonus}₽</strong>.</p>` : ""}`,
+                okLabel: "Got it",
+              });
+            }
+          } else if (gaunt.id === "rocket-hideout") {
+            bus.emit(EVENTS.STORY_POPUP, {
+              title: "👁️ Silph Scope!",
+              body: `<p class="story-text">Giovanni retreats: "So you're the meddler who keeps interfering... We <em>will</em> meet again." Team Rocket abandons the Celadon hideout.</p>
+                <p class="story-text">Among the loot you find the <strong>Silph Scope</strong> — a device that reveals unidentified ghosts.</p>
+                <p class="story-text">Now head to <strong>Lavender Town's Pokémon Tower</strong> and face whatever haunts its top floors.</p>
+                ${bonus ? `<p class="story-text">You recover <strong>${bonus}₽</strong>.</p>` : ""}`,
+              okLabel: "To the Tower!",
+            });
+          } else if (gaunt.id === "cinnabar-mansion") {
+            // Věrný Kanto (Krok 9): po vyčištění gauntletu (Burglaři + boss Volk) v
+            // trezoru najdeš Secret Key (clearItem/clearStoryFlag už udělily výše).
+            bus.emit(EVENTS.STORY_POPUP, {
+              title: "🔑 Secret Key!",
+              body: `<p class="story-text">Scientist Volk collapses beside a scorched terminal: "The Mewtwo data... gone... it was never meant to leave this place."</p>
+                <p class="story-text">In the cracked vault behind him glints the <strong>Secret Key</strong> — the very key that unlocks the Cinnabar Island Gym.</p>
+                <p class="story-text">Head to the <strong>Cinnabar Gym</strong> and challenge <strong>Blaine</strong> for the Volcano Badge!</p>
+                ${bonus ? `<p class="story-text">You also pocket <strong>${bonus}₽</strong> from the labs.</p>` : ""}`,
+              okLabel: "To the Gym!",
+            });
+          } else if (gaunt.id === "silph-co") {
+            // Věrný Kanto (Krok 11): po vyčištění Silph Co (grunti → rival →
+            // Giovanni) osvobodíš prezidenta Silph Co, který ti věnuje MASTER BALL
+            // (je to Poké Ball, ne item → sype se do resources.balls, ne clearItem).
+            // Team Rocket opouští Saffron → Sabrinin gym se otevře (silphCleared).
+            if (!s.resources.balls) s.resources.balls = {};
+            s.resources.balls.master = (s.resources.balls.master ?? 0) + 1;
+            pushLog("The Silph Co. president gave you a Master Ball!", "player");
+            bus.emit(EVENTS.STORY_POPUP, {
+              title: "🟣 Master Ball!",
+              body: `<p class="story-text">On the top floor Giovanni retreats once more: "Rrgh! Team Rocket... falls back — for now. We <em>will</em> rise again!" The Rockets flee Silph Co. and abandon Saffron City.</p>
+                <p class="story-text">The grateful <strong>president of Silph Co.</strong> emerges from hiding. "You saved my company! Please — take our finest creation." He hands you a <strong>Master Ball</strong> — the one ball that catches <em>any</em> Pokémon without fail. Spend it wisely.</p>
+                <p class="story-text">With the Rockets gone, <strong>Sabrina's Gym</strong> has reopened. Challenge her for the <strong>Marsh Badge</strong>!</p>
+                ${bonus ? `<p class="story-text">You also recover <strong>${bonus}₽</strong> from the offices.</p>` : ""}`,
+              okLabel: "To the Gym!",
+            });
+          }
         }
       }
     }
@@ -2082,6 +2349,76 @@ function finishTrainerBattle(t, lastEnemy) {
             <p class="story-text">A leafy tree was blocking the <strong>Vermilion Gym</strong> — now you can cut it down and challenge <strong>Lt. Surge</strong>!</p>`,
           okLabel: "Onward!",
         });
+      }
+    }
+    // Věrný Kanto (Krok 7): duch v Pokémon Tower je rozzuřená Marowak. Se Silph
+    // Scope ji odhalíš a uklidníš (souboj) → uvolní se cesta výš k Mr. Fujimu.
+    if (t.id === "lavender-marowak") {
+      if (!s.story) s.story = {};
+      if (!s.story.marowakCalmed) {
+        s.story.marowakCalmed = true;
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "👻 The ghost is calmed",
+          body: `<p class="story-text">With the Silph Scope, the ghost is revealed at last: the spirit of a <strong>Marowak</strong>, slain by Team Rocket while protecting her child.</p>
+            <p class="story-text">You lay her restless spirit to rest. The way up Pokémon Tower is clear.</p>
+            <p class="story-text">Climb to the top floor — the Rockets are holding an old man, <strong>Mr. Fuji</strong>, captive up there.</p>`,
+          okLabel: "Climb up",
+        });
+      }
+    }
+    // Věrný Kanto (Krok 7): obří spící Snorlax na Route 12. Poké Flute ho probudí
+    // a po souboji uvolní cestu dál na jih (story.snorlaxCleared).
+    if (t.id === "lavender-snorlax") {
+      if (!s.story) s.story = {};
+      if (!s.story.snorlaxCleared) {
+        s.story.snorlaxCleared = true;
+        bus.emit(EVENTS.STORY_POPUP, {
+          title: "😴 Snorlax awakened!",
+          body: `<p class="story-text">The Poké Flute's melody rouses the enormous <strong>Snorlax</strong> — and after a fierce battle, it lumbers off the road.</p>
+            <p class="story-text">The southern path from <strong>Route 12</strong> is open at last, leading deeper into Kanto.</p>`,
+          okLabel: "Onward!",
+        });
+      }
+    }
+  }
+  // Věrný Kanto (Krok 10): postup Ligou (Elite Four → Champion). Běží MIMO blok
+  // `!already`, ať funguje i při odvetě. Posune leagueStep jen když je běh aktivní
+  // a padl právě očekávaný soupeř (order[step]). Po Championovi Liga končí titulem.
+  {
+    const league = leagueForArea(getActiveArea()?.id);
+    if (league && s.progress.leagueActive) {
+      const step = s.progress.leagueStep ?? 0;
+      if (league.order[step] === t.id) {
+        s.progress.leagueStep = step + 1;
+        if (s.progress.leagueStep >= league.order.length) {
+          // Champion poražen → konec běhu, zisk titulu.
+          s.progress.leagueActive = false;
+          s.progress.leagueStep = league.order.length;
+          if (!s.story) s.story = {};
+          const firstTime = !s.story[league.clearFlag];
+          s.story[league.clearFlag] = true; // leagueCleared
+          if (league.clearStoryFlag) s.story[league.clearStoryFlag] = true; // isChampion
+          if (firstTime) {
+            const bonus = league.clearReward?.gold ?? 0;
+            if (bonus) {
+              s.resources.gold += bonus;
+              goldGain += bonus; // ať se objeví i v přehledu výhry
+            }
+            bus.emit(EVENTS.STORY_POPUP, {
+              title: "🏆 Pokémon League Champion!",
+              body: `<p class="story-text">The final Pokémon falls. Blue sinks to his knees. "...No! Why?! I never lost to you before... What went wrong?"</p>
+                <p class="story-text">Professor Oak steps into the Hall of Fame. "Blue! I'm disappointed in you. And you —" he turns to you, beaming, "— you understand that the bond of trust between you and your Pokémon is what makes them strong. You are the new <strong>Pokémon League Champion</strong>!"</p>
+                <p class="story-text">Your team is recorded in the <strong>Hall of Fame</strong>. And with the League conquered, the sealed <strong>Cerulean Cave</strong> is said to open at last — home to the strongest Pokémon of all, <strong>Mewtwo</strong>. Your legend has only begun.</p>`,
+              okLabel: "Hall of Fame ✦",
+            });
+          } else {
+            bus.emit(EVENTS.STORY_POPUP, {
+              title: "🏆 Title defended!",
+              body: `<p class="story-text">Once more you climb through the Elite Four and stand victorious over the Champion. Your place in the <strong>Hall of Fame</strong> is secure.</p>`,
+              okLabel: "Onward!",
+            });
+          }
+        }
       }
     }
   }
@@ -2376,12 +2713,110 @@ export function setActiveArea(areaId) {
     // Příchod do Vermilion → navedeme hráče na S.S. Anne (a k Lt. Surgeovi).
     story.vermilionArrival = true;
     event = "vermilion-arrival";
+  } else if (areaId === "route-11" && !story.route11Arrival) {
+    // Věrný Kanto (Krok 6): východní route od Vermilionu, vede k Diglett's Cave.
+    story.route11Arrival = true;
+    event = "route-11-arrival";
+  } else if (areaId === "digletts-cave" && !story.diglettsArrival) {
+    // Věrný Kanto (Krok 6): úzká jeskyně plná Digletta/Dugtria, zkratka pod Kantem.
+    story.diglettsArrival = true;
+    event = "digletts-arrival";
+  } else if (areaId === "route-09" && !story.hasFlash && !story.route9HikersCleared && !story.route9Arrival) {
+    // Věrný Kanto (Krok 7): HM05 Flash už není zadarmo. Route 9 hlídá parta
+    // Hikerů (gauntlet) a Oakův pomocník dá Flash až po jejich poražení A po
+    // registraci 10 druhů v Pokédexu. Tady jen jednorázově navedeme hráče.
+    story.route9Arrival = true;
+    event = "route-09-arrival";
+  } else if (areaId === "route-09" && !story.hasFlash && story.route9HikersCleared && dexCounts().caught >= 10) {
+    // Návrat na Route 9 – Hikeři poražení a teď už máš 10 druhů → Flash konečně.
+    story.hasFlash = true;
+    if (!s.resources.items) s.resources.items = {};
+    s.resources.items["hm05-flash"] = (s.resources.items["hm05-flash"] ?? 0) + 1;
+    event = "flash-gift";
+  } else if (areaId === "lavender-town" && !story.lavenderArrival) {
+    // Věrný Kanto (Krok 6): ponuré město s Pokémon Tower a duchy.
+    story.lavenderArrival = true;
+    event = "lavender-arrival";
+  } else if (areaId === "celadon-city" && !story.celadonArrival) {
+    // Věrný Kanto (Krok 7): největší město Kanta – Dept Store, Game Corner (za nímž
+    // je Rocket hideout) a Erika v Celadon Gymu (Rainbow Badge).
+    story.celadonArrival = true;
+    event = "celadon-arrival";
+  } else if (areaId === "saffron-city" && !story.saffronArrival) {
+    // Věrný Kanto (Krok 11): Saffron obsazen Team Rocketem – zabrali Silph Co.
+    // Vyčerpaný strážce u Silph Co nepustí dál, dokud mu nepřineseš pití (koupíš
+    // v Celadon Dept Store). Sabrinin gym je do osvobození Silph Co zavřený.
+    story.saffronArrival = true;
+    event = "saffron-arrival";
+  } else if (areaId === "route-12" && story.hasPokeFlute && !story.snorlaxCleared) {
+    // Máš Poké Flute a Snorlax ještě spí → nabídni probuzení (souboj).
+    event = "snorlax-block";
+  } else if (areaId === "route-12" && !story.hasPokeFlute && !story.snorlaxCleared) {
+    // Snorlax blokuje jih a Poké Flute zatím nemáš → flavour (potřebuješ Flute).
+    event = "snorlax-asleep";
+  } else if (areaId === "fuchsia-city" && !story.fuchsiaArrival) {
+    // Věrný Kanto (Krok 8): jižní město s Koga Gymem (Soul Badge), Safari Zone
+    // (uvnitř HM03 Surf + Gold Teeth) a domem Wardena (Gold Teeth → HM04 Strength).
+    story.fuchsiaArrival = true;
+    event = "fuchsia-arrival";
+  } else if (areaId === "route-19" && !story.route19Arrival) {
+    // Věrný Kanto (Krok 9): první nasednutí na Surf – moře na jih od Fuchsie
+    // vede přes Seafoam Islands na Cinnabar Island.
+    story.route19Arrival = true;
+    event = "route-19-arrival";
+  } else if (areaId === "seafoam-islands" && !story.seafoamArrival) {
+    // Věrný Kanto (Krok 9): ledové jeskynní ostrovy v mlze na cestě k Cinnabaru.
+    // Jednorázový flavour popup (jen poprvé). Legendární Articuno už NENÍ popup –
+    // žije ve vlastním tabu „Legendary" (data/legendaries.js + legendaryView),
+    // který se odemkne po Strength a zmizí po chycení (jednorázovost = vlastnictví).
+    story.seafoamArrival = true;
+    event = "seafoam-arrival";
+  } else if (areaId === "cinnabar-island" && !story.cinnabarArrival) {
+    // Věrný Kanto (Krok 9): sopečný ostrov – Blaineův Gym (Volcano Badge),
+    // vyhořelý Pokémon Mansion (Secret Key + lore o Mewtwovi) a Pokémon Lab.
+    story.cinnabarArrival = true;
+    event = "cinnabar-arrival";
+  } else if (areaId === "safari-zone" && !story.safariArrival) {
+    // Věrný Kanto (Krok 8): Safari Zone NEDÁVÁ nic zadarmo. Odměny (Gold Teeth
+    // v oblasti 3, HM03 Surf v Secret House oblasti 4) jsou až za expedici –
+    // řídí ji samostatný safariSystem (viz ui/safariView tab). Tady jen
+    // jednorázově vysvětlíme pravidla. Žádné itemy ani story flagy odměn.
+    story.safariArrival = true;
+    event = "safari-arrival";
+  } else if (areaId === "victory-road" && !story.victoryRoadArrival) {
+    // Věrný Kanto (Krok 10): poslední jeskyně před Ligou. Silní divocí Pokémoni,
+    // balvanové hádanky (Strength) a hluboko uvnitř hnízdí legendární Moltres.
+    story.victoryRoadArrival = true;
+    event = "victory-road-arrival";
+  } else if (areaId === "indigo-plateau" && !story.indigoArrival) {
+    // Věrný Kanto (Krok 10): vrchol cesty – Pokémon League. Elite Four + Champion
+    // v jednom nepřerušeném řetězci soubojů (viz League tab).
+    story.indigoArrival = true;
+    event = "indigo-arrival";
+  } else if (areaId === "cerulean-cave" && !story.ceruleanCaveArrival) {
+    // Věrný Kanto (endgame dojezd): Unknown Dungeon (Cerulean Cave) se otevřel
+    // jen Championovi. Hluboko uvnitř dřímá nejmocnější Pokémon – Mewtwo (Legendary tab).
+    story.ceruleanCaveArrival = true;
+    event = "cerulean-cave-arrival";
   }
 
   // Běžící souboj přizpůsobit nové oblasti.
   if (battle && battle.running) {
-    if (battle.trainer) {
+    if (areaId === "safari-zone") {
+      // V Safari Zone se nebojuje (má vlastní tab/engine) – běžící souboj ukončit.
+      stopBattle();
+    } else if (battle.trainer) {
       // Odchod z trenérského souboje = útěk; trenér zůstane neporažený.
+      // Věrný Kanto (Krok 10): útěk uprostřed Ligy (Elite Four / Champion)
+      // resetuje celý běh – stejně jako prohra jede od prvního vyzyvatele.
+      if (
+        (battle.trainer.kind === "elite-four" || battle.trainer.kind === "champion") &&
+        getState().progress?.leagueActive
+      ) {
+        const p = getState().progress;
+        p.leagueActive = false;
+        p.leagueStep = 0;
+      }
       stopBattle();
     } else if (area.species?.length) {
       battle.area = area;
@@ -2399,22 +2834,93 @@ export function setActiveArea(areaId) {
 }
 
 /**
- * Věrný Kanto: v Mt. Moon si hráč vybere JEDNU fosílii (jednorázově).
- * Helix → Omanyte, Dome → Kabuto. Uloží item do batohu a nastaví story-flag.
- * Oživení fosílie doděláme později (Museum/Lab).
- * @param {"helix"|"dome"} kind
- * @returns {{ ok: boolean, item?: string }}
+ * Věrný Kanto (upraveno pro cíl „celý dex na 1 průchod"): v Mt. Moon hráč získá
+ * VŠECHNY TŘI fosílie najednou (Helix→Omanyte, Dome→Kabuto, Old Amber→Aerodactyl).
+ * Žádná nevratná volba – jinak by se zamkl druh (viz pravidlo single-playthrough dex).
+ * Oživení řeší Museum of Science (viz storyBuildingView FOSSIL_TO_SPECIES).
+ * @returns {{ ok: boolean, items?: string[] }}
  */
-export function applyFossilChoice(kind) {
+export function applyFossilChoice() {
   const s = getState();
   if (!s.story) s.story = {};
   if (s.story.fossilChosen) return { ok: false };
   if (!s.resources.items) s.resources.items = {};
-  const itemId = kind === "dome" ? "dome-fossil" : "helix-fossil";
-  s.resources.items[itemId] = (s.resources.items[itemId] ?? 0) + 1;
-  s.story.fossilChosen = kind;
+  const items = ["helix-fossil", "dome-fossil", "old-amber"];
+  for (const itemId of items) {
+    s.resources.items[itemId] = (s.resources.items[itemId] ?? 0) + 1;
+  }
+  s.story.fossilChosen = "all";
   commit();
-  return { ok: true, item: itemId };
+  return { ok: true, items };
+}
+
+/**
+ * Level dárkového Pokémona škálovaný podle aktuálního týmu hráče, aby dárek vždy
+ * seděl bez ohledu na to, kdy ho vyzvedneš (i při pozdějším návratu na route).
+ * = level nejsilnějšího člena týmu (min. 5). Když je tým prázdný, vrátí 5.
+ * @returns {number}
+ */
+export function giftLevel() {
+  const team = getTeamPokemon();
+  let max = 0;
+  for (const p of team) {
+    const lvl = p?.level ?? 0;
+    if (lvl > max) max = lvl;
+  }
+  return Math.max(5, max);
+}
+
+/**
+ * Kanonická městská VÝMĚNA (in-game trade): hráč odevzdá jednoho jedince druhu
+ * `wantId` a dostane `giveId` na STEJNÉ úrovni (věrné originálu → level se škáluje
+ * sám). Jednorázově dle `flag`. Odevzdaný druh zůstává znovu chytatelný (žádný
+ * trvalý lockout dexu; viz [[single-playthrough-full-dex]]).
+ * @param {string} wantId   druh, kterého hráč musí vlastnit (odevzdá ho)
+ * @param {string} giveId   druh, kterého hráč dostane
+ * @param {string} flag     story flag hlídající jednorázovost
+ * @returns {{ ok: boolean, reason?: string, level?: number }}
+ */
+export function tradePokemon(wantId, giveId, flag) {
+  const s = getState();
+  if (!s.story) s.story = {};
+  if (flag && s.story[flag]) return { ok: false, reason: "done" };
+  if (!getSpecies(wantId) || !getSpecies(giveId)) return { ok: false, reason: "invalid" };
+  const owned = (s.collection ?? []).find((p) => p.speciesId === wantId);
+  if (!owned) return { ok: false, reason: "missing" };
+  // Pojistka proti soft-locku: nedovol odevzdat svého jediného Pokémona.
+  if ((s.collection?.length ?? 0) <= 1) return { ok: false, reason: "only" };
+  const level = owned.level ?? 5;
+  releasePokemon(owned.uid); // commit uvnitř – odebere z týmu/kolekce/boxu
+  const mon = createPokemon(giveId, level);
+  acquirePokemon(mon); // commit uvnitř (R-018)
+  if (flag) {
+    s.story[flag] = true;
+    commit();
+  }
+  return { ok: true, level };
+}
+
+/**
+ * Udělí hráči dárkového/statického Pokémona (Eevee, Lapras, Hitmony…).
+ * Jednorázově dle story-flagu (aby se dárek nedal opakovat).
+ * Používá acquirePokemon (platí R-018: nový druh přidá, duplikát slije lepší).
+ * @param {string} speciesId
+ * @param {number} level
+ * @param {string} flag  story flag hlídající jednorázovost
+ * @returns {{ ok: boolean }}
+ */
+export function grantGiftPokemon(speciesId, level, flag) {
+  const s = getState();
+  if (!s.story) s.story = {};
+  if (flag && s.story[flag]) return { ok: false };
+  if (!getSpecies(speciesId)) return { ok: false };
+  const mon = createPokemon(speciesId, level);
+  acquirePokemon(mon); // commit uvnitř
+  if (flag) {
+    s.story[flag] = true;
+    commit();
+  }
+  return { ok: true };
 }
 
 export function startBattle() {
@@ -2449,6 +2955,55 @@ export function startBattle() {
   };
   battle.enemy = spawnEnemy(battle.area);
   pushLog(`Battle at ${battle.area.name}: ${battle.player.name} vs ${battle.enemy.name}`);
+  emit();
+  schedule();
+  return { ok: true };
+}
+
+/**
+ * Spustí STATICKÝ (skriptovaný) divoký souboj s konkrétním druhem a levelem –
+ * pro legendární/jednorázová setkání (Krok 9: Articuno na Seafoam). Chová se
+ * jako běžný divoký souboj: NEMÁ `battle.trainer`, takže je CHYTATELNÝ i se
+ * (de)serializuje přes speciesId+level (přežije refresh). Jednorázovost neřešíme
+ * flagem tady, ale u volajícího (kontrola vlastnictví druhu / arrival event).
+ * @param {string} speciesId
+ * @param {number} level
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function startStaticEncounter(speciesId, level) {
+  const team = getTeamPokemon();
+  if (team.length === 0) return { ok: false, reason: "You have no Pokémon in your team." };
+  const firstAlive = team.findIndex((p) => hpOf(p) > 0);
+  if (firstAlive < 0) {
+    return { ok: false, reason: "Your whole team has fainted — heal at the Poké Center." };
+  }
+  const sp = getSpecies(speciesId);
+  if (!sp) return { ok: false, reason: `Unknown species: ${speciesId}` };
+
+  const activeArea = getActiveArea();
+  markSeen(speciesId); // do Pokédexu jako „viděno"
+  battle = {
+    running: true,
+    log: [],
+    area: activeArea,
+    teamCursor: firstAlive,
+    turn: 0,
+    result: null,
+    background: pickBackground(activeArea),
+    interlude: null,
+    resolving: false,
+    // Legendární setkání = VŽDY manuál (jako gym/boss). Bez toho by Auto battle
+    // Pokémona automaticky ubilo k smrti a hráč by neměl šanci hodit ball – a
+    // legendární musí jít chytit (celý dex 151). Útěk/prohra/KO ho nezablokují:
+    // jednorázovost = vlastnictví druhu, takže se objeví znovu, dokud nechytíš.
+    forceManual: true,
+    weather: null,
+    tailwind: { player: 0, enemy: 0 },
+    player: makeCombatant(team[firstAlive]),
+    enemy: makeCombatant(createPokemon(speciesId, level)),
+  };
+  pushLog(`A wild ${battle.enemy.name} appeared!`, "enemy");
+  pushLog(`Go, ${battle.player.name}!`, "player");
   emit();
   schedule();
   return { ok: true };
@@ -2705,6 +3260,9 @@ export function setAutoBattle(on) {
  * pro manuální mód i záchrana po wipu. Vrací počet skutečně vyléčených jedinců.
  */
 export function healTeam() {
+  // Liga (Elite Four): během běhu se v Poké Centru NELÉČÍ – jen bag itemy.
+  // Vrací -1 jako signál pro UI (Poké Center / máma), ať ukáže vysvětlení.
+  if (getState().progress?.leagueActive) return -1;
   const team = getTeamPokemon();
   let healed = 0;
   for (const p of team) {

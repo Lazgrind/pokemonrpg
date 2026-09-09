@@ -392,6 +392,48 @@ const FIXED_TRAINERS = [
       "Hah! I'm Blaine! I'm the Cinnabar Gym Leader! My fiery Pokémon will incinerate all challengers! Hah!",
   },
 
+  // ── Pokémon Mansion gauntlet (Cinnabar) – fronta Burglarů + boss za Secret Key ─
+  {
+    id: "cinnabar-mansion-burglar-1",
+    kind: "rocket",
+    class: "burglar",
+    name: "Burglar Ignatz",
+    team: [
+      { speciesId: "growlithe", level: 34 },
+      { speciesId: "vulpix", level: 35 },
+      { speciesId: "ponyta", level: 36 },
+    ],
+    reward: 1620,
+    quote: "Heh, a looter's paradise in here — and you're not getting past me!",
+  },
+  {
+    id: "cinnabar-mansion-burglar-2",
+    kind: "rocket",
+    class: "burglar",
+    name: "Burglar Simon",
+    team: [
+      { speciesId: "vulpix", level: 35 },
+      { speciesId: "growlithe", level: 36 },
+      { speciesId: "rapidash", level: 38 },
+    ],
+    reward: 1710,
+    quote: "The good stuff's locked in the vault. Beat it, kid!",
+  },
+  {
+    id: "cinnabar-mansion-boss",
+    kind: "boss",
+    class: "super-nerd",
+    name: "Scientist Volk",
+    team: [
+      { speciesId: "koffing", level: 37 },
+      { speciesId: "magmar", level: 39 },
+      { speciesId: "weezing", level: 39 },
+      { speciesId: "rapidash", level: 41 },
+    ],
+    reward: 3280,
+    quote: "The Mewtwo experiments must not be disturbed! I'll burn these journals before I let you have that key!",
+  },
+
   // ── Viridian Gym (Giovanni, Ground) ───────────────────────────────────────
   {
     id: "viridian-gym-cooltrainer-samson",
@@ -499,6 +541,285 @@ const FIXED_TRAINERS = [
     ],
     reward: 500,
     quote: "I'm the last one standing. There's no way past me!",
+  },
+
+  // ── Route 9: Mountain Hikers ──────────────────────────────────────────────
+  {
+    id: "route-09-hiker-1",
+    kind: "hiker",
+    class: "hiker",
+    name: "Hiker Marcos",
+    team: [
+      { speciesId: "geodude", level: 12 },
+      { speciesId: "machop", level: 12 },
+    ],
+    reward: 400,
+    quote: "This mountain trail is no place for the weak!",
+  },
+  {
+    id: "route-09-hiker-2",
+    kind: "hiker",
+    class: "hiker",
+    name: "Hiker Dudley",
+    team: [{ speciesId: "onix", level: 14 }],
+    reward: 420,
+    quote: "My Onix will grind you to dust!",
+  },
+  {
+    id: "route-09-hiker-3",
+    kind: "hiker",
+    class: "hiker",
+    name: "Hiker Franklin",
+    team: [
+      { speciesId: "geodude", level: 13 },
+      { speciesId: "geodude", level: 13 },
+      { speciesId: "onix", level: 13 },
+    ],
+    reward: 460,
+    quote: "Rock Tunnel's just ahead. Prove you belong here!",
+  },
+
+  // ── Celadon City: Team Rocket Hideout ─────────────────────────────────────
+  {
+    id: "rocket-hideout-1",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Team Rocket Grunt",
+    team: [
+      { speciesId: "rattata", level: 18 },
+      { speciesId: "zubat", level: 18 },
+      { speciesId: "raticate", level: 21 },
+    ],
+    reward: 600,
+    quote: "You shouldn't be down here, kid!",
+  },
+  {
+    id: "rocket-hideout-2",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Team Rocket Grunt",
+    team: [
+      { speciesId: "grimer", level: 19 },
+      { speciesId: "koffing", level: 19 },
+    ],
+    reward: 640,
+    quote: "Team Rocket owns this town now.",
+  },
+  {
+    id: "rocket-hideout-3",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Team Rocket Grunt",
+    team: [
+      { speciesId: "machop", level: 21 },
+      { speciesId: "drowzee", level: 20 },
+    ],
+    reward: 700,
+    quote: "The boss is just past me. You'll never reach him!",
+  },
+  {
+    id: "rocket-hideout-4",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Team Rocket Grunt",
+    team: [
+      { speciesId: "sandshrew", level: 20 },
+      { speciesId: "ekans", level: 20 },
+      { speciesId: "zubat", level: 20 },
+    ],
+    reward: 740,
+    quote: "This is your last warning!",
+  },
+  {
+    id: "giovanni-hideout",
+    kind: "boss",
+    class: "giovanni",
+    name: "Boss Giovanni",
+    team: [
+      { speciesId: "onix", level: 25 },
+      { speciesId: "rhyhorn", level: 24 },
+      { speciesId: "kangaskhan", level: 29 },
+    ],
+    reward: 2500,
+    quote: "So you've come this far. I am Giovanni, leader of Team Rocket. I'll deal with you myself!",
+  },
+
+  // ── Pokémon Tower: Marowak ghost a Route 12: Snorlax ─────────────────────
+  {
+    id: "lavender-marowak",
+    kind: "boss",
+    class: "ghost",
+    name: "Ghostly Marowak",
+    team: [{ speciesId: "marowak", level: 30 }],
+    reward: 1000,
+    quote: "GAAAAH! The vengeful spirit of a mother Marowak lunges at you!",
+  },
+  {
+    id: "lavender-snorlax",
+    kind: "boss",
+    class: "snorlax",
+    name: "Sleeping Snorlax",
+    team: [{ speciesId: "snorlax", level: 30 }],
+    reward: 1500,
+    quote: "The Poke Flute wakes the enormous Snorlax. It looks furious!",
+  },
+
+  // ── Silph Co. (Krok 11): Team Rocket obsadil ústředí v Saffronu. Gauntlet =
+  //  grunti → rival (7. patro) → boss Giovanni (podruhé). Payoff = Master Ball +
+  //  osvobození Silph Co (viz ROCKET_GAUNTLETS["saffron-city"] + finishTrainerBattle).
+  {
+    id: "silph-rocket-1",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Rocket Grunt",
+    team: [
+      { speciesId: "raticate", level: 33 },
+      { speciesId: "zubat", level: 33 },
+    ],
+    reward: 700,
+  },
+  {
+    id: "silph-rocket-2",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Rocket Grunt",
+    team: [
+      { speciesId: "arbok", level: 34 },
+      { speciesId: "golbat", level: 34 },
+    ],
+    reward: 720,
+  },
+  {
+    id: "silph-rocket-3",
+    kind: "rocket",
+    class: "rocket-grunt",
+    name: "Rocket Grunt",
+    team: [
+      { speciesId: "grimer", level: 33 },
+      { speciesId: "koffing", level: 33 },
+      { speciesId: "weezing", level: 35 },
+    ],
+    reward: 760,
+  },
+  {
+    id: "rival-silph",
+    kind: "rival",
+    class: "rival",
+    name: "Rival",
+    team: [
+      { speciesId: "pidgeot", level: 40 },
+      { speciesId: "growlithe", level: 38 },
+      { speciesId: "kadabra", level: 38 },
+      { speciesId: "gyarados", level: 40 },
+      { speciesId: null, level: 42, counterStarterMid: true },
+    ],
+    reward: 2600,
+    quote:
+      "Hey! What are YOU doing here?! ...Taking on Team Rocket too, huh? Fine — but first let's see how strong you've really gotten!",
+  },
+  {
+    id: "giovanni-silph",
+    kind: "boss",
+    class: "giovanni",
+    name: "Boss Giovanni",
+    team: [
+      { speciesId: "nidorino", level: 37 },
+      { speciesId: "kangaskhan", level: 35 },
+      { speciesId: "rhyhorn", level: 37 },
+      { speciesId: "nidoqueen", level: 41 },
+    ],
+    reward: 5300,
+    quote:
+      "Fuhaha! You again. Team Rocket has taken Silph Co. — this whole region's future is mine to shape! ...Unless you can tear it from my grasp.",
+  },
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  POKÉMON LEAGUE – ELITE FOUR + CHAMPION (Indigo Plateau, Krok 10).
+  //  Zvláštní gauntlet: souboje jdou JEDEN ZA DRUHÝM, mezi nimi se NELZE léčit
+  //  v Poké Centru (jen bag itemy), HP se přenáší. Prohra kdekoli = restart od
+  //  Lorelei. Řídí to LEAGUE + progress.leagueActive/leagueStep (viz battleSystem).
+  //  Obtížnost: kind "elite-four"/"champion" = jako gym-leader (IV30/EV252).
+  //  Sprity: single sprite dle id (assets/gym-leaders/<id>/front.png).
+  // ═══════════════════════════════════════════════════════════════════════════
+  {
+    id: "elite-four-lorelei",
+    kind: "elite-four",
+    class: "elite-four",
+    name: "Elite Four Lorelei",
+    team: [
+      { speciesId: "dewgong", level: 52 },
+      { speciesId: "cloyster", level: 51 },
+      { speciesId: "slowbro", level: 52 },
+      { speciesId: "jynx", level: 54 },
+      { speciesId: "lapras", level: 54 },
+    ],
+    reward: 6000,
+    quote:
+      "Welcome to the Pokémon League. I am Lorelei of the Elite Four. My icy Pokémon will freeze you solid — no waffling here!",
+  },
+  {
+    id: "elite-four-bruno",
+    kind: "elite-four",
+    class: "elite-four",
+    name: "Elite Four Bruno",
+    team: [
+      { speciesId: "onix", level: 51 },
+      { speciesId: "hitmonchan", level: 53 },
+      { speciesId: "hitmonlee", level: 53 },
+      { speciesId: "onix", level: 54 },
+      { speciesId: "machamp", level: 56 },
+    ],
+    reward: 6500,
+    quote: "I am Bruno of the Elite Four! We will grind you down with our superior power! HOOAH!",
+  },
+  {
+    id: "elite-four-agatha",
+    kind: "elite-four",
+    class: "elite-four",
+    name: "Elite Four Agatha",
+    team: [
+      { speciesId: "gengar", level: 54 },
+      { speciesId: "golbat", level: 54 },
+      { speciesId: "haunter", level: 53 },
+      { speciesId: "arbok", level: 56 },
+      { speciesId: "gengar", level: 58 },
+    ],
+    reward: 7000,
+    quote:
+      "I am Agatha of the Elite Four. Oak's taken a real shine to you, kid. My ghosts will teach you what real horror is!",
+  },
+  {
+    id: "elite-four-lance",
+    kind: "elite-four",
+    class: "elite-four",
+    name: "Elite Four Lance",
+    team: [
+      { speciesId: "gyarados", level: 56 },
+      { speciesId: "dragonair", level: 54 },
+      { speciesId: "dragonair", level: 54 },
+      { speciesId: "aerodactyl", level: 58 },
+      { speciesId: "dragonite", level: 60 },
+    ],
+    reward: 7500,
+    quote:
+      "Welcome. I am Lance, the Dragon master and the last of the Elite Four. My dragons are all but invincible. Prepare yourself!",
+  },
+  {
+    id: "champion-blue",
+    kind: "champion",
+    class: "champion",
+    name: "Champion Blue",
+    team: [
+      { speciesId: "pidgeot", level: 61 },
+      { speciesId: "alakazam", level: 59 },
+      { speciesId: "rhydon", level: 61 },
+      { speciesId: "gyarados", level: 61 },
+      { speciesId: "arcanine", level: 61 },
+      { speciesId: null, level: 63, counterStarterFinal: true },
+    ],
+    reward: 10000,
+    quote:
+      "Hah! I knew it! While you were plodding along, I became the Pokémon League CHAMPION! Now I'll show you the difference between us!",
   },
 ];
 
@@ -767,6 +1088,9 @@ export const TRAINER_DIFFICULTY = {
   gym: { ivFixed: 22, evOffense: 128, evSpeed: 128, optimizeNature: true },
   rival: { ivFixed: 24, evOffense: 128, evSpeed: 128, optimizeNature: true },
   "gym-leader": { ivFixed: 30, evOffense: 252, evSpeed: 252, optimizeNature: true },
+  // Liga = nejtěžší v Kantu: plné IV/EV a vhodná povaha (jako gym-leader).
+  "elite-four": { ivFixed: 30, evOffense: 252, evSpeed: 252, optimizeNature: true },
+  champion: { ivFixed: 31, evOffense: 252, evSpeed: 252, optimizeNature: true },
 };
 
 /**
@@ -829,11 +1153,95 @@ export const ROCKET_GAUNTLETS = {
     trainerIds: ["mt-moon-rocket-1", "mt-moon-rocket-2", "mt-moon-rocket-3", "mt-moon-rocket-4", "mt-moon-rocket-5"],
     clearReward: { gold: 1000 },
   },
+  "route-09": {
+    id: "route-09-hikers",
+    areaId: "route-09",
+    title: "Mountain Hikers",
+    tabLabel: "Hikers",
+    tabIcon: "⛏️",
+    intro: "The road to Rock Tunnel is guarded by tough mountain Hikers. Beat them all to prove you're ready for the dark.",
+    clearFlag: "route9HikersCleared",
+    trainerIds: ["route-09-hiker-1", "route-09-hiker-2", "route-09-hiker-3"],
+    clearReward: { gold: 600 },
+  },
+  "celadon-city": {
+    id: "rocket-hideout",
+    areaId: "celadon-city",
+    title: "Team Rocket Hideout",
+    tabLabel: "Team Rocket",
+    tabIcon: "💣",
+    intro: "Behind a poster in the Game Corner, a secret stairway leads down into Team Rocket's hideout. Fight your way to the boss.",
+    clearFlag: "rocketHideoutCleared",
+    trainerIds: ["rocket-hideout-1", "rocket-hideout-2", "rocket-hideout-3", "rocket-hideout-4", "giovanni-hideout"],
+    clearReward: { gold: 2500 },
+    clearItem: "silph-scope",
+    clearStoryFlag: "hasSilphScope",
+  },
+  "cinnabar-island": {
+    id: "cinnabar-mansion",
+    areaId: "cinnabar-island",
+    title: "Pokémon Mansion",
+    tabLabel: "Mansion",
+    tabIcon: "🏚️",
+    // Tab se ukáže AŽ po vyřešení spínačového labyrintu v City → Pokémon Mansion.
+    requiresStory: "mansionPuzzleSolved",
+    intro:
+      "You slipped past the shifting walls. Deeper in the charred labs, two Burglars and their boss stand between you and the vault holding the Secret Key.",
+    clearFlag: "cinnabarMansionCleared",
+    trainerIds: ["cinnabar-mansion-burglar-1", "cinnabar-mansion-burglar-2", "cinnabar-mansion-boss"],
+    clearReward: { gold: 1800 },
+    clearItem: "secret-key",
+    clearStoryFlag: "hasSecretKey",
+  },
+  "saffron-city": {
+    id: "silph-co",
+    areaId: "saffron-city",
+    title: "Silph Co.",
+    tabLabel: "Silph Co.",
+    tabIcon: "🏢",
+    // Tab se ukáže AŽ po napojení vyčerpaného strážce (drink z Celadonu) →
+    // saffronGuardsCleared (viz storyBuildingView silph-co + deptStore).
+    requiresStory: "saffronGuardsCleared",
+    intro:
+      "Team Rocket has seized Silph Co.'s tower floor by floor. Fight your way up through the grunts, past your rival, all the way to Giovanni on the top floor — and free the company.",
+    clearFlag: "silphCleared",
+    trainerIds: ["silph-rocket-1", "silph-rocket-2", "silph-rocket-3", "rival-silph", "giovanni-silph"],
+    clearReward: { gold: 4000 },
+    // Master Ball (je to Poké Ball, ne item) + osvobození prezidenta řeší
+    // speciální payoff v battleSystem.finishTrainerBattle (gaunt.id === "silph-co").
+  },
 };
 
 /** Gauntlet (objekt) navázaný na oblast, nebo null. */
 export function rocketGauntletForArea(areaId) {
   return ROCKET_GAUNTLETS[areaId] ?? null;
+}
+
+/**
+ * POKÉMON LEAGUE (Elite Four + Champion) na Indigo Plateau. Na rozdíl od Rocket
+ * gauntletů běží souboje STRIKTNĚ ZA SEBOU bez léčení v Poké Centru (jen bag
+ * itemy) a prohra kdekoli vrací na začátek. Běh drží progress.leagueActive
+ * (jsi uprostřed výzvy) + progress.leagueStep (kolik členů jsi v tomto běhu
+ * porazil, 0..order.length). Postup i finální payoff řídí battleSystem.
+ *   - order          striktní pořadí trenérů (poslední = Champion)
+ *   - clearFlag      story flag po poražení celé Ligy (leagueCleared)
+ *   - clearStoryFlag navazující flag (isChampion → odemkne Cerulean Cave / Mewtwo)
+ *   - clearReward    jednorázová prize money za PRVNÍ zisk titulu
+ */
+export const LEAGUE = {
+  areaId: "indigo-plateau",
+  title: "Pokémon League — Elite Four",
+  intro:
+    "This is the Indigo Plateau, the pinnacle of every trainer's journey. Behind these doors wait the Elite Four and, beyond them, the Champion. Face them one after another — there is no leaving to heal between battles. Your only aid is what you carry in your Bag. Lose even once, and you start again from the very first challenger.",
+  order: ["elite-four-lorelei", "elite-four-bruno", "elite-four-agatha", "elite-four-lance", "champion-blue"],
+  clearFlag: "leagueCleared",
+  clearStoryFlag: "isChampion",
+  clearReward: { gold: 20000 },
+};
+
+/** Vrátí Ligu, pokud je na dané oblasti, jinak null. */
+export function leagueForArea(areaId) {
+  return LEAGUE.areaId === areaId ? LEAGUE : null;
 }
 
 /** Trenéři (objekty) gauntletu dané oblasti; prázdné pole, když žádný gauntlet. */
@@ -874,7 +1282,8 @@ export function randomTrainerVariant(cls) {
  */
 export function trainerSpriteUrl(trainer) {
   if (!trainer) return "";
-  if (trainer.kind === "gym-leader") {
+  // Leader + Liga (Elite Four / Champion) = 1 stálý sprite dle id.
+  if (trainer.kind === "gym-leader" || trainer.kind === "elite-four" || trainer.kind === "champion") {
     return `assets/gym-leaders/${trainer.id}/front.png`;
   }
   const n = trainer.spriteVariant > 0 ? trainer.spriteVariant : 1;

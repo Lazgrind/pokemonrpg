@@ -63,10 +63,29 @@ export const ITEMS = [
   // doděláme později (Museum/Lab); zatím drží místo v batohu jako klíčový item.
   { id: "helix-fossil", name: "Helix Fossil", icon: "🐚", desc: "A fossil of an ancient sea Pokémon. It can be revived into Omanyte at the Museum of Science.", price: 0, category: "special" },
   { id: "dome-fossil", name: "Dome Fossil", icon: "🗿", desc: "A fossil of an ancient sea Pokémon. It can be revived into Kabuto at the Museum of Science.", price: 0, category: "special" },
+  { id: "old-amber", name: "Old Amber", icon: "🟠", desc: "A piece of amber holding the genetic material of an ancient Pokémon. It can be revived into Aerodactyl at the Museum of Science.", price: 0, category: "special" },
 
   // Klíčové předměty z Kroku 5 (Cerulean → Vermilion).
   { id: "ss-anne-ticket", name: "S.S. Anne Ticket", icon: "🎫", desc: "A ticket that grants passage aboard the luxury liner S.S. Anne, docked at Vermilion City.", price: 0, category: "special" },
   { id: "hm01-cut", name: "HM01 Cut", icon: "🌿", desc: "A Hidden Machine that teaches Cut. Also used to clear small trees blocking the way.", price: 0, category: "special" },
+
+  // Klíčový předmět z Kroku 6 (Vermilion → Lavender).
+  { id: "hm05-flash", name: "HM05 Flash", icon: "🔦", desc: "A Hidden Machine that teaches Flash. Also lights up pitch-dark caves like Rock Tunnel.", price: 0, category: "special" },
+
+  // Klíčové předměty z Kroku 7 (Celadon → Lavender → Snorlax).
+  { id: "silph-scope", name: "Silph Scope", icon: "👁️", desc: "A device from Silph Co. that reveals the identity of ghostly Pokemon. Recovered from Team Rocket's hideout.", price: 0, category: "special" },
+  { id: "poke-flute", name: "Poke Flute", icon: "🎵", desc: "A flute whose melody wakes any sleeping Pokemon. A gift from Mr. Fuji.", price: 0, category: "special" },
+
+  // Klíčové předměty z Kroku 8 (Fuchsia City → Safari Zone → Warden's House).
+  { id: "hm03-surf", name: "HM03 Surf", icon: "🌊", desc: "A Hidden Machine that teaches Surf. Also allows riding on water with a Pokemon that knows it.", price: 0, category: "special" },
+  { id: "hm04-strength", name: "HM04 Strength", icon: "💪", desc: "A Hidden Machine that teaches Strength. Also allows pushing large boulders that block the way.", price: 0, category: "special" },
+  { id: "gold-teeth", name: "Gold Teeth", icon: "🦷", desc: "A precious artifact lost by the Safari Zone Warden. He will reward you handsomely for returning it.", price: 0, category: "special" },
+
+  // Klíčový předmět z Kroku 9 (Cinnabar Island → Pokémon Mansion → Gym).
+  { id: "secret-key", name: "Secret Key", icon: "🔑", desc: "A small key found in the burnt-out Pokemon Mansion. It unlocks the door to the Cinnabar Island Gym.", price: 0, category: "special" },
+
+  // Klíčový předmět z Kroku 11 (Celadon Dept Store → strážce Silph Co v Saffronu).
+  { id: "fresh-water", name: "Fresh Water", icon: "🥤", desc: "Cool, refreshing water from a Celadon vending machine. A parched guard at Silph Co. in Saffron would love one.", price: 0, category: "special" },
 ];
 
 /**

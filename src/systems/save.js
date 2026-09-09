@@ -359,6 +359,207 @@ function migrate(data) {
     }
     data.saveVersion = 30;
   }
+  // v30 → v31: Krok 6 – Rock Tunnel se nově gatuje na HM05 Flash (story.hasFlash,
+  // získaný na Route 9). Kdo už Rock Tunnel (nebo dál) navštívil, toho propustíme
+  // (nastavíme hasFlash + přidáme item do batohu), aby se nikomu nezamkla cesta.
+  if (data.saveVersion < 31) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    const visited = Array.isArray(data.progress?.visited) ? data.progress.visited : [];
+    const pastTunnel = ["rock-tunnel", "route-10", "power-plant", "lavender-town"].some((id) =>
+      visited.includes(id)
+    );
+    if (pastTunnel && !data.story.hasFlash) {
+      data.story.hasFlash = true;
+      if (!data.resources) data.resources = {};
+      if (!data.resources.items) data.resources.items = {};
+      data.resources.items["hm05-flash"] = (data.resources.items["hm05-flash"] ?? 0) + 1;
+    }
+    data.saveVersion = 31;
+  }
+  // v31 → v32: Krok 7 – Flash je nově za Route 9 Hiker gauntlet + 10 druhů v Pokédexu;
+  // Snorlax na Route 12 blokuje jih (potřebuje Poké Flute z Pokémon Tower). Nikomu
+  // ale nesmíme zpětně zamknout cestu, proto retroaktivně „propustíme" postoupené:
+  //  • kdo už má Flash → bereme Route 9 Hikery za poražené (gauntlet hotový),
+  //  • kdo má Rainbow Badge → Erika poražena,
+  //  • kdo už navštívil Route 13 (za Snorlaxem) → Snorlax vyřešen + Poké Flute.
+  if (data.saveVersion < 32) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    if (!data.progress || typeof data.progress !== "object") data.progress = {};
+    if (!Array.isArray(data.progress.defeatedTrainers)) data.progress.defeatedTrainers = [];
+    if (!data.resources) data.resources = {};
+    if (!data.resources.items) data.resources.items = {};
+    const visited = Array.isArray(data.progress.visited) ? data.progress.visited : [];
+    const badges = Array.isArray(data.progress.badges) ? data.progress.badges : [];
+
+    if (data.story.hasFlash) {
+      data.story.route9HikersCleared = true;
+      for (const id of ["route-09-hiker-1", "route-09-hiker-2", "route-09-hiker-3"]) {
+        if (!data.progress.defeatedTrainers.includes(id)) data.progress.defeatedTrainers.push(id);
+      }
+    }
+    if (badges.includes("rainbow-badge")) data.story.erikaCleared = true;
+    if (visited.includes("route-13")) {
+      data.story.snorlaxCleared = true;
+      data.story.hasPokeFlute = true;
+      data.resources.items["poke-flute"] = (data.resources.items["poke-flute"] ?? 0) + 1;
+    }
+    data.saveVersion = 32;
+  }
+  // v32 → v33: Krok 8 – Fuchsia City + přepracované Safari. Safari Zone už NEDÁVÁ
+  // Surf/Gold Teeth zadarmo za pouhý vstup – jsou to odměny za expedici (viz
+  // safariSystem). Migrace proto řeší jen to, aby se nikdo nezamkl: kdo už je ZA
+  // branou (jen díky Surf/Strength se tam dá dostat), musí příslušné HM opravdu mít.
+  //  • kdo má Soul Badge → Koga poražen (+ flavour flag bludiště),
+  //  • kdo navštívil Fuchsia → arrival flag,
+  //  • kdo je za Surf gate (už na Route 19) → HM03 Surf + hasSurf,
+  //  • kdo je za Strength gate (Victory Road) → HM04 Strength + hasStrength.
+  // (Nový běhový stav state.safari se dolaďuje líně přes safariSystem.getSafari.)
+  if (data.saveVersion < 33) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    if (!data.progress || typeof data.progress !== "object") data.progress = {};
+    if (!data.resources) data.resources = {};
+    if (!data.resources.items) data.resources.items = {};
+    const visited = Array.isArray(data.progress.visited) ? data.progress.visited : [];
+    const badges = Array.isArray(data.progress.badges) ? data.progress.badges : [];
+
+    if (badges.includes("soul-badge")) {
+      data.story.kogaCleared = true;
+      data.story.fuchsiaGymWalls = true;
+    }
+    if (visited.includes("fuchsia-city")) data.story.fuchsiaArrival = true;
+
+    if (visited.includes("route-19")) {
+      data.story.hasSurf = true;
+      data.resources.items["hm03-surf"] = (data.resources.items["hm03-surf"] ?? 0) + 1;
+    }
+    if (visited.includes("victory-road")) {
+      data.story.hasStrength = true;
+      data.story.wardenThanked = true;
+      data.resources.items["hm04-strength"] = (data.resources.items["hm04-strength"] ?? 0) + 1;
+    }
+    data.saveVersion = 33;
+  }
+  // v34 (Krok 9 – Cinnabar Island): dopočítej story flagy podle postupu, ať se
+  // staré savy nezaseknou. Kdo už má Volcano Badge, musí mít Secret Key
+  // (jinak by se mu gym zamkl requiresStory) a je označen jako blaineCleared.
+  if (data.saveVersion < 34) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    if (!data.progress || typeof data.progress !== "object") data.progress = {};
+    if (!data.resources) data.resources = {};
+    if (!data.resources.items) data.resources.items = {};
+    const visited = Array.isArray(data.progress.visited) ? data.progress.visited : [];
+    const badges = Array.isArray(data.progress.badges) ? data.progress.badges : [];
+
+    if (visited.includes("route-19")) data.story.route19Arrival = true;
+    if (visited.includes("seafoam-islands")) data.story.seafoamArrival = true;
+    if (visited.includes("cinnabar-island")) data.story.cinnabarArrival = true;
+    if (badges.includes("volcano-badge")) {
+      data.story.blaineCleared = true;
+      data.story.cinnabarGymQuiz = true;
+      data.story.hasSecretKey = true; // aby se vyčištěný gym nezamkl requiresStory
+    }
+    data.saveVersion = 34;
+  }
+  // v35 (Krok 9 – ztížený Pokémon Mansion): Mansion je teď spínačový labyrint
+  // (mansionPuzzleSolved) + gauntlet Burglarů/bosse (cinnabarMansionCleared).
+  // Kdo už měl Secret Key (starý instantní zisk), byl fakticky „hotov" – nastav
+  // oba nové flagy, ať se mu labyrint ani gauntlet znovu nespustí.
+  if (data.saveVersion < 35) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    if (data.story.hasSecretKey) {
+      data.story.mansionPuzzleSolved = true;
+      data.story.cinnabarMansionCleared = true;
+    }
+    data.saveVersion = 35;
+  }
+  // v36 (Krok 10 – Pokémon League): přidán běh Ligy (Elite Four + Champion) do
+  // progress. Doplň neutrální default (žádný běh neběží). Kdo má earth-badge, měl
+  // by mít i giovanniCleared, ať se payoff/otevření Ligy neopakuje.
+  if (data.saveVersion < 36) {
+    if (!data.progress || typeof data.progress !== "object") data.progress = {};
+    if (typeof data.progress.leagueActive !== "boolean") data.progress.leagueActive = false;
+    if (typeof data.progress.leagueStep !== "number") data.progress.leagueStep = 0;
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    const badges = Array.isArray(data.progress.badges) ? data.progress.badges : [];
+    if (badges.includes("earth-badge")) data.story.giovanniCleared = true;
+    data.saveVersion = 36;
+  }
+  // v37 (Krok 11 – Saffron City / Silph Co / Sabrina): Team Rocket obsadil Silph Co,
+  // žíznivý strážce gatuje budovu (Fresh Water z Celadonu), Silph Co gauntlet
+  // (Rockets + rival + Giovanni) → Master Ball a odemčení Sabrinina gymu (Marsh Badge).
+  // Aby se nikomu nezamkla cesta ani neopakoval payoff:
+  //  • kdo navštívil Saffron → arrival flag (ať se úvodní popup neukáže zpětně),
+  //  • kdo má Marsh Badge → Silph Co i Sabrina hotovi (strážci propuštěni, gauntlet
+  //    poražen, Master Ball doplněn) – gym se nesmí zpětně zamknout requiresStory,
+  //  • kdo je Champion (má giovanniCleared a všech 8 odznaků) → Cerulean Cave arrival.
+  if (data.saveVersion < 37) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    if (!data.progress || typeof data.progress !== "object") data.progress = {};
+    if (!Array.isArray(data.progress.defeatedTrainers)) data.progress.defeatedTrainers = [];
+    if (!data.resources) data.resources = {};
+    if (!data.resources.balls || typeof data.resources.balls !== "object") data.resources.balls = {};
+    const visited = Array.isArray(data.progress.visited) ? data.progress.visited : [];
+    const badges = Array.isArray(data.progress.badges) ? data.progress.badges : [];
+
+    if (visited.includes("saffron-city")) data.story.saffronArrival = true;
+
+    if (badges.includes("marsh-badge")) {
+      // Sabrina poražena ⇒ Silph Co musel být vyčištěn dřív → propustit vše zpětně.
+      data.story.saffronGuardsCleared = true;
+      data.story.silphCleared = true;
+      data.story.sabrinaCleared = true;
+      for (const id of ["silph-rocket-1", "silph-rocket-2", "silph-rocket-3", "rival-silph", "giovanni-silph"]) {
+        if (!data.progress.defeatedTrainers.includes(id)) data.progress.defeatedTrainers.push(id);
+      }
+      // Master Ball je payoff za Silph Co – doplň ho zpětně těm, kdo Silphem prošli.
+      data.resources.balls.master = (data.resources.balls.master ?? 0) + 1;
+    }
+    // Champion (porazil Ligu) má přístup do Cerulean Cave – ať se mu úvodní lore
+    // popup neukáže znovu, když už dávno hraje endgame.
+    if (data.story.leagueCleared) {
+      data.story.ceruleanCaveArrival = true;
+    }
+    data.saveVersion = 37;
+  }
+  // v38 (dodělání Gen 1 dexu, Bundle 1): fosílie už NEjsou volba jedné – hráč má
+  // dostat všechny tři (Helix→Omanyte, Dome→Kabuto, Old Amber→Aerodactyl), aby šel
+  // celý dex na 1 průchod. Kdo dřív vybral jednu (fossilChosen "helix"/"dome"),
+  // dostane zpětně chybějící fosílie (druhou + zbrusu nový Old Amber).
+  if (data.saveVersion < 38) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    if (!data.resources) data.resources = {};
+    if (!data.resources.items || typeof data.resources.items !== "object") data.resources.items = {};
+    const chosen = data.story.fossilChosen;
+    if (chosen && chosen !== "all") {
+      const items = data.resources.items;
+      // Druhá fosílie (kterou si tehdy NEvybral) + Old Amber (nová pro všechny).
+      const missing = chosen === "dome" ? ["helix-fossil"] : ["dome-fossil"];
+      missing.push("old-amber");
+      for (const id of missing) items[id] = (items[id] ?? 0) + 1;
+      data.story.fossilChosen = "all";
+    }
+    data.saveVersion = 38;
+  }
+
+  // v39 (Krok 12): dárkoví/statičtí Pokémoni pro doplnění dexu na 1 průchod –
+  // Eevee (Celadon Mansion), Lapras (Silph Co.), Hitmonlee+Hitmonchan (Fighting
+  // Dojo), Mr. Mime (Route 2), Jynx (Route 10), Farfetch'd (Route 13). Všechny
+  // dárky jsou nové jednorázové flagy (eeveeGift, laprasGift, hitmonsGift,
+  // mrMimeGift, jynxGift, farfetchdGift) – u existujících savů zůstávají prostě
+  // nevyzvednuté, hráč si dojde pro ně. Žádné doplňování dat, jen bump verze.
+  if (data.saveVersion < 39) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    data.saveVersion = 39;
+  }
+
+  // v40: Game Corner „Plná herna" – nová měna coiny. Existující savy dostanou
+  // coins:0 (vydělají si je až v herně); jen bump, žádné doplňování.
+  if (data.saveVersion < 40) {
+    if (!data.resources || typeof data.resources !== "object") data.resources = {};
+    if (typeof data.resources.coins !== "number") data.resources.coins = 0;
+    data.saveVersion = 40;
+  }
+
   return data;
 }
 

@@ -78,6 +78,24 @@ export const DEV_CHECKPOINTS = [
   { key: "brock", label: "⑥ Brock poražen · Boulder Badge · Route 3" },
   { key: "cerulean", label: "⑦ Cerulean City · u Misty" },
   { key: "vermilion", label: "⑧ Vermilion City · S.S. Anne + HM Cut" },
+  { key: "lavender", label: "⑨ Lt. Surge · Thunder Badge · Flash · Lavender Town (věž zamčená duchem)" },
+  { key: "celadon", label: "⑩ Celadon City · Rainbow Badge (Erika poražena; hideout ještě NE)" },
+  { key: "silphscope", label: "⑪ Silph Scope získán · Rocket Hideout vyčištěn (věž netknuta)" },
+  { key: "pokeflute", label: "⑫ Poke Flute získán · věž hotová (Marowak uklidněn, Mr. Fuji zachráněn; Snorlax SPÍ)" },
+  { key: "snorlax", label: "⑬ Snorlax probuzen · jižní cesta otevřená (Krok 7 hotov)" },
+  { key: "fuchsia", label: "⑭ Fuchsia City · příchod (Koga i Safari k dispozici)" },
+  { key: "soul", label: "⑮ Koga poražen · Soul Badge (Safari ještě NE)" },
+  { key: "surf", label: "⑯ Safari Zone prošel · HM03 Surf + Gold Teeth získány (Warden ještě NE)" },
+  { key: "strength", label: "⑰ Gold Teeth vráceny Wardenovi · HM04 Strength získán (Krok 8 hotov)" },
+  { key: "cinnabar", label: "⑱ Cinnabar Island · příchod (mořská cesta přes Route 19–21 přeplavána)" },
+  { key: "secretkey", label: "⑲ Pokémon Mansion prozkoumán · Secret Key získán (gym odemčen)" },
+  { key: "volcano", label: "⑳ Blaine poražen · Volcano Badge (Krok 9 hotov)" },
+  { key: "saffron", label: "㉑ Saffron City · příchod (Rocketi drží Silph Co, strážce žízní, gym zamčen)" },
+  { key: "silphopen", label: "㉒ Fresh Water podána strážci · Silph Co. otevřeno" },
+  { key: "silphcleared", label: "㉓ Silph Co. vyčištěn (Rocketi + rival + Giovanni) · Master Ball získán" },
+  { key: "sabrina", label: "㉔ Sabrina poražena · Marsh Badge (Krok 11 hotov)" },
+  { key: "earth", label: "㉕ Giovanni poražen · Earth Badge · 8/8 · Victory Road + Indigo otevřeny" },
+  { key: "champion", label: "㉖ Elite Four + Champion poraženi · Champion (Krok 10 hotov; Cerulean Cave / Mewtwo)" },
 ];
 
 /** Zajistí kontejnery ve stavu (starší/prázdné save). */
@@ -107,6 +125,19 @@ function ensureStarterAndRival(s) {
   }
 }
 
+/**
+ * Dev: udělí dárkového Pokémona při skoku na checkpoint (Krok 12), aby výsledný
+ * save realisticky obsahoval to, co by hráč v daném místě už měl. Jednorázově dle
+ * story-flagu. acquirePokemon commituje sám; flag nastavíme přímo do s.story.
+ */
+function giftMon(s, speciesId, level, flag) {
+  if (!s.story || typeof s.story !== "object") s.story = {};
+  if (s.story[flag]) return; // už dán
+  if (!getSpecies(speciesId)) return;
+  acquirePokemon(createPokemon(speciesId, level));
+  s.story[flag] = true;
+}
+
 /** Aplikuje JEDEN milník na stav (bez commitu). */
 function applyOne(s, key) {
   switch (key) {
@@ -122,6 +153,8 @@ function applyOne(s, key) {
       // Ve Viridianu, ale balíček ještě nemá → Parcel quest jde otestovat.
       addUnique(s.progress.visited, "route-01");
       addUnique(s.progress.visited, "viridian-city");
+      // Krok 12: Viridian Trade House (Abra → Mr. Mime) považ za provedený.
+      giftMon(s, "mr-mime", 10, "mrMimeGift");
       s.progress.activeAreaId = "viridian-city";
       break;
     case "parcel":
@@ -152,6 +185,8 @@ function applyOne(s, key) {
       // Cerulean nedostal). Grunts označíme za poražené, ať Rockets tab ukáže hotovo.
       for (let i = 1; i <= 5; i++) addUnique(s.progress.defeatedTrainers, `mt-moon-rocket-${i}`);
       s.story.mtMoonRocketsCleared = true;
+      // Krok 12: Cerulean Trade House (Poliwhirl → Jynx) považ za provedený.
+      giftMon(s, "jynx", 18, "jynxGift");
       s.progress.activeAreaId = "cerulean-city";
       break;
     case "vermilion":
@@ -172,7 +207,263 @@ function applyOne(s, key) {
       if (!s.resources) s.resources = {};
       if (!s.resources.items) s.resources.items = {};
       s.resources.items["hm01-cut"] = (s.resources.items["hm01-cut"] ?? 0) + 1;
+      // Krok 12: Vermilion Trade House (Spearow → Farfetch'd) považ za provedený.
+      giftMon(s, "farfetchd", 22, "farfetchdGift");
       s.progress.activeAreaId = "vermilion-city";
+      break;
+    case "lavender":
+      // Krok 6: Lt. Surge poražen → Thunder Badge (gym „koše" vyřešeny). Cesta
+      // Route 11/Diglett's Cave prozkoumána; Route 9 (Flash) → Rock Tunnel →
+      // Route 10 → Lavender Town.
+      addUnique(s.progress.defeatedTrainers, "vermilion-gym-sailor-dwayne");
+      addUnique(s.progress.defeatedTrainers, "vermilion-gym-gentleman-gregory");
+      addUnique(s.progress.defeatedTrainers, "lt-surge");
+      addUnique(s.progress.badges, "thunder-badge");
+      s.story.surgeCleared = true;
+      s.story.vermilionGymSwitches = true;
+      addUnique(s.progress.visited, "route-11");
+      addUnique(s.progress.visited, "digletts-cave");
+      addUnique(s.progress.visited, "route-09");
+      addUnique(s.progress.visited, "rock-tunnel");
+      addUnique(s.progress.visited, "route-10");
+      addUnique(s.progress.visited, "lavender-town");
+      s.story.route11Arrival = true;
+      s.story.diglettsArrival = true;
+      s.story.hasFlash = true;
+      s.story.lavenderArrival = true;
+      // Krok 7: Flash je nově za Route 9 Hiker gauntlet – kdo je v Lavenderu,
+      // prošel Rock Tunnel, tedy Hikery porazil. Označíme je za poražené.
+      addUnique(s.progress.defeatedTrainers, "route-09-hiker-1");
+      addUnique(s.progress.defeatedTrainers, "route-09-hiker-2");
+      addUnique(s.progress.defeatedTrainers, "route-09-hiker-3");
+      s.story.route9HikersCleared = true;
+      // HM05 Flash item do batohu (odpovídá reálné odměně z Route 9).
+      if (!s.resources) s.resources = {};
+      if (!s.resources.items) s.resources.items = {};
+      s.resources.items["hm05-flash"] = (s.resources.items["hm05-flash"] ?? 0) + 1;
+      s.progress.activeAreaId = "lavender-town";
+      break;
+    // ── Krok 7 rozdělen na 4 jemné milníky (každý = jeden konkrétní zisk).
+    //    Skoky jsou KUMULATIVNÍ přes smyčku v devApplyCheckpoint → každý case
+    //    přidává JEN své delta, nic neduplikuje. ──────────────────────────────
+    case "celadon":
+      // 7a: cesta Route 7/8 → Celadon; Erika poražena → Rainbow Badge.
+      //     Rocket Hideout (za Game Cornerem) je ještě NEDOTČENÝ (test hideoutu).
+      addUnique(s.progress.visited, "route-08");
+      addUnique(s.progress.visited, "route-07");
+      addUnique(s.progress.visited, "celadon-city");
+      addUnique(s.progress.badges, "rainbow-badge");
+      addUnique(s.progress.defeatedTrainers, "celadon-gym-beauty-tamia");
+      addUnique(s.progress.defeatedTrainers, "celadon-gym-lass-michelle");
+      addUnique(s.progress.defeatedTrainers, "erika");
+      s.story.erikaCleared = true;
+      s.story.celadonArrival = true;
+      // Krok 12: Celadon Mansion → dárkové Eevee.
+      giftMon(s, "eevee", 25, "eeveeGift");
+      s.progress.activeAreaId = "celadon-city";
+      break;
+    case "silphscope":
+      // 7b: Rocket Hideout vyčištěn (4 grunti + Giovanni) → SILPH SCOPE v batohu.
+      //     Pokémon Tower je zatím NETKNUTÁ → posadíme hráče do Lavenderu, ať tam jde.
+      addUnique(s.progress.defeatedTrainers, "rocket-hideout-1");
+      addUnique(s.progress.defeatedTrainers, "rocket-hideout-2");
+      addUnique(s.progress.defeatedTrainers, "rocket-hideout-3");
+      addUnique(s.progress.defeatedTrainers, "rocket-hideout-4");
+      addUnique(s.progress.defeatedTrainers, "giovanni-hideout");
+      s.story.rocketHideoutCleared = true;
+      s.story.hasSilphScope = true;
+      if (!s.resources) s.resources = {};
+      if (!s.resources.items) s.resources.items = {};
+      s.resources.items["silph-scope"] = (s.resources.items["silph-scope"] ?? 0) + 1;
+      // Krok 13: vyčištění hideoutu odemyká „Plnou hernu" v Game Corneru → dej
+      // testerovi coiny, ať si může vyzkoušet automat i koupit Porygona (9999).
+      s.resources.coins = Math.max(s.resources.coins ?? 0, 9999);
+      s.progress.activeAreaId = "lavender-town";
+      break;
+    case "pokeflute":
+      // 7c: v Pokémon Tower uklidněn duch Marowak + zachráněn Mr. Fuji → POKE FLUTE.
+      //     Snorlax na Route 12 zatím SPÍ → posadíme hráče na Route 12 (jde ho probudit).
+      addUnique(s.progress.defeatedTrainers, "lavender-marowak");
+      s.story.marowakCalmed = true;
+      s.story.mrFujiSaved = true;
+      s.story.hasPokeFlute = true;
+      addUnique(s.progress.visited, "route-12");
+      if (!s.resources) s.resources = {};
+      if (!s.resources.items) s.resources.items = {};
+      s.resources.items["poke-flute"] = (s.resources.items["poke-flute"] ?? 0) + 1;
+      s.progress.activeAreaId = "route-12";
+      break;
+    case "snorlax":
+      // 7d: Poke Flute probudil Snorlaxe na Route 12 → poražen → jižní cesta otevřená.
+      addUnique(s.progress.defeatedTrainers, "lavender-snorlax");
+      s.story.snorlaxCleared = true;
+      addUnique(s.progress.visited, "route-13");
+      s.progress.activeAreaId = "route-13";
+      break;
+    case "fuchsia":
+      // 8a: Krok 8 – příchod do Fuchsia City (jižní osa z Lavenderu: Route 12→13→14→15→Fuchsia).
+      //     Město je otevřené, Koga i Safari Zone se nabízejí, ale hráč zatím nic nevyřešil.
+      addUnique(s.progress.visited, "route-14");
+      addUnique(s.progress.visited, "route-15");
+      addUnique(s.progress.visited, "fuchsia-city");
+      s.story.fuchsiaArrival = true;
+      s.progress.activeAreaId = "fuchsia-city";
+      break;
+    case "soul":
+      // 8b: Koga poražen v Fuchsia Gymu → Soul Badge. Safari Zone zatím NE.
+      addUnique(s.progress.defeatedTrainers, "fuchsia-gym-tamer-edgar");
+      addUnique(s.progress.defeatedTrainers, "fuchsia-gym-juggler-nelson");
+      addUnique(s.progress.defeatedTrainers, "koga");
+      addUnique(s.progress.badges, "soul-badge");
+      s.story.kogaCleared = true;
+      s.story.fuchsiaGymWalls = true;
+      s.progress.activeAreaId = "fuchsia-city";
+      break;
+    case "surf":
+      // 8c: Safari Zone expedice dokončena (dev skip) → získal HM03 Surf a Gold Teeth.
+      addUnique(s.progress.visited, "safari-zone");
+      s.story.safariArrival = true;
+      s.story.hasSurf = true;
+      s.story.hasGoldTeeth = true;
+      if (!s.resources) s.resources = {};
+      if (!s.resources.items) s.resources.items = {};
+      s.resources.items["hm03-surf"] = (s.resources.items["hm03-surf"] ?? 0) + 1;
+      s.resources.items["gold-teeth"] = (s.resources.items["gold-teeth"] ?? 0) + 1;
+      s.progress.activeAreaId = "safari-zone";
+      break;
+    case "strength":
+      // 8d: Gold Teeth vráceny Wardenovi → získal HM04 Strength (Krok 8 hotov).
+      s.story.hasStrength = true;
+      s.story.wardenThanked = true;
+      if (!s.resources) s.resources = {};
+      if (!s.resources.items) s.resources.items = {};
+      s.resources.items["hm04-strength"] = (s.resources.items["hm04-strength"] ?? 0) + 1;
+      delete s.resources.items["gold-teeth"];
+      s.story.hasGoldTeeth = false;
+      s.progress.activeAreaId = "fuchsia-city";
+      break;
+    case "cinnabar":
+      // 9a: Krok 9 – přeplavání mořské cesty (Route 19→20→Seafoam→21) na Cinnabar.
+      addUnique(s.progress.visited, "route-19");
+      addUnique(s.progress.visited, "route-20");
+      addUnique(s.progress.visited, "seafoam-islands");
+      addUnique(s.progress.visited, "route-21");
+      addUnique(s.progress.visited, "cinnabar-island");
+      s.story.route19Arrival = true;
+      s.story.seafoamArrival = true;
+      s.story.cinnabarArrival = true;
+      s.progress.activeAreaId = "cinnabar-island";
+      break;
+    case "secretkey":
+      // 9b: Pokémon Mansion vyřešen (spínačový labyrint + gauntlet Burglarů + boss)
+      // → Secret Key získán (odemkne Blaineův gym). Nastavíme celý řetězec flagů,
+      // aby se labyrint ani gauntlet po skoku znovu nespouštěl.
+      s.story.mansionPuzzleSolved = true;
+      s.story.cinnabarMansionCleared = true;
+      s.story.hasSecretKey = true;
+      addUnique(s.progress.defeatedTrainers, "cinnabar-mansion-burglar-1");
+      addUnique(s.progress.defeatedTrainers, "cinnabar-mansion-burglar-2");
+      addUnique(s.progress.defeatedTrainers, "cinnabar-mansion-boss");
+      if (!s.resources) s.resources = {};
+      if (!s.resources.items) s.resources.items = {};
+      s.resources.items["secret-key"] = (s.resources.items["secret-key"] ?? 0) + 1;
+      s.progress.activeAreaId = "cinnabar-island";
+      break;
+    case "volcano":
+      // 9c: Blaine poražen v Cinnabar Gymu → Volcano Badge (Krok 9 hotov).
+      addUnique(s.progress.defeatedTrainers, "cinnabar-gym-burglar-quinn");
+      addUnique(s.progress.defeatedTrainers, "cinnabar-gym-supernerd-erik");
+      addUnique(s.progress.defeatedTrainers, "blaine");
+      addUnique(s.progress.badges, "volcano-badge");
+      s.story.cinnabarGymQuiz = true;
+      s.story.blaineCleared = true;
+      s.progress.activeAreaId = "cinnabar-island";
+      break;
+    case "saffron":
+      // 11a: Krok 11 – příchod do Saffron City. Team Rocket obsadil město i Silph Co,
+      // žíznivý strážce blokuje budovu a Sabrinin gym je zamčený (requiresStory).
+      addUnique(s.progress.visited, "route-08");
+      addUnique(s.progress.visited, "saffron-city");
+      s.story.saffronArrival = true;
+      // Krok 12: Fighting Dojo v Saffronu → OBA Hitmoni (Hitmonlee + Hitmonchan)
+      // pod jedním flagem (hitmonsGift), aby se dárek nedal opakovat.
+      if (!s.story.hitmonsGift) {
+        acquirePokemon(createPokemon("hitmonlee", 30));
+        acquirePokemon(createPokemon("hitmonchan", 30));
+        s.story.hitmonsGift = true;
+      }
+      s.progress.activeAreaId = "saffron-city";
+      break;
+    case "silphopen":
+      // 11b: Fresh Water koupena v Celadonu a podána strážci → Silph Co. se otevře
+      // (tab 🏢 Silph Co. se zpřístupní). Item už je „spotřebován", stačí flag.
+      s.story.saffronGuardsCleared = true;
+      s.progress.activeAreaId = "saffron-city";
+      break;
+    case "silphcleared":
+      // 11c: Silph Co. gauntlet vyčištěn (Rocketi + rival + Giovanni). President
+      // zachráněn → Master Ball; Sabrinin gym se odemkne (silphCleared).
+      for (const id of ["silph-rocket-1", "silph-rocket-2", "silph-rocket-3", "rival-silph", "giovanni-silph"]) {
+        addUnique(s.progress.defeatedTrainers, id);
+      }
+      s.story.silphCleared = true;
+      if (!s.resources) s.resources = {};
+      if (!s.resources.balls || typeof s.resources.balls !== "object") s.resources.balls = {};
+      s.resources.balls.master = (s.resources.balls.master ?? 0) + 1;
+      // Krok 12: vděčný zaměstnanec Silph Co. → dárková Lapras.
+      giftMon(s, "lapras", 15, "laprasGift");
+      s.progress.activeAreaId = "saffron-city";
+      break;
+    case "sabrina":
+      // 11d: Sabrina poražena v Saffron Gymu → Marsh Badge (Krok 11 hotov).
+      s.story.saffronGymIntro = true;
+      addUnique(s.progress.defeatedTrainers, "saffron-gym-psychic-johan");
+      addUnique(s.progress.defeatedTrainers, "saffron-gym-channeler-preston");
+      addUnique(s.progress.defeatedTrainers, "sabrina");
+      addUnique(s.progress.badges, "marsh-badge");
+      s.story.sabrinaCleared = true;
+      s.progress.activeAreaId = "saffron-city";
+      break;
+    case "earth": {
+      // 10a: Giovanni poražen ve Viridian Gymu → Earth Badge (8/8). Nastavíme
+      // VŠECHNY odznaky explicitně (Viridian gym vyžaduje 7 ostatních), poražené
+      // trenéry gymu, giovanniCleared a otevřeme cestu Route 22 → Victory Road →
+      // Indigo Plateau. Liga zatím neběží (leagueActive false).
+      const ALL_BADGES = [
+        "boulder-badge", "cascade-badge", "thunder-badge", "rainbow-badge",
+        "soul-badge", "marsh-badge", "volcano-badge", "earth-badge",
+      ];
+      for (const b of ALL_BADGES) addUnique(s.progress.badges, b);
+      addUnique(s.progress.defeatedTrainers, "viridian-gym-cooltrainer-samson");
+      addUnique(s.progress.defeatedTrainers, "viridian-gym-toughguy-nick");
+      addUnique(s.progress.defeatedTrainers, "giovanni");
+      s.story.viridianGymIntro = true;
+      s.story.giovanniCleared = true;
+      addUnique(s.progress.visited, "route-22");
+      addUnique(s.progress.visited, "route-23");
+      addUnique(s.progress.visited, "victory-road");
+      addUnique(s.progress.visited, "indigo-plateau");
+      s.story.victoryRoadArrival = true;
+      s.story.indigoArrival = true;
+      s.progress.leagueActive = false;
+      s.progress.leagueStep = 0;
+      s.progress.activeAreaId = "indigo-plateau";
+      break;
+    }
+    case "champion":
+      // 10b: Elite Four + Champion poraženi → titul (Krok 10 hotov). isChampion
+      // otevře Cerulean Cave (Unknown Dungeon) s Mewtwem (viz legendaries.js).
+      addUnique(s.progress.defeatedTrainers, "elite-four-lorelei");
+      addUnique(s.progress.defeatedTrainers, "elite-four-bruno");
+      addUnique(s.progress.defeatedTrainers, "elite-four-agatha");
+      addUnique(s.progress.defeatedTrainers, "elite-four-lance");
+      addUnique(s.progress.defeatedTrainers, "champion-blue");
+      s.story.leagueCleared = true;
+      s.story.isChampion = true;
+      s.progress.leagueActive = false;
+      s.progress.leagueStep = 5;
+      addUnique(s.progress.visited, "cerulean-cave");
+      s.progress.activeAreaId = "indigo-plateau";
       break;
   }
 }

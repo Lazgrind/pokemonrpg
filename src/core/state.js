@@ -49,12 +49,15 @@
  *                                     Uspořádání drží hráč (drag & drop); pcSystem.reconcile()
  *                                     zaručí, že každý vlastněný jedinec mimo tým je právě v 1 slotu.
  * @property {Array<{ id: string, speciesId: string }>} eggs  nalezená vejce (líhnou se ve Školce)
- * @property {{ tier: number, activeAreaId: string, visited: string[], badges: string[], defeatedTrainers: string[] }} progress  postup světem:
+ * @property {{ tier: number, activeAreaId: string, visited: string[], badges: string[], defeatedTrainers: string[], leagueActive?: boolean, leagueStep?: number }} progress  postup světem:
  *   tier (odemyká typy ballů), activeAreaId (aktuální oblast na mapě – kde se bojuje),
  *   visited (id navštívených oblastí → odemykají další uzly mapy, viz data/areas.js),
  *   badges (získané odznaky z gymů; unlock.badge gatuje oblasti, viz data/areas.js),
  *   defeatedTrainers (id poražených trenérů → jednorázová odměna + sekvenční postup
- *   gymem; viz data/trainers.js a battleSystem)
+ *   gymem; viz data/trainers.js a battleSystem),
+ *   leagueActive/leagueStep (běh Pokémon League – Elite Four + Champion na Indigo
+ *   Plateau: active = jsi uprostřed nepřerušeného řetězce, step = kolik členů jsi
+ *   v tomto běhu porazil; viz data/trainers.js LEAGUE a battleSystem)
  * @property {Array<{ uid: string, moveId: string }>} moveLearnQueue  čekající nabídky naučení tahu
  *                                     (jedinec chce nový tah, ale má plné 4 sloty → hráč volí nahrazení)
  * @property {{ seen: string[] }} pokedex  druhy potkané v souboji (chycené se odvozují z kolekce)
@@ -71,7 +74,7 @@
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 30;
+export const CURRENT_SAVE_VERSION = 40;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
@@ -95,14 +98,14 @@ export function createNewGame() {
     saveVersion: CURRENT_SAVE_VERSION,
     meta: { createdAt: now, lastSaved: now },
     player: { name: "Trainer", rivalName: "" }, // rivalName zadá hráč v úvodním intru
-    resources: { gold: 0, balls: { poke: 5 }, items: {} },
+    resources: { gold: 0, coins: 0, balls: { poke: 5 }, items: {} }, // coins = měna Game Corneru
     collection: [],
     team: [],
     pcBoxes: [{ name: "Box 1", slots: Array(PC_BOX_SIZE).fill(null) }], // úložiště mimo tým (viz pcSystem)
     eggs: [], // nalezená vejce; líhnou se ve Školce (viz eggSystem)
     // Start doma v Pallet Townu; Route 1 je odemčená (start), vstup na ni odemkne
     // Viridian City atd. (řetěz viz data/areas.js). visited = kde už hráč byl.
-    progress: { tier: 1, activeAreaId: "pallet-town", visited: ["pallet-town"], badges: [], defeatedTrainers: [] },
+    progress: { tier: 1, activeAreaId: "pallet-town", visited: ["pallet-town"], badges: [], defeatedTrainers: [], leagueActive: false, leagueStep: 0 },
     // Override pozic uzlů na mapě (areaId → {x,y} v %). Prázdné = použijí se
     // výchozí pozice z data/areas.js. Plní je "režim umístění" v mapView.
     mapPositions: {},
@@ -128,6 +131,9 @@ export function createNewGame() {
     battle: null, // uložený běhový stav souboje (viz battleSystem.serialize)
     city: { buildings: {} }, // úrovně budov (viz buildingSystem)
     story: {}, // jednorázové příběhové flagy (viz storyBuildingView) – např. momGift
+    // Běhový stav Safari Zone expedice (viz systems/safariSystem.js).
+    // active=false → mimo výpravu; jinak steps/balls docházejí, depth = hloubka.
+    safari: { active: false, steps: 0, balls: 0, depth: 1, bestDepth: 0, encounter: null },
   };
 }
 

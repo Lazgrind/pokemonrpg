@@ -157,6 +157,110 @@ export const STORY_BUILDINGS = [
     description: "A luxury liner docked at Vermilion City. Board it with the S.S. Anne Ticket.",
     story: "ss-anne",
   },
+  {
+    id: "pokemon-tower",
+    name: "Pokémon Tower",
+    icon: "🗼",
+    color: "#6b5b8a",
+    description: "A tall tower in Lavender Town where departed Pokémon are laid to rest. Restless spirits haunt its upper floors.",
+    story: "pokemon-tower",
+  },
+  {
+    id: "mr-fuji-house",
+    name: "Mr. Fuji's House",
+    icon: "🏡",
+    color: "#a06a4b",
+    description: "The home of Mr. Fuji, the kind old man who cares for orphaned Pokémon in Lavender Town.",
+    story: "mr-fuji-house",
+  },
+  {
+    id: "dept-store",
+    name: "Celadon Dept. Store",
+    icon: "🏬",
+    color: "#5a8bbf",
+    description: "Kanto's biggest department store. Floors of items, TMs, and vending machines on the roof.",
+    story: "dept-store",
+  },
+  {
+    id: "game-corner",
+    name: "Rocket Game Corner",
+    icon: "🎰",
+    color: "#c25b7a",
+    description: "A flashy slots parlor in Celadon. Rumor says Team Rocket runs it — and hides something beneath it.",
+    story: "game-corner",
+  },
+  {
+    id: "warden-house",
+    name: "Warden's House",
+    icon: "🏡",
+    color: "#a06a4b",
+    description: "The home of the Safari Zone Warden. He cares deeply for the Pokemon in his reserve.",
+    story: "warden-house",
+  },
+  {
+    id: "pokemon-mansion",
+    name: "Pokémon Mansion",
+    icon: "🏚️",
+    color: "#8a5a3c",
+    description: "A burnt-out mansion on Cinnabar Island. Old research journals — and a Secret Key — lie somewhere in its charred ruins.",
+    story: "pokemon-mansion",
+  },
+  {
+    id: "pokemon-lab",
+    name: "Pokémon Lab",
+    icon: "🧪",
+    color: "#5a9bb5",
+    description: "Cinnabar Island's research laboratory. Scientists here study fossils and rare Pokémon.",
+    story: "pokemon-lab",
+  },
+  {
+    id: "silph-co",
+    name: "Silph Co.",
+    icon: "🏢",
+    color: "#5566aa",
+    description: "Saffron's proud technology giant — maker of the Master Ball. Team Rocket has seized its tower floor by floor.",
+    story: "silph-co",
+  },
+  {
+    id: "celadon-mansion",
+    name: "Celadon Mansion",
+    icon: "🏨",
+    color: "#8a6ab0",
+    description: "A quiet apartment block in Celadon City. A game-loving kid on the top floor is looking for a home for one of his Pokémon.",
+    story: "celadon-mansion",
+  },
+  {
+    id: "fighting-dojo",
+    name: "Fighting Dojo",
+    icon: "🥋",
+    color: "#b5623c",
+    description: "Saffron's Fighting Dojo, once a rival to the city Gym. Defeat its master and he'll let you take one of his prized Fighting Pokémon — here, both are yours.",
+    story: "fighting-dojo",
+  },
+  {
+    id: "viridian-trade-house",
+    name: "Trade House",
+    icon: "🏠",
+    color: "#8fae6a",
+    description: "A cramped house in Viridian City. A collector inside is looking to trade a Pokémon.",
+    story: "viridian-trade-house",
+  },
+  {
+    id: "cerulean-trade-house",
+    name: "Trade House",
+    icon: "🏠",
+    color: "#6a9fae",
+    description: "A tidy home in Cerulean City. The owner wants to trade one of her Pokémon.",
+    story: "cerulean-trade-house",
+  },
+  {
+    id: "vermilion-trade-house",
+    name: "Trade House",
+    icon: "🏠",
+    color: "#c9a24b",
+    description: "A sailor's house in Vermilion City. He's itching to trade a rare Pokémon.",
+    story: "vermilion-trade-house",
+  },
 ];
 
 /**
@@ -169,14 +273,30 @@ export const CITY_BUILDINGS = {
   "pallet-town": ["oak-lab", "player-home", "rival-home"],
   // Viridian City: první skutečné služby (Center + Mart). Gym má vlastní tab
   // (zatím zavřený, viz gymView isGymOpen) – ne jako budova v City rosteru.
-  "viridian-city": ["poke-center", "poke-mart"],
+  "viridian-city": ["poke-center", "poke-mart", "viridian-trade-house"],
   // Pewter City: služby + příběhové Museum of Science. Gym (Brock) má vlastní tab.
   "pewter-city": ["poke-center", "poke-mart", "pewter-museum"],
   // Cerulean City: služby (Center + Mart). Gym (Misty) má vlastní tab.
-  "cerulean-city": ["poke-center", "poke-mart"],
+  "cerulean-city": ["poke-center", "poke-mart", "cerulean-trade-house"],
   // Vermilion City: služby + příběhová S.S. Anne (loď). Gym (Lt. Surge) má vlastní
   // tab, ale je zamčený stromem dokud hráč nemá HM Cut (viz gyms.js requiresStory).
-  "vermilion-city": ["poke-center", "poke-mart", "ss-anne"],
+  "vermilion-city": ["poke-center", "poke-mart", "ss-anne", "vermilion-trade-house"],
+  // Celadon City: služby + Dept Store + Game Corner (s skrytou Rocket základnou).
+  // Gym (Erika) má vlastní tab.
+  "celadon-city": ["poke-center", "poke-mart", "dept-store", "game-corner", "celadon-mansion"],
+  // Lavender Town: služby + Pokémon Tower (zamčená duchem – potřebuje Silph Scope
+  // z pozdějšího kroku) + dům Mr. Fujiho. Lavender nemá gym.
+  "lavender-town": ["poke-center", "poke-mart", "pokemon-tower", "mr-fuji-house"],
+  // Saffron City: služby + Silph Co (Team Rocket, gauntlet → Master Ball). Gym
+  // (Sabrina) má vlastní tab, zamčený dokud neosvobodíš Silph Co (viz gyms.js).
+  "saffron-city": ["poke-center", "poke-mart", "silph-co", "fighting-dojo"],
+  // Fuchsia City: služby + Warden's House (kde hráč vrací Gold Teeth a dostane HM04 Strength).
+  // Gym (Koga) má vlastní tab.
+  "fuchsia-city": ["poke-center", "poke-mart", "warden-house"],
+  // Cinnabar Island: služby + Pokémon Lab (flavour) + vyhořelý Pokémon Mansion
+  // (kde hráč najde Secret Key). Gym (Blaine) má vlastní tab, zamčený dokud
+  // hráč nemá Secret Key (viz gyms.js requiresStory).
+  "cinnabar-island": ["poke-center", "poke-mart", "pokemon-lab", "pokemon-mansion"],
 };
 
 /** Všechny známé budovy (idle + story) pro vyhledávání podle id. */

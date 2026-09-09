@@ -6,6 +6,165 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.85.0] – 2026-09-09 · Kompletace Gen 1 dexu – uzavření posledních děr (Poliwag linie + Mew)
+### Added
+- **Poliwag linie do spawnů.** Audit dexu odhalil, že Poliwag/Poliwhirl/Poliwrath nebyli nikde získatelní (a tím pádem ani **Jynx** přes Cerulean Trade House). `poliwag` doplněn do `data/areas.js`: Route 22, Route 24, Route 25, Route 6 a Seafoam Islands; `poliwhirl` navíc do Seafoam Islands (přímý záložní odchyt). Poliwrath = Water Stone na Poliwhirl.
+- **Mew (#151) – „pod náklaďákem" (kanon legenda).** Skrytý event v `ssAnneView` (`storyBuildingView.js`): po odplutí S.S. Anne (`ssAnneCleared`) a s **hasSurf + hasStrength** se u vzdáleného doku objeví opuštěný náklaďák → tlačítko „heave the truck aside" spustí statické setkání s **Mew** (`startStaticEncounter("mew", max(50, giftLevel()))`, legendary rarita → chytatelný, těžký, vrací se dokud ho nechytíš; žádný trvalý zámek). Nový import `startStaticEncounter` do storyBuildingView.
+### Changed
+- Bez save migrace (jen spawny + event, žádný nový stav). `VERSION` = 0.85.0.
+### Notes
+- Tím je **všech 151 Gen 1 získatelných na 1 průchod** (spawny/evoluce vč. trade+stone přes Linking Cord/kameny z obchodu / fosílie / dary / výměny / Game Corner / legendární / Mew truck). Ditto ✓ (divoké spawny).
+
+## [0.84.0] – 2026-09-09 · Kompletace Gen 1 dexu (3/3): Game Corner „Plná herna" (automat + coiny + prize corner → Porygon)
+### Added
+- **Nová měna: coiny** (`state.resources.coins`). Zobrazená v Profilu (řádek „Coins 🪙") a v Game Corneru. Migrace save v40 doplní `coins: 0` (jen bump, hráč si je vydělá v herně).
+- **Game Corner „Plná herna"** (`storyBuildingView.gameCornerView`, odemyká se po `rocketHideoutCleared` – z Rockety provozované herny je zase obyčejná herna). Tři služby:
+  - **Automat (slot machine):** sázka `SLOT_BET` = 3 coiny/spin, 3 válce s váženými symboly (🍒/🔔/🍊/⭐/🔵/7️⃣), výplaty za tři shodné (7️⃣=300 … 🍒=8) + bonus za třešně. Výsledek se drží přes překreslení (`lastSpin`), reset při otevření okna.
+  - **Směnárna coinů** (`COIN_PACKS`): 50 🪙 za 1000₽ nebo 500 🪙 za 10000₽ (kanon ~50/1000).
+  - **Prize corner** (`GAME_CORNER_PRIZES`): coiny za vzácné Pokémony – Abra 180 · Clefairy 500 · Vulpix 1000 · Pinsir 2500 · Dratini 2800 · Scyther 5500 · **Porygon 9999** (jinde v Gen 1 nezískatelný). Level škálovaný dle týmu (`giftLevel()`), 1×/druh (tlačítko „✓ Owned"/disabled u vlastněných – šetří coiny).
+- **Dev „Skip to":** checkpoint ⑪ (silphscope – vyčištění Rocket Hideoutu = odemčení herny) nově dá **9999 coinů**, ať jde herna i Porygon otestovat.
+### Changed
+- **Save migrace v40:** doplní `resources.coins = 0` u starých savů. `CURRENT_SAVE_VERSION` = 40.
+
+## [0.83.0] – 2026-09-09 · Kompletace Gen 1 dexu (2/3): dárkoví/výměnní Pokémoni (Eevee, Lapras, oba Hitmoni, Mr. Mime, Jynx, Farfetch'd)
+### Added
+- **Kanonické Trade Houses ve městech** (nový mechanismus výměny NPC): 3 nové story budovy „Trade House" (`buildings.js` `viridian-trade-house`/`cerulean-trade-house`/`vermilion-trade-house`, 🏠; přidány do `CITY_BUILDINGS`). NPC vymění tvého Pokémona za svého — **věrné hře**: **Abra → Mr. Mime** (Viridian, flag `mrMimeGift`), **Poliwhirl → Jynx** (Cerulean, `jynxGift`), **Spearow → Farfetch'd** (Vermilion, `farfetchdGift`). Nahrazuje dřívější nápad „dárek na routě".
+- **Nový export `tradePokemon(wantId, giveId, flag)`** (`battleSystem.js`): najde požadovaný druh v kolekci, pustí ho a vytvoří vyměněného **na STEJNÉM levelu** (věrné hře – přijatý Pokémon má level toho odevzdaného; auto-škáluje se dle hráče). Guardy: hráč musí druh vlastnit, nesmí to být jeho jediný Pokémon (anti-softlock), jednorázově přes flag. Odevzdaný druh zůstává znovu-chytatelný (žádný trvalý zámek dexu).
+- **View `tradeHouseView(storyKey)`** + config `CITY_TRADES` (`storyBuildingView.js`): 3 stavy – nabídne výměnu jen když druh vlastníš (`ownsSpecies`), jinak navede si ho chytit; po výměně „done". Handler `[data-trade]` v `wire()`.
+- **Celadon Mansion → Eevee.** Nová story budova (`buildings.js` `celadon-mansion`, 🏨; přidána do `CITY_BUILDINGS["celadon-city"]`). View `celadonMansionView` dá **Eevee** (`data-take-eevee`, flag `eeveeGift`).
+- **Fighting Dojo → OBA Hitmoni.** Nová story budova (`fighting-dojo`, 🥋; v `CITY_BUILDINGS["saffron-city"]`). View `fightingDojoView` dá **Hitmonlee + Hitmonchan** najednou (`data-take-hitmons`, flag `hitmonsGift`) — věrně cíli „celý dex na 1 průchod" (žádná volba jednoho).
+- **Silph Co. → Lapras.** Po osvobození (`silphCleared`) přidán do `silphCoView` vděčný zaměstnanec, který dá **Lapras** (`data-take-lapras`, flag `laprasGift`).
+- **Škálování darů dle týmu hráče:** nový export `giftLevel()` (`battleSystem.js`) vrátí max level týmu (min 5); Eevee/oba Hitmoni/Lapras se udělují na tomto levelu, ať nejsou proti hráči přestřelené.
+### Changed
+- **Dárci nejsou na routách, ale ve městech (tajně/kanon).** Odstraněny dřívější arrival eventy + „Receive" popupy na Route 2/10/13 (`setActiveArea` a `mapView` vyčištěny). Getování probíhá v městských budovách – výměnou (Trade House) nebo darem (Mansion/Dojo/Silph).
+- **Dev „Skip to" – dary/výměny navázané na existující milníky** (žádný nový hrubý skok, helper `giftMon`): Mr. Mime u Viridian, Jynx u Cerulean, Farfetch'd u Vermilion, Eevee u Celadon, oba Hitmoni u Saffron, Lapras u Silph Co.
+- **Save migrace v39:** nové flagy jsou u existujících savů prostě nevyzvednuté (hráč si pro ně dojde); žádné doplňování dat, jen bump `CURRENT_SAVE_VERSION` = 39.
+
+## [0.82.0] – 2026-09-09 · Kompletace Gen 1 dexu (1/3): divoké spawny + fosílie (obě + Old Amber)
+### Added
+- **Chybějící divoké druhy do spawn poolů** (`data/areas.js`): `gastly`+`haunter` (Route 8 u Lavenderu, +`gastly` Route 12), `koffing` (Route 16) a `koffing`+`weezing` (Route 17/18), `goldeen`+`seaking` (Route 13, +`goldeen` Route 12), `lickitung` (Route 11), `magmar` (Power Plant). Evoluce doplní `gengar` (trade z haunter), `weezing`, `seaking`.
+- **Dratini + Dragonair do Safari Zone** (`safariSystem.js` hloubkové pooly: Dratini oblast 3, Dragonair oblast 4; + `areas.js` safari species). Dragonite přes evoluci.
+- **Old Amber → Aerodactyl** – nový klíčový item (`data/items.js`, 🟠). Oživení v **Museum of Science** (Pewter) vedle Helix/Dome (`storyBuildingView` `FOSSIL_TO_SPECIES` + revive UI).
+### Changed
+- **Fosílie z Mt. Moon už NEjsou nevratná volba jedné.** Hráč dostane **všechny tři** (Helix + Dome + Old Amber) najednou — cíl „celý dex na 1 průchod". `applyFossilChoice()` (bez parametru) udělí všechny tři; Mt. Moon popup přepsán z volby na jedno potvrzení; `pickFossil()` upraven.
+- **Save migrace v38:** kdo dřív vybral jednu fosílii (`fossilChosen` "helix"/"dome"), dostane zpětně chybějící druhou + nový Old Amber (`fossilChosen` → "all"). `CURRENT_SAVE_VERSION` = 38.
+
+## [0.81.0] – 2026-09-09 · Věrný Kanto – Krok 11: Saffron City (Silph Co · Master Ball · Sabrina) + Cerulean Cave lore
+### Added
+- **Saffron City obsazen Team Rocket.** Arrival event `saffron-arrival` (`setActiveArea` + popup v `mapView`): Rocketi drží město, žíznivý strážce blokuje **Silph Co.** a **Sabrinin gym je zamčený**, dokud město neosvobodíš. Naváděcí popup pošle hráče koupit pití v Celadonu.
+- **Žíznivý strážce (gate na kánon).** Nový klíčový item **Fresh Water** (`data/items.js`, 🥤). V **Celadon Dept. Store** (`storyBuildingView` → `deptStoreView`) se kupuje za 200 💰; podání strážci (`silph-co` view, `data-give-drink`) nastaví `saffronGuardsCleared` a otevře budovu. Bez softlocku – strážce blokuje jen budovu (a gym), ne průchod přes Saffron.
+- **Silph Co. – Rocket gauntlet.** `ROCKET_GAUNTLETS["saffron-city"]` (tab **🏢 Silph Co.**, `requiresStory: "saffronGuardsCleared"`): 3× Rocket grunt → **rival** (`rival-silph`, plný tým s counter-startérem) → **Giovanni** (`giovanni-silph`). Po vyčištění (`silphCleared`) payoff v `finishTrainerBattle`: Giovanni prchá, president dá **Master Ball** (`resources.balls.master`, garantovaný odchyt) a Sabrinin gym se otevře.
+- **Sabrina – Marsh Badge.** `saffron-gym` má `requiresStory: "silphCleared"` (gate v `gymView` `GYM_GATES`), jednorázový intro popup (flag `saffronGymIntro`, teleport-bludiště). Po výhře payoff (badge `marsh-badge`, flag `sabrinaCleared`, +1800 💰).
+- **Cerulean Cave lore (endgame).** Arrival event `cerulean-cave-arrival` (`setActiveArea` + popup v `mapView`): lore o **Mewtwovi** stvořeném ve zříceninách Pokémon Mansion; zmíní Master Ball a Legendary tab.
+- **Dev „Skip to" ㉑–㉔ (rozmělněno na dílčí milníky):** ㉑ příchod do Saffronu · ㉒ Fresh Water podána (Silph Co otevřeno) · ㉓ Silph Co vyčištěn (Master Ball) · ㉔ Sabrina poražena (Marsh Badge). Earth/Champion skoky posunuty na ㉕/㉖.
+### Changed
+- **Save migrace v37:** doplní nové flagy; kdo má **marsh-badge**, dostane zpětně `saffronGuardsCleared`/`silphCleared`/`sabrinaCleared` (+ Silph trenéři jako poražení + 1 **Master Ball** za férovost); kdo navštívil Saffron → `saffronArrival`; kdo dokončil Ligu → `ceruleanCaveArrival`. `CURRENT_SAVE_VERSION` = 37.
+
+## [0.80.0] – 2026-09-09 · Věrný Kanto – Krok 10: Viridian Gym (Giovanni), Victory Road, Indigo Plateau (Elite Four + Champion) = endgame
+### Added
+- **Poslední odznak – Giovanni ve Viridian Gymu.** Přidáni gym trenéři + leader **Giovanni** (Earth Badge, 8/8). Jednorázový intro popup v `gymView` (flag `viridianGymIntro`) naznačí tajemného Leadera; po výhře payoff popup (`finishTrainerBattle`, badge `earth-badge`, flag `giovanniCleared`, +3000 💰) odhalí Giovanniho jako **šéfa Team Rocket**, který gang rozpustí, a otevře cestu **Route 22 → Victory Road → Indigo Plateau**.
+- **Pokémon League (Elite Four + Champion) – nepřerušený řetězec soubojů.** Nová data `LEAGUE` + `leagueForArea` v `data/trainers.js`: **Lorelei → Bruno → Agatha → Lance → Champion Blue** (Champion má `counterStarterFinal` eso). Nová obtížnost `TRAINER_DIFFICULTY` pro `elite-four` (IV30/EV252) a `champion` (IV31/EV252). Nový tab **🏆 League** (`src/ui/leagueView.js`) na Indigo Plateau: Begin/Continue/Forfeit, roster s postupem, varování o léčení.
+- **Mechanika Ligy dle kánonu (na výslovné přání):** souboje jdou **jeden za druhým**, **žádné léčení v Poké Centru** mezi nimi (jen bag itemy – Potion/Revive), **HP se přenáší** (`owned.hp` je trvalé). **Prohra kdekoli = restart od Lorelei.** Běh drží `progress.leagueActive` + `progress.leagueStep`; postup a payoff řeší `finishTrainerBattle`, wipe reset řeší `handleFaint`. `healTeam()` je během běhu zablokovaný (vrací `-1`; Poké Center i máma ukážou vysvětlení). Po dokončení jednoho zápasu se UI automaticky přepne zpět na League tab (mezi zápasy jde přes Bag dohealovat).
+- **Champion payoff + odemčení Mewtwa.** Poražení Championa nastaví `leagueCleared` + `isChampion` (+20000 💰 poprvé) a Hall of Fame popup. `isChampion` odemkne **Cerulean Cave** (`areas.js` unlock rozšířen o `story: "isChampion"`) → legendární **Mewtwo** (viz v0.79.0).
+- **Arrival eventy Victory Road + Indigo Plateau** (`setActiveArea` + popupy v `mapView`): `victory-road-arrival` (silní divocí, balvany/Strength, Moltres uvnitř) a `indigo-arrival` (vysvětlí pravidla Ligy – bez léčení, jen bag, restart při prohře).
+- **Dev „Skip to" ㉑–㉒:** ㉑ Giovanni poražen · Earth Badge · 8/8 · Victory Road + Indigo otevřeny; ㉒ Elite Four + Champion poraženi · Champion (Krok 10 hotov; Cerulean Cave / Mewtwo).
+### Changed
+- **Sprity Ligy:** `trainerSpriteUrl` řeší `elite-four`/`champion` jako leadery – 1 stálý sprite dle id (`assets/gym-leaders/<id>/front.png`), fallback glyph při chybějícím assetu.
+- **Cerulean Cave** vyžaduje `isChampion` (kanon: Unknown Dungeon se otevře až Championovi).
+- **Save migrace v36:** doplní `progress.leagueActive`/`leagueStep` (neutrální default); kdo má `earth-badge`, dostane `giovanniCleared`. `CURRENT_SAVE_VERSION` = 36.
+
+## [0.79.0] – 2026-09-09 · Articuno má vlastní „Legendary" tab (popup jen 1×) + per-area pozadí Seafoam
+### Added
+- **Nový vzor „Legendary" tab pro statická legendární setkání.** `data/legendaries.js` (`LEGENDARY_ENCOUNTERS` keyed by areaId + `legendaryForArea`) a `src/ui/legendaryView.js` (`renderLegendaryTab`). Tab se v `mainPanel` ukáže jen když oblast má legendárního, je splněná `requiresStory` (HM/story gate) a druh ještě **nevlastníš** (`ownsSpecies`) → sám zmizí po chycení. Dynamický popisek + ikona jako u gauntletů (např. „❄️ Articuno"). Karta s velkým spritem, lore textem a tlačítkem, které spustí `startStaticEncounter` a přepne do Battle tabu.
+- **Všichni tři legendární ptáci + Mewtwo tímto vzorem.** `assets`/data přidány: **Articuno** (Seafoam Islands, gate Strength, L50), **Zapdos** (Power Plant, gate Surf, L50), **Moltres** (Victory Road, gate Strength, L50) a **Mewtwo** (Cerulean Cave, gate `isChampion` = po poražení Ligy, L70). Každý má vlastní lore + ikonu; všichni `rarity:"legendary"` (těžké chytání) a vždy manuál. Snorlax zůstává jako probouzecí event (Poké Flute), ne legendary tab.
+- **Per-area pozadí soubojů (override).** `battleSystem.pickBackground` teď preferuje `area.background` (string nebo pole souborů v `assets/backgrounds/`) před sdíleným biome poolem. Seafoam Islands dostal `background: "seafoam-islands.png"` (do nahrání assetu běží fallback).
+### Changed
+- **Articuno přesunut z opakovaného popupu do vlastního tabu.** Dřív se při každé návštěvě Seafoam (se Strength) otevíral encounter popup s Face/Back away. Teď je Articuno stálá výzva v **Legendary** tabu; příběhový popup Seafoam Islands se ukáže **jen jednou** (první příchod) a upozorní na tab + Strength gate.
+### Removed
+- **Event `articuno-encounter`** (větev v `setActiveArea` + handler v `mapView`) nahrazen tabovým vzorem. Chování chytání (statický souboj, forceManual, znovuobjevení dokud nechytíš) zůstává beze změny – jen se spouští z tabu, ne z popupu.
+
+## [0.78.0] – 2026-09-09 · Krok 9 dopilování: ztížený Pokémon Mansion (labyrint + gauntlet + boss), Articuno na Seafoam, oprava pořadí mořské cesty
+### Added
+- **Pokémon Mansion je teď skutečná výzva, ne dárek u dveří.** Cesta k **Secret Key** je třífázová: (1) **spínačový labyrint** – tři místnosti, v každé útržek deníku napoví správnou z pokřivených soch; špatná volba spustí oblak jedovatého kouře a místnost se opakuje (řetězené `showPopup`, `dismissible:false`), po vyřešení flag `mansionPuzzleSolved`; (2) **gauntlet** dvou **Burglarů** + **boss Scientist Volk** (Koffing/Magmar/Weezing/Rapidash) v novém tabu **Mansion** (přes zobecněný `ROCKET_GAUNTLETS`, gate `requiresStory: "mansionPuzzleSolved"`); (3) vyčištění gauntletu udělí **Secret Key** + flag `hasSecretKey` + 1800 💰 a payoff popup navede k Blaineovi.
+- **Articuno na Seafoam Islands (legendární úlovek).** Nový **statický souboj** – `startStaticEncounter(speciesId, level)` v `battleSystem` (divoký = chytatelný, přežije refresh přes speciesId+level). Hluboko v ledových jeskyních (gate na **Strength**) se objeví **Articuno L50** (event `articuno-encounter`, nabídka Face/Back away v `mapView`). Legendární = `rarity:"legendary"` → násobek chytání 0,3 (na plné HP ~4,5 % Poké / ~9 % Ultra, oslabený ~25 % / ~50 %) – musíš ho oslabit a házet bally. Souboj je **vždy manuál** (`battle.forceManual`, serializuje se), aby Auto battle legendárního neubilo. **Znovuobjeví se, dokud ho nechytíš** (jednorázovost = vlastnictví druhu přes `ownsSpecies`; útěk/prohra/KO ho nezablokují – nutné pro plný dex 151).
+### Changed
+- **Pořadí mořské cesty opraveno** na kánon: **Route 19 → Seafoam Islands → Route 20 → Cinnabar Island → Route 21** (řetěz `unlock: { visited }` v `areas.js`).
+- **Mansion tab** (Rockets/gauntlet) se ve `mainPanel` odemkne až po `mansionPuzzleSolved` (nová `requiresStory` větev + import `getState`).
+- **Dev „Skip to" ⑲ (Secret Key)** teď nastaví `mansionPuzzleSolved` + `cinnabarMansionCleared` + porazí 3 mansion trenéry (deterministický skok).
+- **Save migrace v35:** kdo už má `hasSecretKey` (starý instantní zisk), dostane `mansionPuzzleSolved` + `cinnabarMansionCleared`, ať se mu labyrint ani gauntlet znovu nespustí. `CURRENT_SAVE_VERSION` = 35.
+
+## [0.77.0] – 2026-09-09 · Věrný Kanto příběh – Krok 9: Cinnabar Island (Blaine, Volcano Badge, Pokémon Mansion + Secret Key)
+### Added
+- **Mořská cesta na Cinnabar (arrival eventy).** První nasednutí na **Surf** na **Route 19** (event `route-19-arrival`, flag `route19Arrival`), průchod **Seafoam Islands** (`seafoam-arrival`, `seafoamArrival`) a příchod na **Cinnabar Island** (`cinnabar-arrival`, `cinnabarArrival`) – každý s vlastním popupem v `mapView`.
+- **Pokémon Mansion (nová story budova).** Vyhořelý sídlo na Cinnabaru: prozkoumáš ruiny, přečteš útržky deníků o původu **Mewtwa** (Mew → gen. experimenty) a najdeš **Secret Key** (`secret-key`, special item, flag `hasSecretKey`).
+- **Pokémon Lab (nová story budova).** Flavour laboratoř na Cinnabaru – vědci o fosíliích a pověstech o Mewtwovi (napojení na Mansion). Oživení fosílií nadále řeší Pewter Museum.
+- **Cinnabar Gym zamčený na Secret Key.** `cinnabar-gym` má `requiresStory: "hasSecretKey"`; brána gymu (zobecněný `GYM_GATES` v `gymView`) navede hráče na Mansion. Neuvedené gymy dostaly obecný fallback text.
+- **Blaineův kvíz (kánon).** Při prvním vstupu do odemčeného, nevyčištěného gymu proběhne řetěz pravda/nepravda otázek (přes `popup.choices`, flag `cinnabarGymQuiz`), pak souboj s Blainem.
+- **Volcano Badge payoff.** Po poražení Blaina (`finishTrainerBattle`, badge **volcano-badge**, flag `blaineCleared`, +2000 gold) popup navede zpět do znovuotevřeného **Viridian Gymu** (8. odznak).
+- **Dev „Skip to" ⑱–⑳:** příchod na Cinnabar (mořská cesta), Secret Key/Mansion, Volcano Badge/Blaine (Krok 9 hotov).
+### Changed
+- **Roster budov `cinnabar-island`:** Poké Center + Mart + **Pokémon Lab** + **Pokémon Mansion**.
+- **Save migrace v34:** dopočítá arrival flagy podle navštívených oblastí; kdo už má **volcano-badge**, dostane `blaineCleared`/`cinnabarGymQuiz`/`hasSecretKey`, aby se vyčištěný gym nezamkl `requiresStory`.
+- `CURRENT_SAVE_VERSION` = 34.
+
+## [0.76.0] – 2026-09-09 · Safari Zone – plná věrná expedice (žádné odměny zadarmo)
+### Added
+- **Safari Zone je teď skutečná expedice, ne dárek u vchodu.** Nový samostatný engine `src/systems/safariSystem.js` + běhový stav `state.safari`. Zaplatíš **vstupné (500 💰)** → dostaneš rozpočet **500 kroků** a **30 Safari Ballů**. Idle tik popojde a občas narazíš na divokého Pokémona.
+- **Věrné Safari chytání (Bait/Rock/Ball/Run).** Žádné souboje/HP. **Bait** (jídlo) sníží šanci na útěk, ale zhorší chytání; **Rock** (kámen) zlepší chytání, ale zvýší útěk. Safari Ball má vlastní násobič; Pokémon může **utéct**. Šance na útěk i chycení škáluje vzácností druhu.
+- **4 oblasti do hloubky (`goDeeper`, −60 kroků).** Nekumulativní pooly – vzácnější druhy vyžadují dojít hlouběji (Chansey/Scyther/Pinsir/Tauros/Kangaskhan až ve 4. oblasti).
+- **Odměny za dojití, ne za vstup:** **Gold Teeth** v oblasti 3, **HM03 Surf** v **Secret House** (oblast 4) – oboje s vlastním popupem, jen jednou (řízeno flagy `hasGoldTeeth`/`hasSurf`).
+- **„Ding-dong! Time's up!"** – když dojdou kroky nebo Bally, ranger tě odvede ke vchodu (úlovky/itemy si necháš). Odchod z oblasti safari-zone ukončí probíhající výpravu.
+- **Nový tab „Safari"** (`src/ui/safariView.js`) viditelný jen v oblasti safari-zone; v této oblasti se schová tab **Battle** (nebojuje se). HUD: kroky / Safari Balls / oblast + živé bary.
+- **Setkání vypadá jako souboj (jiným stylem):** encounter panel ukazuje **animovaný sprite** divokého Pokémona (`spriteImg`, gif→png→glyph fallback) v malé travnaté „scéně" + jméno/level. Akce **Bait/Rock/Safari Ball/Run** (i „Press deeper"/„Leave") jsou přestylované do **stejných tlačítek jako tahy v manuálním souboji** (`move-grid` + `move-btn move-typed` s ikonou, názvem a podtitulkem, barevně odlišené).
+### Changed
+- **Zrušen automatický dárek při vstupu do Safari** (dřívější `safari-entry` event dával Surf + Gold Teeth zadarmo). Nahrazeno pravidlovým popupem `safari-arrival` (jen vysvětlí expedici, nic nedá).
+- **Save migrace v33 upravena:** Surf/Gold Teeth se už neudělují za pouhou návštěvu safari-zone; migrace jen dorovná HM za branami (kdo je na Route 19 → Surf, kdo na Victory Road → Strength), aby se nikdo nezamkl. Nový `state.safari` se dolaďuje líně.
+- **Dev „Skip to" ⑯** popisuje dokončenou Safari expedici (flag `safariArrival` místo obsoletního `safariEntered`).
+### Notes
+- Bez nových spritů – encounter panel je zatím textový (jméno + level + % šance). Battle engine se v safari-zone při vstupu bezpečně zastaví (`stopBattle`).
+
+## [0.75.0] – 2026-09-09 · Věrný Kanto příběh – Krok 8: Fuchsia City (Koga, Soul Badge, Safari Zone, HM Surf/Strength)
+### Added
+- **Jižní osa přesměrována na Fuchsia.** Hlavní cesta do Fuchsia City vede nyní z **JIHU** přes **Route 15** (unlock `visited:route-15`), což je kanonické. **Cycling Road (route-18)** zůstává boční slepá větev z Celadonu (west side).
+- **Koga & Soul Badge – příběhová vrstva.** Při prvním vstupu do odemčeného, nevyčištěného Fuchsia Gymu vyskočí jednorázový popup „bludiště neviditelných zdí" (flag `fuchsiaGymWalls`). Po poražení Kogy payoff popup v `finishTrainerBattle` (badge **soul-badge**, flag `kogaCleared`, +1500 gold).
+- **Safari Zone – primární zdroj Surf.** První vstup event `safari-entry` vrátí **HM03 Surf** (`hm03-surf`, special item) + **Gold Teeth** (`gold-teeth`, special item, flagy `safariEntered`/`hasSurf`/`hasGoldTeeth`). Vzácní druhy (Chansey, Kangaskhan, Scyther, Pinsir, Tauros, Tangela aj.) v datech.
+- **Warden's House (nová story budova).** Ve Fuchsia vrátíš Gold Teeth → dostaneš **HM04 Strength** (`hm04-strength`, special item, flag `hasStrength`), zuby se spotřebují (flagy `wardenThanked`/`hasGoldTeeth=false`).
+- **Nové HM gaty.** Route 19 (`unlock: {story:"hasSurf"}`), Victory Road (`unlock: {story:"hasStrength"}`).
+- **Dev „Skip to" – Krok 8 rozdělen na 4 checkpointy** (testovatelné fáze): **⑭ Fuchsia arrival** (příchod), **⑮ Soul Badge** (Koga), **⑯ Safari/Surf+Gold Teeth** (vstup), **⑰ Strength** (hotov). Kumulativní, odstraněna duplikace v `applyOne`.
+- **New eventy:** `fuchsia-arrival` (mapView), `safari-entry` (mapView), soul-badge payoff (finishTrainerBattle).
+### Changed
+- **Save migrace v32→v33:** retroaktivní propuštění dle postupu (visited route-15, Koga, Safari Zone, HM03/04, Gold Teeth).
+### Notes
+- Warden-house je story budova bez popupu. Route 15 návštěva bez trainers.
+
+## [0.74.0] – 2026-09-09 · Věrný Kanto příběh – Krok 7: Celadon → Rocket Hideout → Pokémon Tower finále (Erika, Silph Scope, Poké Flute, Snorlax)
+### Added
+- **HM05 Flash je nově těžší (kanonicky).** Zrušen laciný dárek od náhodného turisty. Na **Route 9** je teď **Hiker gauntlet** (tab „Hikers": 3 tuzí Hikeři) a **Oakův pomocník** dá **HM05 Flash** až po jejich poražení **A** po registraci **10 druhů** v Pokédexu. Když druhů zatím nemáš dost, Flash dostaneš při **návratu na Route 9** (žádný soft-lock).
+- **Celadon City – příběhová vrstva.** Vlastní roster budov: **Poké Center + Poké Mart + Dept. Store + Game Corner**. Příchodový popup navede na Dept Store / Game Corner / Erika. **Celadon Gym** (Erika) dá **Rainbow Badge** + payoff popup (+1000₽) navádějící na Game Corner.
+- **Team Rocket Hideout (za Game Cornerem).** Game Corner má tajný vchod → tab „Team Rocket": gauntlet 4 grunty + boss **Giovanni**. Vyčištění dá **Silph Scope** (`hasSilphScope`) + 2500₽ + popup směřující do Pokémon Tower.
+- **Pokémon Tower finále.** Stavový automat věže: bez Silph Scope duch nejde poznat → se Scope souboj s **duchem Marowak** (`marowakCalmed`) → osvobození **Mr. Fujiho** na vršku → dostaneš **Poké Flute** (`hasPokeFlute`). Mr. Fuji's House po záchraně navede na Snorlaxe.
+- **Snorlax na Route 12.** Spící Snorlax blokuje jih. Bez Poké Flute jen flavour; s Poké Flute příchodový popup **„Play the Poké Flute!"** spustí souboj → po výhře `snorlaxCleared` otevře cestu dál na jih.
+### Changed
+- **Obrácená jižní osa (věrně kánonu).** Route 12/13/14/15 nově vedou z **Lavenderu dolů** (Lavender → Route 12 → 13 → 14 → 15). Snorlax gate je na přechodu **Route 12 → Route 13** (`unlock.story: "snorlaxCleared"`). Fuchsia zůstává dostupná přes Cycling Road.
+- **Gauntlet systém zobecněn** na členství (`trainerIds`) místo `t.kind === "rocket"`, aby fungoval i pro Hikery, a nově aplikuje `clearItem` / `clearStoryFlag` + per-gauntlet payoff popupy.
+- **Rockets tab má dynamický popisek** podle oblasti („Hikers" na Route 9, „Team Rocket" v Celadonu).
+- **Dev „Skip to" – Krok 7 rozdělen na 4 jemné milníky** (dřív by byl jeden obří skok): **⑩ Celadon/Rainbow Badge** (hideout ještě netknutý), **⑪ Silph Scope získán** (Rocket Hideout vyčištěn, věž netknutá), **⑫ Poké Flute získán** (věž hotová, Snorlax ještě spí), **⑬ Snorlax probuzen** (jih otevřen). Každý = jeden konkrétní zisk, kumulativně. Odstraněna duplikace obsahu předchozího milníku v `applyOne` (kumulativnost řeší smyčka).
+### Notes
+- Migrace **save v32**: kdo má Flash → Route 9 Hikeři označeni za poražené; kdo má Rainbow Badge → Erika hotová; kdo navštívil Route 13 → Snorlax vyřešen + Poké Flute v batohu. Žádná regrese.
+- Marowak i Snorlax jsou implementováni jako **boss „trenéři"** (`forceManual`), ne divoká setkání (engine nemá snadný spawn konkrétního druhu). Bez nových spritů – vše přes existující fallbacky.
+
+## [0.73.0] – 2026-09-09 · Věrný Kanto příběh – Krok 6: Vermilion → Lavender Town (Lt. Surge, HM Flash)
+### Added
+- **Lt. Surge / Thunder Badge – příběhová vrstva.** Při prvním otevření odemčeného Vermilion Gymu vyskočí okno s kanonickou **hádankou s odpadkovými koši** (dva skryté vypínače otevřou elektrické dveře). Po poražení **Lt. Surge** dostaneš gratulační okno + drobnou odměnu (**+800₽**) a rozcestník kam dál (flag `surgeCleared`).
+- **HM05 Flash + Rock Tunnel.** Na **Route 9** ti horský turista dá **HM05 Flash** (nový klíčový item, flag `hasFlash`) – stejně jako HM Cut. **Rock Tunnel** je nově zamčený, dokud Flash nemáš (`unlock.story: "hasFlash"`). Po zisku popup potvrdí, že tunelem projdeš.
+- **Příchodové popupy** pro **Route 11**, **Diglett's Cave** a **Lavender Town** (flavour, každý jednorázově).
+- **Lavender Town – příběhová vrstva.** Město má nově vlastní roster budov: **Poké Center + Poké Mart + Pokémon Tower + Mr. Fuji's House**. **Pokémon Tower** je zamčená duchem (potřebuje **Silph Scope** z pozdějšího kroku – zatím flavour), **Mr. Fuji's House** naznačuje, že Mr. Fuji zmizel ve věži.
+### Changed
+- **Dev „Skip to".** Přidán checkpoint **⑨ Lt. Surge poražen · Thunder Badge · Lavender Town** (celá cesta Route 11/Diglett's + Route 9/Flash → Rock Tunnel → Route 10 → Lavender).
+### Notes
+- Migrace **save v31**: kdo už Rock Tunnel (nebo dál) navštívil, se automaticky „propustí" (nastaví `hasFlash` + dostane HM05 Flash do batohu) – žádná regrese.
+- Bez nových spritů: příběhové budovy (Pokémon Tower, Mr. Fuji's House) používají CSS ikonu; Lt. Surge používá existující leader/gym sprity (fallback).
+
 ## [0.72.0] – 2026-09-08 · Věrný Kanto příběh – Krok 5: Cerulean → Vermilion (Bill, fosílie, S.S. Anne, HM Cut)
 ### Added
 - **Bill na Route 25.** Při dojití na konec **Route 25** pomůžeš **Billovi** z jeho teleportéru a dostaneš **S.S. Anne Ticket** (nový klíčový item). Jednorázově (flag `billHelped`).

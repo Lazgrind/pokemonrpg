@@ -12,9 +12,33 @@
 import { getGymForCity, gymTrainers, isGymOpen } from "../../data/gyms.js";
 import { trainerSpriteUrl } from "../../data/trainers.js";
 import { getBadge } from "../../data/badges.js";
-import { getState } from "../core/state.js";
+import { getState, commit } from "../core/state.js";
 import { startTrainerBattle, getActiveArea } from "../systems/battleSystem.js";
 import { openMainTab } from "./mainPanel.js";
+import { showPopup } from "./popup.js";
+
+/**
+ * Text „zamčené brány" gymu, dokud není splněný gym.requiresStory flag. Per-gym,
+ * ať každé město má věrný důvod (Vermilion = strom + Cut, Cinnabar = zamčené
+ * dveře + Secret Key z Mansionu). Neuvedené gymy dostanou obecný fallback.
+ */
+const GYM_GATES = {
+  "vermilion-gym": {
+    icon: "🌳",
+    body: `<p class="story-text">A thick, leafy tree blocks the Gym's entrance.</p>
+      <p class="placeholder">You'll need <strong>HM Cut</strong> to clear it. Board the <strong>S.S. Anne</strong> in the City tab and help out to earn it.</p>`,
+  },
+  "cinnabar-gym": {
+    icon: "🔒",
+    body: `<p class="story-text">The Gym's door is firmly locked — there's a keyhole where the handle should be.</p>
+      <p class="placeholder">You'll need the <strong>Secret Key</strong>. Search the burnt-out <strong>Pokémon Mansion</strong> in the City tab to find it.</p>`,
+  },
+  "saffron-gym": {
+    icon: "🚧",
+    body: `<p class="story-text">Team Rocket grunts loiter outside the Gym. "Beat it, kid — this whole city belongs to Team Rocket now. The Leader ain't seeing anyone."</p>
+      <p class="placeholder">Drive Team Rocket out of <strong>Silph Co.</strong> first (City tab → Silph Co.). Once the company is free, Sabrina's Gym will reopen.</p>`,
+  },
+};
 
 /** Vykreslí obsah záložky Gym do zadaného elementu. */
 export function renderGymTab(root, onStatus = () => {}) {
@@ -45,13 +69,100 @@ export function renderGymTab(root, onStatus = () => {}) {
 
   // Story-gate (např. Vermilion: vchod blokuje strom, potřebuješ HM Cut). Blokuje
   // JEN dokud gym není vyčištěný – staré savy s poraženým gymem se nezamknou.
+  // Text brány je per-gym (podle requiresStory flagu / města), s obecným fallbackem.
   if (gym.requiresStory && !cleared && !getState().story?.[gym.requiresStory]) {
-    root.innerHTML = `<h2 class="panel-title">🌳 ${gym.name}</h2>
-      <p class="story-text">A thick, leafy tree blocks the Gym's entrance.</p>
-      <p class="placeholder">You'll need <strong>HM Cut</strong> to clear it. Board the <strong>S.S. Anne</strong> in the City tab and help out to earn it.</p>`;
+    const gate = GYM_GATES[gym.id] ?? {
+      icon: "🔒",
+      body: `<p class="story-text">The Gym's entrance is blocked.</p>
+        <p class="placeholder">You'll need to advance the story before you can challenge this Leader.</p>`,
+    };
+    root.innerHTML = `<h2 class="panel-title">${gate.icon} ${gym.name}</h2>${gate.body}`;
     return;
   }
   const badge = getBadge(gym.badge);
+
+  // Věrný Kanto (Krok 6): Vermilion Gym má kanonickou hádanku s odpadkovými koši
+  // (dva skryté vypínače otevřou elektrické dveře k Lt. Surgeovi). Řešíme jako
+  // jednorázový flavour popup při prvním otevření odemčeného, ještě nevyčištěného
+  // gymu. Flag nastavíme rovnou v paměti (guard proti re-fire při každém ticku);
+  // uložení dořeší commit v onOk.
+  if (gym.id === "vermilion-gym" && !cleared) {
+    const st = getState();
+    if (!st.story) st.story = {};
+    if (!st.story.vermilionGymSwitches) {
+      st.story.vermilionGymSwitches = true;
+      showPopup({
+        title: "🗑️ Lt. Surge's Gym",
+        body: `<p class="story-text">Beyond the entrance, a locked electric door bars the way. Two hidden switches are tucked away inside the Gym's <strong>trash cans</strong>.</p>
+          <p class="story-text">You rummage through the bins, flip the first switch… then hunt down the second. With a loud <em>clunk</em>, the door slides open!</p>
+          <p class="placeholder">Lt. Surge, the Lightning American, is waiting. Electric-types are weak to Ground.</p>`,
+        okLabel: "Bring it on!",
+        onOk: () => commit(),
+      });
+    }
+  }
+  // Věrný Kanto (Krok 8): Koga's Gym je bludiště neviditelných zdí – jednorázový
+  // flavour popup při prvním vstupu (guard proti re-fire, uložení dořeší commit).
+  if (gym.id === "fuchsia-gym" && !cleared) {
+    const st = getState();
+    if (!st.story) st.story = {};
+    if (!st.story.fuchsiaGymWalls) {
+      st.story.fuchsiaGymWalls = true;
+      showPopup({
+        title: "🥷 Koga's Gym",
+        body: `<p class="story-text">The floor is a maze of <strong>invisible walls</strong>. You bump into unseen barriers, feeling your way forward inch by inch through the ninja trickery.</p>
+          <p class="story-text">At last the path opens up. <strong>Koga</strong>, the poisonous ninja master, awaits in the shadows.</p>
+          <p class="placeholder">Poison-types are weak to Ground and Psychic. Watch out for status effects!</p>`,
+        okLabel: "I'm ready.",
+        onOk: () => commit(),
+      });
+    }
+  }
+  // Věrný Kanto (Krok 9): Blaine tě před soubojem prožene svým kvízem. Jednorázově
+  // (guard flag cinnabarGymQuiz), pak řetěz otázek → finále → souboj.
+  if (gym.id === "cinnabar-gym" && !cleared) {
+    const st = getState();
+    if (!st.story) st.story = {};
+    if (!st.story.cinnabarGymQuiz) {
+      st.story.cinnabarGymQuiz = true;
+      startBlaineQuiz();
+    }
+  }
+  // Věrný Kanto (Krok 11): Sabrina věděla, že přijdeš. Jednorázový flavour popup
+  // při prvním vstupu do odemčeného (Silph Co osvobozeno) gymu.
+  if (gym.id === "saffron-gym" && !cleared) {
+    const st = getState();
+    if (!st.story) st.story = {};
+    if (!st.story.saffronGymIntro) {
+      st.story.saffronGymIntro = true;
+      showPopup({
+        title: "🔮 Sabrina's Gym",
+        body: `<p class="story-text">The Gym warps around you — teleport tiles blink you from pad to pad through a mirror-maze of psychic energy.</p>
+          <p class="story-text">At the center sits <strong>Sabrina</strong>, unmoving, eyes closed. "I knew you would come. I saw it long ago." Her Psychic-types are merciless.</p>
+          <p class="placeholder">Psychic-types are weak to Bug, Ghost and Dark. Bring hard hitters.</p>`,
+        okLabel: "I'm ready.",
+        onOk: () => commit(),
+      });
+    }
+  }
+  // Věrný Kanto (Krok 10): Viridian Gym byl celou hru zavřený. Když se konečně
+  // otevře (8. odznak), jednorázový flavour popup naznačí tajemného Leadera –
+  // teprve po jeho poražení se odhalí jako Giovanni (viz finishTrainerBattle).
+  if (gym.id === "viridian-gym" && !cleared) {
+    const st = getState();
+    if (!st.story) st.story = {};
+    if (!st.story.viridianGymIntro) {
+      st.story.viridianGymIntro = true;
+      showPopup({
+        title: "🌍 The Viridian Gym",
+        body: `<p class="story-text">The Gym that was locked when your journey began finally stands open. The air inside is cold and still.</p>
+          <p class="story-text">A powerful figure waits in the shadows at the far end — the mysterious Leader who has eluded challengers all this time. Something about him feels dangerously familiar...</p>
+          <p class="placeholder">This is the eighth and final Kanto badge. Bring your very best — his Ground-types hit brutally hard.</p>`,
+        okLabel: "Face him",
+        onOk: () => commit(),
+      });
+    }
+  }
 
   const rows = trainers
     .map((t, i) => {
@@ -105,4 +216,45 @@ export function renderGymTab(root, onStatus = () => {}) {
       openMainTab("battle");
     })
   );
+}
+
+/**
+ * Blaineův kvíz (Krok 9) – řetěz otázek přes popup.choices. Kánonické pravda/nepravda
+ * otázky; skóre je jen pro chuť (souboj se odemkne tak jako tak). Flag proti re-fire
+ * nastavuje volající; commit (uložení) proběhne až v onOk finálního okna.
+ */
+function startBlaineQuiz() {
+  const questions = [
+    { text: "Caterpie evolves into Butterfree?", answer: true },
+    { text: "There are 9 certified Pokémon League Badges?", answer: false },
+    { text: "Poliwag evolves three times?", answer: true },
+  ];
+  let score = 0;
+
+  const ask = (i) => {
+    if (i >= questions.length) {
+      showPopup({
+        title: "🔥 Blaine's Gym",
+        body: `<p class="story-text">Blaine roars with laughter. "Hah! You got <strong>${score}/${questions.length}</strong> right!"</p>
+          <p class="story-text">"But the real question burns hotter than any quiz — can you stand the heat of my fire Pokémon? Come on!"</p>
+          <p class="placeholder">Fire-types are weak to Water, Ground and Rock. His Arcanine hits hard.</p>`,
+        okLabel: "Light it up!",
+        onOk: () => commit(),
+      });
+      return;
+    }
+    const q = questions[i];
+    showPopup({
+      title: `🔥 Blaine's Quiz — ${i + 1}/${questions.length}`,
+      body: `<p class="story-text">Blaine stands by a locked quiz door. "I'm Blaine, the red-hot quizmaster! Answer me this, hotshot!"</p>
+        <p class="story-text"><strong>${q.text}</strong></p>`,
+      dismissible: false,
+      choices: [
+        { label: "YES", onPick: () => { if (q.answer === true) score++; ask(i + 1); } },
+        { label: "NO", onPick: () => { if (q.answer === false) score++; ask(i + 1); } },
+      ],
+    });
+  };
+
+  ask(0);
 }

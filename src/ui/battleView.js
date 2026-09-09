@@ -29,6 +29,7 @@ import {
   lootLabel,
   itemsAllowed,
   getRules,
+  leagueState,
 } from "../systems/battleSystem.js";
 import { POKEBALLS, getPokeball } from "../../data/pokeballs.js";
 import { ITEMS, getItem } from "../../data/items.js";
@@ -46,6 +47,7 @@ import { isCaught } from "../systems/pokedex.js";
 import { typeColor, typeBadge } from "./typeColors.js";
 import { statusBadge } from "./statusBadge.js";
 import { preserveWindowScroll } from "./scrollPreserve.js";
+import { openMainTab } from "./mainPanel.js";
 
 /** Podmenu manuálního souboje (jen manuál mód): root | fight | bag | switch | item-target. */
 let menuMode = "root";
@@ -738,7 +740,15 @@ function wire(root) {
 
   // „Next battle" ve výherním/chytacím okně (manuální mód) → další soupeř.
   const nextBtn = root.querySelector("#next-encounter");
-  if (nextBtn) nextBtn.addEventListener("click", () => nextEncounter());
+  if (nextBtn)
+    nextBtn.addEventListener("click", () => {
+      nextEncounter();
+      // Liga: po dokončení jednoho zápasu (běh stále aktivní) přepni rovnou na
+      // League tab, ať hráč vidí postup a tlačítko „Continue" (mezitím může přes
+      // Bag dohealovat). Po Championovi je běh vypnutý → zůstaneme v Battle.
+      const ls = leagueState();
+      if (ls?.active) openMainTab("league");
+    });
 
   // Rychlé vyléčení týmu přímo z obrazovky prohry (bez proklikávání města).
   const healBtn = root.querySelector("#heal-team");
