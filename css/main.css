@@ -1278,6 +1278,21 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 .ball-buy { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
 .btn-sm { padding: 3px 8px; font-size: 12px; }
 
+/* Game Corner (Celadon herna): balance, automat, směnárna, prize corner. */
+.gc-balance { font-size: 14px; margin: 6px 0 4px; }
+.gc-h { margin: 14px 0 6px; font-size: 15px; border-top: 1px solid var(--border, #333); padding-top: 10px; }
+.gc-sub { font-weight: normal; opacity: 0.7; font-size: 12px; }
+.gc-reels {
+  font-size: 34px; letter-spacing: 10px; text-align: center;
+  padding: 10px 6px; margin: 4px 0; border-radius: 8px;
+  background: rgba(0, 0, 0, 0.25); border: 2px solid var(--border, #444);
+}
+.gc-spinmsg { text-align: center; min-height: 1.2em; margin: 4px 0 8px; }
+.gc-win { color: #ffd34d; font-weight: bold; }
+.gc-lose { opacity: 0.75; }
+.gc-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.gc-prizes .gc-prize { min-width: 0; }
+
 /* Battle info – „textbox" jako v klasické Pokémon hře: rámovaný panel s
    průběžným popisem souboje (nejnovější hláška dole, výrazněji). */
 .battle-info {
@@ -1302,16 +1317,27 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 
 /* ---- Izometrické město (2.5D, čistě CSS) ---- */
 .iso-city {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 18px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  align-content: center;
+  gap: 18px 24px;
+  min-height: 280px;
   margin-top: 6px;
-  padding: 22px 14px;
+  padding: 26px 18px;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  /* travnatá plocha s jemným vinětováním */
+  /* Pozadí města: scrim (čitelnost popisků) → obrázek města (--city-bg) →
+     fallback travnatý gradient. Chybí-li obrázek (--city-bg nenastaven / 404),
+     prosvítá gradient pod ním. */
   background:
+    linear-gradient(180deg, rgba(0, 0, 0, 0.12), rgba(0, 0, 0, 0.34)),
+    var(--city-bg, none),
     radial-gradient(120% 90% at 50% 20%, #2f6b3a 0%, #245730 55%, #1c4527 100%);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
   box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.35);
 }
 
@@ -1451,28 +1477,12 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   image-rendering: pixelated; /* ostrý pixel-art i po zvětšení */
 }
 
-/* Volná parcela = plochý izometrický kosočtverec. */
-.iso-plot {
-  position: relative;
-  width: 84px;
-  height: 42px;
-  margin: 21px 0; /* zarovná výšku k budovám */
-  background: rgba(255, 255, 255, 0.06);
-  clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-}
-.iso-plot .plot-hint { font-size: 18px; opacity: 0.6; }
-
 .iso-tag {
   font-size: 12px;
   color: var(--text);
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   text-align: center;
 }
-.iso-tag.muted { color: var(--text-dim); font-style: italic; }
 .iso-tag .lvl-inline { color: var(--accent); }
 
 /* ---- Detail budovy (modal) ---- */
@@ -2793,3 +2803,91 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 .rival-cleared { color: var(--accent-2, #7fc97f); font-weight: 700; margin-top: 8px; }
 .rival-cleared.rival-lost { color: var(--text-dim, #b8c0d0); font-weight: 600; }
 .rival-fight { margin-top: 6px; }
+
+/* ── Legendary „gateway" tab (viz src/ui/legendaryView.js) ────────────────── */
+/* Ledově laděná varianta rival karty – samostatná výzva pro statická legendární
+ * setkání (Articuno atd.). Souboj běží v Battle tabu (startStaticEncounter). */
+.legendary-section { padding: 4px; }
+.legendary-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--accent-ice, #7fd3e0);
+  border-radius: 10px;
+  background: rgba(127, 211, 224, 0.08);
+}
+.legendary-mon { width: 96px; height: 96px; object-fit: contain; image-rendering: pixelated; }
+.legendary-meta { flex: 1 1 auto; min-width: 0; }
+.legendary-name { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.legendary-fight { margin-top: 6px; }
+
+/* ---- Safari Zone tab (viz src/ui/safariView.js) ---- */
+.safari-rules { margin: 8px 0 12px; padding-left: 18px; font-size: 12px; line-height: 1.5; }
+.safari-rules li { margin: 3px 0; }
+.safari-hud {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin: 10px 0 14px;
+}
+.safari-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid var(--border, #38405a);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  font-size: 11px;
+}
+.safari-stat span { color: var(--text-dim, #b8c0d0); }
+.safari-stat strong { font-size: 13px; }
+.safari-bar {
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  margin-top: 2px;
+}
+.safari-bar-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+.safari-encounter {
+  margin: 12px 0;
+  padding: 12px;
+  border: 1px solid var(--accent, #e0a030);
+  border-radius: 10px;
+  background: rgba(224, 160, 48, 0.08);
+}
+/* Mini „scéna" setkání – sprite divokého Pokémona (jako souboj, jen klidnější). */
+.safari-scene {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px;
+  margin-bottom: 6px;
+  border-radius: 10px;
+  background:
+    radial-gradient(120% 90% at 50% 120%, rgba(120, 200, 110, 0.28), transparent 70%),
+    linear-gradient(180deg, rgba(140, 200, 235, 0.18), rgba(120, 190, 110, 0.14));
+  border: 1px solid var(--border, #38405a);
+}
+.safari-scene .safari-mon {
+  width: 96px;
+  height: 96px;
+  flex: 0 0 auto;
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.35));
+}
+.safari-enc-info { display: flex; flex-direction: column; gap: 2px; }
+.safari-enc-name { font-weight: 700; font-size: 16px; }
+.safari-enc-lv { font-size: 12px; color: var(--text-dim, #b8c0d0); }
+.safari-move-grid { margin-top: 10px; }
+.safari-secret {
+  grid-column: 1 / -1;
+  padding: 8px 10px;
+  border: 1px dashed var(--border, #38405a);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--text-dim, #b8c0d0);
+  text-align: center;
+}

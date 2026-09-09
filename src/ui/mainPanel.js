@@ -22,15 +22,24 @@ import { renderBattle } from "./battleView.js";
 import { renderGymTab } from "./gymView.js";
 import { renderRivalTab } from "./rivalView.js";
 import { renderRocketsTab } from "./rocketView.js";
+import { renderSafariTab } from "./safariView.js";
+import { renderLegendaryTab } from "./legendaryView.js";
+import { renderLeagueTab } from "./leagueView.js";
 import { getActiveArea } from "../systems/battleSystem.js";
+import { getState } from "../core/state.js";
+import { ownsSpecies } from "../systems/team.js";
 import { getGymForCity } from "../../data/gyms.js";
-import { rivalForArea, rocketGauntletForArea } from "../../data/trainers.js";
+import { rivalForArea, rocketGauntletForArea, leagueForArea } from "../../data/trainers.js";
+import { legendaryForArea } from "../../data/legendaries.js";
 
 const ALL_TABS = [
   { id: "battle", label: "Battle" },
+  { id: "safari", label: "Safari" },
   { id: "gym", label: "Gym" },
   { id: "rival", label: "Rival" },
   { id: "rockets", label: "Rockets" },
+  { id: "legendary", label: "Legendary" },
+  { id: "league", label: "🏆 League" },
   { id: "city", label: "City" },
   { id: "pc", label: "PC" },
   { id: "pokedex", label: "Pokédex" },
@@ -57,13 +66,31 @@ function visibleTabs() {
   // se pozná až uvnitř tabu hláškou (viz gymView isGymOpen).
   const hasGym = inCity && !!getGymForCity(area?.id);
   const hasRival = !!rivalForArea(area?.id);
-  const hasRockets = !!rocketGauntletForArea(area?.id);
+  // Gauntlet tab (Rockets/Hikers/Mansion): některé mají story-podmínku (Mansion se
+  // ukáže až po vyřešení spínačového labyrintu → flag mansionPuzzleSolved).
+  const gaunt = rocketGauntletForArea(area?.id);
+  const hasRockets = !!gaunt && (!gaunt.requiresStory || !!getState().story?.[gaunt.requiresStory]);
+  const inSafari = area?.id === "safari-zone";
+  // Legendary tab: oblast má legendárního, story-gate splněný a druh ještě nevlastníš.
+  // Zmizí sám v momentě chycení (ownsSpecies) → forgiving jednorázovost pro plný dex.
+  const leg = legendaryForArea(area?.id);
+  const hasLegendary =
+    !!leg &&
+    (!leg.requiresStory || !!getState().story?.[leg.requiresStory]) &&
+    !ownsSpecies(leg.speciesId);
+  // League tab: jen na Indigo Plateau (kde Liga je). Dostat se sem = mít 8 odznaků
+  // (Route 22 → Victory Road → Indigo je za earth-badge), takže žádný extra gate.
+  const hasLeague = !!leagueForArea(area?.id);
   return ALL_TABS.filter((t) => {
     if (t.id === "profile") return false; // skrytá – jen z horní lišty
+    if (t.id === "battle") return !inSafari; // v Safari se nebojuje – Battle mizí
+    if (t.id === "safari") return inSafari; // Safari tab jen v oblasti safari-zone
     if (t.id === "city") return inCity;
     if (t.id === "gym") return hasGym; // jen ve městě s gymem
     if (t.id === "rival") return hasRival; // jen na oblasti s rival gate
     if (t.id === "rockets") return hasRockets; // jen na oblasti s Rocket gauntletem
+    if (t.id === "legendary") return hasLegendary; // jen na oblasti s (nechyceným) legendárním
+    if (t.id === "league") return hasLeague; // jen na Indigo Plateau (Pokémon League)
     return true;
   });
 }
@@ -90,9 +117,11 @@ export function renderMainPanel(root, onStatus = () => {}) {
   const tabs = visibleTabs();
   // Mizící záložky (City/Gym/Rival dle lokace) → spadni na Battle, když už nejsou
   // viditelné. Profile je skrytá záložka z horní lišty, tu neresetujeme (není v `tabs`).
-  const conditional = new Set(["city", "gym", "rival", "rockets"]);
+  // battle+safari jsou také podmíněné (v safari-zone se prohodí). Když aktivní
+  // záložka zmizí, spadni na první viditelnou (v safari-zone = Safari, jinak Battle).
+  const conditional = new Set(["city", "gym", "rival", "rockets", "legendary", "league", "battle", "safari"]);
   if (conditional.has(activeTab) && !tabs.some((t) => t.id === activeTab)) {
-    activeTab = "battle";
+    activeTab = tabs[0]?.id ?? "battle";
   }
 
   // Skeleton jen jednou – battle podpanel si dál drží vlastní DOM/odběry.
@@ -109,8 +138,18 @@ export function renderMainPanel(root, onStatus = () => {}) {
 
   // Lišta záložek (laciné překreslení pokaždé).
   const tabBar = root.querySelector(".main-tabs");
+  // Rockets tab má dynamický popisek podle gauntletu v aktuální oblasti
+  // (např. „Hikers" na Route 9, „Team Rocket" v Celadonu).
+  const rocketLabel = rocketGauntletForArea(getActiveArea()?.id)?.tabLabel;
+  // Legendary tab má taky dynamický popisek + ikonu (např. „❄️ Articuno").
+  const legMeta = legendaryForArea(getActiveArea()?.id);
   tabBar.innerHTML = tabs
-    .map((t) => `<button class="tab ${t.id === activeTab ? "active" : ""}" data-tab="${t.id}">${t.label}</button>`)
+    .map((t) => {
+      let label = t.label;
+      if (t.id === "rockets" && rocketLabel) label = rocketLabel;
+      else if (t.id === "legendary" && legMeta) label = `${legMeta.tabIcon} ${legMeta.tabLabel}`;
+      return `<button class="tab ${t.id === activeTab ? "active" : ""}" data-tab="${t.id}">${label}</button>`;
+    })
     .join("");
   tabBar.querySelectorAll(".tab").forEach((btn) =>
     btn.addEventListener("click", () => {
@@ -134,6 +173,9 @@ export function renderMainPanel(root, onStatus = () => {}) {
     else if (activeTab === "gym") renderGymTab(restPane, onStatus);
     else if (activeTab === "rival") renderRivalTab(restPane, onStatus);
     else if (activeTab === "rockets") renderRocketsTab(restPane, onStatus);
+    else if (activeTab === "legendary") renderLegendaryTab(restPane, onStatus);
+    else if (activeTab === "league") renderLeagueTab(restPane, onStatus);
+    else if (activeTab === "safari") renderSafariTab(restPane, onStatus);
     else if (activeTab === "profile") renderProfileTab(restPane, onStatus);
   }
 }

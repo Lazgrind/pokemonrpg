@@ -1,8 +1,9 @@
 /**
- * UI: panel Města – izometrické 2.5D město (čistě CSS, bez závislostí).
- * Budovy jsou prostorové domečky (střecha + dvě stěny) na zelené ploše;
- * klik na budovu otevře její detail s možnostmi. Volné parcely = prázdné
- * pozemky, které naznačují růst města (další budovy = jen data).
+ * UI: panel Města – scéna s vlastním pozadím per město a budovami daného města.
+ * Pozadí je obrázek `assets/city/<cityId>.png` (fallback = travnatý gradient v CSS).
+ * Zobrazují se JEN budovy daného města (viz buildingsForCity) – žádné prázdné
+ * parcely. Budovy jsou obrázkové sprity, nebo CSS domeček (fallback); klik otevře
+ * detail budovy / příběhovou interakci.
  */
 
 import { buildingsForCity } from "../../data/buildings.js";
@@ -13,26 +14,25 @@ import { getActiveArea } from "../systems/battleSystem.js";
 import { getState, commit } from "../core/state.js";
 import { showPopup } from "./popup.js";
 
-/** Celkový počet pozemků ve městě (zbytek nad počtem budov = volné parcely). */
-const CITY_PLOTS = 6;
-
 /**
  * Vykreslí panel města do zadaného elementu. Roster budov závisí na aktivním
- * městě (viz buildingsForCity) – Pallet má laboratoř + domy, ostatní zatím idle pětici.
+ * městě (viz buildingsForCity) – Pallet má laboratoř + domy, ostatní služby dle města.
+ * Pozadí města je obrázek `assets/city/<cityId>.png`; chybí-li, CSS vyloží
+ * fallback (travnatý gradient) přes vrstvené pozadí (žádný „broken image").
  * @param {HTMLElement} root
  * @param {(msg: string) => void} [onStatus]
  */
 export function renderCity(root, onStatus = () => {}) {
-  const cityId = getActiveArea()?.id;
+  const area = getActiveArea();
+  const cityId = area?.id;
   const buildings = buildingsForCity(cityId);
-  const emptyCount = Math.max(0, CITY_PLOTS - buildings.length);
+  const bgStyle = cityId ? ` style="--city-bg:url('assets/city/${cityId}.png')"` : "";
 
   root.innerHTML = `
-    <h2 class="panel-title">City</h2>
+    <h2 class="panel-title">${area?.name ?? "City"}</h2>
     <p class="placeholder">Click a building to open its options.</p>
-    <div class="iso-city">
+    <div class="iso-city"${bgStyle}>
       ${buildings.map(buildingCell).join("")}
-      ${Array.from({ length: emptyCount }, emptyCell).join("")}
     </div>
   `;
 
@@ -67,18 +67,6 @@ function buildingCell(def) {
     <div class="iso-cell">
       ${visual}
       ${tag}
-    </div>
-  `;
-}
-
-/** Buňka s volnou parcelou. */
-function emptyCell() {
-  return `
-    <div class="iso-cell">
-      <div class="iso-plot" title="Empty lot — more buildings coming">
-        <span class="plot-hint">🏗️</span>
-      </div>
-      <div class="iso-tag muted">Empty lot</div>
     </div>
   `;
 }

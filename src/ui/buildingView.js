@@ -307,6 +307,10 @@ export function openBuilding(id, onStatus = () => {}) {
     if (heal)
       heal.addEventListener("click", () => {
         const n = healTeam();
+        if (n < 0) {
+          onStatus("The Poké Center is closed during the League challenge — heal with Bag items only.");
+          return;
+        }
         onStatus(n > 0 ? `Healed ${n} Pokémon — full HP, status & PP restored ✓` : "Your team is already at full HP");
       });
 

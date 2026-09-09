@@ -70,6 +70,7 @@ export function renderProfileTab(root, onStatus = () => {}) {
         ${statRow("Badges", `${badges.length} / ${BADGES.length}`)}
         ${statRow("Shiny caught", `${shiny}`)}
         ${statRow("Gold", `${s.resources?.gold ?? 0} G`)}
+        ${statRow("Coins", `${s.resources?.coins ?? 0} 🪙`)}
         ${statRow("Play time", playtime)}
       </div>
     </div>

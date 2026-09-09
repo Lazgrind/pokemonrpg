@@ -86,6 +86,9 @@ export const GYMS = [
     type: "psychic",
     badge: "marsh-badge",
     leaderId: "sabrina",
+    // Věrné kánonu: Team Rocket obsadil Saffron a zabral i gym, dokud nevyčistíš
+    // Silph Co (viz storyBuildingView silph-co → silphCleared).
+    requiresStory: "silphCleared",
     trainerOrder: [
       "saffron-gym-psychic-johan",
       "saffron-gym-channeler-preston",
@@ -99,6 +102,9 @@ export const GYMS = [
     type: "fire",
     badge: "volcano-badge",
     leaderId: "blaine",
+    // Věrné kánonu: dveře gymu jsou zamčené, dokud nenajdeš Secret Key ve
+    // vyhořelém Pokémon Mansionu (viz storyBuildingView pokemon-mansion).
+    requiresStory: "hasSecretKey",
     trainerOrder: [
       "cinnabar-gym-burglar-quinn",
       "cinnabar-gym-supernerd-erik",
