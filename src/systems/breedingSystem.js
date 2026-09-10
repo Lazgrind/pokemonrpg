@@ -14,8 +14,9 @@
  * neztrácí.
  */
 
-import { commit } from "../core/state.js";
+import { commit, getState } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
+import { SHINY_CHARM_MULT } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { learnableMovesAtLevel } from "../../data/learnsets.js";
 import { getBreedingSlot, getBreedingParents } from "./buildingSystem.js";
@@ -126,7 +127,13 @@ export function accrueBreeding(seconds) {
     const breed = {
       // Kopie IV rodičů (neměnné, ale ať nedržíme referenci na živého jedince).
       parents: [{ ...a.ivs }, { ...b.ivs }],
-      shinyChance: BREED_SHINY_CHANCE,
+      // Shiny Charm (odměna za kompletní dex) násobí i šanci u breedingu –
+      // pokud je vlastněný A zapnutý v horní liště (settings.shinyCharmActive).
+      shinyChance:
+        BREED_SHINY_CHANCE *
+        (getState().story?.shinyCharm && getState().settings?.shinyCharmActive !== false
+          ? SHINY_CHARM_MULT
+          : 1),
     };
     // Dědičnost IV přes Destiny Knot: drží-li ho jeden z rodičů, potomek zdědí
     // 5 IV místo 3. Jinak zůstane default INHERIT_IV_COUNT.

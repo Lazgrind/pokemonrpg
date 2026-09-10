@@ -47,7 +47,7 @@ import { learnableMovesAtLevel } from "../../data/learnsets.js";
 import { getMove } from "../../data/moves.js";
 import { breedingStatus } from "../systems/breedingSystem.js";
 import { canBreedSpecies, BREED_MINUTES, INHERIT_IV_COUNT } from "../../data/breeding.js";
-import { isBallUnlocked } from "../systems/pokeballSystem.js";
+import { isBallUnlocked, badgesForBallTier } from "../systems/pokeballSystem.js";
 import { healTeam } from "../systems/battleSystem.js";
 import { ITEMS, ITEM_CATEGORIES } from "../../data/items.js";
 import { buyItem, itemCount } from "../systems/itemSystem.js";
@@ -1072,7 +1072,23 @@ function openBallShop(id, onStatus) {
       })
       .join("");
 
-    const body = rows || `<p class="placeholder">No Poké Balls available yet.</p>`;
+    // Náhled zamčených typů (další tier) – ukáže, co odemkne postup (odznaky).
+    // Neprodejné (tier/price null) a comingSoon se nezobrazují.
+    const lockedRows = POKEBALLS.filter(
+      (ball) => ball.price != null && ball.tier != null && !ball.comingSoon && !isBallUnlocked(ball)
+    )
+      .map((ball) => {
+        const need = badgesForBallTier(ball.tier);
+        return `<div class="ball-row ball-locked">
+          <span>${ballIconHtml(ball.id, { size: 18 })} <strong>${ball.name}</strong> <span class="placeholder">— ${ball.desc}</span></span>
+          <span class="ball-buy placeholder">🔒 ${need} badge${need === 1 ? "" : "s"}</span>
+        </div>`;
+      })
+      .join("");
+
+    const body =
+      (rows || `<p class="placeholder">No Poké Balls available yet.</p>`) +
+      (lockedRows ? `<div class="ball-shop-locked">${lockedRows}</div>` : "");
 
     // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
     const savedScroll = saveScroll(overlay);
@@ -1147,7 +1163,9 @@ function openItemShop(id, onStatus) {
   function render() {
     const gold = getState().resources.gold;
     const groups = ITEM_CATEGORIES.map((cat) => {
-      const rows = ITEMS.filter((it) => it.category === cat.key)
+      // Jen kupitelné (price>0): nekupitelné itemy (např. TM získatelné jen
+      // dropem / od gym leaderů) se v Martu nezobrazují.
+      const rows = ITEMS.filter((it) => it.category === cat.key && it.price > 0)
         .map((it) => {
           const owned = itemCount(it.id);
           const count = buyCount(qty, it.price, gold);

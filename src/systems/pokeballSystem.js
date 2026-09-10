@@ -17,15 +17,28 @@ function clamp(v, min, max) {
   return Math.max(min, Math.min(max, v));
 }
 
-/** Aktuálně dosažená úroveň odemčení (postup lokalitou na mapě). Seam. */
+/**
+ * Aktuálně dosažená úroveň odemčení ballů. Řídí se REÁLNÝM postupem = počtem
+ * získaných odznaků (`progress.badges`): 0–1 → tier 1, 2–4 → tier 2, 5+ → tier 3.
+ * Případný explicitní `progress.tier` (dev/budoucí postup) smí tier už jen zvýšit.
+ */
 export function unlockedBallTier() {
-  return getState().progress?.tier ?? 1;
+  const p = getState().progress ?? {};
+  const badges = Array.isArray(p.badges) ? p.badges.length : 0;
+  const byBadges = badges >= 5 ? 3 : badges >= 2 ? 2 : 1;
+  const explicit = p.tier ?? 0;
+  return Math.max(byBadges, explicit);
 }
 
 /** Je ball k dispozici v obchodě podle postupu? (Neprodejné = false.) */
 export function isBallUnlocked(ball) {
   if (!ball || ball.tier == null || ball.price == null) return false;
   return ball.tier <= unlockedBallTier();
+}
+
+/** Kolik odznaků je potřeba pro daný ball tier (pro náhled zamčených v obchodě). */
+export function badgesForBallTier(tier) {
+  return tier >= 3 ? 5 : tier >= 2 ? 2 : 0;
 }
 
 /**
@@ -100,6 +113,14 @@ export function ballMultiplier(ball, ctx) {
       }
       break;
     }
+    case "darkPlace":
+      // Dusk Ball: lepší v jeskyních (v kánonu i v noci; denní dobu nemáme).
+      if (ctx.biome === "cave") m = b.mult;
+      break;
+    case "waterPlace":
+      // Dive Ball: lepší ve vodních oblastech (surf/moře; potápění nemáme).
+      if (ctx.biome === "water") m = b.mult;
+      break;
   }
   return m;
 }

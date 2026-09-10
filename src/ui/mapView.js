@@ -13,7 +13,7 @@
  * výpis, který se pak přepíše natvrdo do data/areas.js.
  */
 
-import { AREAS, getArea, isAreaUnlocked } from "../../data/areas.js";
+import { AREAS, getArea, isAreaUnlocked, areaLevelRange } from "../../data/areas.js";
 import { setActiveArea, getActiveAreaId, applyFossilChoice, startTrainerBattle } from "../systems/battleSystem.js";
 import { endSafari, isSafariActive } from "../systems/safariSystem.js";
 import { getState, commit } from "../core/state.js";
@@ -98,7 +98,11 @@ export function renderMap(root) {
   const nodesHtml = AREAS.map((area) => {
     const unlocked = isAreaUnlocked(area, visited, badges, beaten, story);
     const p = posOf(area);
-    const lvl = area.species?.length ? ` · Lv ${area.recommendedLevel}` : "";
+    // Popisek levelu = per-oblast pásmo (Lv min–max), u jednobodového jen jedno číslo.
+    const [lmin, lmax] = areaLevelRange(area);
+    const lvl = area.species?.length ? ` · Lv ${lmin === lmax ? lmin : `${lmin}–${lmax}`}` : "";
+    // Pozn.: počet objevených druhů (R-023) ZÁMĚRNĚ NENÍ na uzlu mapy (zabíral moc
+    // místa). Ukazuje se u aktivní oblasti v hlavičce Battle Area (viz battleView.js).
     return `
       <button
         class="map-node"
@@ -117,7 +121,7 @@ export function renderMap(root) {
       <h2 class="panel-title">Map</h2>
       <div class="map-head-actions">
         ${editMode ? `<button class="btn btn-sm" data-toggle-labels>${editHideLabels ? "🏷 Labels: off" : "🏷 Labels: on"}</button>` : ""}
-        ${editMode ? `<button class="btn btn-sm" data-show-dump title="Zobrazit výpis pozic k odeslání">📋 Výpis pozic</button>` : ""}
+        ${editMode ? `<button class="btn btn-sm" data-show-dump title="Show position dump to submit">📋 Position dump</button>` : ""}
         ${DEV_MAP_PLACEMENT ? `<button class="btn btn-sm map-edit-toggle" data-edit-toggle>${editMode ? "✓ Done" : "📍 Place nodes"}</button>` : ""}
       </div>
     </div>
@@ -501,7 +505,7 @@ function editPanelHtml() {
   }).join("");
   return `
     <div class="map-edit">
-      <p class="map-edit-hint">Vyber uzel (klikni na jeho tečku na mapě nebo na čip níže), pak klikni na mapu, kam patří. Klikáním do prázdna pozici dolaď. Nakonec klikni na <strong>📋 Výpis pozic</strong> nahoře a pošli mi ten výpis.</p>
+      <p class="map-edit-hint">Pick a node (click its dot on the map or the chip below), then click the map where it belongs. Click empty space to fine-tune. Finally click <strong>📋 Position dump</strong> above and send me the dump.</p>
       <div class="map-chips">${chips}</div>
     </div>`;
 }
@@ -518,12 +522,12 @@ function openPositionsModal() {
   overlay.className = "modal-overlay map-pos-modal";
   overlay.innerHTML = `
     <div class="modal map-pos-card">
-      <h3 style="margin:0 0 8px">📋 Výpis pozic uzlů</h3>
-      <p style="margin:0 0 10px;font-size:12px;opacity:0.8">Zkopíruj celý výpis a pošli mi ho – přepíšu ho natvrdo do <code>data/areas.js</code> a bude i na produkci.</p>
+      <h3 style="margin:0 0 8px">📋 Node position dump</h3>
+      <p style="margin:0 0 10px;font-size:12px;opacity:0.8">Copy the whole dump and send it to me – I'll hardcode it into <code>data/areas.js</code> and it'll ship to production.</p>
       <textarea class="map-pos-dump" readonly rows="10">${positionsDump()}</textarea>
       <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
-        <button class="btn btn-sm" data-copy>📋 Kopírovat</button>
-        <button class="btn btn-sm" data-close>Zavřít</button>
+        <button class="btn btn-sm" data-copy>📋 Copy</button>
+        <button class="btn btn-sm" data-close>Close</button>
       </div>
     </div>`;
 
@@ -544,8 +548,8 @@ function openPositionsModal() {
       document.execCommand("copy");
     } catch {}
     const b = e.currentTarget;
-    b.textContent = "✓ Zkopírováno";
-    setTimeout(() => (b.textContent = "📋 Kopírovat"), 1500);
+    b.textContent = "✓ Copied";
+    setTimeout(() => (b.textContent = "📋 Copy"), 1500);
   });
   overlay.querySelector("[data-close]").addEventListener("click", close);
   overlay.addEventListener("click", (e) => {

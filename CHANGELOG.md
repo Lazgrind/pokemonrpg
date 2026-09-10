@@ -6,6 +6,146 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.96.0] – 2026-09-10 · HM system: real, reusable teachable moves (canonical)
+### Added
+- **Full Gen 1 HM system** (`data/hms.js`, `data/hmCompat.js`, `src/systems/hmSystem.js`): **HM01 Cut · HM02 Fly · HM03 Surf · HM04 Strength · HM05 Flash** are now real teachable moves. Unlike TMs, **HMs are reusable — never consumed** and teachable to any number of compatible Pokémon (canonical behavior). HM ownership = holding the HM key item in `resources.items` (never decremented). **The existing story-flag gating is unchanged** (S.S. Anne / Safari / Warden / Route 9 still hand out the HMs the same way).
+- **Per-species canonical HM compatibility for all 151** (`data/hmCompat.js`): regenerated 1:1 from PokeAPI Gen 1 (Red/Blue, machine method) via the extended `tools/fetch_tm_compat.ps1` (now emits both TM and HM tables). E.g. only Water/strong lines learn Surf, only winged learn Fly, Mew learns all 5.
+- **"Teach HM" section on the Pokémon card** (`src/ui/pokemonCard.js`): mirrors "Teach TM" — dropdown of compatible HMs the Pokémon can learn, with the same full-slot "choose a move to forget" flow. HMs stay available after teaching (reusable).
+- **HM02 Fly item + move** (`data/items.js`, `data/moves.js`): `hm02-fly` key item and the `flash` move (Normal status, lowers target accuracy) were added. Fly is granted alongside HM01 Cut at the S.S. Anne captain event (thematically travel; Cut is the canonical prerequisite for reaching Fly). **Fly is a battle-only two-turn Flying attack — NOT fast-travel** (the game uses a clickable idle map).
+### Changed
+- **Auto level-up never overwrites player-taught TM/HM moves** (`src/systems/pokemonSystem.js`): TM/HM-taught slots are now marked `taught: true`. The auto moveset rebuild (`learnLevelUpMoves` auto path, `repairWeakMoveset`) pins taught moves first so they're never dropped, and `setActiveMoves` preserves the `taught` flag through reshuffles. The manual level-up flow is unchanged (the player still explicitly chooses what to replace).
+### Notes
+- Save bumped to **v44**: players past S.S. Anne get HM02 Fly + `hasFly` backfilled. Dive is intentionally **not** an HM (it isn't a Gen 1 HM) — it stays a regular move. HM data was fetched from PokeAPI directly during development, so `data/hmCompat.js` is already populated.
+
+## [0.95.0] – 2026-09-10 · Battle engine finished: Bide implemented + Fly/Dive two-turn fixes
+### Added
+- **Bide is now a real move** (`src/systems/battleSystem.js`, `data/moves.js`): previously a placeholder no-op (it's Brock's TM34 reward). It now **stores damage for 2 turns and strikes back for ×2**. The user is locked into Bide while charging (via `lockedAction`, mirroring the two-turn charge lock), all attack damage taken accumulates in `volatile.biding`, and on release it deals double the total to the opponent (or "failed" if no damage was stored). No PP is spent on the forced storing turns, and biding clears naturally on switch/faint (transient volatile state).
+- **HM02 Fly added as a battle move** (`data/moves.js`): Flying, 90 power / 95 acc, `twoTurn`. The engine already referenced `fly` in `TWO_TURN_MSG` and `INVULN_CHARGE_MOVES` (semi-invulnerable charge turn), so this fills a dangling reference — Fly now charges turn 1 (untouchable) and hits turn 2, like Dig/Bounce.
+### Fixed
+- **Dive is now actually a two-turn move** (`data/moves.js`): it was listed in `INVULN_CHARGE_MOVES` but was missing `effect: { kind: "twoTurn" }`, so it behaved as a plain one-turn attack and never went semi-invulnerable. Added the effect so it dives (untouchable) turn 1 and surfaces to hit turn 2.
+### Notes
+- With Bide done, the deferred move-effect list from v0.61.0 is closed. **Haze** (wipes all stat stages both sides) and **Metronome** (calls a random non-blocked move) were already implemented in an earlier version; the backlog note listing them as pending was simply stale — verified against the code. The battle engine's `effect` handling is now feature-complete for Gen 1.
+
+## [0.94.0] – 2026-09-10 · Poké Ball completion: progression-gated unlocks + Dusk/Dive balls
+### Changed
+- **Ball tiers now unlock from real progress (badges)** (`src/systems/pokeballSystem.js`): `unlockedBallTier()` used to read the never-written `progress.tier` seam (so only the tier-1 starter set was ever purchasable). It now derives from **earned badges** — 0–1 badges → tier 1, 2–4 → tier 2, 5+ → tier 3 — so Great/Ultra/Net/Repeat/Timer/Love/Heavy/Level/Fast/Dream/Moon/Luxury (and the new Dusk/Dive) actually become buyable as you beat gyms. An explicit `progress.tier` can still only raise the tier (dev/future). No save migration.
+- **TM compatibility rewritten from canonical data** (`data/tmCompat.js`): the previous per-species TM lists were systematically under-listed. Regenerated 1:1 from PokeAPI Gen 1 (Red/Blue, machine method) mapped to our TM numbering (`tools/fetch_tm_compat.ps1`), fixing hundreds of false negatives (e.g. Machamp now learns Earthquake/Counter/Rock Slide/Hyper Beam) and removing wrong entries (Bulbasaur line no longer "learns" Self-Destruct).
+### Added
+- **Dusk Ball & Dive Ball are now real, buyable balls** (`data/pokeballs.js`, `src/systems/pokeballSystem.js`): moved out of the `comingSoon` reserve into tier 3. **Dusk Ball** ×3 in cave areas (`biome:"cave"`), **Dive Ball** ×3.5 in water areas (`biome:"water"`). New declarative bonus types `darkPlace`/`waterPlace`; `catchContext()` now passes the active area's `biome`.
+- **Locked-ball preview in the Poké Ball shop** (`src/ui/buildingView.js`, `css/main.css`): the shop now shows the next-tier balls dimmed with a **🔒 N badges** hint (below the sellable list), so tier progression is visible. Non-sellable balls (Master + remaining `comingSoon`) stay hidden.
+### Notes
+- Remaining `comingSoon` balls (Lure/Safari/Sport/Park/Cherish/Premier/Friend) still need mechanics we don't have yet (fishing, events, friendship), so they're honestly left reserved rather than faked. HMs remain out of scope.
+
+## [0.93.0] – 2026-09-10 · TM system (all 50 Gen 1 TMs, canonical sources & compatibility)
+### Added
+- **Full Gen 1 TM system** (`data/tms.js`, `data/tmCompat.js`, `src/systems/tmSystem.js`): all **TM01–TM50** implemented as single-use items (`💿`, id `tm01`..`tm50`) stored in the generic `resources.items` map (no save migration). Each TM teaches its canonical move; teaching consumes 1 TM. Per-species canonical compatibility for all 151 Pokémon (`TM_COMPAT`, e.g. Caterpie/Weedle/Magikarp/Ditto learn none, Mew learns all 50).
+- **Teach TMs from a Pokémon's card** (`src/ui/pokemonCard.js`): new **"Teach TM"** section — a dropdown of TMs the selected Pokémon can currently learn (owned ∩ compatible ∩ not-yet-known) + **Teach**. If it already knows 4 moves, a slot-picker asks which move to forget (with Cancel).
+- **Canonical ways to obtain TMs, "as in the games":**
+  - **Gym Leader rewards** (`src/systems/battleSystem.js`): beating a leader grants their canonical TM once with the badge — Brock → TM34 Bide, Misty → TM11 Bubble Beam, Lt. Surge → TM24 Thunderbolt, Erika → TM21 Mega Drain, Koga → TM06 Toxic, Sabrina → TM46 Psywave, Blaine → TM38 Fire Blast, Giovanni → TM27 Fissure.
+  - **Poké Mart** (`data/items.js`, `buildingView.js`): buyable TMs in a new **TMs** shop category (only priced TMs are stocked): TM01/03/05/09/10/15/17/26/32/33/39/44/45/50.
+  - **Game Corner prizes** (`storyBuildingView.js`): coin-exchange TMs — TM13 Ice Beam (4400), TM23 Dragon Rage (3300), TM48 Rock Slide (5500).
+  - **Rare wild battle drops** (`src/systems/battleSystem.js`): ~1.5% chance a wild win drops a random TM.
+- **Bag TM section** (`src/ui/bagView.js`): read-only **TMs** list showing your TM stock with a hint that teaching happens on the Pokémon card (shown only when you own at least one).
+- **4 missing Gen 1 TM moves added** (`data/moves.js`): Razor Wind, Egg Bomb, Psywave, Bide (Psywave uses fixed power and Bide is a placeholder no-op, as the engine lacks variable/turn-delayed damage).
+### Notes
+- TMs reuse the generic item/shop/bag plumbing (`getItem`, `buyItem`, `itemCount`), so no save-version bump was needed (`resources.items` is lazily initialized). HMs (Cut/Surf/…) stay separate key items — not part of the TM system.
+
+## [0.92.0] – 2026-09-10 · Big bundle: level cap, hidden species, move effects, held-item UI + full English UI
+### Added
+- **Optional level cap by story progress** (`src/systems/progression.js`, `src/core/state.js`, `src/ui/settingsView.js`): new **Game rule "Level cap"** (off by default). When on, Pokémon can't out-level the next challenge — the cap is the ace level of the next *unbeaten* gym leader (Brock 14 → Misty 21 → Lt. Surge 24 → Erika 29 → Koga 43 → Sabrina 43 → Blaine 47 → Giovanni 50), then the Elite Four / Champion ace once all 8 badges are earned, then removed entirely (MAX_LEVEL 100) after becoming Champion. Implemented centrally in `grantXp()` so every XP source (battle, daycare, idle) honours it with no caller changes. `currentLevelCap()` derives the cap from `GYMS`/`trainers.js` data. Safe on old saves (rule absent → off, no migration).
+- **Per-area catch progress** (R-023, `src/systems/pokedex.js`, `src/ui/battleView.js`): the Battle Area header now shows a small **`🔴 caught/total`** badge for the current wild area (not on the map node — that was too cramped), so "catch 'em all" in each area becomes a visible goal. New `areaCatchProgress(area)` helper counts owned species out of the area's pool.
+- **Held-item equip/unequip UI outside breeding** (`src/ui/pokemonCard.js`): the Pokémon card now has a proper held-item section — a dropdown of owned held items + **Equip**/**Unequip** buttons, so you can manage held items anywhere, not just in the daycare/breeding screen.
+- **New held items** (`data/items.js`): **Sitrus Berry** (restores 30 HP below 50%, consumed), **Focus Sash** (survive a would-be KO from full HP with 1 HP, consumed). Both buyable in the Poké Mart Held Items section.
+### Changed
+- **More move effects implemented** (`data/moves.js`, `src/systems/battleSystem.js`):
+  - **Haze** now clears all stat-stage changes (and crit-rate boosts) on both combatants.
+  - **Metronome** now actually fires a random usable move (via a dedicated resolver so it doesn't re-trigger can't-act/PP gates).
+  - **Dig / Bounce / Fly / Dive** now grant semi-invulnerability during their charge turn — targeted damaging moves miss the charging Pokémon that turn (multi-turn releases like Solar Beam / Hyper Beam still connect).
+- **Full English UI conversion:** remaining Czech player-facing strings were translated to English across **Settings** (panel/layout/rules labels + dev feedback), **Map** (dev placement hints, position-dump modal), **Dev tools** (all 26 story checkpoint labels), the **title screen** ("Ready – click to enter"), and the Pokémon card ("Male"/"Female", "Evolves with a stone"). Code comments stay Czech by project convention.
+### Notes
+- Level cap is a **rule toggle**, so nothing changes for existing players unless they opt in. Focus Sash / Sitrus Berry reuse existing battle hooks (`focusSash`, `lowHpHeal`); Choice items were intentionally deferred (they'd require move-locking + manual-battle UI enforcement). Bide/Fly-as-a-move have no data entry, so no dead engine cases were added.
+
+## [0.91.0] – 2026-09-10 · Per-area wild level ranges
+### Added
+- **Per-area level ranges for wild Pokémon** (`data/areas.js`): wild encounters used to spawn at a flat `recommendedLevel`..`recommendedLevel+1` for the *whole* area. New `AREA_LEVELS` table maps each route/cave `id` → canonical `[min, max]` band (e.g. Route 1 `Lv 2–4`, Viridian Forest `Lv 3–6`, Power Plant `Lv 20–26`, Victory Road `Lv 36–44`, Cerulean Cave `Lv 46–60`), so battles across Kanto track story progression and feel varied. Helpers `areaLevelRange(area)` (explicit band, else fallback to the old `recommendedLevel`..+1) and `rollAreaLevel(area)` (uniform inclusive roll). Kept as a single tunable table like `RARITY_WEIGHTS`.
+- **UI shows the band:** map node labels (`mapView.js`) and the Pokédex "Where to catch" list (`pokemonCard.js`) now display `Lv min–max` instead of a single `Lv X` / `Lv X+`.
+### Changed
+- **`spawnEnemy()`** (`src/systems/battleSystem.js`) now rolls the wild level via `rollAreaLevel(area)` instead of `recommendedLevel + rand(0..1)`. Fully backwards compatible: any area not listed in `AREA_LEVELS` falls back to the previous behaviour. No save-version bump (spawn levels are transient).
+### Notes
+- Level bands are a **design choice, easy to retune** in one place (`AREA_LEVELS`). They loosely follow Gen 1 canon while staying monotonic-ish along the story path.
+
+## [0.90.1] – 2026-09-10 · Gen 1 polish: rarity consistency + data integrity audit
+### Fixed
+- **Rarity consistency across areas** (`data/areas.js`): three species were tagged inconsistently between areas (rare in one place, accidentally plain-string `common` in another). Unified them so grinding an area feels the same everywhere the mon appears:
+  - `sandshrew` → `uncommon` on **Route 4** (it was already `uncommon` on all 7 other routes it spawns on).
+  - `tentacruel` → `uncommon` on **Route 19 & Route 20** (matches Route 21; it's Tentacool's evolution, so it shouldn't be as common as the base form).
+  - `dugtrio` → `uncommon` in **Diglett's Cave** (evolved form should be rarer than Diglett).
+### Notes
+- **Data integrity audit (no code change needed):** cross-checked every species id in `areas.js` against `pokemon.js` (94 unique — all exist), every move id in `learnsets.js` against `moves.js` (394 — all exist), every learnset species against `pokemon.js`, and all evolution targets. **Everything resolves; no broken references.** A false-positive claim that `nidoran-m`/`nidoran-f`/`mr-mime` lacked learnsets was verified against `learnsets.js` (they're present at lines 518/471/2007) and dismissed.
+- As always, rarity changes **frequency only, never availability** — all three species remain catchable; they just spawn a bit less often in the corrected spots.
+
+## [0.90.0] – 2026-09-10 · Auto catch: "New species" filter
+### Added
+- **Auto catch "New species" filter.** The auto-catch control is now a compact **drop-down multi-select**: one small button (`Catch: …`) in the Battle Area toolbar opens a panel with checkboxes **All / New / Shiny** — tick any combination (they combine with **OR**). *New* means `!ownsSpecies(enemy)`, so it's the set-and-forget way to complete the Pokédex during idle auto-battle (especially valuable now that spawns are rarity-weighted). Stays a single collapsed control so the toolbar remains short, but you can select several options at once.
+### Changed
+- **Autocatch state model:** `settings.autocatch.mode` (`"none"|"all"|"shiny"`) → independent booleans `catchAll` / `catchNew` / `catchShiny` that combine with **OR**. The dropdown just encodes the useful combinations onto those booleans. `getAutocatch()` migrates old saves lazily (all→catchAll, shiny→catchShiny) — no save-version bump needed; `setAutocatch()` rewrites the clean shape on first change.
+### Notes
+- Autocatch behaviour is unchanged otherwise: it still throws at **full power / full HP** every turn (per user: "hází na plno, kdo nechce být u toho, ať trpí") and auto-battle may KO the target first — wild targets simply respawn later. Dedicated autocatch ball selector and auto-off-when-empty are unchanged.
+
+## [0.89.0] – 2026-09-10 · Wild encounter rarities (weighted route spawns)
+### Added
+- **Rarity/weight system for wild spawns** (`data/areas.js`): each entry in an area's `species` is now either a plain string (tier `common`) or an object `{ id, rarity }` where `rarity` ∈ `uncommon` / `rare` / `veryrare`. New `RARITY_WEIGHTS` (`common:40, uncommon:15, rare:5, veryrare:1`) + helper `areaEncounters(area)` normalises the mixed list into `[{ id, weight }]`.
+- **Weighted spawn selection** (`src/systems/battleSystem.js`): new `pickWeighted()`; `spawnEnemy()` now rolls the wild species by weight instead of uniform random. Fully backwards compatible — legacy plain-string pools behave as all-common.
+- **Canonical rarities tagged across all Kanto routes/caves:** iconic uncommons (Pikachu in Viridian Forest, Clefairy in Mt. Moon, Abra on Cerulean/Saffron routes, Growlithe/Vulpix, Ponyta on Cycling Road, Electabuzz/Magmar in Power Plant…) are `rare`; Safari Zone / Cerulean Cave super-rares (Chansey, Kangaskhan, Scyther, Pinsir, Tauros, Dratini/Dragonair, Lickitung) are `veryrare`; evolved wild forms (Raticate, Fearow, Sandslash, Dugtrio, Kadabra, Machoke, Graveler, Golbat…) are `uncommon`.
+### Fixed
+- **`[object Object]` crash / rarity regression:** consumers of `area.species` that still assumed plain strings broke once entries became `{ id, rarity }` objects. Route-trainer team generation (`data/trainers.js` `poolForArea`), egg drops (`eggSystem.js rollEggDrop`) and the Pokédex "where to catch" (`pokedex.js areasForSpecies`) now use the new `areaSpeciesIds(area)` / `speciesEntryId(entry)` helpers to normalise the mixed list to plain ids. Fixes `Uncaught Error: Neznámý druh Pokémona: [object Object]` in auto battle.
+- **Pokémon could end up with 8 moves instead of 4:** `balancedMovesetIds()` used `status.slice(-statusSlots)`, and when all 4 slots were filled by attacking moves `statusSlots` was `0` → `slice(-0)` === `slice(0)` returned the **entire** status list, appending every status move. Now guarded (`if (statusSlots > 0)`). Save migration **v43** re-trims existing over-stuffed movesets to `MAX_MOVES` (dedup by id, keep first 4).
+### Notes
+- Rarity changes **frequency only, never availability**: no species has weight 0, so all 151 remain catchable in a single playthrough (per the full-dex rule) — `veryrare` (weight 1 vs common 40) is just a long idle grind, not impossible. Nothing was removed from any area's pool. Weights live in one constant (`RARITY_WEIGHTS`) — easy to retune.
+- `jscheck.py` now also covers `data/areas.js`.
+
+## [0.88.0] – 2026-09-10 · Gym Challenges: interactive minigames before gym battles (Vermilion, Fuchsia, Saffron)
+### Added
+- **Gym Challenges Framework** (`src/ui/gymChallengeView.js`): reusable data-driven registry of mini-games per gym. Exports `hasGymChallenge(gymId)`, `isGymChallengeDone(gymId)`, `startGymChallenge(gymId, { onComplete })`. Challenges are **mandatory** pre-fight puzzles (thematic, faithful to canon): they gate the entire gym — no gym trainer or leader can be fought until the puzzle is solved.
+- **Vermilion Gym Challenge – Trash Can Puzzle (Surge):** clickable 3×5 grid of trash cans. Find and flip the first switch → second switch must be in an adjacent can → wrong guess resets the lock. Mimics the Red/Blue/Yellow puzzle. Completion flag `state.story.vermilionGymSwitches` (repurposed from old flavour status). Once solved, gym leader battles unlock; previously locked trainers open with a card "🧩 Gym Challenge → Start Challenge" in Gym tab.
+- **Fuchsia Gym Challenge – Invisible-Wall Maze (Koga):** 5×5 tile maze with hidden walls. Step from the bottom entrance up to Koga (🥷) by clicking highlighted adjacent tiles; bumping a hidden wall reveals it (🧱) so you feel your way through. Fixed, guaranteed-solvable layout. Completion flag `state.story.fuchsiaGymWalls` (repurposed from old flavour popup). Replaces the old Koga flavour popup.
+- **Saffron Gym Challenge – Teleport Pads (Sabrina):** 3×3 grid of warp pads with one fixed correct sequence of 4 pads to reach Sabrina. Correct pad hums and locks lit; a wrong pad warps you back to the entrance (maze never re-shuffles, so it's a fair memory puzzle). Completion flag `state.story.saffronGymIntro` (repurposed from old flavour popup). Shows only after Silph Co. is freed (existing story gate). Replaces the old Sabrina flavour popup.
+- **Gym Challenge UI Integration** (`src/ui/gymView.js`): challenge gate check before starting trainer battles. Guards `started`/`cleared` skip minigame for old saves (backwards compatible, no save migration needed). Challenge card displays in Gym tab when unsolved.
+- **CSS styling** (`css/main.css`): new sections for `.gym-challenge-card`, `.gym-challenge-modal`, `.gc-cans` grid layout, `.gc-can` / `.gc-can.on` states, `.gc-win` completion state.
+### Changed
+- **Gym Tab Lock:** Trainers and gym leader remain locked until challenge is solved (if challenge exists). Old saves with `started` or `cleared` flags bypass the challenge entirely.
+### Notes
+- All three interactive challenges (Vermilion, Fuchsia, Saffron) share the same data-driven `gymChallengeView.js` registry — adding another gym is just one registry entry + a `build()` function.
+- Blaine's quiz (v0.77.0) remains unchanged (already interactive); Surge/Koga/Sabrina puzzles replace their old flavour popups. Pewter/Cerulean/Celadon/Viridian are canonically puzzle-free → no challenge.
+- Sprite-less: puzzle uses emoji grid + CSS only; no new assets required.
+
+## [0.87.0] – 2026-09-10 · Interaktivní obřad u Oaka + stažitelný diplom + přepínač Shiny Charmu
+### Added
+- **Slavnostní obřad udělení diplomu u Prof. Oaka** (`src/ui/diploma.js` → `startDiplomaCeremony`). Po zkompletování dexu a kliknutí na „Show Prof. Oak your completed Pokédex" proběhne vícekrokový dialog se **spritem Oaka** (`assets/npc/oak.png`): (1) gratulace → (2) vizuální **Diplom** + stažení → (3) předání **Shiny Charmu** (sprite vedle Oaka) → (4) poděkování. Flagy (`story.dexDiploma`, `story.shinyCharm`) se nastaví AŽ na konci obřadu (přeruší-li ho hráč, tlačítko u Oaka zůstane → žádný softlock).
+- **Reálný stažitelný diplom (PNG).** `renderDiplomaCanvas()` vykreslí certifikát 1000×720 na `<canvas>` (krémový gradient, dvojitý zlatý rámeček, jméno trenéra, počet druhů, Shiny Charm, odznaky/čas/datum, podpis „Prof. Oak"). `downloadDiplomaPng()` stáhne jej jako `pokedex-diploma-<jmeno>-<datum>.png`. `showDiplomaModal()` ho ukáže vizuálně v okně s tlačítky „⬇ Download PNG" a „Close" (podpora `onClose` callbacku pro navázání obřadu).
+- **Stažení diplomu i později z Profilu.** V záložce Profile přibylo tlačítko „🎓 View / Download Diploma" (jen když `story.dexDiploma`) → otevře `showDiplomaModal`.
+- **Přepínač Shiny Charmu v horní liště** (`src/main.js` `renderResourceBar`). Zobrazí se JEN když hráč Charm vlastní (`story.shinyCharm`). Klik přepíná `settings.shinyCharmActive` (ON = ×3 shiny, OFF = vypnuto). Vizuál: zlatá záře (ON) / ztlumeno (OFF).
+### Changed
+- **Shiny Charm respektuje přepínač.** Spawn (`battleSystem.spawnEnemy`) i breeding (`breedingSystem`) násobí šanci na shiny jen když `story.shinyCharm && settings.shinyCharmActive !== false`.
+- **Profil**: řádek „Shiny Charm" nově rozlišuje „✨ Active (×3 shiny)" vs „✨ Owned (off)"; řádek „Dex Diploma" ukazuje „🎓 Earned" / pobídku k návštěvě Oaka.
+- **Save migrace v42:** doplní `settings.shinyCharmActive = true` (výchozí zapnuto; koho se netýká, přepínač neuvidí). `VERSION` = 0.87.0, save v42.
+### Notes
+- Sprite Shiny Charmu (`assets/items/shiny-charm.png`) zatím neexistuje → fallback ✨ glyf (viz docs/SPRITES-TODO.md).
+
+## [0.86.0] – 2026-09-10 · Pokédex Diploma + Shiny Charm (capstone Gen 1)
+### Added
+- **Pokédex Diploma (Prof. Oak reward).** When player collects all 151 unique species, they must visit **Oak's Lab** (Pallet Town) and interact with **Prof. Oak** → button appears: "Show Prof. Oak your completed Pokédex" → triggers reward popup with **Pokédex Diploma** (one-time, flag `dexDiploma`). No auto-trigger; player action required. Visually confirmed in **Profile tab** (new row: "Dex Diploma" → "Complete!" when `dexCounts.caught >= total`).
+- **Shiny Charm (multiplier ×3).** Awarded alongside Diploma via same Oak's Lab interaction (flag `shinyCharm` in `state.story`). Globally multiplies shiny spawn chance by **3×** via constant `SHINY_CHARM_MULT` in `pokemonSystem.js`. Applied in two contexts: (1) wild spawns via `battleSystem.spawnEnemy(shinyChance * SHINY_CHARM_MULT)`, (2) breeding via `breedingSystem.BREED_SHINY_CHANCE * shinyCharmMult`. Displayed in Profile as "Shiny Charm: Active ×3" or "—" when inactive.
+- **Save migration v41:** retroactive grant for users with all 151 species already caught (anti-softlock: `dexCounts.caught >= 151` → set both flags without popup).
+### Changed
+- **Dev tool `devCompleteDex()`** in `devTools.js` — fills all 151 species into collection; does **NOT** grant Diploma/Charm (player must still visit Oak's Lab).
+- **Function `grantDexDiploma()`** in `team.js` called by Oak's Lab view; applies both flags and popup.
+- **Oak's Lab interaction** (`storyBuildingView.js`) handles button and triggers reward.
+- **Version 0.86.0**, save v41.
+### Notes
+- Diploma + Charm awarded only via player action at Oak's Lab, not automatic upon 151st catch.
+- Shiny Charm persists for remainder of game.
+
 ## [0.85.0] – 2026-09-09 · Kompletace Gen 1 dexu – uzavření posledních děr (Poliwag linie + Mew)
 ### Added
 - **Poliwag linie do spawnů.** Audit dexu odhalil, že Poliwag/Poliwhirl/Poliwrath nebyli nikde získatelní (a tím pádem ani **Jynx** přes Cerulean Trade House). `poliwag` doplněn do `data/areas.js`: Route 22, Route 24, Route 25, Route 6 a Seafoam Islands; `poliwhirl` navíc do Seafoam Islands (přímý záložní odchyt). Poliwrath = Water Stone na Poliwhirl.

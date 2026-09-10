@@ -14,9 +14,13 @@ import { getState, commit } from "../core/state.js";
 import { openMainTab } from "./mainPanel.js";
 import { openStarterModal } from "./starterModal.js";
 import { getStarterSpeciesId, acquirePokemon, ownsSpecies } from "../systems/team.js";
+import { dexCounts } from "../systems/pokedex.js";
+import { startDiplomaCeremony } from "./diploma.js";
 import { healTeam, teamNeedsHeal, startTrainerBattle, giftLevel, tradePokemon, startStaticEncounter } from "../systems/battleSystem.js";
 import { createPokemon } from "../systems/pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
+import { TMS, getTm, tmDisplayName } from "../../data/tms.js";
+import { grantTm } from "../systems/tmSystem.js";
 import { showPopup } from "./popup.js";
 
 /** Kolik Potionů dá máma (jednorázově). Poké Bally už hráč má ve startu. */
@@ -240,11 +244,28 @@ function oakLabView() {
     : `<p class="story-text">"Welcome! Choose your very first partner."</p>
        <button class="btn" data-choose-starter>Choose your starter</button>`;
 
+  // Capstone Gen 1: kompletní dex → Oak udělí Diplom + Shiny Charm (jednorázově).
+  const { caught, total } = dexCounts();
+  let diploma = "";
+  if (storyFlag("dexDiploma")) {
+    diploma = `<hr class="story-sep">
+      <p class="story-text">"You completed the entire Pokédex — you are a true Pokémon Master! That Shiny Charm is yours to keep."</p>
+      <p class="placeholder">🎓 Pokédex Diploma earned · ✨ Shiny Charm active</p>`;
+  } else if (hasStarter && caught >= total) {
+    diploma = `<hr class="story-sep">
+      <p class="story-text">"Wait... your Pokédex — is it truly complete?! Show me!"</p>
+      <button class="btn" data-claim-diploma>🎓 Show Prof. Oak your completed Pokédex</button>`;
+  } else if (hasStarter) {
+    diploma = `<hr class="story-sep">
+      <p class="placeholder">Pokédex progress: ${caught} / ${total} caught. Complete it and Prof. Oak has a special reward for you!</p>`;
+  }
+
   return {
     title: "🔬 Oak's Lab",
     body: `
       <p class="story-text">Professor Oak looks up from his research.</p>
       ${action}
+      ${diploma}
     `,
   };
 }
@@ -564,6 +585,14 @@ function gameCornerView() {
           }).join("")}
         </div>
         <p class="placeholder">The clerk winks: "That <strong>Porygon</strong> is one of a kind — you'll only ever get one here."</p>
+
+        <h3 class="gc-h">💿 TM Prizes</h3>
+        <div class="gc-row gc-prizes">
+          ${TMS.filter((tm) => tm.coins).map((tm) => {
+            const afford = coins >= tm.coins;
+            return `<button class="btn btn-sm gc-prize" data-buy-tm="${tm.num}" ${afford ? "" : "disabled"}>${tmDisplayName(tm)} — ${tm.coins} 🪙</button>`;
+          }).join("")}
+        </div>
       `,
     };
   }
@@ -735,6 +764,20 @@ function wire(storyKey, overlay, onStatus, render, close) {
     openStarterModal();
   });
 
+  // Oak's Lab – capstone: hráč s kompletním dexem ukáže Oakovi Pokédex. Spustí se
+  // slavnostní obřad (viz diploma.startDiplomaCeremony): gratulace → vizuální Diplom
+  // + stažení → předání Shiny Charmu → poděkování. Flagy nastaví až obřad na konci.
+  overlay.querySelector("[data-claim-diploma]")?.addEventListener("click", () => {
+    const { caught, total } = dexCounts();
+    if (caught < total) {
+      onStatus("Your Pokédex isn't complete yet.");
+      render();
+      return;
+    }
+    close(); // Oak's Lab zavřeme, scénu přebírá obřad (řetězené popupy + diplom)
+    startDiplomaCeremony({ onStatus });
+  });
+
   // Oak's Lab – doručení Oak's Parcel: odemkne sever (Route 2) + Poké Bally.
   overlay.querySelector("[data-deliver-parcel]")?.addEventListener("click", () => {
     const s = getState();
@@ -901,6 +944,25 @@ function wire(storyKey, overlay, onStatus, render, close) {
       acquirePokemon(createPokemon(id, lvl));
       const name = getSpecies(id)?.name ?? id;
       onStatus(`You exchanged ${prize.cost} coins for a ${name} (Lv. ${lvl})!`);
+      render();
+    });
+  });
+
+  // Game Corner – TM prize corner: coiny za TM (opakovaně, konzumovatelný item).
+  overlay.querySelectorAll("[data-buy-tm]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const num = parseInt(btn.getAttribute("data-buy-tm"), 10);
+      const tm = getTm(num);
+      if (!tm || !tm.coins) return;
+      const s = getState();
+      if ((s.resources?.coins ?? 0) < tm.coins) {
+        onStatus("You don't have enough coins for that prize.");
+        return;
+      }
+      s.resources.coins -= tm.coins;
+      grantTm(num);
+      commit();
+      onStatus(`You exchanged ${tm.coins} coins for ${tmDisplayName(tm)}!`);
       render();
     });
   });

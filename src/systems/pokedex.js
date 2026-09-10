@@ -11,7 +11,7 @@
 
 import { getState, commit } from "../core/state.js";
 import { POKEMON_SPECIES, STARTER_IDS, getSpecies } from "../../data/pokemon.js";
-import { AREAS } from "../../data/areas.js";
+import { AREAS, areaSpeciesIds, getArea } from "../../data/areas.js";
 
 /** Pokédex stav se seznamem viděných druhů (lazy default). */
 export function getPokedex() {
@@ -87,5 +87,22 @@ export function dexCounts() {
  * @returns {import("../../data/areas.js").Area[]}
  */
 export function areasForSpecies(speciesId) {
-  return AREAS.filter((a) => (a.species ?? []).includes(speciesId));
+  return AREAS.filter((a) => areaSpeciesIds(a).includes(speciesId));
+}
+
+/**
+ * Postup CHYCENÍ druhů dané oblasti (R-023): kolik z druhů oblasti hráč už
+ * CHYTIL (má v kolekci) z celkového počtu. Slouží jako cíl „vychytej oblast".
+ * @param {import("../../data/areas.js").Area|string} area  oblast nebo její id
+ * @returns {{ caught: number, total: number }}
+ */
+export function areaCatchProgress(area) {
+  const a = typeof area === "string" ? getArea(area) : area;
+  const ids = areaSpeciesIds(a);
+  if (!ids.length) return { caught: 0, total: 0 };
+  let caught = 0;
+  for (const id of ids) {
+    if (isCaught(id)) caught++;
+  }
+  return { caught, total: ids.length };
 }

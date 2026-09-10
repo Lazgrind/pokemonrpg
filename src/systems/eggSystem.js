@@ -15,6 +15,7 @@
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { getSpecies } from "../../data/pokemon.js";
+import { areaSpeciesIds } from "../../data/areas.js";
 import { learnableMovesAtLevel } from "../../data/learnsets.js";
 import { createPokemon, inheritIvs, setActiveMoves } from "./pokemonSystem.js";
 import { acquirePokemon } from "./team.js";
@@ -80,7 +81,8 @@ function makeEggId(speciesId) {
  * @returns {null | { id: string, speciesId: string }} nalezené vejce, nebo null
  */
 export function rollEggDrop(area) {
-  const species = area?.species ?? [];
+  // species položka může být string i { id, rarity } → normalizuj na ploché id.
+  const species = areaSpeciesIds(area);
   if (species.length === 0) return null;
   if (Math.random() >= EGG_DROP_CHANCE) return null;
   const speciesId = species[Math.floor(Math.random() * species.length)];

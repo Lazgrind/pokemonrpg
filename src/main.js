@@ -7,7 +7,7 @@
 
 import { VERSION } from "./core/version.js";
 import { bus, EVENTS } from "./core/events.js";
-import { getState } from "./core/state.js";
+import { getState, commit } from "./core/state.js";
 import { loadGame, newGame, saveGame } from "./systems/save.js";
 import { renderMainPanel, openMainTab } from "./ui/mainPanel.js";
 import { renderTeamTab } from "./ui/teamView.js";
@@ -114,9 +114,21 @@ function renderResourceBar(root) {
     },
     { icon: "🥚", label: "Eggs", value: (s.eggs ?? []).length },
   ];
+  // Shiny Charm přepínač – ukáže se JEN když ho hráč vlastní (odměna od Oaka za
+  // kompletní dex). Klik přepíná settings.shinyCharmActive (ON = ×3 shiny, OFF = vypnuto).
+  if (s.story?.shinyCharm) {
+    const active = s.settings?.shinyCharmActive !== false;
+    items.push({
+      icon: "✨",
+      label: `Shiny Charm — ${active ? "ON (×3 shiny)" : "OFF"} · click to toggle`,
+      value: active ? "ON" : "OFF",
+      action: "shiny-charm",
+      extraClass: `shiny-charm-toggle ${active ? "on" : "off"}`,
+    });
+  }
   root.innerHTML = items
     .map(
-      (r) => `<span class="resource${r.tooltipHtml ? " has-tooltip" : ""}${r.action ? " resource-clickable" : ""}"${r.action ? ` data-action="${r.action}" role="button" tabindex="0"` : ""}${r.tooltipHtml ? "" : ` title="${r.label}"`}>
+      (r) => `<span class="resource${r.tooltipHtml ? " has-tooltip" : ""}${r.action ? " resource-clickable" : ""}${r.extraClass ? ` ${r.extraClass}` : ""}"${r.action ? ` data-action="${r.action}" role="button" tabindex="0"` : ""}${r.tooltipHtml ? "" : ` title="${r.label}"`}>
                 ${r.iconHtml ?? `<span class="icon">${r.icon}</span>`}
                 <span class="value">${r.value}</span>
                 ${r.tooltipHtml ?? ""}
@@ -129,6 +141,14 @@ function renderResourceBar(root) {
     const open = () => {
       if (node.dataset.action === "pokedex") openMainTab("pokedex");
       else if (node.dataset.action === "profile") openMainTab("profile");
+      else if (node.dataset.action === "shiny-charm") {
+        // Přepni aktivitu Shiny Charmu (vlastnictví řeší story.shinyCharm, tady
+        // jen zap/vyp). commit() překreslí lištu a projeví se ve spawnu/breedingu.
+        const st = getState();
+        if (!st.settings || typeof st.settings !== "object") st.settings = {};
+        st.settings.shinyCharmActive = st.settings.shinyCharmActive === false;
+        commit();
+      }
     };
     node.addEventListener("click", open);
     node.addEventListener("keydown", (e) => {
@@ -283,7 +303,7 @@ function init() {
   if (titleLoading) {
     titleLoading.classList.add("is-ready");
     const readyText = titleLoading.querySelector(".title-loading-text");
-    if (readyText) readyText.textContent = "Připraveno – klikni pro vstup";
+    if (readyText) readyText.textContent = "Ready – click to enter";
   }
 
   const versionTag = el("version-tag");

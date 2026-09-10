@@ -61,7 +61,7 @@ export function openBag(onStatus = () => {}) {
   /** Seznam vlastněných consumable itemů (bez held itemů, bez evolučních). */
   function consumablesListHtml() {
     const items = ITEMS
-      .filter((it) => !isHeldItem(it.id) && it.category !== "evolution" && it.category !== "special" && itemCount(it.id) > 0)
+      .filter((it) => !isHeldItem(it.id) && it.category !== "evolution" && it.category !== "special" && it.category !== "tm" && itemCount(it.id) > 0)
       .sort((a, b) => a.name.localeCompare(b.name));
 
     const rows = items
@@ -99,6 +99,28 @@ export function openBag(onStatus = () => {}) {
       )
       .join("");
     return rows ? rows : `<p class="placeholder">No key items.</p>`;
+  }
+
+  /** Seznam vlastněných TM (read-only). Naučení tahu probíhá na kartě Pokémona
+   * (klikni na jedince → sekce „Teach TM"), tady je jen přehled zásoby. */
+  function tmListHtml() {
+    const items = ITEMS
+      .filter((it) => it.category === "tm" && itemCount(it.id) > 0)
+      .sort((a, b) => (a.tm ?? 0) - (b.tm ?? 0));
+
+    const rows = items
+      .map(
+        (it) => `<div class="bag-item-row-wrapper">
+          <div class="bag-item-row" title="${it.desc}">
+            <span>${it.icon} <strong>${it.name}</strong> <span class="placeholder">— ${it.desc}</span></span>
+            <span class="bag-count">×${itemCount(it.id)}</span>
+          </div>
+        </div>`
+      )
+      .join("");
+    return rows
+      ? `${rows}<p class="placeholder">Teach a TM from a Pokémon's card (the "Teach TM" section).</p>`
+      : `<p class="placeholder">No TMs yet. Earn them from Gym Leaders, the Game Corner, the Poké Mart, or rare battle drops.</p>`;
   }
 
   /** Seznam evolučních kamenů a Linking Cord. */
@@ -178,10 +200,16 @@ export function openBag(onStatus = () => {}) {
     const keyItemsSection = hasKeyItems
       ? `<h3 class="shop-cat">🔑 Key Items</h3>${keyItemsListHtml()}`
       : "";
+    // TM sekci ukážeme jen když nějaké TM fakt vlastníš (jinak zabírá místo).
+    const hasTms = ITEMS.some((it) => it.category === "tm" && itemCount(it.id) > 0);
+    const tmSectionHtml = hasTms
+      ? `<h3 class="shop-cat">💿 TMs</h3>${tmListHtml()}`
+      : "";
     const body = `
       <h3 class="shop-cat">🧴 Consumables</h3>
       ${consumablesListHtml()}
       ${keyItemsSection}
+      ${tmSectionHtml}
       <h3 class="shop-cat">🪨 Evolution Items</h3>
       ${evolutionItemsListHtml()}
       <h3 class="shop-cat">💎 Held Items</h3>
