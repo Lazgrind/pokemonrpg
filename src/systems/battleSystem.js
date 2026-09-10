@@ -14,9 +14,11 @@ import { bus, EVENTS } from "../core/events.js";
 import { getTeamPokemon, ownsSpecies, acquirePokemon, releasePokemon, getStarterSpeciesId } from "./team.js";
 import { getPokeball, POKEBALLS } from "../../data/pokeballs.js";
 import { ballMultiplier } from "./pokeballSystem.js";
-import { createPokemon, computeStats, STAT_KEYS } from "./pokemonSystem.js";
+import { createPokemon, computeStats, STAT_KEYS, SHINY_CHANCE, SHINY_CHARM_MULT } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
-import { getMove } from "../../data/moves.js";
+import { getMove, MOVES } from "../../data/moves.js";
+import { TMS, TM_BY_BADGE, getTm } from "../../data/tms.js";
+import { grantTm } from "./tmSystem.js";
 import { typeMultiplier } from "../../data/types.js";
 import { grantXp } from "./progression.js";
 import { rollLoot } from "./loot.js";
@@ -25,7 +27,7 @@ import { healPercent, ppRegenPercent } from "./buildingSystem.js";
 import { useItem, canUseItem, itemCount, heldItemOf } from "./itemSystem.js";
 import { getItem, ITEMS } from "../../data/items.js";
 import { markSeen, dexCounts } from "./pokedex.js";
-import { AREAS, getArea, isAreaUnlocked } from "../../data/areas.js";
+import { AREAS, getArea, isAreaUnlocked, areaEncounters, rollAreaLevel } from "../../data/areas.js";
 import { biomeBackgrounds } from "../../data/backgrounds.js";
 import {
   getTrainer,
@@ -170,7 +172,7 @@ export function makeCombatant(owned) {
   });
   // Běhové (transientní) bojové stavy – NEUKLÁDAJÍ se do save, jen inicializace.
   // stages: dočasné stupně statů (−6..+6), volatile: pomíjivé stavy (flinch,
-  // confusion, seeded, trapped, charging, locked, rageActive, substitute,
+  // confusion, seeded, trapped, charging, locked, biding (Bide), rageActive, substitute,
   // moveOverride/transformed pro Transform+Mimic, lastMoveId pro Mimic,
   // lastHitDmg/lastHitPhysical pro Counter). Spánek/zmrznutí jsou naopak TRVALÝ
   // status (owned.status). critStages: navýšená šance na krit (Focus Energy).
@@ -216,16 +218,33 @@ export function avgDamage(attacker, defender) {
   return calcMoveDamage(attacker, defender, action.move, true).dmg;
 }
 
-/** Vytvoří nového divokého nepřítele podle oblasti (druhy z area.species). */
+/**
+ * Vážený náhodný výběr z [{id, weight}] – vrátí id, nebo null když prázdné.
+ * Nulové/záporné váhy se ignorují; když je součet ≤ 0, vezme první položku.
+ */
+function pickWeighted(list) {
+  const total = list.reduce((s, e) => s + (e.weight > 0 ? e.weight : 0), 0);
+  if (total <= 0) return list[0]?.id ?? null;
+  let r = Math.random() * total;
+  for (const e of list) {
+    r -= e.weight > 0 ? e.weight : 0;
+    if (r < 0) return e.id;
+  }
+  return list[list.length - 1]?.id ?? null;
+}
+
+/** Vytvoří nového divokého nepřítele podle oblasti (druhy + rarita z area.species). */
 function spawnEnemy(area) {
-  const pool = area?.species?.length ? area.species : FALLBACK_SPECIES;
-  let id = pool[Math.floor(Math.random() * pool.length)];
-  // Guard: pokud druh neexistuje, zkus další platný z poolu, jinak fallback
+  // Vážený seznam druhů dle rarity (viz areas.js). Prázdná oblast → fallback.
+  let enc = areaEncounters(area);
+  if (!enc.length) enc = FALLBACK_SPECIES.map((id) => ({ id, weight: 1 }));
+  let id = pickWeighted(enc);
+  // Guard: pokud vylosovaný druh neexistuje, zkus další platný z poolu, jinak fallback
   let sp = getSpecies(id);
-  if (!sp && pool.length > 1) {
-    for (const candidate of pool) {
-      if (getSpecies(candidate)) {
-        id = candidate;
+  if (!sp) {
+    for (const e of enc) {
+      if (getSpecies(e.id)) {
+        id = e.id;
         sp = getSpecies(id);
         break;
       }
@@ -237,9 +256,15 @@ function spawnEnemy(area) {
     sp = getSpecies(id);
   }
   if (!sp) return null; // bezpečný fallback – nepřítel se nezadá
-  const level = Math.max(1, area.recommendedLevel) + Math.floor(Math.random() * 2);
+  // Level z per-oblast pásma (AREA_LEVELS v areas.js); fallback = recommendedLevel..+1.
+  const level = rollAreaLevel(area);
   markSeen(id); // do Pokédexu jako „viděno" (chycené se odvozují z kolekce)
-  return makeCombatant(createPokemon(id, level));
+  // Shiny Charm (odměna za kompletní dex) násobí šanci na divokého shiny.
+  // Musí být vlastněný A zapnutý v horní liště (settings.shinyCharmActive).
+  const st = getState();
+  const charmOn = st.story?.shinyCharm && st.settings?.shinyCharmActive !== false;
+  const shinyChance = SHINY_CHANCE * (charmOn ? SHINY_CHARM_MULT : 1);
+  return makeCombatant(createPokemon(id, level, { shinyChance }));
 }
 
 /**
@@ -453,6 +478,12 @@ function confusionSelfDamage(c) {
  * nebo zamčený v thrash smyčce (locked); jinak null.
  */
 function lockedAction(c) {
+  if (c.volatile?.biding) {
+    // Bide sbírá poškození několik kol – bojovník je zamčený a opakuje Bide,
+    // dokud ho neuvolní (řeší useMove). _release → nespotřebuje znovu PP.
+    const mv = getMove("bide");
+    if (mv) return { slot: c.volatile.biding.slot ?? null, move: mv, _release: true };
+  }
   if (c.volatile?.charging) {
     const mv = getMove(c.volatile.charging.moveId);
     if (mv) return { slot: c.volatile.charging.slot, move: mv, _release: true };
@@ -692,7 +723,76 @@ function chooseAction(attacker, defender) {
 }
 
 /** Hláška při nabíjení dvoukolového tahu (první kolo). */
-const TWO_TURN_MSG = { "solar-beam": "took in sunlight", "skull-bash": "tucked in its head" };
+const TWO_TURN_MSG = {
+  "solar-beam": "took in sunlight",
+  "skull-bash": "tucked in its head",
+  dig: "burrowed its way underground",
+  bounce: "sprang up high",
+  fly: "flew up high",
+  dive: "hid underwater",
+};
+
+/** Dvoukolové tahy, u kterých je nabíjecí kolo POLOnezranitelné (útok mine).
+ *  Ostatní dvoukola (Solar Beam, Skull Bash, Hyper Beam release…) sem NEPATŘÍ. */
+const INVULN_CHARGE_MOVES = new Set(["dig", "bounce", "fly", "dive"]);
+
+// ── Metronome: náhodný tah ────────────────────────────────────────────────────
+/** Tahy, které Metronome nikdy nevybere (id). */
+const METRONOME_BLOCK_IDS = new Set(["metronome", "struggle", "mirror-move", "mimic"]);
+/** Efekty se speciálním enginovým tokem, které přes Metronome nedávají smysl. */
+const METRONOME_BLOCK_EFFECTS = new Set([
+  "metronome", "twoTurn", "copyMove", "transform", "forceSwitch",
+  "counter", "fixedDamageHalf", "thrash", "substitute", "rage", "bide", "rest",
+]);
+
+/** Náhodný tah pro Metronome (útočné i jednoduché statusové; blokované vynechány). */
+function randomMetronomeMove() {
+  const pool = MOVES.filter(
+    (m) =>
+      !METRONOME_BLOCK_IDS.has(m.id) &&
+      !METRONOME_BLOCK_EFFECTS.has(m.effect?.kind) &&
+      (m.power > 0 || m.ailment || m.effect)
+  );
+  return pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+}
+
+/**
+ * Provede Metronome-vybraný tah bez „can't act" bran a bez spotřeby PP (ty už
+ * proběhly u samotného Metronome). Replikuje jádro useMove od accuracy dál:
+ * accuracy → power0 status / damage → substitute → HP → ailment → efekty.
+ * Faint řeší round loop po návratu z useMove (kontroluje hp<=0).
+ */
+function resolveMetronomeMove(attacker, defender, move, side) {
+  const accMult = accStageMult((attacker.stages?.accuracy ?? 0) - (defender.stages?.evasion ?? 0));
+  if (move.accuracy != null && Math.random() * 100 >= move.accuracy * accMult) {
+    pushLog(`But it missed!`, side);
+    return;
+  }
+  const action = { slot: null, move };
+  if (!move.power) {
+    if (move.ailment) maybeInflict(move, defender, side);
+    if (move.effect) applyMoveEffects(attacker, defender, action, side, 0);
+    return;
+  }
+  const { dmg, eff, crit } = calcMoveDamage(attacker, defender, move);
+  if (defender.volatile?.substitute > 0) {
+    const before = defender.volatile.substitute;
+    defender.volatile.substitute = Math.max(0, before - dmg);
+    const absorbed = before - defender.volatile.substitute;
+    pushLog(`The substitute took the hit! (-${absorbed})`, side);
+    if (defender.volatile.substitute <= 0) pushLog(`${defender.name}'s substitute faded!`, side);
+    return;
+  }
+  defender.hp = Math.max(0, defender.hp - dmg);
+  const note = eff > 1 ? " (super effective!)" : eff < 1 ? " (not very effective)" : "";
+  pushLog(`${defender.name} took ${dmg}${note}${crit ? " A critical hit!" : ""}`, side);
+  if (dmg > 0 && defender.volatile) {
+    defender.volatile.lastHitDmg = dmg;
+    defender.volatile.lastHitPhysical = move.category === "physical";
+  }
+  maybeInflict(move, defender, side);
+  applyMoveEffects(attacker, defender, action, side, dmg);
+}
 
 /**
  * Provede jeden tah útočníka na obránce: „can't act" brány (flinch/spánek/zmatení/
@@ -772,6 +872,52 @@ function useMove(attacker, defender, action) {
   }
   if (action._release) attacker.volatile.charging = null;
 
+  // Bide: bojovník 2 kola sbírá utržené poškození (je zamčený přes lockedAction),
+  // pak ho vrátí ×2. Poškození se načítá při zásazích do bidera (viz dále, kde se
+  // aplikuje damage do obránce). Řešeno tady, protože Bide má power 0.
+  if (move.effect?.kind === "bide") {
+    const v = attacker.volatile;
+    if (!v.biding) {
+      // Start sbírání – toto kolo se počítá, proto rovnou dekrement.
+      v.biding = { turns: 2, dmg: 0, slot: action.slot };
+      pushLog(`${attacker.name} is storing energy!`, side);
+      v.biding.turns -= 1;
+      return { dmg: 0, crit: false };
+    }
+    if (v.biding.turns > 0) {
+      v.biding.turns -= 1;
+      pushLog(`${attacker.name} is storing energy!`, side);
+      return { dmg: 0, crit: false };
+    }
+    // Uvolnění: vrať 2× nasbíraného poškození.
+    const stored = v.biding.dmg;
+    v.biding = null;
+    if (stored <= 0 || defender.hp <= 0) {
+      pushLog(`${attacker.name} unleashed its stored energy, but it failed!`, side);
+      return { dmg: 0, crit: false };
+    }
+    const dmg = stored * 2;
+    defender.hp = Math.max(0, defender.hp - dmg);
+    pushLog(`${attacker.name} unleashed its stored energy! ${defender.name} took ${dmg}`, side);
+    if (defender.volatile) {
+      defender.volatile.lastHitDmg = dmg;
+      defender.volatile.lastHitPhysical = true;
+    }
+    return { dmg, crit: false };
+  }
+
+  // Polonezranitelnost: obránce právě nabíjí Dig/Fly/Bounce/Dive (je pod zemí /
+  // ve vzduchu / pod vodou) → útok ho mine. Swift (accuracy 101) trefí vždy.
+  const defCharge = defender.volatile?.charging;
+  if (
+    defCharge &&
+    INVULN_CHARGE_MOVES.has(defCharge.moveId) &&
+    move.accuracy != null
+  ) {
+    pushLog(`${attacker.name} used ${move.name} — but ${defender.name} avoided the attack!`, side);
+    return { dmg: 0, crit: false };
+  }
+
   // Accuracy → minutí. Zohledni stupně accuracy útočníka a evasion obránce.
   const accMult = accStageMult((attacker.stages?.accuracy ?? 0) - (defender.stages?.evasion ?? 0));
   if (move.accuracy != null && Math.random() * 100 >= move.accuracy * accMult) {
@@ -823,7 +969,19 @@ function useMove(attacker, defender, action) {
     if (defender.volatile.substitute <= 0) pushLog(`${defender.name}'s substitute faded!`, side);
     return { dmg: absorbed, crit };
   }
+  const defHpBefore = defender.hp;
   defender.hp = Math.max(0, defender.hp - dmg);
+  // Bide: pokud obránce právě sbírá energii, přičti utržené poškození (vrátí ×2).
+  if (dmg > 0 && defender.volatile?.biding) defender.volatile.biding.dmg += dmg;
+  // Focus Sash: z PLNÉHO HP přežije jinak smrtící zásah s 1 HP (jednorázově).
+  if (defender.hp <= 0 && defHpBefore >= defender.stats.maxHp) {
+    const sash = heldItemOf(defender.ref);
+    if (sash?.held?.kind === "focusSash") {
+      defender.hp = 1;
+      defender.ref.heldItem = null; // spotřebuje se
+      pushLog(`${defender.name} hung on using its ${sash.name}!`, side);
+    }
+  }
   const note = eff > 1 ? " (super effective!)" : eff < 1 ? " (not very effective)" : "";
   const critNote = crit ? " A critical hit!" : "";
   pushLog(`${attacker.name} used ${move.name}! ${defender.name} took ${dmg}${note}${critNote}`, side);
@@ -1122,6 +1280,27 @@ function applyMoveEffects(attacker, defender, action, side, dmgDealt) {
       pushLog(`${origName} transformed into ${defender.name}!`, side);
       break;
     }
+    case "haze": {
+      // Vynuluje VŠECHNY stupně statů (i accuracy/evasion) a crit stupně u OBOU
+      // bojovníků – jako klasický Haze.
+      for (const c of [attacker, defender]) {
+        if (c?.stages) for (const k of Object.keys(c.stages)) c.stages[k] = 0;
+        if (c) c.critStages = 0;
+      }
+      pushLog(`All stat changes were eliminated!`, side);
+      break;
+    }
+    case "metronome": {
+      // Zamává prstem a použije náhodný tah (mimo blokovaných). Provede se rovnou.
+      const pick = randomMetronomeMove();
+      if (!pick) {
+        pushLog(`But it failed!`, side);
+        break;
+      }
+      pushLog(`Waggling a finger let it use ${pick.name}!`, side);
+      resolveMetronomeMove(attacker, defender, pick, side);
+      break;
+    }
     // highCrit/twoTurn/fixedDamageHalf/pursuit/suckerPunch: řešeno jinde nebo
     // jen plný damage – tady nic.
     default:
@@ -1225,7 +1404,7 @@ function tick() {
   const ac = getAutocatch();
   // Autocatch drží jeden vybraný typ ballu; když ten dojde, NESAHÁ po jiném –
   // rovnou se sám vypne (viditelně v UI), ať nespotřebuje prémiové míčky.
-  if (ac.enabled && ac.mode !== "none" && ballCount(ac.ball) <= 0) {
+  if (ac.enabled && autocatchActive(ac) && ballCount(ac.ball) <= 0) {
     setAutocatch({ enabled: false });
     pushLog(`Auto catch off — out of ${getPokeball(ac.ball)?.name ?? "balls"}.`);
   }
@@ -1729,6 +1908,13 @@ function handleFaint(winner) {
     // Loot: datově řízené dropy z oblasti.
     const loot = rollLoot(battle.area);
     for (const d of loot) res[d.resource] = (res[d.resource] ?? 0) + d.amount;
+    // TM drop: velmi malá šance (~1,5 %), že divoký souboj upustí náhodný TM
+    // (jakýkoli z TM01–TM50). Uloží se jako item do res.items (viz tmSystem.js).
+    let tmDrop = null;
+    if (Math.random() < 0.015) {
+      const tm = TMS[Math.floor(Math.random() * TMS.length)];
+      if (tm) { grantTm(tm.num); tmDrop = tm; }
+    }
     // Vejce: malá šance najít vejce druhu z oblasti (líhne se ve Školce).
     const egg = rollEggDrop(battle.area);
     commit();
@@ -1737,6 +1923,9 @@ function handleFaint(winner) {
     if (egg) {
       const eggName = getSpecies(egg.speciesId)?.name ?? egg.speciesId;
       pushLog(`🥚 You found a ${eggName} Egg! Hatch it at the Day Care.`);
+    }
+    if (tmDrop) {
+      pushLog(`💿 ${enemy.name} dropped TM${String(tmDrop.num).padStart(2, "0")} ${tmDrop.name}!`, "player");
     }
     if (leveled) {
       battle.player.stats = computeStats(battle.player.ref);
@@ -2104,6 +2293,16 @@ function finishTrainerBattle(t, lastEnemy) {
         badgeGain = t.badge;
       }
     }
+    // Kanonická TM odměna od gym leadera (jednorázově se ziskem odznaku).
+    // Např. Brock → TM34 Bide, Misty → TM11 Bubble Beam, Surge → TM24 Thunderbolt.
+    if (badgeGain && TM_BY_BADGE[badgeGain] != null) {
+      const tmNum = TM_BY_BADGE[badgeGain];
+      grantTm(tmNum);
+      const tmObj = getTm(tmNum);
+      if (tmObj) {
+        pushLog(`${t.name} gave you TM${String(tmNum).padStart(2, "0")} ${tmObj.name}!`, "player");
+      }
+    }
     // Věrný Kanto: první zisk Boulder Badge (Brock) = drobná odměna + gratulace
     // v samostatném okně (info o otevřené Route 3). Jednorázově (story flag).
     if (badgeGain === "boulder-badge") {
@@ -2339,13 +2538,18 @@ function finishTrainerBattle(t, lastEnemy) {
       if (!s.story.ssAnneCleared) {
         s.story.ssAnneCleared = true;
         s.story.hasCut = true;
+        s.story.hasFly = true;
         if (!s.resources.items) s.resources.items = {};
         s.resources.items["hm01-cut"] = (s.resources.items["hm01-cut"] ?? 0) + 1;
-        pushLog("The S.S. Anne captain gave you HM01 Cut!", "player");
+        // HM02 Fly: kapitán (téma cestování) přidá i letecký HM. HM je znovupoužitelný
+        // (nespotřebuje se), Fly je čistě bojový dvoutahový Flying útok – ne cestování.
+        if ((s.resources.items["hm02-fly"] ?? 0) < 1) s.resources.items["hm02-fly"] = 1;
+        pushLog("The S.S. Anne captain gave you HM01 Cut and HM02 Fly!", "player");
         bus.emit(EVENTS.STORY_POPUP, {
-          title: "🌿 HM01 Cut!",
-          body: `<p class="story-text">With the rival gone, you help the ship's seasick captain feel better. Grateful, he hands you a Hidden Machine.</p>
+          title: "🌿 HM01 Cut & 🕊️ HM02 Fly!",
+          body: `<p class="story-text">With the rival gone, you help the ship's seasick captain feel better. Grateful, he hands you two Hidden Machines.</p>
             <p class="story-text">You received <strong>HM01 Cut</strong>! It can slice down small trees blocking the way.</p>
+            <p class="story-text">You also received <strong>HM02 Fly</strong>! A powerful two-turn Flying-type attack that compatible Pokémon can learn.</p>
             <p class="story-text">A leafy tree was blocking the <strong>Vermilion Gym</strong> — now you can cut it down and challenge <strong>Lt. Surge</strong>!</p>`,
           okLabel: "Onward!",
         });
@@ -2476,6 +2680,7 @@ function catchContext() {
     player: battle.player,
     turn: battle.turn ?? 1,
     owns: ownsSpecies(battle.enemy.ref.speciesId),
+    biome: battle.area?.biome ?? null,
   };
 }
 
@@ -2525,17 +2730,34 @@ export function getCatchChance(ballId = getSelectedBall()) {
 
 /**
  * Nastavení autocatch z herního stavu (normalizované, s bezpečným výchozím).
- * `mode`: "none" = nechytat nic (výchozí – ať zapnutí samo nezačne chytat),
- * "all" = chytat všechny, "shiny" = jen shiny.
+ * Tři NEZÁVISLÉ přepínače (sčítají se logickým NEBO):
+ *   - `catchAll`   = chytat všechny divoké
+ *   - `catchNew`   = chytat druhy, které ještě nemáš (kompletace dexu)
+ *   - `catchShiny` = chytat shiny
+ * Žádný zapnutý filtr = nechytat nic (výchozí, ať zapnutí samo nezačne chytat).
+ * Zpětná kompat se starým modelem `mode` ("none"/"all"/"shiny"): když nové klíče
+ * chybí, odvodíme je z něj (all→catchAll, shiny→catchShiny).
  */
 export function getAutocatch() {
   const s = getState().settings?.autocatch;
+  const hasNew =
+    s &&
+    (typeof s.catchAll === "boolean" ||
+      typeof s.catchNew === "boolean" ||
+      typeof s.catchShiny === "boolean");
   return {
     enabled: s?.enabled ?? false,
-    mode: s?.mode ?? "none",
     // Typ ballu vyhrazený pro autocatch (nezávislý na ručně vybraném selectedBall).
     ball: s?.ball ?? "poke",
+    catchAll: hasNew ? !!s.catchAll : s?.mode === "all",
+    catchNew: hasNew ? !!s.catchNew : false,
+    catchShiny: hasNew ? !!s.catchShiny : s?.mode === "shiny",
   };
+}
+
+/** Je aktivní aspoň jeden autocatch filtr? Bez něj autocatch nemá co chytat. */
+function autocatchActive(ac) {
+  return ac.catchAll || ac.catchNew || ac.catchShiny;
 }
 
 /** Změní nastavení autocatch (částečný patch), uloží a překreslí UI souboje. */
@@ -2548,11 +2770,16 @@ export function setAutocatch(patch) {
   return s.settings.autocatch;
 }
 
-/** Má se hra pokusit tohoto nepřítele automaticky chytit? (dle módu) */
+/**
+ * Má se hra pokusit tohoto nepřítele automaticky chytit? Filtry se sčítají přes
+ * NEBO: All = vše; Shiny = shiny; New = druh, který ještě nemáš. Takže New+Shiny
+ * chytá nové, shiny i „nové shiny". Žádný filtr = nechytat.
+ */
 function shouldAutocatch(ref, ac) {
-  if (ac.mode === "none") return false; // nic – dokud si hráč nevybere co chytat
-  if (ac.mode === "shiny") return !!ref.shiny; // jen shiny
-  return true; // "all" – chytat všechny
+  if (ac.catchAll) return true;
+  if (ac.catchShiny && ref.shiny) return true;
+  if (ac.catchNew && !ownsSpecies(ref.speciesId)) return true;
+  return false;
 }
 
 /**

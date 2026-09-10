@@ -126,6 +126,12 @@ disku má, ty tu nejsou).
 - [ ] **`assets/buildings/pokemon-mansion.png`** — Pokémon Mansion (ikona 🏚️) – spínačový labyrint + gauntlet, Secret Key.
 - [ ] **`assets/buildings/pokemon-lab.png`** — Pokémon Lab (ikona 🧪) – flavour/lore.
 
+### Itemy – ikony / sprity
+Speciální itemy se renderují jako emoji glyfy; sprite je opcionálně pro vizuální zlepšení.
+Nová složka `assets/items/` pro item sprity (zatím neexistuje).
+
+- [ ] **`assets/items/shiny-charm.png`** — Shiny Charm (ikona ✨ fallback) – held item, zvyšuje šanci na shiny ×3. Předáván v obřadu u Oaka (v0.87.0). Používá se v `diploma.js` (`charmSpriteHtml`) a případně jinde. Do nahrání běží fallback glyf. Rozměr ~32px, průhledné pozadí.
+
 ---
 
 ## ✅ Kompletní na disku (netřeba nic dodávat)

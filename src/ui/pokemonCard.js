@@ -15,8 +15,12 @@ import { getState, commit } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getPokeball } from "../../data/pokeballs.js";
 import { getMove } from "../../data/moves.js";
-import { getItem } from "../../data/items.js";
-import { heldItemOf } from "../systems/itemSystem.js";
+import { getItem, isHeldItem } from "../../data/items.js";
+import { heldItemOf, equipHeldItem, unequipHeldItem } from "../systems/itemSystem.js";
+import { learnableTmsFor, teachTm } from "../systems/tmSystem.js";
+import { getTm } from "../../data/tms.js";
+import { learnableHmsFor, teachHm } from "../systems/hmSystem.js";
+import { getHm } from "../../data/hms.js";
 import { bus, EVENTS } from "../core/events.js";
 import { saveScroll, restoreScroll, scrollAware } from "./scrollPreserve.js";
 import {
@@ -32,6 +36,7 @@ import {
 import { getNature, isNeutralNature } from "../../data/natures.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { areasForSpecies } from "../systems/pokedex.js";
+import { areaLevelRange } from "../../data/areas.js";
 import { evolutionInfo, canEvolveNow, evolvePokemon } from "../systems/evolutionSystem.js";
 import { spriteImg, silhouetteHtml } from "./sprites.js";
 import { ballIconHtml } from "./ballIcon.js";
@@ -108,10 +113,12 @@ function whereToCatch(speciesId) {
   }
   return `<ul class="mc-areas">
     ${areas
-      .map(
-        (a) =>
-          `<li><strong>${esc(a.name)}</strong> <span class="placeholder">· ${esc(a.region)} · Lv ${a.recommendedLevel}+</span></li>`
-      )
+      .map((a) => {
+        // Level pásmo oblasti (Lv min–max) místo dřívějšího „Lv X+".
+        const [lmin, lmax] = areaLevelRange(a);
+        const lvl = lmin === lmax ? `Lv ${lmin}` : `Lv ${lmin}–${lmax}`;
+        return `<li><strong>${esc(a.name)}</strong> <span class="placeholder">· ${esc(a.region)} · ${lvl}</span></li>`;
+      })
       .join("")}
   </ul>`;
 }
@@ -262,17 +269,127 @@ function movesList(owned) {
   return `<ul class="mc-moves">${rows}</ul>`;
 }
 
-/** Sekce Held item – read-only zobrazení. Ovládání je v batohu. */
+// Rozpracované naučení TM, které vyžaduje výběr slotu k přepsání (jedinec má
+// plný počet tahů). Drží se na úrovni modulu, ať přežije překreslení karty.
+// { uid, num, name } nebo null.
+let pendingTm = null;
+
+/**
+ * Sekce TM – naučení tahu z Technical Machine (jednorázově, kompatibilní druhy).
+ * Když má jedinec plné 4 tahy, přepne se na výběr tahu k přepsání (pendingTm).
+ */
+function tmSection(owned) {
+  // Režim výběru slotu k přepsání (jedinec má plno).
+  if (pendingTm && pendingTm.uid === owned.uid) {
+    const moves = Array.isArray(owned.moves) ? owned.moves : [];
+    const slots = moves
+      .map((slot, i) => {
+        const mv = getMove(slot.id);
+        return `<button class="btn btn-sm" data-act="tm-replace" data-slot="${i}">${esc(mv?.name ?? slot.id)}</button>`;
+      })
+      .join("");
+    return `
+      <h4 class="mc-section">Teach ${esc(pendingTm.name)}</h4>
+      <p class="placeholder">This Pokémon already knows 4 moves. Choose one to forget:</p>
+      <div class="tm-replace-slots">${slots}
+        <button class="btn btn-sm btn-ghost" data-act="tm-cancel">Cancel</button>
+      </div>`;
+  }
+
+  const learnable = learnableTmsFor(owned.uid);
+  const options = learnable
+    .map((t) => `<option value="${t.num}">TM${String(t.num).padStart(2, "0")} ${esc(t.name)} ×${t.count}</option>`)
+    .join("");
+
+  return `
+    <h4 class="mc-section">Teach TM</h4>
+    <div class="held-item-controls">
+      ${
+        options
+          ? `<select class="held-equip-select" data-tm-select>${options}</select>
+             <button class="btn btn-sm" data-act="teach-tm">Teach</button>`
+          : `<span class="placeholder">No compatible TMs in your Bag.</span>`
+      }
+    </div>`;
+}
+
+// Rozpracované naučení HM, které vyžaduje výběr slotu k přepsání (jedinec má
+// plný počet tahů). Drží se na úrovni modulu, ať přežije překreslení karty.
+// { uid, num, name } nebo null.
+let pendingHm = null;
+
+/**
+ * Sekce HM – naučení tahu z Hidden Machine. NA ROZDÍL OD TM se HM NEspotřebuje,
+ * lze ho učit opakovaně libovolným kompatibilním druhům (jako v kánonu).
+ * Když má jedinec plné 4 tahy, přepne se na výběr tahu k přepsání (pendingHm).
+ */
+function hmSection(owned) {
+  // Režim výběru slotu k přepsání (jedinec má plno).
+  if (pendingHm && pendingHm.uid === owned.uid) {
+    const moves = Array.isArray(owned.moves) ? owned.moves : [];
+    const slots = moves
+      .map((slot, i) => {
+        const mv = getMove(slot.id);
+        return `<button class="btn btn-sm" data-act="hm-replace" data-slot="${i}">${esc(mv?.name ?? slot.id)}</button>`;
+      })
+      .join("");
+    return `
+      <h4 class="mc-section">Teach ${esc(pendingHm.name)}</h4>
+      <p class="placeholder">This Pokémon already knows 4 moves. Choose one to forget:</p>
+      <div class="tm-replace-slots">${slots}
+        <button class="btn btn-sm btn-ghost" data-act="hm-cancel">Cancel</button>
+      </div>`;
+  }
+
+  const learnable = learnableHmsFor(owned.uid);
+  const options = learnable
+    .map((h) => `<option value="${h.num}">HM${String(h.num).padStart(2, "0")} ${esc(h.name)}</option>`)
+    .join("");
+
+  return `
+    <h4 class="mc-section">Teach HM</h4>
+    <div class="held-item-controls">
+      ${
+        options
+          ? `<select class="held-equip-select" data-hm-select>${options}</select>
+             <button class="btn btn-sm" data-act="teach-hm">Teach</button>`
+          : `<span class="placeholder">No compatible HMs in your Bag.</span>`
+      }
+    </div>`;
+}
+
+/** Sekce Held item – zobrazení + nasazení/sundání přímo z karty (i mimo batoh). */
 function heldItemSection(owned) {
   const current = heldItemOf(owned);
   const currentHtml = current
     ? `<span class="held-item-display">${current.icon} <strong>${esc(current.name)}</strong></span>`
     : `<span class="placeholder">None</span>`;
 
+  // Držitelné itemy v batohu (count > 0), z nichž lze vybrat k nasazení.
+  const items = getState().resources?.items ?? {};
+  const options = Object.keys(items)
+    .filter((id) => (items[id] ?? 0) > 0 && isHeldItem(id))
+    .map((id) => {
+      const def = getItem(id);
+      return `<option value="${id}">${def?.icon ?? ""} ${esc(def?.name ?? id)} ×${items[id]}</option>`;
+    })
+    .join("");
+
+  const controls = `
+    <div class="held-item-controls">
+      ${
+        options
+          ? `<select class="held-equip-select" data-equip-select>${options}</select>
+             <button class="btn btn-sm" data-act="equip">Equip</button>`
+          : `<span class="placeholder">No held items in your Bag.</span>`
+      }
+      ${current ? `<button class="btn btn-sm" data-act="unequip">Remove</button>` : ""}
+    </div>`;
+
   return `
     <h4 class="mc-section">Held Item</h4>
     <div class="held-item-display-wrap">${currentHtml}</div>
-    <p class="placeholder"><em>Manage held items in the Bag.</em></p>
+    ${controls}
   `;
 }
 
@@ -308,6 +425,8 @@ function ownedBody(owned) {
     ${ownedStatsTable(owned, species)}
     <h4 class="mc-section">Moves</h4>
     ${movesList(owned)}
+    ${tmSection(owned)}
+    ${hmSection(owned)}
     ${heldItemSection(owned)}
     <dl class="mc-meta">
       <dt>Caught in</dt><dd>${
@@ -318,7 +437,7 @@ function ownedBody(owned) {
       <dt>Gender</dt><dd>${
         owned.gender === "genderless"
           ? `<span class="placeholder">Genderless</span>`
-          : `${genderSymbolHtml(owned.gender)} ${owned.gender === "m" ? "Samec" : "Samice"}`
+          : `${genderSymbolHtml(owned.gender)} ${owned.gender === "m" ? "Male" : "Female"}`
       }</dd>
       <dt>Nature</dt><dd>${natureLabel(owned.nature)}</dd>
       ${(() => {
@@ -360,7 +479,7 @@ function seenBody(species) {
       ${heightWeightRows(species)}
       ${
         species.evolvesTo && species.evolutionLevel != null
-          ? `<dt>Evolves into</dt><dd>${esc(typeof species.evolvesTo === "string" ? (getSpecies(species.evolvesTo)?.name ?? species.evolvesTo) : "Vyvíjí se pomocí kamene")} <span class="placeholder">at Lv ${species.evolutionLevel}</span></dd>`
+          ? `<dt>Evolves into</dt><dd>${esc(typeof species.evolvesTo === "string" ? (getSpecies(species.evolvesTo)?.name ?? species.evolvesTo) : "Evolves with a stone")} <span class="placeholder">at Lv ${species.evolutionLevel}</span></dd>`
           : ""
       }
       <dt>Egg groups</dt><dd>${(species.eggGroups ?? []).map(esc).join(", ")}</dd>
@@ -413,7 +532,21 @@ export function openPokemonCard(arg = {}) {
     }
   })) : () => {};
 
+  // Ruční překreslení těla karty (pro stavy bez commitu, např. výběr TM slotu).
+  function rerenderBody() {
+    if (!owned) return;
+    const fresh = getState().collection.find((p) => p.uid === owned.uid);
+    const body = overlay.querySelector(".mon-card-body");
+    if (fresh && body) {
+      const _s = saveScroll(body);
+      body.innerHTML = ownedBody(fresh);
+      restoreScroll(body, _s);
+    }
+  }
+
   function close() {
+    pendingTm = null; // zahoď rozpracovaný výběr TM slotu
+    pendingHm = null; // i HM slotu
     unsub();
     document.removeEventListener("keydown", onKey);
     overlay.remove();
@@ -432,6 +565,96 @@ export function openPokemonCard(arg = {}) {
       const res = evolvePokemon(owned.uid);
       if (!res.ok && res.reason) window.alert?.(res.reason);
       // Při úspěchu commit() → STATE_CHANGED překreslí tělo na novou formu.
+      return;
+    }
+    // Nasazení drženého itemu: přečti vybraný item ze selectu vedle tlačítka.
+    const equipBtn = e.target.closest?.('[data-act="equip"]');
+    if (equipBtn && owned) {
+      const sel = overlay.querySelector("[data-equip-select]");
+      const id = sel?.value;
+      if (id) {
+        const res = equipHeldItem(owned.uid, id);
+        if (!res.ok && res.reason) window.alert?.(res.reason);
+        // commit() → STATE_CHANGED překreslí tělo (nový held item + batoh).
+      }
+      return;
+    }
+    // Sundání drženého itemu zpět do batohu.
+    const unequipBtn = e.target.closest?.('[data-act="unequip"]');
+    if (unequipBtn && owned) {
+      const res = unequipHeldItem(owned.uid);
+      if (!res.ok && res.reason) window.alert?.(res.reason);
+      return;
+    }
+    // Naučit TM: přečti vybraný TM ze selectu. Když má jedinec plno, přepni na
+    // výběr slotu (pendingTm) a překresli ručně (teachTm bez slotu nekomituje).
+    const teachBtn = e.target.closest?.('[data-act="teach-tm"]');
+    if (teachBtn && owned) {
+      const sel = overlay.querySelector("[data-tm-select]");
+      const num = Number(sel?.value);
+      if (num) {
+        const res = teachTm(owned.uid, num, null);
+        if (res.needsSlot) {
+          pendingTm = { uid: owned.uid, num, name: getTm(num)?.name ?? `TM${num}` };
+          rerenderBody();
+        } else if (!res.ok && res.reason) {
+          window.alert?.(`Can't teach this TM (${res.reason}).`);
+        }
+        // Úspěch → commit v teachTm → STATE_CHANGED překreslí tělo.
+      }
+      return;
+    }
+    // Výběr tahu k přepsání při plných slotech.
+    const tmReplaceBtn = e.target.closest?.('[data-act="tm-replace"]');
+    if (tmReplaceBtn && owned && pendingTm) {
+      const slot = Number(tmReplaceBtn.dataset.slot);
+      const num = pendingTm.num;
+      pendingTm = null;
+      const res = teachTm(owned.uid, num, slot);
+      if (!res.ok && res.reason) window.alert?.(`Can't teach this TM (${res.reason}).`);
+      else rerenderBody(); // pro jistotu (commit obvykle překreslí sám)
+      return;
+    }
+    // Zrušení výběru slotu.
+    const tmCancelBtn = e.target.closest?.('[data-act="tm-cancel"]');
+    if (tmCancelBtn) {
+      pendingTm = null;
+      rerenderBody();
+      return;
+    }
+    // Naučit HM: stejný pattern jako TM, ale HM se nespotřebuje (učitelné opakovaně).
+    const teachHmBtn = e.target.closest?.('[data-act="teach-hm"]');
+    if (teachHmBtn && owned) {
+      const sel = overlay.querySelector("[data-hm-select]");
+      const num = Number(sel?.value);
+      if (num) {
+        const res = teachHm(owned.uid, num, null);
+        if (res.needsSlot) {
+          pendingHm = { uid: owned.uid, num, name: getHm(num)?.name ?? `HM${num}` };
+          rerenderBody();
+        } else if (!res.ok && res.reason) {
+          window.alert?.(`Can't teach this HM (${res.reason}).`);
+        }
+        // Úspěch → commit v teachHm → STATE_CHANGED překreslí tělo.
+      }
+      return;
+    }
+    // Výběr tahu k přepsání při plných slotech (HM).
+    const hmReplaceBtn = e.target.closest?.('[data-act="hm-replace"]');
+    if (hmReplaceBtn && owned && pendingHm) {
+      const slot = Number(hmReplaceBtn.dataset.slot);
+      const num = pendingHm.num;
+      pendingHm = null;
+      const res = teachHm(owned.uid, num, slot);
+      if (!res.ok && res.reason) window.alert?.(`Can't teach this HM (${res.reason}).`);
+      else rerenderBody(); // pro jistotu (commit obvykle překreslí sám)
+      return;
+    }
+    // Zrušení výběru slotu (HM).
+    const hmCancelBtn = e.target.closest?.('[data-act="hm-cancel"]');
+    if (hmCancelBtn) {
+      pendingHm = null;
+      rerenderBody();
       return;
     }
   });

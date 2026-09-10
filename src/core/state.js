@@ -65,7 +65,9 @@
  *
  * @typedef {Object} AutocatchSettings
  * @property {boolean} enabled       chytat automaticky během souboje
- * @property {"none"|"all"|"shiny"} mode  které chytat: nic / všechny / jen shiny
+ * @property {boolean} catchAll      chytat všechny divoké
+ * @property {boolean} catchNew      chytat druhy, které ještě nemáš (kompletace dexu)
+ * @property {boolean} catchShiny    chytat shiny (filtry se sčítají přes NEBO)
  * @property {string} ball           vyhrazený typ míčku pro autocatch (nezávislý na selectedBall);
  *                                   když dojde, autocatch se sám vypne (nesahá po jiných)
  * @property {{ buildings: Record<string, { level: number }>, daycare?: { uid: string|null, buffer: number, eggs?: Array<{ id: string, elapsedSec: number }>, breeding?: { a: string|null, b: string|null, buffer: number } } }} city  budovy města + sloty školky (výcvik + inkubace vajec + breeding)
@@ -74,7 +76,7 @@
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 40;
+export const CURRENT_SAVE_VERSION = 44;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
@@ -117,13 +119,17 @@ export function createNewGame() {
       selectedBall: "poke",
       layout: "auto", // rozvržení panelů: auto (responzivní) | wide (2 sloupce) | stacked (1 sloupec) | mobile (1 sloupec + svislé rozdělení souboje)
       stackOrder: ["battle", "map", "tabs"], // pořadí panelů ve skládaném režimu (shora dolů)
-      autocatch: { enabled: false, mode: "none", ball: "poke" }, // mode: "none" (nechytat) | "all" | "shiny"; ball = vyhrazený typ míčku
+      autocatch: { enabled: false, catchAll: false, catchNew: false, catchShiny: false, ball: "poke" }, // nezávislé filtry (All/New/Shiny, sčítají se NEBO); ball = vyhrazený typ míčku
       // Herní pravidla / režimy (viz settingsView, battleSystem):
       //  - noItems: zakáže léčivé předměty (žádné lektvary ani jiné itemy) v souboji
       //  - noPotions: zakáže jen lektvary (Potion apod.), ostatní předměty ok
       //  - nuzlocke: permadeath (omdlelý jedinec navždy padne) + chytání jen prvního
       //    druhu na dané oblasti
-      rules: { noItems: false, noPotions: false, nuzlocke: false },
+      //  - levelCap: strop levelu dle postupu příběhem (ace dalšího gym leadera →
+      //    Liga → bez limitu po titulu; viz progression.currentLevelCap) – proti
+      //    přelevelování v idle režimu
+      rules: { noItems: false, noPotions: false, nuzlocke: false, levelCap: false },
+      shinyCharmActive: true, // Shiny Charm zapnutý (přepínatelný v horní liště, jen když ho vlastníš)
     },
     // Nuzlocke: mapa oblast -> true, když už na ní hráč (ne)úspěšně čerpal první
     // úlovek. Prázdné = ještě nikde nechytal (viz battleSystem).

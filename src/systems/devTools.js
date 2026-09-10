@@ -46,6 +46,22 @@ export function devAddPokemon(speciesId = "ditto", level = 5) {
 }
 
 /**
+ * Dev: naráz získá všech `POKEMON_SPECIES` druhů (co ještě nemáš) přes
+ * acquirePokemon – jen doplní kolekci, NEuděluje Diplom (ten dá až Prof. Oak
+ * v Oak's Lab, když si o dexu promluvíš). Slouží k rychlému otestování capstonu
+ * bez chytání 151 kusů: po kliknutí dojdi do Pallet Townu → Oak's Lab.
+ * @returns {{ added: number, total: number }}
+ */
+export function devCompleteDex() {
+  let added = 0;
+  for (const sp of POKEMON_SPECIES) {
+    const res = acquirePokemon(createPokemon(sp.id, 5)); // commit + capstone check uvnitř
+    if (res.added) added++;
+  }
+  return { added, total: POKEMON_SPECIES.length };
+}
+
+/**
  * Přidá hráči zlato (dev). Kladné i záporné; nikdy nespadne pod 0.
  * @param {number} amount
  * @returns {number} nový stav zlata
@@ -70,32 +86,32 @@ const DEV_DEFAULT_RIVAL = "Blue";
 
 /** Uspořádané milníky příběhu (index = pořadí; skok je kumulativní). */
 export const DEV_CHECKPOINTS = [
-  { key: "start", label: "① Pallet Town · máš startéra (po intru)" },
-  { key: "route1", label: "② Rival poražen · Route 1 otevřená" },
-  { key: "viridian", label: "③ Viridian City · Parcel quest připraven" },
-  { key: "parcel", label: "④ Parcel doručen · Route 2 otevřená" },
-  { key: "pewter", label: "⑤ Pewter City · u Brocka" },
-  { key: "brock", label: "⑥ Brock poražen · Boulder Badge · Route 3" },
-  { key: "cerulean", label: "⑦ Cerulean City · u Misty" },
+  { key: "start", label: "① Pallet Town · you have a starter (after intro)" },
+  { key: "route1", label: "② Rival defeated · Route 1 open" },
+  { key: "viridian", label: "③ Viridian City · Parcel quest ready" },
+  { key: "parcel", label: "④ Parcel delivered · Route 2 open" },
+  { key: "pewter", label: "⑤ Pewter City · at Brock's" },
+  { key: "brock", label: "⑥ Brock defeated · Boulder Badge · Route 3" },
+  { key: "cerulean", label: "⑦ Cerulean City · at Misty's" },
   { key: "vermilion", label: "⑧ Vermilion City · S.S. Anne + HM Cut" },
-  { key: "lavender", label: "⑨ Lt. Surge · Thunder Badge · Flash · Lavender Town (věž zamčená duchem)" },
-  { key: "celadon", label: "⑩ Celadon City · Rainbow Badge (Erika poražena; hideout ještě NE)" },
-  { key: "silphscope", label: "⑪ Silph Scope získán · Rocket Hideout vyčištěn (věž netknuta)" },
-  { key: "pokeflute", label: "⑫ Poke Flute získán · věž hotová (Marowak uklidněn, Mr. Fuji zachráněn; Snorlax SPÍ)" },
-  { key: "snorlax", label: "⑬ Snorlax probuzen · jižní cesta otevřená (Krok 7 hotov)" },
-  { key: "fuchsia", label: "⑭ Fuchsia City · příchod (Koga i Safari k dispozici)" },
-  { key: "soul", label: "⑮ Koga poražen · Soul Badge (Safari ještě NE)" },
-  { key: "surf", label: "⑯ Safari Zone prošel · HM03 Surf + Gold Teeth získány (Warden ještě NE)" },
-  { key: "strength", label: "⑰ Gold Teeth vráceny Wardenovi · HM04 Strength získán (Krok 8 hotov)" },
-  { key: "cinnabar", label: "⑱ Cinnabar Island · příchod (mořská cesta přes Route 19–21 přeplavána)" },
-  { key: "secretkey", label: "⑲ Pokémon Mansion prozkoumán · Secret Key získán (gym odemčen)" },
-  { key: "volcano", label: "⑳ Blaine poražen · Volcano Badge (Krok 9 hotov)" },
-  { key: "saffron", label: "㉑ Saffron City · příchod (Rocketi drží Silph Co, strážce žízní, gym zamčen)" },
-  { key: "silphopen", label: "㉒ Fresh Water podána strážci · Silph Co. otevřeno" },
-  { key: "silphcleared", label: "㉓ Silph Co. vyčištěn (Rocketi + rival + Giovanni) · Master Ball získán" },
-  { key: "sabrina", label: "㉔ Sabrina poražena · Marsh Badge (Krok 11 hotov)" },
-  { key: "earth", label: "㉕ Giovanni poražen · Earth Badge · 8/8 · Victory Road + Indigo otevřeny" },
-  { key: "champion", label: "㉖ Elite Four + Champion poraženi · Champion (Krok 10 hotov; Cerulean Cave / Mewtwo)" },
+  { key: "lavender", label: "⑨ Lt. Surge · Thunder Badge · Flash · Lavender Town (tower locked by ghost)" },
+  { key: "celadon", label: "⑩ Celadon City · Rainbow Badge (Erika defeated; hideout not yet)" },
+  { key: "silphscope", label: "⑪ Silph Scope obtained · Rocket Hideout cleared (tower untouched)" },
+  { key: "pokeflute", label: "⑫ Poke Flute obtained · tower complete (Marowak calmed, Mr. Fuji saved; Snorlax SLEEPS)" },
+  { key: "snorlax", label: "⑬ Snorlax awakened · south path open (Step 7 complete)" },
+  { key: "fuchsia", label: "⑭ Fuchsia City · arrival (Koga and Safari available)" },
+  { key: "soul", label: "⑮ Koga defeated · Soul Badge (Safari not yet)" },
+  { key: "surf", label: "⑯ Safari Zone cleared · HM03 Surf + Gold Teeth obtained (Warden not yet)" },
+  { key: "strength", label: "⑰ Gold Teeth returned to Warden · HM04 Strength obtained (Step 8 complete)" },
+  { key: "cinnabar", label: "⑱ Cinnabar Island · arrival (sea route via Route 19–21 sailed)" },
+  { key: "secretkey", label: "⑲ Pokémon Mansion explored · Secret Key obtained (gym unlocked)" },
+  { key: "volcano", label: "⑳ Blaine defeated · Volcano Badge (Step 9 complete)" },
+  { key: "saffron", label: "㉑ Saffron City · arrival (Rockets hold Silph Co, guard thirsty, gym locked)" },
+  { key: "silphopen", label: "㉒ Fresh Water given to guard · Silph Co. open" },
+  { key: "silphcleared", label: "㉓ Silph Co. cleared (Rockets + rival + Giovanni) · Master Ball obtained" },
+  { key: "sabrina", label: "㉔ Sabrina defeated · Marsh Badge (Step 11 complete)" },
+  { key: "earth", label: "㉕ Giovanni defeated · Earth Badge · 8/8 · Victory Road + Indigo open" },
+  { key: "champion", label: "㉖ Elite Four + Champion defeated · Champion (Step 10 complete; Cerulean Cave / Mewtwo)" },
 ];
 
 /** Zajistí kontejnery ve stavu (starší/prázdné save). */
@@ -202,11 +218,13 @@ function applyOne(s, key) {
       addUnique(s.progress.defeatedTrainers, "rival-ss-anne");
       s.story.ssAnneCleared = true;
       s.story.hasCut = true;
+      s.story.hasFly = true;
       s.story.vermilionArrival = true;
-      // HM Cut item do batohu (odpovídá reálné odměně ze S.S. Anne).
+      // HM Cut + HM Fly item do batohu (odpovídá reálné odměně ze S.S. Anne).
       if (!s.resources) s.resources = {};
       if (!s.resources.items) s.resources.items = {};
       s.resources.items["hm01-cut"] = (s.resources.items["hm01-cut"] ?? 0) + 1;
+      if ((s.resources.items["hm02-fly"] ?? 0) < 1) s.resources.items["hm02-fly"] = 1;
       // Krok 12: Vermilion Trade House (Spearow → Farfetch'd) považ za provedený.
       giftMon(s, "farfetchd", 22, "farfetchdGift");
       s.progress.activeAreaId = "vermilion-city";

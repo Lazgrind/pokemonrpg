@@ -8,7 +8,7 @@
 import { getState, commit, MAX_TEAM_SIZE } from "../core/state.js";
 import { createPokemon, STAT_KEYS, emptyEvs } from "./pokemonSystem.js";
 import { pokemonEngagement } from "./buildingSystem.js";
-import { ensureStartersSeen } from "./pokedex.js";
+import { ensureStartersSeen, dexCounts } from "./pokedex.js";
 import { STARTER_IDS } from "../../data/pokemon.js";
 
 /**
@@ -97,6 +97,30 @@ export function acquirePokemon(pokemon) {
   }
   commit();
   return { added: false, released: true, pokemon: existing, improvements };
+}
+
+/**
+ * Capstone Gen 1: udělí Diplom + Shiny Charm, POKUD má hráč kompletní dex a ještě
+ * je nemá. NEspouští se automaticky – volá ho Oak's Lab, když si hráč o dexu
+ * promluví s Prof. Oakem (viz storyBuildingView.oakLabView). Shiny Charm globálně
+ * násobí šanci na shiny (flag `story.shinyCharm`, aplikováno ve spawnu/breedingu).
+ * Idempotentní přes `story.dexDiploma`. Vizuální oslavu (obrázek diplomu +
+ * stažení) zobrazí VOLAJÍCÍ přes `ui/diploma.showDiplomaModal` – tady jen stav.
+ * @returns {boolean} true, když byl Diplom právě udělen (jinak false)
+ */
+export function grantDexDiploma() {
+  const s = getState();
+  if (!s.story || typeof s.story !== "object") s.story = {};
+  if (s.story.dexDiploma) return false; // už uděleno
+  const { caught, total } = dexCounts();
+  if (caught < total) return false; // dex ještě není kompletní
+  s.story.dexDiploma = true;
+  s.story.shinyCharm = true;
+  // Shiny Charm zapneme (přepínatelný v horní liště přes settings.shinyCharmActive).
+  if (!s.settings || typeof s.settings !== "object") s.settings = {};
+  s.settings.shinyCharmActive = true;
+  commit();
+  return true;
 }
 
 /**

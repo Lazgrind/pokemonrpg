@@ -16,6 +16,7 @@ import { getState, commit } from "../core/state.js";
 import { startTrainerBattle, getActiveArea } from "../systems/battleSystem.js";
 import { openMainTab } from "./mainPanel.js";
 import { showPopup } from "./popup.js";
+import { hasGymChallenge, isGymChallengeDone, startGymChallenge } from "./gymChallengeView.js";
 
 /**
  * Text „zamčené brány" gymu, dokud není splněný gym.requiresStory flag. Per-gym,
@@ -66,6 +67,12 @@ export function renderGymTab(root, onStatus = () => {}) {
   // Index dalšího neporaženého trenéra (odemčený). -1 = celý gym hotový.
   const nextIdx = trainers.findIndex((t) => !defeated.includes(t.id));
   const cleared = nextIdx === -1;
+  // Gym challenge (interaktivní minihra PŘED souboji, viz gymChallengeView.js).
+  // Blokuje trenéry, dokud ji hráč nevyřeší. Starým savům (rozehraný/hotový gym)
+  // ji nevnucujeme (guard `started`/`cleared`).
+  const started = trainers.some((t) => defeated.includes(t.id));
+  const challengePending =
+    hasGymChallenge(gym.id) && !cleared && !started && !isGymChallengeDone(gym.id);
 
   // Story-gate (např. Vermilion: vchod blokuje strom, potřebuješ HM Cut). Blokuje
   // JEN dokud gym není vyčištěný – staré savy s poraženým gymem se nezamknou.
@@ -81,43 +88,9 @@ export function renderGymTab(root, onStatus = () => {}) {
   }
   const badge = getBadge(gym.badge);
 
-  // Věrný Kanto (Krok 6): Vermilion Gym má kanonickou hádanku s odpadkovými koši
-  // (dva skryté vypínače otevřou elektrické dveře k Lt. Surgeovi). Řešíme jako
-  // jednorázový flavour popup při prvním otevření odemčeného, ještě nevyčištěného
-  // gymu. Flag nastavíme rovnou v paměti (guard proti re-fire při každém ticku);
-  // uložení dořeší commit v onOk.
-  if (gym.id === "vermilion-gym" && !cleared) {
-    const st = getState();
-    if (!st.story) st.story = {};
-    if (!st.story.vermilionGymSwitches) {
-      st.story.vermilionGymSwitches = true;
-      showPopup({
-        title: "🗑️ Lt. Surge's Gym",
-        body: `<p class="story-text">Beyond the entrance, a locked electric door bars the way. Two hidden switches are tucked away inside the Gym's <strong>trash cans</strong>.</p>
-          <p class="story-text">You rummage through the bins, flip the first switch… then hunt down the second. With a loud <em>clunk</em>, the door slides open!</p>
-          <p class="placeholder">Lt. Surge, the Lightning American, is waiting. Electric-types are weak to Ground.</p>`,
-        okLabel: "Bring it on!",
-        onOk: () => commit(),
-      });
-    }
-  }
-  // Věrný Kanto (Krok 8): Koga's Gym je bludiště neviditelných zdí – jednorázový
-  // flavour popup při prvním vstupu (guard proti re-fire, uložení dořeší commit).
-  if (gym.id === "fuchsia-gym" && !cleared) {
-    const st = getState();
-    if (!st.story) st.story = {};
-    if (!st.story.fuchsiaGymWalls) {
-      st.story.fuchsiaGymWalls = true;
-      showPopup({
-        title: "🥷 Koga's Gym",
-        body: `<p class="story-text">The floor is a maze of <strong>invisible walls</strong>. You bump into unseen barriers, feeling your way forward inch by inch through the ninja trickery.</p>
-          <p class="story-text">At last the path opens up. <strong>Koga</strong>, the poisonous ninja master, awaits in the shadows.</p>
-          <p class="placeholder">Poison-types are weak to Ground and Psychic. Watch out for status effects!</p>`,
-        okLabel: "I'm ready.",
-        onOk: () => commit(),
-      });
-    }
-  }
+  // Věrný Kanto: Vermilion (koše), Fuchsia (bludiště neviditelných zdí) i Saffron
+  // (teleportační dlaždice) řeší kanonickou hádanku jako interaktivní minihru
+  // (gymChallengeView.js), viz `challengePending` výše – NE už jako flavour popup.
   // Věrný Kanto (Krok 9): Blaine tě před soubojem prožene svým kvízem. Jednorázově
   // (guard flag cinnabarGymQuiz), pak řetěz otázek → finále → souboj.
   if (gym.id === "cinnabar-gym" && !cleared) {
@@ -126,23 +99,6 @@ export function renderGymTab(root, onStatus = () => {}) {
     if (!st.story.cinnabarGymQuiz) {
       st.story.cinnabarGymQuiz = true;
       startBlaineQuiz();
-    }
-  }
-  // Věrný Kanto (Krok 11): Sabrina věděla, že přijdeš. Jednorázový flavour popup
-  // při prvním vstupu do odemčeného (Silph Co osvobozeno) gymu.
-  if (gym.id === "saffron-gym" && !cleared) {
-    const st = getState();
-    if (!st.story) st.story = {};
-    if (!st.story.saffronGymIntro) {
-      st.story.saffronGymIntro = true;
-      showPopup({
-        title: "🔮 Sabrina's Gym",
-        body: `<p class="story-text">The Gym warps around you — teleport tiles blink you from pad to pad through a mirror-maze of psychic energy.</p>
-          <p class="story-text">At the center sits <strong>Sabrina</strong>, unmoving, eyes closed. "I knew you would come. I saw it long ago." Her Psychic-types are merciless.</p>
-          <p class="placeholder">Psychic-types are weak to Bug, Ghost and Dark. Bring hard hitters.</p>`,
-        okLabel: "I'm ready.",
-        onOk: () => commit(),
-      });
     }
   }
   // Věrný Kanto (Krok 10): Viridian Gym byl celou hru zavřený. Když se konečně
@@ -175,6 +131,8 @@ export function renderGymTab(root, onStatus = () => {}) {
       let statusHtml;
       if (isDefeated) {
         statusHtml = `<span class="gym-status done">✓ Defeated</span>`;
+      } else if (isNext && challengePending) {
+        statusHtml = `<span class="gym-status locked">🔒 Solve the Gym Challenge first</span>`;
       } else if (isNext) {
         statusHtml = `<button class="btn btn-sm gym-fight" data-trainer="${t.id}" data-gym="${gym.id}">${isLeader ? "Challenge ⚔" : "Fight ⚔"}</button>`;
       } else {
@@ -198,13 +156,27 @@ export function renderGymTab(root, onStatus = () => {}) {
     ? `<span class="gym-badge-won"><img class="badge-icon" src="assets/badges/${gym.badge}.png" alt="${badgeName}" onerror="this.style.display='none'"> ${badgeName} earned!</span>`
     : `<span class="placeholder">Beat the Leader to earn the ${badgeName}.</span>`;
 
+  // Karta gym challenge (jen dokud není hádanka splněná) – tlačítko spustí minihru.
+  const challengeHtml = challengePending
+    ? `<div class="gym-challenge-card">
+        <span class="gym-challenge-label">🧩 Gym Challenge — required</span>
+        <p class="placeholder">You must solve this Gym's puzzle before you can battle any trainer or the Leader.</p>
+        <button class="btn btn-sm gym-challenge-start" data-gym="${gym.id}">Start Challenge</button>
+      </div>`
+    : "";
+
   root.innerHTML = `
     <section class="gym-section type-${gym.type}">
       <h2 class="panel-title">🏟️ ${gym.name} <span class="placeholder">· ${gym.type}</span></h2>
       <p class="placeholder">Gym battles are manual only — Auto battle is disabled here.</p>
       <div class="gym-badge-row">${badgeState}</div>
+      ${challengeHtml}
       <ul class="gym-trainer-list">${rows}</ul>
     </section>`;
+
+  root.querySelector(".gym-challenge-start")?.addEventListener("click", () =>
+    startGymChallenge(gym.id, { onComplete: () => renderGymTab(root, onStatus) })
+  );
 
   root.querySelectorAll(".gym-fight").forEach((btn) =>
     btn.addEventListener("click", () => {

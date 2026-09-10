@@ -28,7 +28,7 @@
  * dle kánonu (Diglett's Cave, Power Plant, Safari Zone, Seafoam Islands, Cerulean Cave).
  */
 
-import { AREAS, getArea } from "./areas.js";
+import { AREAS, getArea, areaSpeciesIds } from "./areas.js";
 import { getSpecies } from "./pokemon.js";
 import { TRAINER_SPRITE_COUNTS } from "./spriteVariants.js";
 
@@ -969,14 +969,15 @@ const ROUTE_AREAS_BY_ORDER = AREAS.filter((a) => a.type === "route").sort(
  */
 function poolForArea(areaId) {
   const area = getArea(areaId);
-  const local = Array.isArray(area?.species) ? area.species.slice() : [];
+  // Ploché id druhů (species položka může být string i { id, rarity }).
+  const local = areaSpeciesIds(area);
   const order = area?.order ?? 0;
   const localSet = new Set(local);
   const lower = [];
   const seen = new Set(local);
   for (const a of ROUTE_AREAS_BY_ORDER) {
     if ((a.order ?? 0) >= order) break;
-    for (const sp of a.species ?? []) {
+    for (const sp of areaSpeciesIds(a)) {
       if (!seen.has(sp)) {
         seen.add(sp);
         lower.push(sp);

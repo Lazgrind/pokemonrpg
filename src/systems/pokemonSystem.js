@@ -33,6 +33,14 @@ export const EV_MAX_TOTAL = 510;
 /** Šance na shiny při vzniku jedince (laditelné). Klasická hodnota z her. */
 export const SHINY_CHANCE = 1 / 8192;
 
+/**
+ * Násobitel šance na shiny, když hráč vlastní Shiny Charm (odměna za kompletní
+ * dex, flag `state.story.shinyCharm`). Kánon ≈ ×3. Aplikuje ho VOLAJÍCÍ (divoký
+ * spawn v battleSystem, líhnutí ve breedingSystem) tím, že předá vynásobený
+ * `shinyChance` do createPokemon – tady jen jedno místo pravdy pro hodnotu.
+ */
+export const SHINY_CHARM_MULT = 3;
+
 /** Maximální počet tahů, které může jedinec současně znát. */
 export const MAX_MOVES = 4;
 
@@ -82,7 +90,12 @@ function balancedMovesetIds(candidateIds) {
   const attacking = attackingSafe.length ? attackingSafe : uniq.filter((id) => isAttackingMove(id));
   const chosen = attacking.slice(-MAX_MOVES);
   const statusSlots = Math.max(0, MAX_MOVES - chosen.length);
-  for (const id of status.slice(-statusSlots)) chosen.push(id);
+  // POZOR: `slice(-0)` === `slice(0)` (JS bere -0 jako 0), takže bez této pojistky
+  // by se při plných slotech (statusSlots===0) přidaly VŠECHNY status tahy → sada
+  // by mohla mít 8+ tahů. Status doplňujeme jen když je volný slot.
+  if (statusSlots > 0) {
+    for (const id of status.slice(-statusSlots)) chosen.push(id);
+  }
   return chosen;
 }
 
@@ -105,7 +118,9 @@ export function repairWeakMoveset(pokemon) {
   const balanced = balancedMovesetIds(pool);
   const newAttacks = balanced.filter((id) => isAttackingMove(id)).length;
   if (newAttacks <= attacks) return false; // víc útočných stejně nezískáme
-  setActiveMoves(pokemon, balanced);
+  // Chráněné TM/HM tahy (`taught`) připni vepředu, ať je oprava sady nezahodí.
+  const taughtIds = pokemon.moves.filter((m) => m.taught).map((m) => m.id);
+  setActiveMoves(pokemon, [...taughtIds, ...balanced.filter((id) => !taughtIds.includes(id))]);
   return true;
 }
 
@@ -132,11 +147,16 @@ export function learnLevelUpMoves(pokemon, prevLevel, { auto = false } = {}) {
     // aktuálního levelu + ty, které už umí (zachová i egg/TM tahy mimo learnset).
     // Tím se navíc při dalším level-upu OPRAVÍ i sady pokažené dřívější verzí.
     const before = new Set(pokemon.moves.map((m) => m.id));
+    // TM/HM tahy naučené hráčem (`taught`) jsou CHRÁNĚNÉ – auto přeskládání je NIKDY
+    // nezahodí. Připneme je vepředu, zbytek slotů dorovná vyvážená sada.
+    const taughtIds = pokemon.moves.filter((m) => m.taught).map((m) => m.id);
     const pool = [
       ...learnableMovesAtLevel(pokemon.speciesId, pokemon.level).map((e) => e.id),
       ...pokemon.moves.map((m) => m.id),
     ];
-    setActiveMoves(pokemon, balancedMovesetIds(pool));
+    const balanced = balancedMovesetIds(pool);
+    const finalIds = [...taughtIds, ...balanced.filter((id) => !taughtIds.includes(id))];
+    setActiveMoves(pokemon, finalIds);
     return pokemon.moves.filter((m) => !before.has(m.id)).map((m) => m.id);
   }
   const learned = [];
@@ -171,7 +191,12 @@ export function setActiveMoves(pokemon, moveIds) {
     if (!mv) continue;
     if (next.some((m) => m.id === id)) continue; // bez duplikátů
     const keep = prev.get(id);
-    next.push(keep ? { id, pp: keep.pp, maxPp: keep.maxPp ?? mv.pp } : { id, pp: mv.pp, maxPp: mv.pp });
+    // Zachovej PP i `taught` (TM/HM tah naučený hráčem) u tahů, které jedinec už měl.
+    next.push(
+      keep
+        ? { id, pp: keep.pp, maxPp: keep.maxPp ?? mv.pp, ...(keep.taught ? { taught: true } : {}) }
+        : { id, pp: mv.pp, maxPp: mv.pp }
+    );
   }
   pokemon.moves = next;
 }

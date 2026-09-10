@@ -26,10 +26,11 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 - 🔵 **Mechaniky pro dokončení Kanta – ZBÝVÁ:**
   - ✅ **Evoluce kamenem + trade-item (v0.59.0) – HOTOVO:** kamenné evoluce (Fire/Water/Thunder/Leaf/Moon-stone) + `linking-cord` (výměna); větvené evoluce (Eevee) řeší volba kamene. UI: použití z batohu → výběr cíle. Data: pole `evolutions` u 18 druhů + vynulované levelové `evolvesTo`.
   - ✅ **Item systém rozšíření (v0.59.0) – HOTOVO:** evoluční kameny + `linking-cord` v `data/items.js` (kategorie „evolution"), kupitelné v obchodě Items.
-  - **Spawny/oblasti pro Kanto routes**: rozšířit `data/areas.js` (kde se kterí Pokémoni chytají) + rarita per oblast.
-  - **Sprity 135 chybějících druhů**: zatím fallback „?"; dodá uživatel po vyřešení pipeline.
+  - ✅ **Spawny/oblasti pro Kanto routes + rarita (v0.89.0) – HOTOVO:** všechny routy/jeskyně mají v `data/areas.js` seznam druhů; nově **raritní tiery** – položka `species` je buď string (`common`), nebo `{ id, rarity }` (`uncommon`/`rare`/`veryrare`). `RARITY_WEIGHTS` + `areaEncounters()` + vážený `spawnEnemy` (`pickWeighted`). Kánon: Pikachu/Clefairy/Abra… `rare`, Safari/Cerulean Cave speciály (Chansey, Scyther, Dratini…) `veryrare`. ✅ **Per-oblast level ranges – HOTOVO (v0.91.0):** `AREA_LEVELS` v `data/areas.js` (tabulka `id → [min,max]`) + helpery `areaLevelRange`/`rollAreaLevel`; `spawnEnemy` losuje level z pásma (fallback = staré `recommendedLevel`..+1); popisky na mapě i v „kde chytit" ukazují `Lv min–max`. **Zbývá do budoucna:** jemné doladění, které druhy jsou kde přesně / per-druh level (data existují, tiery i pásma odhadnuté dle kánonu).
+  - ✅ **Sprity všech druhů – HOTOVO:** všech **151/151** má reálné sprity ve `assets/pokemon/<id>/`
+    (front/back/shiny + gif varianty), žádný „?" fallback.
   - ✅ **Multi-stat boost tahy (v0.59.0) – HOTOVO:** engine efektů umí `effect.changes[]` (víc statů jedním tahem). Dragon Dance / Calm Mind / Bulk Up / Shell Smash napojeny.
-  - ✅ **Dokončení soubojů (v0.61.0) – HOTOVO:** deferované **transform / copyMove (Mimic) / forceSwitch (Whirlwind/Roar)** už fungují (dočasný `volatile.moveOverride` přes `activeMoves` helper; blow-away nového soupeře / vytažení hráče). Přidány i **Substitute, Counter, Rest, Reflect/Light Screen** a **Sleep + Freeze jako trvalé non-volatile statusy** (spánek 1–3 kola, freeze 20 %/kolo + Fire thaw, Ice imunní). Zbývá do budoucna: Bide, Dig/Fly, Haze, Metronome.
+  - ✅ **Dokončení soubojů (v0.61.0) – HOTOVO:** deferované **transform / copyMove (Mimic) / forceSwitch (Whirlwind/Roar)** už fungují (dočasný `volatile.moveOverride` přes `activeMoves` helper; blow-away nového soupeře / vytažení hráče). Přidány i **Substitute, Counter, Rest, Reflect/Light Screen** a **Sleep + Freeze jako trvalé non-volatile statusy** (spánek 1–3 kola, freeze 20 %/kolo + Fire thaw, Ice imunní). ✅ **Zbytek dokončen (Haze/Metronome/Dig dříve, Bide + Fly/Dive v0.95.0):** Bide (sbírá 2 kola, vrátí ×2, `volatile.biding`), Fly přidán do `data/moves.js` (twoTurn), Dive opraven na twoTurn. **Engine efektů tahů je feature-complete pro Gen 1.**
   
 - **Pravidlo dat (rozhodnuto):** **1 kanonický záznam na druh** dle **nejnovější
   mainline generace** (base staty, typy, movepool…). **Region = jen spawn-filtr**
@@ -88,11 +89,10 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 - ✅ **Nepřátelé podle oblasti** – hotovo v 0.15.0: `ENEMY_POOL` přesunut do dat
   oblasti (`data/areas.js` → `species`), `spawnEnemy` losuje odtud. Zbývá přidat
   další oblasti a případně rarity/váhy výskytu per oblast.
-- ⚪ **Skryté druhy na cestě (návrh, R-023).** Hráč by dopředu neviděl, KTEŘÍ
-  Pokémoni na cestě jsou – jen náznak, KOLIK druhů tam může potkat (např.
-  „?/N druhů objeveno"). Objevené druhy se odemykají v Pokédexu (viz sekce
-  Pokédex) a teprve pak se ukazuje, kde se vyskytují. Napojení: `area.species`
-  zůstává, jen se ve UI maskuje podle `state.pokedex.seen`.
+- ✅ **Skryté druhy na cestě / postup chycení (R-023) – HOTOVO v0.92.0.** Hlavička
+  Battle Area (`battleView.js`) ukazuje malý odznak **`🔴 chyceno/N`** pro aktuální
+  divokou oblast (NE na uzlu mapy – tam zabíral moc místa); počítá kolik druhů z
+  poolu oblasti hráč už CHYTIL. Helper `areaCatchProgress(area)` (`src/systems/pokedex.js`).
 
 ## Vajíčka a líhnutí
 
@@ -171,40 +171,43 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
   `pokeballSystem.js` (násobiče + podmíněné bonusy), inventář po typech
   (`resources.balls`), přepínač v souboji, obchod v Poké Martu, odemykání dle
   `progress.tier`. Ikony jsou zatím emoji.
-- ⚪ **Odemykání ballů napojit na skutečný postup oblastí.** `progress.tier` je
-  teď seam (natvrdo 1). Až budou další oblasti na mapě, dosažení oblasti má
-  zvyšovat `tier` a tím odemykat další typy ballů v obchodě.
-- ⚪ **Jak získat Master Ball.** Teď neprodejný a bez zdroje. Navrhnout milník/
-  odměnu (např. dokončení oblasti, achievement).
+- ✅ **Odemykání ballů napojené na reálný postup – HOTOVO v0.94.0.** `unlockedBallTier()`
+  už nečte nikdy nezapisovaný seam `progress.tier` (proto šel dřív koupit jen tier 1),
+  ale odvozuje tier z **počtu odznaků**: 0–1 → t1, 2–4 → t2, 5+ → t3. Explicitní
+  `progress.tier` smí tier už jen zvýšit (dev/budoucnost). Obchod navíc ukazuje
+  **náhled zamčených ballů** dalšího tieru (🔒 N badges). Bez save migrace.
+- ✅ **Jak získat Master Ball – HOTOVO (v0.81.0).** Odměna za vyčištění **Silph Co.**
+  gauntletu v Saffronu (payoff větev v `battleSystem.js finishTrainerBattle`, přidá
+  `resources.balls.master`). Ball `data/pokeballs.js` `{ id:"master", guaranteed:true }`
+  (jistota chycení, neprodejný).
 - ✅ **Autocatch – výběr míčku + auto-vypnutí (ZMĚNA v0.64.0).** ~~Dřív (v0.58.0)
   fallback na nejlevnější vlastněný~~ → uživatel to VRÁTIL: autocatch teď má
   **vlastní výběr typu** (`#ac-ball` select, `autocatch.ball`, ukazuje počty) a
   používá **JEN vybraný typ**. Když dojde → `resolveAutocatchBall` vrátí null a
   tick loop **autocatch automaticky vypne** (`setAutocatch({enabled:false})`) +
   hláška do logu. NIKDY nesáhne po jiném (dražším) míčku.
-- ⚪ **Skutečné ikony ballů** – místo emoji použít obrázky z `assets/pokeballs/`.
-  Uživatel dodává sprite jednotlivých ballů; použít je **všude**, kde je ball
-  vidět (souboj, obchod, lišta, karta týmu). Jedna pomocná funkce
-  `ballIcon(ballId)` → `<img>`, ať se to nepíše na více místech. Fallback na
-  emoji pro balls bez dodaného spritu.
-- ⚪ **Ball na kartě týmu / kartě Pokémona (vizuál).** Ukázat, v jakém ballu byl
-  jedinec chycen. Seam: při chytání ukládat `caughtBall` na jedince; UI pak
-  vykreslí `ballIcon(caughtBall)`. Navazuje na „Skutečné ikony ballů" výše a na
-  Kartu Pokémona.
+- ✅ **Skutečné ikony ballů – HOTOVO.** `src/ui/ballIcon.js` (`ballIconHtml(ballId)`)
+  kreslí `<img>` z `assets/pokeballs/<id>-ball.png` s emoji fallbackem; používá se
+  všude (souboj, obchod, horní lišta, karta Pokémona). Všech 13 ballů má reálný sprite.
+- ✅ **Ball na kartě Pokémona (vizuál) – HOTOVO.** Při chytání se ukládá `caughtBall`
+  na jedince (`battleSystem.js`), karta Pokémona ho vykreslí přes `ballIconHtml`
+  (`pokemonCard.js`). (Řádek slotu Týmu = drobná kosmetika, pokud vůbec.)
 - ⚪ **Fast Ball práh** – teď base speed ≥ 100; naši startovní druhy tak rychlí
   nejsou, uplatní se až u rychlejších druhů (záměr, případně doladit).
 - 🔵 **Bally jako loot (pozor).** Loot tabulka oblastí zůstává, ale ball dropy
   jsme zrušili (bally jen z obchodu, R-020). Kdyby se někdy měl ball dropovat,
   loot aplikace (`handleFaint`/`idle.js`) počítá `res[resource]` – ball id by
   muselo jít do `res.balls[id]`, ne přímo do `resources`.
-- 🔵 **Rezervované bally (comingSoon) – ČÁSTEČNĚ HOTOVO v0.62.0.** ✅ Odemčeny
+- 🔵 **Rezervované bally (comingSoon) – ČÁSTEČNĚ HOTOVO (v0.62.0, v0.94.0).** ✅ Odemčeny
   **Love** (`loveMatch` ×8), **Heavy** (`heavy`, dle hmotnosti), **Dream**
-  (`statusEnemy` ×4/×6 spící), **Moon** (`moonStone` ×4) – doplněn tier/price/bonus
-  + mechanika v `pokeballSystem.ballMultiplier`. Zbývají (stále comingSoon,
-  `tier:null`/`price:null`, jen sprite+id): **Dusk** (noc/jeskyně – čeká na denní
-  dobu/biome), **Dive** (pod vodou), **Lure** (rybaření), Safari/Sport/Park/
-  Cherish/Premier (eventy/kosmetika), Friend (friendship). Zapojení = doplnit
-  ballu `tier`/`price`/`bonus` + case v `ballMultiplier`.
+  (`statusEnemy` ×4/×6 spící), **Moon** (`moonStone` ×4) v0.62.0. ✅ v0.94.0 přidány
+  **Dusk** (`darkPlace` ×3 v jeskyních `biome:"cave"`) a **Dive** (`waterPlace` ×3.5
+  ve vodních oblastech `biome:"water"`) – `catchContext()` nově předává `biome`.
+  **Zbývají (stále comingSoon,** `tier:null`/`price:null`, jen sprite+id): **Lure**
+  (rybaření), Safari/Sport/Park/Cherish (eventy), Premier (kosmetika za hromadný
+  nákup), Friend (friendship) – čekají na chybějící mechaniky (rybaření/eventy/
+  friendship), záměrně nevymýšlíme naslepo. Zapojení = doplnit `tier`/`price`/`bonus`
+  + case v `ballMultiplier`.
 - ⚪ **Beast Ball (Ultra Beasts).** Jediný chybějící ball z celého kánonu – NEMÁ
   zatím ani sprite (`beast-ball.png`) ani datovou položku. Řešit **až** s Ultra
   Beasts; teď záměrně vynecháno.
@@ -214,7 +217,9 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 - 🔵 **Sekce Marketu.** Hotovo v 0.19.0: okno „🛒 Market" s obchodem po sekcích
   (`buildingView.js` → `openMarket`, dept-cards). ✅ **Items** (léčení/statusy/revive)
   přidány v **0.45.0** (`openItemShop`, data `data/items.js`). ✅ **Hromadný nákup**
-  (×1/×5/×10/Max) v obou obchodech v **0.58.0**. Zbývá: **evoluční kameny**.
+  (×1/×5/×10/Max) v obou obchodech v **0.58.0**. ✅ **Evoluční kameny** (Fire/Water/
+  Thunder/Leaf/Moon + Linking Cord) kupitelné v sekci Items (kategorie „evolution",
+  `data/items.js` + `buildingView.openItemShop`, v0.59.0) → **CELÁ SEKCE HOTOVÁ**.
 
 ## Itemy & léčení
 
@@ -228,7 +233,14 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
   kolo (`battleSystem.js`). **Pozn.:** nabízí jen členy TÝMU, ne jedince v PC boxech.
 - ✅ **Hromadný nákup itemů – HOTOVO v0.58.0** (×1/×5/×10/Max, `buildingView.js`).
 - ✅ **Prodej itemů + řazení batohu – HOTOVO v0.59.0** (`itemSystem.sellItem`, výkup 50 %, tlačítka Sell 1 / Sell all v batohu; seznamy řazené abecedně). 🚫 Batch use (použití víc kusů naráz) **ZAMÍTNUTO uživatelem – itemy vždy jen po 1 ks.**
-- ⚪ **Held items** (item nesený jedincem) – samostatný systém, později.
+- ✅ **Held items** (item nesený jedincem) – **HOTOVO v0.92.0.** `OwnedPokemon.heldItem`
+  (`state.js`); funkční **Everstone** (blok evoluce + dědičnost povahy) a **Destiny Knot**
+  (5 IV dědičnost, `breedingSystem.js`); v souboji held-item efekty (low-HP heal /
+  end-turn heal, `battleSystem.js`). ✅ Sortiment rozšířen o **Sitrus Berry** (heal 30
+  pod 50 % HP) a **Focus Sash** (přežití KO z plného HP s 1 HP, hook `focusSash`);
+  ✅ **UI pro nasazení/sundání** drženého předmětu je v kartě Pokémona (dropdown +
+  Equip/Unequip, `pokemonCard.js`), mimo breeding. **Zbývá do budoucna:** choice items
+  (vyžadují move-lock + vynucení v manuálním souboji – záměrně odloženo).
 - ✅ **Ekonomika léčení – ROZHODNUTO v0.62.0: zůstává ZDARMA.** Uživatel zvolil
   nechat Heal team / Cure v Poké Centru zdarma; potiony mají smysl hlavně v souboji
   (do Centra tam nelze). Jen zpřehledněno UI: „Heal team (free)" + explicitní
@@ -339,31 +351,26 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
   mapa vpravo). `leftPanel.js` smazán. **Badge-gating základ** připraven
   (`isAreaUnlocked(area, visited, badges)` + `unlock.badge`), zatím nevyužit.
 
-### DALŠÍ KROKY — POŘADNÍK (priorita shora, aktualizováno 2026-09-07)
-1. ✅ **Player Profile / Trainer Card (nový tab) — HOTOVO (čeká vizuální ověření).**
+### DALŠÍ KROKY — POŘADNÍK (priorita shora, aktualizováno 2026-09-10)
+1. ✅ **Player Profile / Trainer Card (nový tab) — HOTOVO (v0.65.0).**
    Profile view (`src/ui/profileView.js`) – **otevírá se tlačítkem 👤 v horní liště**
-   (vedle Goldu, `main.js` renderResourceBar → `openMainTab("profile")`); v liště tabů
-   NENÍ (skrytá záložka v `mainPanel.js`).
-   Trainer card: jméno hráče (klik = přejmenovat), souhrn (Pokédex caught/total, Seen,
-   Badges n/8, Shiny caught, Gold, Play time) + **badge case** (8 slotů z `data/badges.js`,
-   získané barevné / chybějící „???" ztmavené; ikona `assets/badges/<id>.png` s glyf-
-   fallbackem). CSS v `css/main.css` (sekce „Profile"). Nová data: **`data/badges.js`**
-   (8 kanonických odznaků – využije i gym systém). Scroll řešen přes scrollPreserve.
-2. ⚪ **Trenéři + Gymy — FÁZE 1: data** — `data/trainers.js` (+ gymy), rozšíření
-   `area.unlock` o `trainer`, `progress.defeatedTrainers` + gym-progres, save migrace.
-   Design hotový, viz sekce **„Trenéři, Gymy a vícevrstvý gating"**. První gym: Brock.
-3. ⚪ **Trenéři + Gymy — FÁZE 2: engine** — trenérský souboj (fronta, bez chytání/
-   útěku, pravidla léčení, ball ukazatel, auto-odklik textů), výhra/odměna/badge,
-   ~15 % spawn, gym sekvence, vícevrstvý `isAreaUnlocked`.
-4. ⚪ **Trenéři + Gymy — FÁZE 3: UI** — gym tab v Battle Areně (sekvence), route
-   sekce Trainers (✓/✗), hláška u zamčeného uzlu.
-5. ⚪ **Sprity (uživatel dodá)** — trenérské třídy, 8 gym leaderů, 8 odznaků, nová
-   pozadí/biome. Složky připravené (viz `docs/SPRITES-TODO.md`).
-6. ⚪ **Trenéři + Gymy — FÁZE 5: badge-gaty** na kanonická místa (zapne odložený
-   badge-gating; hlavní: Victory Road / Route 23 = 8 odznaků).
-7. ⚪ **Odemknout fázi 5 Kanto** (spawny nových druhů dle oblastí) z
+   (vedle Goldu); Trainer card se jménem, Pokédex souhrnem, badge case (8/8), zlatem, časem.
+2. ✅ **Trenéři + Gymy — FÁZE 1–3: HOTOVO (v0.66.0–v0.80.0).**
+   `data/trainers.js` (route trenéři + gym leadeři), `data/badges.js` (8 odznaků),
+   `data/gyms.js` (8 gymů), trenérský engine v `src/systems/battleSystem.js` (souboje,
+   výhra, odznaky), gym UI (`src/ui/gymView.js`), vícevrstvý gating (`area.unlock`).
+   **Všechny 8 gymů Kanta funční s leaderama i odznaky.**
+3. ✅ **Trenéři + Gymy — FÁZE 4: sprity — v0.67.0–v0.80.0, částečně dodáno.**
+   Trenérské třídy v `assets/trainers/`, 8 gym leaderů (assets/gym-leaders/), odznak ikony.
+   Zbývá: doplnit chybějící sprity (SPRITES-TODO.md).
+4. ✅ **Trenéři + Gymy — FÁZE 5: badge-gaty — HOTOVO (v0.80.0, v0.81.0).**
+   Victory Road / Route 23 = 8 odznaků (Earth Badge od Giovanniho), Indigo Plateau
+   jen po poražení Ligy. Všechny kanonické gaty napojené.
+5. ⚪ **Sprity (uživatel dodá)** — zbývající trenérské třídy, legendární ptáci,
+   pozadí pro nové oblasti. Seznam v `docs/SPRITES-TODO.md`.
+6. ⚪ **Odemknout fázi 5 Kanto** (spawny nových druhů dle oblastí) z
    alldex-data-strategy — navázat na postup po mapě + `progress.tier` pro bally.
-8. ⚪ **Vizuální ověření layoutu** ve hře (mapa, team-grid 3×2, přepínání tabů) —
+7. ⚪ **Vizuální ověření layoutu** ve hře (mapa, team-grid 3×2, přepínání tabů) —
    doladit CSS podle oka, průběžně.
 
 **Později (bez pevného pořadí):** TM odměny za gymy, HM systém, mapa per generace
@@ -401,8 +408,12 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 
 ## Trenéři, Gymy a vícevrstvý gating
 
-Kompletní design odsouhlasen s uživatelem 2026-09-07 (sekce A), detail rozhodnutí v
-[NOTES.md](NOTES.md). **Zatím NIC v kódu** (⚪) – čeká i na sprity od uživatele.
+✅ **IMPLEMENTOVÁNO v kódu (v0.66.0–v0.80.0).** Kompletní systém: `data/trainers.js`
+(route trenéři + gym leadeři), `data/badges.js` (8 odznaků), `data/gyms.js` (8 gymů Kanta),
+engine v `src/systems/battleSystem.js` (souboje, výhra, odznaky), UI `src/ui/gymView.js`
+(gym tabu), vícevrstvý gating (`area.unlock`). Všechny tři implementační fáze (1. data,
+2. engine, 3. UI) jsou **hotové a ověřené v kódu**. Zbývá: dodaná sprity od uživatele (Fáze 4)
+a badge-gating na kanonická místa (Fáze 5).
 Klíč: **trenér = jen „scénář" (fronta soupeřů) pro STÁVAJÍCÍ battle engine**, žádný
 nový bojový mód. Auto AI odbojuje frontu; autocatch se u trenéra vypne.
 
@@ -468,18 +479,40 @@ nový bojový mód. Auto AI odbojuje frontu; autocatch se u trenéra vypne.
 4. **Sprity (uživatel dodá):** trenérské třídy + 8 gym leaderů + 8 ikon odznaků + pozadí.
 5. **Badge-gaty** na kanonická místa (zapne odložený badge-gating).
 
+### Gym Challenges (minihry před souboji)
+
+- ✅ **Vermilion Gym Challenge – trash cans (v0.88.0).** Framework `src/ui/gymChallengeView.js`
+  (datově řízený registr `CHALLENGES` po gymech; `hasGymChallenge`, `isGymChallengeDone`,
+  `startGymChallenge`). Vermilion (Lt. Surge) má klikací mřížku 5×3 košů – najdi první
+  vypínač, druhý je vedle, špatný tip resetuje zámek. Splnění se ukládá do
+  `state.story.vermilionGymSwitches`. Integrování do `src/ui/gymView.js`: challenge karty
+  v Gym tabu, zámek na souboje trenérů, žádná migrace (staré save s `started`/`cleared`
+  challenge obejdou).
+- ✅ **Saffron Gym Challenge – teleportační dlaždice (v0.88.0).** `buildTeleportPads`: mřížka
+  3×3 warp padů, jedna pevná správná posloupnost 4 padů k Sabrině; správný pad se rozsvítí,
+  špatný tě teleportuje zpět na vstup (bludiště se nemíchá → férové paměťové puzzle). Flag
+  `state.story.saffronGymIntro`. Zobrazí se až po osvobození Silph Co. (existující story gate).
+- ✅ **Fuchsia Gym Challenge – neviditelné zdi (v0.88.0).** `buildInvisibleWalls`: bludiště 5×5
+  se skrytými zdmi, hráč se hmatem prodírá z dolního vchodu ke Kogovi (🥷); náraz do zdi ji
+  odhalí (🧱). Pevné, zaručeně řešitelné rozložení. Flag `state.story.fuchsiaGymWalls`.
+- ✅ **Blaine (Cinnabar) – kvíz (v0.77.0).** Již hotový (pravda/nepravda otázky v `popup.choices`).
+
 ### Budoucí rozšíření (⚪ zapsat, dělat časem)
-- ⚪ **TM odměny za gymy** – v MVP gym dává jen odznak + peníze; časem přidat TM
-  (technický stroj) jako odměnu za gym leadera (dle kánonu každý leader dává TM).
-  Předpokládá TM/HM item systém.
-- ⚪ **HM systém a jeho role v progresu** – vymyslet, jak fungují HMka (Cut/Surf/
-  Strength/Flash/Fly/…) a co blokují (stromy, vodní plochy, Rock Tunnel, Cycling Road…).
-  Zatím HM oblasti nechány **volně (jen visited)**. Až bude HM systém, převést kanonické
-  HM/item gaty do `unlock.hm`/`unlock.item`.
+- ✅ **TM systém + odměny za gymy (v0.93.0).** Kompletní Gen 1 TM01–TM50 (`data/tms.js`,
+  `data/tmCompat.js`, `src/systems/tmSystem.js`): jednorázové itemy v `resources.items`,
+  kanonická kompatibilita per druh (všech 151), naučení tahu z karty Pokémona
+  („Teach TM" + výběr slotu k přepsání). Zdroje TM dle kánonu: **gym leadeři** (Brock→TM34
+  Bide, Misty→TM11 Bubble Beam, Surge→TM24 Thunderbolt, Erika→TM21 Mega Drain, Koga→TM06
+  Toxic, Sabrina→TM46 Psywave, Blaine→TM38 Fire Blast, Giovanni→TM27 Fissure), **Poké Mart**
+  (kupitelné), **Game Corner** (TM13/23/48 za coiny) a **vzácný wild drop** (~1,5 %). Batoh
+  má read-only TM sekci. HM zůstávají samostatné klíčové itemy (viz níže).
+- ✅ **HM systém (v0.96.0) – HOTOVO.** HM01 Cut / HM02 Fly / HM03 Surf / HM04 Strength / HM05 Flash jsou reálné **znovupoužitelné učitelné tahy** (nespotřebují se, učí se neomezeně kompatibilním druhům). Data: `data/hms.js` (mapování HM→tah+item+flag), `data/hmCompat.js` (kanonická kompatibilita všech 151), `src/systems/hmSystem.js` (logika, `teachHm` NEspotřebovává). UI: sekce „Teach HM" na kartě (`pokemonCard.js`, vedle „Teach TM"). Odemykání HM přes story flagy beze změny (hasSurf/hasStrength apod.). Nově přidáno: item `hm02-fly`, move `flash`; Fly se uděluje na S.S. Anne, je JEN bojový move. Save v44 (backfill `hm02-fly`, `hasFly`). **Zámínka pro budoucnost:** Až bude třeba **gating po HM** (např. stromy/vodní plochy jako skutečné bloky), převést na `unlock.hm` ve vzoru `area.unlock`; zatím jsou HM oblasti volné (jen visited). Zbývá: doladit gating HM-oblastí (bude-li potřeba).
 
 ## Player Profile / Trainer Card (nový tab)
 
-- ⚪ **Tab „Profile" (trainer card)** – nápad uživatele 2026-09-07. Samostatný tab
+- ✅ **Tab „Profile" (trainer card) – HOTOVO** (`src/ui/profileView.js`, zapojeno v
+  `mainPanel.js`). Badge case, Pokédex souhrn, peníze/jméno/čas. Původní zadání níže:
+- (historie) **Tab „Profile" (trainer card)** – nápad uživatele 2026-09-07. Samostatný tab
   v layoutu (`src/ui/mainPanel.js`) s přehledem hráče:
   - **Badge case** – 8 slotů odznaků, získané barevné (`progress.badges`), chybějící
     ztmavené; ikony z `assets/badges/<id>.png`. (Přirozený domov pro odznaky z gymů.)
@@ -570,10 +603,12 @@ nový bojový mód. Auto AI odbojuje frontu; autocatch se u trenéra vypne.
     **residuální poškození konce kola** (otrava/popálení + Leech Seed + trap,
     krokově v manuálu); sebe-KO z recoilu/zmatení správně vyřadí. **TYPE_CHART
     rozšířen na plných 18 typů** (mj. Dark + Fairy), dvojtypy se násobí korektně.
-    ⚠️ **DEFEROVÁNO** (data „připravená", zatím bez efektu / „but it failed!"):
-    **transform**, **copyMove**, **forceSwitch** (Whirlwind). Do budoucna i další
-    Gen1 mechaniky: Substitute, Counter, Bide, Dig/Fly, Rest, Reflect/Light
-    Screen, Haze, Metronome…
+    ✅ **DODĚLÁNO (v0.61.0):** **transform**, **copyMove** (Mimic), **forceSwitch**
+    (Whirlwind/Roar), **Substitute**, **Counter**, **Rest**, **Reflect/Light Screen**
+    už engine PROVÁDÍ (viz `battleSystem.js`). ✅ **DODĚLÁNO (v0.92.0):** **Haze**
+    (nuluje stat-stages obou), **Metronome** (spustí náhodný tah dedikovaným resolverem),
+    **Dig/Bounce/Fly/Dive** semi-invulnerabilita během nabíjecího kola (cílené útoky
+    minou). ⚠️ **Zbývá:** **Bide** – v datech `moves.js` zatím žádný záznam (žádný dead case).
   - **Fáze 4 (později):** víc oblastí; Struggle recoil.
     ✅ **Auto-battle politika** (v0.48.0): `chooseAutoPlayerTurn` (auto-heal <30 %
     HP, auto-switch při enemy eff ≥2× s guardem, jinak move); `chooseAction`
@@ -626,8 +661,10 @@ nový bojový mód. Auto AI odbojuje frontu; autocatch se u trenéra vypne.
   (zákaz všech předmětů v souboji vč. auto-heal), **No potions** (jen HP kategorie),
   **Nuzlocke** (permadeath přes `releasePokemon` + chytání jen 1 druhu/oblast).
   `battleSystem.getRules()`/`itemsAllowed()` – systémy jen respektují.
-  **Zbývá:** **Level cap** (podle nejsilnějšího trenéra v gymu – předpokládá gymy/trenéry,
-  zatím neexistují) → DEFEROVÁNO.
+  ✅ **Level cap (v0.92.0) – HOTOVO.** Rule „Level cap" (default off): strop = ace
+  level dalšího neporaženého gym leadera → po 8 odznacích Elite Four/Champion ace →
+  po titulu Champion strop zmizí (MAX_LEVEL 100). Centrálně v `grantXp()`
+  (`progression.currentLevelCap()`), takže ho respektují všechny zdroje XP.
 
 ## Úvodní obrazovka (title screen)
 

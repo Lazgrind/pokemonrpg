@@ -40,8 +40,10 @@
  *   `visited` + `badge` platí zároveň (AND) – např. route za Pewter až po Brockovi.
  * @property {number} recommendedLevel
  * @property {string} description
- * @property {string[]} species  druhy Pokémonů v oblasti (nepřátelé i druh vajíčka);
- *                               u měst prázdné
+ * @property {(string|{id:string, rarity:"uncommon"|"rare"|"veryrare"})[]} species
+ *   druhy Pokémonů v oblasti (nepřátelé i druh vajíčka); u měst prázdné. Položka je
+ *   buď prostý string (tier "common"), nebo objekt `{ id, rarity }` s vyšší vzácností
+ *   (viz RARITY_WEIGHTS + areaEncounters – vážený náhodný výběr ve spawnEnemy).
  * @property {Drop[]} drops     loot tabulka oblasti (zadání, sekce 6)
  * @property {string} [biome]   prostředí oblasti → sdílený pool pozadí souboje
  *   (viz `data/backgrounds.js`, `BACKGROUND_BIOMES`). Víc oblastí stejného biome
@@ -143,7 +145,7 @@ export const AREAS = [
     unlock: { visited: "route-02" },
     recommendedLevel: 5,
     description: "A maze-like forest of tall trees. Bug Pokémon everywhere — and a rare Pikachu.",
-    species: ["caterpie", "metapod", "weedle", "kakuna", "pidgey", "pikachu"],
+    species: ["caterpie", "metapod", "weedle", "kakuna", "pidgey", { id: "pikachu", rarity: "rare" }],
     // biome "forest" – vlastní pool pozadí zatím v data/backgrounds.js NENÍ,
     // takže se použije fallback gradient. Přidat forest obrázky později.
     biome: "forest",
@@ -178,7 +180,7 @@ export const AREAS = [
     unlock: { visited: "pewter-city", badge: "boulder-badge" },
     recommendedLevel: 9,
     description: "A rocky path leading northeast from Pewter City toward Mt. Moon.",
-    species: ["spearow", "rattata", "pidgey", "jigglypuff", "mankey", "ekans", "sandshrew"],
+    species: ["spearow", "rattata", "pidgey", { id: "jigglypuff", rarity: "rare" }, "mankey", "ekans", { id: "sandshrew", rarity: "uncommon" }],
     biome: "grassland",
     drops: [],
   },
@@ -193,7 +195,7 @@ export const AREAS = [
     unlock: { visited: "route-03" },
     recommendedLevel: 10,
     description: "A mysterious mountain cave. Fossils and ancient Pokémon dwell here.",
-    species: ["zubat", "geodude", "paras", "clefairy", "sandshrew"],
+    species: ["zubat", "geodude", "paras", { id: "clefairy", rarity: "rare" }, { id: "sandshrew", rarity: "uncommon" }],
     biome: "cave",
     drops: [],
   },
@@ -208,7 +210,7 @@ export const AREAS = [
     unlock: { visited: "mt-moon", story: "mtMoonRocketsCleared" },
     recommendedLevel: 11,
     description: "A desert-like passage on the far side of Mt. Moon.",
-    species: ["rattata", "spearow", "ekans", "sandshrew", "mankey"],
+    species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }, "mankey"],
     biome: "grassland",
     drops: [],
   },
@@ -237,7 +239,7 @@ export const AREAS = [
     unlock: { visited: "cerulean-city" },
     recommendedLevel: 12,
     description: "A coastal path north of Cerulean City, blooming with flowers.",
-    species: ["oddish", "bellsprout", "pidgey", "caterpie", "weedle", "abra", "poliwag"],
+    species: ["oddish", "bellsprout", "pidgey", "caterpie", "weedle", { id: "abra", rarity: "rare" }, "poliwag"],
     biome: "grassland",
     drops: [],
   },
@@ -252,7 +254,7 @@ export const AREAS = [
     unlock: { visited: "route-24" },
     recommendedLevel: 13,
     description: "An eastern route beyond Route 24. Home to rare botanical Pokémon.",
-    species: ["oddish", "bellsprout", "pidgey", "caterpie", "weedle", "abra", "kakuna", "metapod", "poliwag"],
+    species: ["oddish", "bellsprout", "pidgey", "caterpie", "weedle", { id: "abra", rarity: "rare" }, "kakuna", "metapod", "poliwag"],
     biome: "grassland",
     drops: [],
   },
@@ -267,7 +269,7 @@ export const AREAS = [
     unlock: { visited: "cerulean-city" },
     recommendedLevel: 13,
     description: "A quiet path south of Cerulean City, filled with tall grass.",
-    species: ["oddish", "bellsprout", "pidgey", "meowth", "mankey", "abra"],
+    species: ["oddish", "bellsprout", "pidgey", "meowth", "mankey", { id: "abra", rarity: "rare" }],
     biome: "grassland",
     drops: [],
   },
@@ -282,7 +284,7 @@ export const AREAS = [
     unlock: { visited: "route-05" },
     recommendedLevel: 13,
     description: "A path leading to the coast, where the roar of waves echoes.",
-    species: ["oddish", "bellsprout", "pidgey", "meowth", "mankey", "abra", "poliwag"],
+    species: ["oddish", "bellsprout", "pidgey", "meowth", "mankey", { id: "abra", rarity: "rare" }, "poliwag"],
     biome: "grassland",
     drops: [],
   },
@@ -311,7 +313,7 @@ export const AREAS = [
     unlock: { visited: "vermilion-city" },
     recommendedLevel: 14,
     description: "An eastern route from Vermilion City, home to wild Pokémon and trainers.",
-    species: ["spearow", "ekans", "sandshrew", "drowzee", "rattata", "lickitung"],
+    species: ["spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }, "drowzee", "rattata", { id: "lickitung", rarity: "veryrare" }],
     biome: "grassland",
     drops: [],
   },
@@ -326,7 +328,7 @@ export const AREAS = [
     unlock: { visited: "route-11" },
     recommendedLevel: 18,
     description: "A narrow cave home to Diglett and Dugtrio. Watch your step!",
-    species: ["diglett", "dugtrio"],
+    species: ["diglett", { id: "dugtrio", rarity: "uncommon" }],
     biome: "cave",
     drops: [],
   },
@@ -341,7 +343,7 @@ export const AREAS = [
     unlock: { visited: "cerulean-city" },
     recommendedLevel: 14,
     description: "A scenic mountain path connecting Cerulean City to Rock Tunnel.",
-    species: ["rattata", "spearow", "ekans", "sandshrew"],
+    species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }],
     biome: "grassland",
     drops: [],
   },
@@ -358,7 +360,7 @@ export const AREAS = [
     unlock: { visited: "route-09", story: "hasFlash" },
     recommendedLevel: 16,
     description: "A dark cavern filled with dangerous rock formations and wild Pokémon.",
-    species: ["zubat", "geodude", "machop", "onix", "cubone"],
+    species: ["zubat", "geodude", { id: "machop", rarity: "uncommon" }, "onix", { id: "cubone", rarity: "rare" }],
     biome: "cave",
     drops: [],
   },
@@ -373,7 +375,7 @@ export const AREAS = [
     unlock: { visited: "rock-tunnel" },
     recommendedLevel: 16,
     description: "A mountain path on the eastern slope, leading to Lavender Town.",
-    species: ["rattata", "spearow", "ekans", "sandshrew", "voltorb", "machop"],
+    species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }, "voltorb", { id: "machop", rarity: "uncommon" }],
     biome: "grassland",
     drops: [],
   },
@@ -388,7 +390,7 @@ export const AREAS = [
     unlock: { visited: "route-10" },
     recommendedLevel: 22,
     description: "An industrial facility overflowing with Electric-type Pokémon.",
-    species: ["voltorb", "magnemite", "pikachu", "electabuzz", "grimer", "magneton", "magmar"],
+    species: ["voltorb", "magnemite", { id: "pikachu", rarity: "rare" }, { id: "electabuzz", rarity: "rare" }, "grimer", { id: "magneton", rarity: "uncommon" }, { id: "magmar", rarity: "rare" }],
     biome: "building",
     drops: [],
   },
@@ -417,7 +419,7 @@ export const AREAS = [
     unlock: { visited: "lavender-town" },
     recommendedLevel: 16,
     description: "A path west of Lavender Town toward Saffron City.",
-    species: ["pidgey", "ekans", "sandshrew", "meowth", "growlithe", "vulpix", "abra", "drowzee", "gastly", "haunter"],
+    species: ["pidgey", "ekans", { id: "sandshrew", rarity: "uncommon" }, "meowth", { id: "growlithe", rarity: "rare" }, { id: "vulpix", rarity: "rare" }, { id: "abra", rarity: "rare" }, "drowzee", "gastly", { id: "haunter", rarity: "uncommon" }],
     biome: "grassland",
     drops: [],
   },
@@ -446,7 +448,7 @@ export const AREAS = [
     unlock: { visited: "saffron-city" },
     recommendedLevel: 16,
     description: "A scenic route connecting Saffron City and Celadon City to the west.",
-    species: ["pidgey", "oddish", "bellsprout", "meowth", "growlithe", "vulpix", "abra"],
+    species: ["pidgey", "oddish", "bellsprout", "meowth", { id: "growlithe", rarity: "rare" }, { id: "vulpix", rarity: "rare" }, { id: "abra", rarity: "rare" }],
     biome: "grassland",
     drops: [],
   },
@@ -475,7 +477,7 @@ export const AREAS = [
     unlock: { visited: "celadon-city" },
     recommendedLevel: 18,
     description: "A path south of Celadon City, leading toward the seaside.",
-    species: ["spearow", "doduo", "rattata", "raticate", "grimer", "koffing"],
+    species: ["spearow", "doduo", "rattata", { id: "raticate", rarity: "uncommon" }, "grimer", "koffing"],
     biome: "grassland",
     drops: [],
   },
@@ -490,7 +492,7 @@ export const AREAS = [
     unlock: { visited: "route-16" },
     recommendedLevel: 22,
     description: "A thrilling downhill cycling road with fast-moving trainers and wild Pokémon.",
-    species: ["spearow", "doduo", "ponyta", "grimer", "raticate", "koffing", "weezing"],
+    species: ["spearow", "doduo", { id: "ponyta", rarity: "rare" }, "grimer", { id: "raticate", rarity: "uncommon" }, "koffing", { id: "weezing", rarity: "uncommon" }],
     biome: "grassland",
     drops: [],
   },
@@ -505,7 +507,7 @@ export const AREAS = [
     unlock: { visited: "route-17" },
     recommendedLevel: 24,
     description: "A coastal route where the wind blows strong and wild Pokémon roam freely.",
-    species: ["spearow", "doduo", "raticate", "grimer", "koffing", "weezing"],
+    species: ["spearow", "doduo", { id: "raticate", rarity: "uncommon" }, "grimer", "koffing", { id: "weezing", rarity: "uncommon" }],
     biome: "grassland",
     drops: [],
   },
@@ -535,7 +537,7 @@ export const AREAS = [
     unlock: { visited: "fuchsia-city" },
     recommendedLevel: 25,
     description: "A vast wildlife reserve teeming with rare and exotic Pokémon species.",
-    species: ["nidoran-m", "nidoran-f", "nidorina", "nidorino", "paras", "parasect", "venonat", "exeggcute", "rhyhorn", "chansey", "kangaskhan", "scyther", "pinsir", "tauros", "doduo", "tangela", "dratini", "dragonair"],
+    species: ["nidoran-m", "nidoran-f", { id: "nidorina", rarity: "uncommon" }, { id: "nidorino", rarity: "uncommon" }, "paras", { id: "parasect", rarity: "uncommon" }, "venonat", "exeggcute", "rhyhorn", { id: "chansey", rarity: "veryrare" }, { id: "kangaskhan", rarity: "veryrare" }, { id: "scyther", rarity: "veryrare" }, { id: "pinsir", rarity: "veryrare" }, { id: "tauros", rarity: "veryrare" }, "doduo", { id: "tangela", rarity: "rare" }, { id: "dratini", rarity: "veryrare" }, { id: "dragonair", rarity: "veryrare" }],
     biome: "grassland",
     drops: [],
   },
@@ -552,7 +554,7 @@ export const AREAS = [
     unlock: { visited: "route-14" },
     recommendedLevel: 23,
     description: "A path between Fuchsia City and the Safari Zone entrance.",
-    species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", "ditto"],
+    species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", { id: "ditto", rarity: "rare" }],
     biome: "grassland",
     drops: [],
   },
@@ -567,7 +569,7 @@ export const AREAS = [
     unlock: { visited: "route-13" },
     recommendedLevel: 23,
     description: "A winding route connecting the inland areas toward the western side.",
-    species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", "ditto"],
+    species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", { id: "ditto", rarity: "rare" }],
     biome: "grassland",
     drops: [],
   },
@@ -584,7 +586,7 @@ export const AREAS = [
     unlock: { visited: "route-12", story: "snorlaxCleared" },
     recommendedLevel: 23,
     description: "A grassy route where trainers test their skills against wild creatures.",
-    species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", "ditto", "goldeen", "seaking"],
+    species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", { id: "ditto", rarity: "rare" }, { id: "goldeen", rarity: "uncommon" }, { id: "seaking", rarity: "uncommon" }],
     biome: "grassland",
     drops: [],
   },
@@ -600,7 +602,7 @@ export const AREAS = [
     unlock: { visited: "lavender-town" },
     recommendedLevel: 23,
     description: "A scenic waterfront route with both land and aquatic Pokémon.",
-    species: ["oddish", "bellsprout", "venonat", "pidgey", "ditto", "gastly", "goldeen"],
+    species: ["oddish", "bellsprout", "venonat", "pidgey", { id: "ditto", rarity: "rare" }, "gastly", { id: "goldeen", rarity: "uncommon" }],
     biome: "grassland",
     drops: [],
   },
@@ -616,7 +618,7 @@ export const AREAS = [
     unlock: { visited: "fuchsia-city", story: "hasSurf" },
     recommendedLevel: 30,
     description: "A vast ocean expanse. Surfing Pokémon and Water-types patrol the waves.",
-    species: ["tentacool", "tentacruel"],
+    species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }],
     biome: "water",
     drops: [],
   },
@@ -632,7 +634,7 @@ export const AREAS = [
     unlock: { visited: "seafoam-islands" },
     recommendedLevel: 30,
     description: "A narrow channel with swirling currents, running west from the Seafoam Islands to Cinnabar Island.",
-    species: ["tentacool", "tentacruel"],
+    species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }],
     biome: "water",
     drops: [],
   },
@@ -648,7 +650,7 @@ export const AREAS = [
     unlock: { visited: "route-19" },
     recommendedLevel: 30,
     description: "A chain of icy islands shrouded in mist. Ice and Water Pokémon thrive here.",
-    species: ["zubat", "golbat", "seel", "dewgong", "slowpoke", "psyduck", "krabby", "horsea", "shellder", "staryu", "poliwag", "poliwhirl"],
+    species: ["zubat", { id: "golbat", rarity: "uncommon" }, { id: "seel", rarity: "rare" }, { id: "dewgong", rarity: "uncommon" }, "slowpoke", "psyduck", "krabby", { id: "horsea", rarity: "rare" }, { id: "shellder", rarity: "rare" }, { id: "staryu", rarity: "rare" }, "poliwag", { id: "poliwhirl", rarity: "uncommon" }],
     biome: "cave",
     // Speciální oblast – vlastní pozadí (per-area override v battleSystem.pickBackground)
     // místo sdíleného „cave" poolu. Ledová jeskyně Seafoam Islands.
@@ -667,7 +669,7 @@ export const AREAS = [
     unlock: { visited: "cinnabar-island" },
     recommendedLevel: 30,
     description: "A long seaway north of Cinnabar Island, winding back toward Pallet Town.",
-    species: ["tentacool", "tentacruel", "pidgey", "rattata", "magikarp"],
+    species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }, "pidgey", "rattata", "magikarp"],
     biome: "water",
     drops: [],
   },
@@ -699,7 +701,7 @@ export const AREAS = [
     unlock: { visited: "cinnabar-island", badge: "earth-badge" },
     recommendedLevel: 32,
     description: "A mountain passage leading north toward the ultimate challenge of Victory Road.",
-    species: ["spearow", "fearow", "ekans", "arbok", "sandshrew", "sandslash", "mankey", "primeape", "ponyta", "ditto"],
+    species: ["spearow", { id: "fearow", rarity: "uncommon" }, "ekans", { id: "arbok", rarity: "uncommon" }, { id: "sandshrew", rarity: "uncommon" }, { id: "sandslash", rarity: "uncommon" }, "mankey", { id: "primeape", rarity: "uncommon" }, { id: "ponyta", rarity: "rare" }, { id: "ditto", rarity: "rare" }],
     biome: "mountain",
     drops: [],
   },
@@ -715,7 +717,7 @@ export const AREAS = [
     unlock: { visited: "route-23", story: "hasStrength" },
     recommendedLevel: 34,
     description: "The final gauntlet before the Pokémon League. Powerful trainers and Pokémon await.",
-    species: ["zubat", "golbat", "geodude", "graveler", "onix", "machop", "machoke", "marowak"],
+    species: ["zubat", { id: "golbat", rarity: "uncommon" }, "geodude", { id: "graveler", rarity: "uncommon" }, "onix", { id: "machop", rarity: "uncommon" }, { id: "machoke", rarity: "uncommon" }, { id: "marowak", rarity: "uncommon" }],
     biome: "cave",
     drops: [],
   },
@@ -746,11 +748,139 @@ export const AREAS = [
     unlock: { visited: "indigo-plateau", story: "isChampion" },
     recommendedLevel: 50,
     description: "A mysterious cave harboring legendary and powerful Pokémon of unknown strength.",
-    species: ["golbat", "magneton", "machoke", "kadabra", "ditto", "chansey", "rhydon", "electrode", "parasect"],
+    species: [{ id: "golbat", rarity: "uncommon" }, { id: "magneton", rarity: "uncommon" }, { id: "machoke", rarity: "uncommon" }, { id: "kadabra", rarity: "rare" }, { id: "ditto", rarity: "rare" }, { id: "chansey", rarity: "veryrare" }, { id: "rhydon", rarity: "uncommon" }, { id: "electrode", rarity: "uncommon" }, { id: "parasect", rarity: "uncommon" }],
     biome: "cave",
     drops: [],
   },
 ];
+
+/**
+ * Váhy raritních tierů pro vážený výběr divokého druhu v oblasti. Vyšší váha =
+ * častější výskyt. Záznam v `area.species` může být buď prostý string (= tier
+ * "common"), nebo objekt `{ id, rarity }` s jedním z tierů níže. Kánon Gen 1:
+ * běžní ptáci/hlodavci jsou "common", speciality (Pikachu, Chansey, Dratini,
+ * Kangaskhan, Scyther, Pinsir…) "rare"/"veryrare".
+ * @type {Record<string, number>}
+ */
+export const RARITY_WEIGHTS = {
+  common: 40,
+  uncommon: 15,
+  rare: 5,
+  veryrare: 1,
+};
+
+/**
+ * Znormalizuje `area.species` (mix stringů a objektů `{ id, rarity }`) na jednotný
+ * seznam `{ id, weight }` pro vážený náhodný výběr. Neznámý/chybějící tier =
+ * "common". Prázdné/neplatné položky se vyfiltrují.
+ * @param {Area} area
+ * @returns {{ id: string, weight: number }[]}
+ */
+export function areaEncounters(area) {
+  const list = Array.isArray(area?.species) ? area.species : [];
+  return list
+    .map((e) => {
+      if (typeof e === "string") return { id: e, weight: RARITY_WEIGHTS.common };
+      const weight = RARITY_WEIGHTS[e?.rarity] ?? RARITY_WEIGHTS.common;
+      return { id: e?.id, weight };
+    })
+    .filter((e) => e.id);
+}
+
+/**
+ * Level ranges `[min, max]` (INKLUZIVNĚ) divokých Pokémonů per oblast. Rozšiřuje
+ * dřívější chování (jen `recommendedLevel`..`+1` pro celou oblast) na kanonické
+ * pásmo, aby souboje napříč Kantem líp odrážely postup příběhem. Klíč = `area.id`;
+ * chybí-li oblast tady, `areaLevelRange` spadne na `[recommendedLevel,
+ * recommendedLevel+1]` (zpětně kompatibilní). Města (bez `species`) neuvádíme.
+ * Hodnoty jsou 1 tabulka k snadnému doladění (jako RARITY_WEIGHTS).
+ * @type {Record<string, [number, number]>}
+ */
+export const AREA_LEVELS = {
+  "route-01": [2, 4],
+  "route-22": [2, 5],
+  "route-02": [3, 5],
+  "viridian-forest": [3, 6],
+  "route-03": [7, 11],
+  "mt-moon": [8, 12],
+  "route-04": [8, 12],
+  "route-24": [10, 14],
+  "route-25": [11, 15],
+  "route-05": [10, 14],
+  "route-06": [11, 15],
+  "route-11": [12, 16],
+  "digletts-cave": [16, 22],
+  "route-09": [11, 15],
+  "rock-tunnel": [13, 18],
+  "route-10": [14, 18],
+  "power-plant": [20, 26],
+  "route-08": [14, 19],
+  "route-07": [14, 19],
+  "route-16": [17, 22],
+  "route-17": [20, 25],
+  "route-18": [22, 26],
+  "safari-zone": [22, 28],
+  "route-15": [21, 26],
+  "route-14": [21, 26],
+  "route-13": [22, 27],
+  "route-12": [22, 27],
+  "route-19": [28, 33],
+  "route-20": [28, 33],
+  "seafoam-islands": [28, 35],
+  "route-21": [28, 34],
+  "route-23": [34, 40],
+  "victory-road": [36, 44],
+  "cerulean-cave": [46, 60],
+};
+
+/**
+ * Vrátí `[min, max]` level divokého Pokémona pro oblast (inkluzivně, min ≥ 1,
+ * max ≥ min). Explicitní pásmo z `AREA_LEVELS`, jinak fallback na staré chování
+ * (`recommendedLevel`..`recommendedLevel+1`).
+ * @param {Area} area
+ * @returns {[number, number]}
+ */
+export function areaLevelRange(area) {
+  const explicit = AREA_LEVELS[area?.id];
+  if (Array.isArray(explicit) && explicit.length === 2) {
+    const min = Math.max(1, Math.floor(explicit[0]));
+    const max = Math.max(min, Math.floor(explicit[1]));
+    return [min, max];
+  }
+  const rec = Math.max(1, Math.floor(area?.recommendedLevel ?? 1));
+  return [rec, rec + 1];
+}
+
+/**
+ * Náhodný level v pásmu oblasti (rovnoměrně, inkluzivně obě meze).
+ * @param {Area} area
+ * @returns {number}
+ */
+export function rollAreaLevel(area) {
+  const [min, max] = areaLevelRange(area);
+  return min + Math.floor(Math.random() * (max - min + 1));
+}
+
+/**
+ * Vytáhne čisté id druhu z jedné položky `species` (string nebo `{ id, rarity }`).
+ * @param {string|{id:string}} entry
+ * @returns {string|undefined}
+ */
+export function speciesEntryId(entry) {
+  return typeof entry === "string" ? entry : entry?.id;
+}
+
+/**
+ * Seznam id druhů oblasti BEZ rarity (ploché stringy). Pro místa, která pracují
+ * jen s druhy (pooly route trenérů, líhnutí vajec, „kde chytit" v Pokédexu),
+ * a NEzajímá je váha. Vyfiltruje prázdné položky.
+ * @param {Area} area
+ * @returns {string[]}
+ */
+export function areaSpeciesIds(area) {
+  const list = Array.isArray(area?.species) ? area.species : [];
+  return list.map(speciesEntryId).filter(Boolean);
+}
 
 /**
  * Najde oblast podle id.

@@ -43,7 +43,7 @@ import { getSpecies } from "../../data/pokemon.js";
 import { getMove } from "../../data/moves.js";
 import { trainerSpriteUrl } from "../../data/trainers.js";
 import { getBadge } from "../../data/badges.js";
-import { isCaught } from "../systems/pokedex.js";
+import { isCaught, areaCatchProgress } from "../systems/pokedex.js";
 import { typeColor, typeBadge } from "./typeColors.js";
 import { statusBadge } from "./statusBadge.js";
 import { preserveWindowScroll } from "./scrollPreserve.js";
@@ -55,6 +55,11 @@ let menuMode = "root";
 let pendingItemId = null;
 /** Poslední root pro překreslení při navigaci v podmenu (bez BATTLE_UPDATE). */
 let lastRoot = null;
+/** Je rozbalené auto-catch multi-select menu (New/Shiny/All)? Drží se mezi
+ *  překresleními, ať zaškrtnutí jedné položky menu nezavře. */
+let acMenuOpen = false;
+/** Jednorázově navázaný „klik mimo → zavři" listener pro auto-catch menu. */
+let acDocBound = false;
 
 /** Ikona kategorie tahu pro tlačítka útoků. */
 const CAT_ICON = { physical: "💥", special: "✨", status: "🌀" };
@@ -279,7 +284,7 @@ function combatantHtml(c, side, view, showXp = false, animated = false) {
 /**
  * Hlavička okna: nadpis vlevo, vpravo nahoře ovládání –
  * Pause/Resume (pozastavení souboje) + přepínače Auto battle a Auto catch
- * a výběr auto-catch módu (All / Shiny only). `b` může být null (žádný souboj).
+ * a rozbalovací multi-select auto-catch (All / New / Shiny, lze víc). `b` může být null.
  */
 function headHtml(b) {
   const ac = getAutocatch();
@@ -302,11 +307,22 @@ function headHtml(b) {
       catchBtn = `<button class="btn head-btn catch-btn" id="catch-btn" ${canCatch ? "" : "disabled"}>${ballIcon} Catch${pctLabel}</button>`;
     }
   }
-  const acMode = `<select id="ac-mode" class="ac-mode" ${ac.enabled ? "" : "disabled"} title="Auto catch: which Pokémon to catch">
-      <option value="none" ${ac.mode === "none" ? "selected" : ""}>None</option>
-      <option value="all" ${ac.mode === "all" ? "selected" : ""}>All</option>
-      <option value="shiny" ${ac.mode === "shiny" ? "selected" : ""}>Shiny only</option>
-    </select>`;
+  // Kompaktní ROZBALOVACÍ menu se zaškrtávátky (ať lišta nebují, ale šlo naklikat
+  // víc položek). Interně nezávislé booleany catchAll/catchNew/catchShiny (sčítání
+  // přes NEBO). „New" = druh, který ještě nemáš. Souhrn na tlačítku:
+  const acSummary = ac.catchAll
+    ? "All"
+    : [ac.catchNew ? "New" : null, ac.catchShiny ? "Shiny" : null].filter(Boolean).join(" + ") || "None";
+  const acMode = `<div class="ac-dd${acMenuOpen ? " open" : ""}">
+      <button type="button" id="ac-dd-btn" class="ac-mode ac-dd-btn" ${ac.enabled ? "" : "disabled"} title="Auto catch: which Pokémon to catch. New = species you don't own yet. Tick several.">
+        Catch: ${acSummary} <span class="ac-dd-caret">▾</span>
+      </button>
+      <div class="ac-dd-panel"${acMenuOpen ? "" : " hidden"}>
+        <label class="ac-dd-item"><input type="checkbox" id="ac-all" ${ac.catchAll ? "checked" : ""}/> All</label>
+        <label class="ac-dd-item"><input type="checkbox" id="ac-new" ${ac.catchNew ? "checked" : ""}/> New <span class="ac-dd-hint">(not owned)</span></label>
+        <label class="ac-dd-item"><input type="checkbox" id="ac-shiny" ${ac.catchShiny ? "checked" : ""}/> Shiny</label>
+      </div>
+    </div>`;
   // Výběr míčku vyhrazeného pro autocatch (nezávislý na ručním selectedBall).
   // Ukáže počet kusů; když typ dojde, autocatch se sám vypne (viz battleSystem).
   const balls = getState().resources.balls ?? {};
@@ -315,8 +331,15 @@ function headHtml(b) {
         (ball) => `<option value="${ball.id}" ${ball.id === ac.ball ? "selected" : ""}>${ball.name} (${balls[ball.id] ?? 0})</option>`
       ).join("")}
     </select>`;
+  // Postup CHYCENÍ druhů v aktuální divoké oblasti (R-023): jen u divokých
+  // oblastí s druhy (ne u trenérských/gym soubojů). Malý odznak vedle názvu.
+  let dexBadge = "";
+  if (b && !b.trainer && b.area?.species?.length) {
+    const { caught, total } = areaCatchProgress(b.area);
+    dexBadge = `<span class="area-dex-count" title="Species caught in this area">🔴 ${caught}/${total}</span>`;
+  }
   return `<div class="battle-head">
-    <h2 class="panel-title">Battle Area${b ? ` — ${b.area.name}` : ""}</h2>
+    <h2 class="panel-title">Battle Area${b ? ` — ${b.area.name}` : ""}${dexBadge}</h2>
     <div class="battle-toggles">
       ${pauseBtn}
       ${catchBtn}
@@ -759,8 +782,32 @@ function wire(root) {
   if (tgAuto) tgAuto.addEventListener("change", (e) => setAutoBattle(e.target.checked));
   const tgCatch = root.querySelector("#tg-autocatch");
   if (tgCatch) tgCatch.addEventListener("change", (e) => setAutocatch({ enabled: e.target.checked }));
-  const acMode = root.querySelector("#ac-mode");
-  if (acMode) acMode.addEventListener("change", (e) => setAutocatch({ mode: e.target.value }));
+  // Auto-catch rozbalovací menu: tlačítko přepíná otevření (bez změny stavu →
+  // překreslíme ručně), zaškrtávátka mění booleany (setAutocatch samo překreslí
+  // přes BATTLE_UPDATE) a menu nechají otevřené, ať jde naklikat víc položek.
+  const acBtn = root.querySelector("#ac-dd-btn");
+  if (acBtn)
+    acBtn.addEventListener("click", (e) => {
+      e.stopPropagation(); // ať to hned nezavře „klik mimo" listener
+      acMenuOpen = !acMenuOpen;
+      draw(root);
+    });
+  const acAll = root.querySelector("#ac-all");
+  if (acAll) acAll.addEventListener("change", (e) => { acMenuOpen = true; setAutocatch({ catchAll: e.target.checked }); });
+  const acNew = root.querySelector("#ac-new");
+  if (acNew) acNew.addEventListener("change", (e) => { acMenuOpen = true; setAutocatch({ catchNew: e.target.checked }); });
+  const acShiny = root.querySelector("#ac-shiny");
+  if (acShiny) acShiny.addEventListener("change", (e) => { acMenuOpen = true; setAutocatch({ catchShiny: e.target.checked }); });
+  // Klik kdekoli mimo menu ho zavře (navázáno jen jednou pro celý modul).
+  if (!acDocBound) {
+    acDocBound = true;
+    document.addEventListener("click", (e) => {
+      if (!acMenuOpen) return;
+      if (e.target.closest && e.target.closest(".ac-dd")) return; // klik uvnitř menu
+      acMenuOpen = false;
+      if (lastRoot) draw(lastRoot);
+    });
+  }
   const acBall = root.querySelector("#ac-ball");
   if (acBall) acBall.addEventListener("change", (e) => setAutocatch({ ball: e.target.value }));
 

@@ -15,6 +15,7 @@ import { getState, commit } from "../core/state.js";
 import { dexCounts, getPokedex } from "../systems/pokedex.js";
 import { BADGES } from "../../data/badges.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
+import { showDiplomaModal } from "./diploma.js";
 
 /** ms → „Xd Yh" / „Yh Zm" / „Zm" (odehraný čas). */
 function formatPlaytime(ms) {
@@ -69,10 +70,32 @@ export function renderProfileTab(root, onStatus = () => {}) {
         ${statRow("Seen", `${seen}`)}
         ${statRow("Badges", `${badges.length} / ${BADGES.length}`)}
         ${statRow("Shiny caught", `${shiny}`)}
+        ${statRow(
+          "Shiny Charm",
+          s.story?.shinyCharm
+            ? s.settings?.shinyCharmActive !== false
+              ? "✨ Active (×3 shiny)"
+              : "✨ Owned (off)"
+            : "—"
+        )}
+        ${
+          s.story?.dexDiploma
+            ? statRow("Dex Diploma", "🎓 Earned")
+            : caught >= total
+              ? statRow("Dex Diploma", "See Prof. Oak in Pallet Town")
+              : ""
+        }
         ${statRow("Gold", `${s.resources?.gold ?? 0} G`)}
         ${statRow("Coins", `${s.resources?.coins ?? 0} 🪙`)}
         ${statRow("Play time", playtime)}
       </div>
+      ${
+        s.story?.dexDiploma
+          ? `<div class="profile-diploma-action">
+               <button class="btn" data-view-diploma>🎓 View / Download Diploma</button>
+             </div>`
+          : ""
+      }
     </div>
 
     <h3 class="profile-subtitle">Badge Case <span class="dex-count">${badges.length} / ${BADGES.length}</span></h3>
@@ -97,5 +120,11 @@ export function renderProfileTab(root, onStatus = () => {}) {
       commit(); // → STATE_CHANGED → překreslení
       onStatus("Trainer name updated");
     });
+  }
+
+  // Diplom: znovu ukázat vizuálně + nabídnout stažení PNG (dostupné kdykoli po zisku).
+  const diplomaBtn = root.querySelector("[data-view-diploma]");
+  if (diplomaBtn) {
+    diplomaBtn.addEventListener("click", () => showDiplomaModal(getState()));
   }
 }

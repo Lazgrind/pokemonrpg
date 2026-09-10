@@ -13,7 +13,7 @@ import { bus, EVENTS } from "../core/events.js";
 import { getState, commit } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getSpeed, setSpeed } from "../systems/battleSystem.js";
-import { devAddEgg, devAddPokemon, devAddMoney, devApplyCheckpoint, DEV_CHECKPOINTS } from "../systems/devTools.js";
+import { devAddEgg, devAddPokemon, devAddMoney, devApplyCheckpoint, devCompleteDex, DEV_CHECKPOINTS } from "../systems/devTools.js";
 import { devSetLevel, devToggleShiny } from "../systems/evolutionSystem.js";
 import { scrollAware } from "./scrollPreserve.js";
 
@@ -82,6 +82,7 @@ function devSectionHtml() {
         <span class="dev-sublabel">Spawn</span>
         <button class="btn btn-sm" data-dev="egg">🥚 Add egg</button>
         <button class="btn btn-sm" data-dev="ditto">Add Ditto</button>
+        <button class="btn btn-sm" data-dev="complete-dex">Complete Dex (all 151)</button>
       </div>
 
       <div class="dev-row">
@@ -129,7 +130,7 @@ function ruleRow(key, name, desc, on) {
 }
 
 /** Popisky panelů pro přeuspořádání pořadí. */
-const PANEL_LABELS = { battle: "Hlavní panel (souboj/taby)", map: "Mapa", tabs: "Tým" };
+const PANEL_LABELS = { battle: "Main panel (battle/tabs)", map: "Map", tabs: "Team" };
 
 /** HTML přeuspořádání pořadí panelů ve skládaném režimu (šipky nahoru/dolů). */
 function stackOrderHtml() {
@@ -140,14 +141,14 @@ function stackOrderHtml() {
       <div class="order-row">
         <span class="order-idx">${i + 1}.</span>
         <span class="order-name">${PANEL_LABELS[key] ?? key}</span>
-        <button class="btn btn-sm" data-order-up="${key}" ${i === 0 ? "disabled" : ""} title="Nahoru">▲</button>
-        <button class="btn btn-sm" data-order-down="${key}" ${i === order.length - 1 ? "disabled" : ""} title="Dolů">▼</button>
+        <button class="btn btn-sm" data-order-up="${key}" ${i === 0 ? "disabled" : ""} title="Up">▲</button>
+        <button class="btn btn-sm" data-order-down="${key}" ${i === order.length - 1 ? "disabled" : ""} title="Down">▼</button>
       </div>`
     )
     .join("");
   return `
     <div class="settings-row settings-order">
-      <span class="settings-label">🧱 Pořadí panelů (pod sebou)</span>
+      <span class="settings-label">🧱 Panel order (stacked)</span>
       <div class="order-list">${rows}</div>
     </div>`;
 }
@@ -159,12 +160,12 @@ function layoutHtml() {
     `<button class="btn spd layout-opt ${cur === key ? "active" : ""}" data-layout-set="${key}" title="${desc}">${label}</button>`;
   return `
     <div class="settings-row">
-      <span class="settings-label">🖥️ Rozvržení</span>
+      <span class="settings-label">🖥️ Layout</span>
       <span class="layout-group">
-        ${opt("auto", "Auto", "Přizpůsobí se velikosti okna – na úzkém displeji panely pod sebe")}
-        ${opt("wide", "Široké", "Vždy dva sloupce (klasické, pro velké obrazovky)")}
-        ${opt("stacked", "Pod sebou", "Vždy jeden sloupec (telefon / půl obrazovky)")}
-        ${opt("mobile", "Mobil", "Jednosloupcový layout se svislým rozdělením souboje")}
+        ${opt("auto", "Auto", "Adapts to window size — panels stack on narrow displays")}
+        ${opt("wide", "Wide", "Always two columns (classic, for large screens)")}
+        ${opt("stacked", "Stacked", "Always one column (phone / half screen)")}
+        ${opt("mobile", "Mobile", "Single-column layout with a vertical battle split")}
       </span>
     </div>`;
 }
@@ -174,11 +175,12 @@ function rulesHtml() {
   const rules = getState().settings?.rules ?? {};
   return `
     <div class="settings-rules">
-      <div class="settings-label">📋 Herní pravidla</div>
+      <div class="settings-label">📋 Game rules</div>
       <table class="rules-table"><tbody>
-        ${ruleRow("noItems", "Bez itemů", "Zakáže použití itemů v souboji", !!rules.noItems)}
-        ${ruleRow("noPotions", "Bez lektvarů", "Zakáže léčivé lektvary v souboji", !!rules.noPotions)}
-        ${ruleRow("nuzlocke", "Nuzlocke", "Permadeath + chytání jen 1 úlovku na oblast", !!rules.nuzlocke)}
+        ${ruleRow("noItems", "No items", "Disables all items in battle", !!rules.noItems)}
+        ${ruleRow("noPotions", "No potions", "Disables healing potions in battle", !!rules.noPotions)}
+        ${ruleRow("nuzlocke", "Nuzlocke", "Permadeath + catch only the first encounter per area", !!rules.nuzlocke)}
+        ${ruleRow("levelCap", "Level cap", "Caps level by progress (next gym leader's ace → League → no limit once Champion)", !!rules.levelCap)}
       </tbody></table>
     </div>`;
 }
@@ -269,7 +271,7 @@ export function openSettingsModal() {
       cb.addEventListener("change", () => {
         const s = getState();
         if (!s.settings.rules) {
-          s.settings.rules = { noItems: false, noPotions: false, nuzlocke: false };
+          s.settings.rules = { noItems: false, noPotions: false, nuzlocke: false, levelCap: false };
         }
         s.settings.rules[cb.dataset.rule] = cb.checked;
         commit();
@@ -284,7 +286,7 @@ export function openSettingsModal() {
       })
     );
 
-    // Spawn (vejce / Ditto).
+    // Spawn (vejce / Ditto / Complete Dex).
     bodyEl.querySelectorAll("[data-dev]").forEach((b) =>
       b.addEventListener("click", () => {
         if (b.dataset.dev === "egg") {
@@ -293,6 +295,9 @@ export function openSettingsModal() {
         } else if (b.dataset.dev === "ditto") {
           const r = devAddPokemon("ditto"); // commit uvnitř
           showDevMsg(r.ok ? `Added ${r.name} to your collection.` : "Failed to add Ditto.");
+        } else if (b.dataset.dev === "complete-dex") {
+          const r = devCompleteDex(); // commit + capstone check uvnitř
+          showDevMsg(`Added ${r.added} new species — dex complete (${r.total}).`);
         }
       })
     );
@@ -302,7 +307,7 @@ export function openSettingsModal() {
     if (cpBtn) cpBtn.addEventListener("click", () => {
       const sel = bodyEl.querySelector("[data-checkpoint]");
       const r = devApplyCheckpoint(sel?.value); // commit uvnitř → re-render
-      showDevMsg(r.ok ? `⏩ Skočeno na: ${r.label}` : "Skok selhal.");
+      showDevMsg(r.ok ? `⏩ Skipped to: ${r.label}` : "Skip failed.");
     });
 
     // Přepínač viditelnosti uzlů na mapě: vše (dev) ↔ jen odemčené (reálný postup).

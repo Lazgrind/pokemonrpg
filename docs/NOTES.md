@@ -13,6 +13,151 @@ Legenda stavů rozhodnutí:
 
 ---
 
+## 2026-09-10 – Auto catch: filtr „New" + nezávislé přepínače (v0.90.0)
+
+🟢 **SCHVÁLENO** – nápad uživatele: „autocatch na nové/shiny – klikne New + Shiny a chytá jen nové, shiny, klidně i nové shiny". Zjištění: autocatch **už existoval** (dropdown None/All/Shiny, vyhrazený míček, auto-vypnutí při došlých míčcích) – chyběl jen filtr na nové druhy.
+
+**Co se změnilo:**
+- **Model:** `settings.autocatch.mode` (string) → **3 nezávislé booleany `catchAll` / `catchNew` / `catchShiny`** (sčítají se přes NEBO). `getAutocatch()` migruje staré savy líně (all→catchAll, shiny→catchShiny), `setAutocatch()` při první změně přepíše čistý tvar → **bez save migrace / bez bumpu save verze**.
+- **Engine (`battleSystem.js`):** `shouldAutocatch(ref, ac)` = `catchAll || (catchShiny && shiny) || (catchNew && !ownsSpecies(id))`. Nový helper `autocatchActive(ac)` (nahradil test `mode!=="none"` v tiku i u auto-vypnutí).
+- **UI (`battleView.js`):** finální podoba = **rozbalovací multi-select** (2 iterace zpětné vazby uživatele: nejdřív checkboxy vedle sebe = moc dlouhá lišta → pak 5-hodnotový dropdown = „má být naklikávací, klidně 2 položky" → teď). Kompaktní tlačítko `#ac-dd-btn` (`Catch: New + Shiny`) rozbalí panel `.ac-dd-panel` se zaškrtávátky `#ac-all`/`#ac-new`/`#ac-shiny` (lze zaškrtnout víc). Otevření drží **modulová proměnná `acMenuOpen`** (přežije překreslení, ať zaškrtnutí jedné položky menu nezavře); tlačítko ji přepíná (ruční `draw`), checkboxy volají `setAutocatch({catch*})` (překreslí přes BATTLE_UPDATE, menu nechají otevřené). „Klik mimo → zavři" listener navázán jednou (`acDocBound`). CSS `.ac-dd*` v main.css.
+
+**Rozhodnutí uživatele:** autocatch **hází na plno / při plném HP** jako dosud – žádné „šetření cíle" (uživatel: „hází na plno, kdo nechce být u toho, ať trpí, je jedno že to bude trvat dýl"). Auto battle tedy může cíl složit dřív – u divokých se ale časem znovu objeví. `catchNew` je hlavní přínos pro idle kompletaci dexu (obzvlášť po v0.89.0 raritě).
+
+Změněné soubory: `src/systems/battleSystem.js`, `src/core/state.js`, `src/ui/battleView.js`, `css/main.css`, `src/core/version.js` (0.90.0), `CHANGELOG.md`, `docs/NOTES.md`.
+
+---
+
+## 2026-09-10 – Bugfixy: `[object Object]` v souboji + 8 tahů na jedinci (v0.89.0)
+
+🟢 **SCHVÁLENO** – dvě opravy hlášené uživatelem po v0.89.0.
+
+**1) `[object Object]` crash (regrese z rarity):** po změně `area.species` na mix `string | {id,rarity}` padaly konzumenti, co četli položky jako čisté stringy → `Uncaught Error: Neznámý druh Pokémona: [object Object]` (auto battle ve Viridian Forest, generace týmu route trenéra). Opraveno přidáním helperů `speciesEntryId(entry)` a `areaSpeciesIds(area)` do `data/areas.js` a jejich zapojením do:
+- `data/trainers.js` `poolForArea` (lokální i nižší pooly),
+- `src/systems/eggSystem.js` `rollEggDrop`,
+- `src/systems/pokedex.js` `areasForSpecies` (`.includes` na objektu nefungoval).
+`spawnEnemy` už objekty řešil přes `areaEncounters`; místa s jen `.length` (battleSystem, mapView) jsou v pořádku.
+
+**2) 8 tahů místo 4:** `balancedMovesetIds()` používal `status.slice(-statusSlots)`. Když 4 útočné tahy zaplnily všechny sloty, `statusSlots===0` a **`slice(-0)` === `slice(0)`** (JS bere -0 jako 0) → vrátil CELÉ pole status tahů a přidal je navíc → 8+ tahů. Projevilo se přes „dej levely" (`devSetLevel` → `defaultMovesFor`) i auto level-up (`learnLevelUpMoves` auto). Fix: `if (statusSlots > 0)` guard. Existující poškozené save opraví **migrace v43** (`CURRENT_SAVE_VERSION=43`) – ořízne na `MAX_MOVES` (dedup dle id, ponech první 4).
+
+**Bonus – dotaz na damage:** lvl 45 Charizard dává lvl 5 Caterpie ~2008 dmg → OVĚŘENO jako správné. Formule v `calcMoveDamage` je autentická Gen 1 (`(((2·lvl/5+2)·power·atk/def)/50)+2`); velké číslo plyne z poměru atk/def (~15×) + STAB ×1.5 + typová efektivita Fire→Bug ×2 (+případný krit). Není bug, jen one-shot overkill.
+
+---
+
+## 2026-09-10 – Wild encounter rarity: vážené route spawny (v0.89.0)
+
+🟢 **SCHVÁLENO** – Verze 0.89.0. Uživatel přes AskUserQuestion vybral „Route spawny + rarita" jako další Gen 1 polish. Dřív `spawnEnemy` vybíral druh z `area.species` UNIFORMNĚ náhodně (žádné rarity).
+
+**Co se změnilo:**
+- **`data/areas.js`:** položka `species` je buď prostý string (tier `common`), nebo objekt `{ id, rarity }` s `uncommon`/`rare`/`veryrare`. Konstanta `RARITY_WEIGHTS = {common:40, uncommon:15, rare:5, veryrare:1}` + helper `areaEncounters(area)` (normalizuje mix na `[{id,weight}]`).
+- **`src/systems/battleSystem.js`:** nový `pickWeighted()`; `spawnEnemy` losuje druh podle váhy. Zpětně kompatibilní (staré string pooly = vše common), guardy na neexistující druh zachovány.
+- **Data (Haiku dle množin určených Opusem):** legendárky + Safari/Cerulean Cave speciály (Chansey, Kangaskhan, Scyther, Pinsir, Tauros, Dratini/Dragonair, Lickitung) = `veryrare`; ikonické (Pikachu ve Viridian Forest, Clefairy v Mt. Moon, Abra, Vulpix/Growlithe, Ponyta, Electabuzz/Magmar, Seel/Staryu/Horsea/Shellder…) = `rare`; vyvinuté formy = `uncommon`; zbytek `common`. Ditto+Kadabra ponechány `rare`.
+
+**Klíčové rozhodnutí uživatele:**
+- 🟢 **Extrémní rarita je OK, ALE všech 151 musí zůstat chytatelných.** Uživatel: „není problém, že jsou extrémně rare spawny, nejde o to tu hru dohrát za 1 den" + „ale člověk musí zvládnout chytit všechny pokémony". Řešení: rarita mění jen FREKVENCI, ne dostupnost – žádný druh nemá váhu 0 (veryrare=1 je nenulová = jistě se časem objeví při idle grindu), nic se z poolů neodebralo. Weighty zůstávají TVRDÉ (40:1), nezjemňovat.
+- **TODO budoucí:** per-oblast/per-druh level ranges (teď `recommendedLevel`±1 na celou oblast).
+
+---
+
+## 2026-09-10 – Gym Challenges: interaktivní minihry PŘED souboji s gym trenéry (v0.88.0)
+
+🟢 **SCHVÁLENO** – Verze 0.88.0. Rozšíření gym systému: před gym leader souboji se řeší
+**Gym Challenge** (věrná kánonu, tematická minigra). Znovupoužitelný framework.
+
+**Co se změnilo:**
+
+- **Framework `src/ui/gymChallengeView.js`:** datově řízený registr `CHALLENGES` per gym.
+  Exports: `hasGymChallenge(gymId)` (ověří, zda gym má challenge), `isGymChallengeDone(gymId)`
+  (ověří splnění dle story flagu), `startGymChallenge(gymId, { onComplete })` (spustí modal).
+  Challenge = **POVINNÁ podmínka** před celým gymem – dokud není splněná, nejde bojovat
+  s ŽÁDNÝM gym trenérem ani leaderem (NENÍ volitelná). Guardy `started`/`cleared` jen
+  přeskočí minihru u starých rozehraných/hotových savů (anti-softlock), ne u nové hry.
+
+- **Vermilion Gym (Lt. Surge) – Trash Can Puzzle (klikací mřížka 5×3):** Najdi první vypínač,
+  druhý musí být vedle (adjacent), špatný tip resetuje zámek + tooltip. Completion flag
+  `state.story.vermilionGymSwitches` (repurpose starého flavor flagu bez migrace). UI v
+  `src/ui/gymView.js`: pokud challenge není splněna, trenéři jsou zamčení a v tabu se
+  zobrazí karta „🧩 Gym Challenge → Start Challenge".
+
+- **Fuchsia Gym (Koga) – Invisible-Wall Maze (`buildInvisibleWalls`, mřížka 5×5):** hráč se
+  hmatem prodírá z dolního vchodu (index 22) nahoru ke Kogovi (index 2). Klik na zvýrazněnou
+  sousední dlaždici = krok; náraz do skryté zdi ji odhalí (🧱). Pevné, ověřeně řešitelné
+  rozložení zdí (`MAZE_WALLS`, cesta 22→21→20→15→10→11→12→7→2). Flag `state.story.fuchsiaGymWalls`.
+
+- **Saffron Gym (Sabrina) – Teleport Pads (`buildTeleportPads`, mřížka 3×3):** jedna pevná
+  správná posloupnost 4 padů k Sabrině; správný pad se rozsvítí a zamkne, špatný = teleport
+  zpět na vstup. Bludiště se NEMÍCHÁ (na rozdíl od Vermilionu) → férové paměťové puzzle. Flag
+  `state.story.saffronGymIntro`. Zobrazí se až po osvobození Silph Co. (story gate v gymView).
+
+- **CSS v `css/main.css`:** `.gym-challenge-card`, `.gc-cans` (+`.gc-cols-3`/`.gc-cols-5`),
+  `.gc-can` / `.gc-can.on` / `.gc-win` / `.gc-cans--won`, a pro bludiště `.gc-can--me`
+  (hráč), `.gc-can--goal` (Koga), `.gc-can--wall` (odhalená zeď), `.gc-can--reach` (dosah).
+  Žádné nové assety (emoji + CSS).
+
+**Klíčová rozhodnutí:**
+- 🟢 **Framework znovupoužitelný a využitý** – všechny tři minihry (Vermilion, Fuchsia,
+  Saffron) sdílí `gymChallengeView.js`; přidání dalšího gymu = jedna položka registru +
+  `build()` funkce. Blaine (kvíz) zůstává jako již interaktivní flavor. Pewter/Cerulean/
+  Celadon/Viridian jsou kánonicky bez puzzle → žádná challenge.
+- 🟢 **Staré flavor popupy zrušeny** – Koga (`fuchsiaGymWalls`) i Sabrina (`saffronGymIntro`)
+  flavor popupy v `gymView.js` odstraněny; jejich flagy přepoužity jako „challenge splněna".
+- 🟢 **Žádná save migrace** – `vermilionGymSwitches=undefined` u starého save = challenge
+  nespuštěna, guardy ji znovu spustí. Hráči s completed gymem (`beat.includes("surge")`)
+  budou skippovat challenge (očekávaný postup).
+
+---
+
+## 2026-09-10 – Pokédex Diploma + Shiny Charm (capstone Gen 1, v0.86.0)
+
+🟢 **SCHVÁLENO** – Verze 0.86.0, save v41. Uzavírací milestone Gen 1: hráč, který chytne všechny 151 Pokémonů Gen 1 Kanta, musí dojít do **Oak's Lab v Pallet Town** a promluvit s **Prof. Oakem** → objeví se tlačítko **"Show Prof. Oak your completed Pokédex"** → reward popup s **Pokédex Diplomou** a **Shiny Charm** (globální multiplikátor šancí na shiny ×3).
+
+**Co se změnilo:**
+
+- **Pokédex Diploma + Shiny Charm = MANUÁLNÍ odemčení u Oak's Labu.** Žádný auto-trigger z `acquirePokemon`. Hráč s kompletním dexem (151 unikátních druhů) si jde k Oakovi a kliknout musí ON – teprve pak se spustí `grantDexDiploma()` (team.js) → beide flgy (`dexDiploma` + `shinyCharm`) nastaví + popup gratulace. Flag `state.story.dexDiploma` znemožňuje retry.
+- **Shiny Charm = flag `state.story.shinyCharm` s globálním efektem.** Konstanta `SHINY_CHARM_MULT = 3` v `pokemonSystem.js` se násobí do `shinyChance` všech divokých spawnů (`battleSystem.spawnEnemy(baseChance * mult)`) a breedingu (`breedingSystem.BREED_SHINY_CHANCE * mult`). Po udělení Charmu = navždy aktiv (není toggle).
+- **Profil (profileView.js):** dvě nové řádky: 
+  - "Shiny Charm: Active ×3" (když `state.story.shinyCharm`) / "—" (jinak)
+  - "Dex Diploma: Complete!" (když `caught >= total`) / „—" (jinak)
+- **Save migrace v40 → v41:** anti-softlock pro hráče, který už má všech 151 (měl náramek bez flagu): detekuj `dexCounts.caught >= 151`, nastav oba flagy (`dexDiploma` + `shinyCharm`) zpětně bez popupu.
+- **Dev nástroj:** `devCompleteDex()` v `devTools.js` – doplní všechny 151 druhů do kolekce; **NEUDĚLUJE Diplom/Charm** (hráč musí k Oakovi).
+- **Nový soubor:** `src/ui/storyBuildingView.js` obsahuje Oak's Lab handler (`oaksLabView`) s tlačítkem → `grantDexDiploma()` call.
+- Změněné soubory: `src/systems/pokemonSystem.js` (konstanta `SHINY_CHARM_MULT`), `src/systems/battleSystem.js` (aplikace multiplikátoru ve spawnech), `src/systems/breedingSystem.js` (aplikace v breedingu), `src/systems/team.js` (export `grantDexDiploma`), `src/systems/save.js` (migrace v41), `src/core/state.js` (story flags), `src/core/version.js` (0.86.0), `src/ui/profileView.js` (profil řádky), **`src/ui/storyBuildingView.js`** (Oak's Lab), `src/systems/devTools.js` (dev `devCompleteDex`).
+
+**Klíčová designová rozhodnutí:**
+- 🟢 **Diplomu + Charm dostane jen hráč, který sám dojde k Oakovi** – interaktivní moment, ne automatika. Player-driven reward.
+- 🟢 **Dev `devCompleteDex()` jen doplní druhy, Diplom NEUDĚLUJE** – ať se dá testovací flow rozlišit od finálního.
+- 🟢 **Shiny Charm je permanentní (ne toggle).** Jakmile se udělí, zůstává aktivní do konce hry.
+- 🟢 **Charm ×3 je globální multiplikátor,** ne mechanika „guaranteed shiny". Stále záleží na RNG a raritě; charm jen zlepší šance (~0,2% → ~0,6% na běžných, ~10% → ~30% na vzácných). Věrné kánonu.
+- 🟢 **Bez nových spritů.** Diplomu je abstraktní achievement; charm je text. Popup je běžný popup.
+
+**Závěr: Gen 1 je kompletní a "capstone-ready" – všechny mechaniky (dex, shiny, breeding, move system, manuální souboj, ekonomika) jsou finální.**
+
+---
+
+## 2026-09-10 – Interaktivní obřad u Oaka + stažitelný diplom + přepínač Shiny Charmu (v0.87.0)
+
+🟢 **SCHVÁLENO** – Verze 0.87.0, save v42. Rozšíření v0.86.0: diplomový obřad u Oaka se spritem, canvas PNG diplom s možností stažení (i z Profilu) a přepínač pro Shiny Charm v horní liště (settings.shinyCharmActive).
+
+**Co se změnilo:**
+
+- **Interaktivní obřad udělení diplomu (4 kroky):** Po zkompletování dexu a kliknutí na tlačítko u Oak's Labu se spustí vícekrokový dialog (`diploma.js` → `startDiplomaCeremony`): (1) **Gratulace od Oaka** → (2) **Zobrazení diplomu** s tlačítkem ke stažení → (3) **Předání Shiny Charmu** (sprite vedle Oaka) → (4) **Poděkování**. Flagy se nastaví **až na konci** obřadu (není to okamžité). Přeruší-li hráč dialog, tlačítko u Oaka zůstane → žádný softlock.
+
+- **Canvas PNG diplom:** `renderDiplomaCanvas()` vykreslí certifikát 1000×720 (krémový gradient, zlatý rámeček, jméno trenéra, počet druhů, Shiny Charm v rohu, odznaky a datum). `showDiplomaModal()` ukáže diplom v okně s tlačítky „⬇ Download PNG" a „Close"; `downloadDiplomaPng()` stáhne jako `pokedex-diploma-<jmeno>-<datum>.png`.
+
+- **Stažení diplomu později z Profilu:** V záložce Profile se nové tlačítko „🎓 View / Download Diploma" (viditelné jen když `story.dexDiploma`).
+
+- **Přepínač Shiny Charmu v horní liště:** `renderResourceBar` v `main.js` přidává nový prvek (viditelný jen když `story.shinyCharm`). Klik mění `settings.shinyCharmActive` mezi ON a OFF. Spawn a breeding násobí šanci na shiny jen když `story.shinyCharm && settings.shinyCharmActive !== false`.
+
+- **Profil:** Řádek „Shiny Charm" rozlišuje „✨ Active (×3 shiny)" vs „✨ Owned (off)"; řádek „Dex Diploma" ukazuje „🎓 Earned".
+
+- **Save migrace v42:** Doplní `settings.shinyCharmActive = true` (výchozí zapnuto).
+
+**Klíčová rozhodnutí:**
+- Sprite Shiny Charmu (`assets/items/shiny-charm.png`) zatím neexistuje → fallback ✨ glyf.
+- Přepínač umožňuje hráčům dočasně deaktivovat Charm bez ztráty.
+
+---
+
 ## 2026-09-09 – Kompletace Gen 1 dexu – uzavření posledních děr (Poliwag linie + Mew) (v0.85.0)
 
 🟢 **SCHVÁLENO** – Verze 0.85.0, save v40. Audit dexu (Haiku) odhalil, že bylo v rámci jednoho průchodu **chytatelných 148/151 Pokémonů Gen 1 Kanta**. Zbývaly dvě skutečné díry, obě opraveny – **nyní jsou všechny 151 chytatelné na jedné save**.

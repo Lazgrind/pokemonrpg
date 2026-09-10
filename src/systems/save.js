@@ -13,7 +13,7 @@ import {
   CURRENT_SAVE_VERSION,
 } from "../core/state.js";
 import { randomIvs, emptyEvs, rollGender, computeStats, defaultMovesFor, randomNature, repairWeakMoveset, MAX_MOVES } from "./pokemonSystem.js";
-import { getSpecies } from "../../data/pokemon.js";
+import { getSpecies, POKEMON_SPECIES } from "../../data/pokemon.js";
 import { AREAS } from "../../data/areas.js";
 
 /** Klíč v localStorage. */
@@ -558,6 +558,64 @@ function migrate(data) {
     if (!data.resources || typeof data.resources !== "object") data.resources = {};
     if (typeof data.resources.coins !== "number") data.resources.coins = 0;
     data.saveVersion = 40;
+  }
+
+  // v41: Capstone Gen 1 – Diplom za kompletní dex + Shiny Charm (flagy
+  // story.dexDiploma / story.shinyCharm). Anti-softlock: kdo už má všech
+  // POKEMON_SPECIES.length druhů, dostane obojí zpětně (bez popupu – zaslouží si to).
+  if (data.saveVersion < 41) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    const caught = new Set((data.collection ?? []).map((p) => p.speciesId)).size;
+    if (caught >= POKEMON_SPECIES.length) {
+      data.story.dexDiploma = true;
+      data.story.shinyCharm = true;
+    }
+    data.saveVersion = 41;
+  }
+
+  // v42: Shiny Charm lze nově zapínat/vypínat v horní liště (settings.shinyCharmActive).
+  // Výchozí = zapnutý, ať se chování stávajících majitelů Charmu nezmění (kdo Charm
+  // nevlastní, přepínač stejně neuvidí – řídí se story.shinyCharm).
+  if (data.saveVersion < 42) {
+    if (!data.settings || typeof data.settings !== "object") data.settings = {};
+    if (typeof data.settings.shinyCharmActive !== "boolean") {
+      data.settings.shinyCharmActive = true;
+    }
+    data.saveVersion = 42;
+  }
+
+  // v43: doořízne sady tahů na MAX_MOVES. Live bug v balancedMovesetIds (`slice(-0)`
+  // === `slice(0)`) přidával při plných 4 útočných slotech VŠECHNY status tahy, takže
+  // jedinci mohli mít 8+ tahů i po v28 migraci. Fix je v kódu; tady dorovnáme staré
+  // save (dedup podle id, ponech prvních MAX_MOVES – správná původní sada je vepředu).
+  if (data.saveVersion < 43) {
+    for (const p of data.collection ?? []) {
+      if (!Array.isArray(p.moves)) continue;
+      const seen = new Set();
+      const trimmed = [];
+      for (const m of p.moves) {
+        if (!m || seen.has(m.id)) continue;
+        seen.add(m.id);
+        trimmed.push(m);
+        if (trimmed.length >= MAX_MOVES) break;
+      }
+      p.moves = trimmed;
+    }
+    data.saveVersion = 43;
+  }
+
+  // v44: HM02 Fly je nově znovupoužitelný učitelný tah (HM systém). Kdo už prošel
+  // S.S. Anne (ssAnneCleared / hasCut), dostane HM02 Fly zpětně do batohu + flag,
+  // aby měl přístup ke stejnému obsahu jako nová hra.
+  if (data.saveVersion < 44) {
+    if (!data.story || typeof data.story !== "object") data.story = {};
+    if (data.story.ssAnneCleared || data.story.hasCut) {
+      data.story.hasFly = true;
+      if (!data.resources || typeof data.resources !== "object") data.resources = {};
+      if (!data.resources.items) data.resources.items = {};
+      if ((data.resources.items["hm02-fly"] ?? 0) < 1) data.resources.items["hm02-fly"] = 1;
+    }
+    data.saveVersion = 44;
   }
 
   return data;

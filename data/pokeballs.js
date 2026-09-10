@@ -20,6 +20,8 @@
  *  - { type:"heavy" }                        bonus na těžké druhy (dle weight)
  *  - { type:"statusEnemy", mult }            násobek proti nepříteli se stavovým postižením
  *  - { type:"moonStone", mult }              násobek na druhy vyvíjené Měsíčním kamenem
+ *  - { type:"darkPlace", mult }              násobek v jeskyních (biome "cave") – Dusk Ball
+ *  - { type:"waterPlace", mult }             násobek ve vodních oblastech (biome "water") – Dive Ball
  *
  * @typedef {Object} Pokeball
  * @property {string} id
@@ -81,13 +83,23 @@ export const POKEBALLS = [
   { id: "moon", name: "Moon Ball", icon: "🌙", tier: 3, price: 140, mult: 1,
     bonus: { type: "moonStone", mult: 4 },
     desc: "×4 na druhy vyvíjené Měsíčním kamenem." },
+  { id: "dusk", name: "Dusk Ball", icon: "🌑", tier: 3, price: 120, mult: 1,
+    bonus: { type: "darkPlace", mult: 3 },
+    desc: "×3 in caves." },
+  { id: "dive", name: "Dive Ball", icon: "🌊", tier: 3, price: 120, mult: 1,
+    bonus: { type: "waterPlace", mult: 3.5 },
+    desc: "×3.5 in water areas." },
   { id: "luxury", name: "Luxury Ball", icon: "🎀", tier: 3, price: 60, mult: 1,
     desc: "Cosmetic — friendship isn't implemented yet." },
 
-  // --- Speciální: NEprodejný, jen jako odměna (zatím není zdroj). Jistota chycení. ---
-  // tier:null + price:null → NEobjevuje se v obchodě; získat se dá jen zvlášť.
+  // --- Speciální / eventové: NEprodejné, jen mimo obchod (tier:null+price:null). ---
   { id: "master", name: "Master Ball", icon: "🟣", tier: null, price: null, guaranteed: true,
     desc: "Never fails to catch. A rare prize — not for sale." },
+  // Safari Ball se NEkupuje ani nedrží v batohu: Safari Zone (safariSystem.js) má
+  // vlastní zásobu míčků na výpravu a používá ho automaticky. Držíme záznam kvůli
+  // názvu/ikoně/spritu chyceného Pokémona (caughtBall:"safari").
+  { id: "safari", name: "Safari Ball", icon: "🌴", tier: null, price: null, mult: 1,
+    desc: "Used only inside the Safari Zone expedition." },
 
   // --- Rezervováno na budoucnost (comingSoon) ---------------------------------
   // Sprity už máme v assets/pokeballs/<id>-ball.png. Tyhle bally se zatím NIKDE
@@ -98,14 +110,8 @@ export const POKEBALLS = [
     desc: "Coming soon — kosmetický ball (odměna za hromadný nákup)." },
   { id: "friend", name: "Friend Ball", icon: "💚", tier: null, price: null, mult: 1, comingSoon: true,
     desc: "Coming soon — zvýší friendship chyceného Pokémona." },
-  { id: "lure", name: "Lure Ball", icon: "🎣", tier: null, price: null, mult: 1, comingSoon: true,
-    desc: "Coming soon — bonus při rybaření." },
-  { id: "dusk", name: "Dusk Ball", icon: "🌑", tier: null, price: null, mult: 1, comingSoon: true,
-    desc: "Coming soon — bonus v noci a v jeskyních." },
-  { id: "dive", name: "Dive Ball", icon: "🌊", tier: null, price: null, mult: 1, comingSoon: true,
-    desc: "Coming soon — bonus v podvodních oblastech." },
-  { id: "safari", name: "Safari Ball", icon: "🌴", tier: null, price: null, mult: 1, comingSoon: true,
-    desc: "Coming soon — event ball do Safari zóny." },
+  // POZN.: Lure Ball vynechán záměrně – rybaření do hry přidávat NEBUDEME, takže
+  // by šlo o trvale nesplnitelný slib. Sprite zůstává v assets/, kdyby se to změnilo.
   { id: "sport", name: "Sport Ball", icon: "🐛", tier: null, price: null, mult: 1, comingSoon: true,
     desc: "Coming soon — event ball do Bug-Catching soutěže." },
   { id: "park", name: "Park Ball", icon: "🏞️", tier: null, price: null, mult: 1, comingSoon: true,

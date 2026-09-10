@@ -23,8 +23,14 @@
  *          | undefined } effect
  * @property {{ kind: "endTurnHeal", fraction: number }
  *          | { kind: "lowHpHeal", threshold: number, amount: number }
+ *          | { kind: "focusSash" }
  *          | undefined } held  efekt v boji (jen pro held itemy)
+ *   - endTurnHeal: doplní `fraction` max HP na konci každého kola (Leftovers)
+ *   - lowHpHeal: když HP klesne pod `threshold`, doplní `amount` HP a spotřebuje se
+ *   - focusSash: z PLNÉHO HP přežije jinak smrtící zásah s 1 HP; pak se spotřebuje
  */
+
+import { TMS, tmItemId, tmDisplayName } from "./tms.js";
 
 /** @type {ItemDef[]} */
 export const ITEMS = [
@@ -55,6 +61,8 @@ export const ITEMS = [
   // --- Held items: drží se během souboje, poskytují efekty ---
   { id: "leftovers", name: "Leftovers", icon: "🍖", desc: "Restores a little HP each turn in battle.", price: 2000, category: "held", held: { kind: "endTurnHeal", fraction: 1/16 } },
   { id: "oran-berry", name: "Oran Berry", icon: "🍒", desc: "When HP drops below 50%, restores 10 HP. Consumed on use.", price: 100, category: "held", effect: { kind: "heal", amount: 10 }, held: { kind: "lowHpHeal", threshold: 0.5, amount: 10 } },
+  { id: "sitrus-berry", name: "Sitrus Berry", icon: "🫐", desc: "When HP drops below 50%, restores 30 HP. Consumed on use.", price: 300, category: "held", effect: { kind: "heal", amount: 30 }, held: { kind: "lowHpHeal", threshold: 0.5, amount: 30 } },
+  { id: "focus-sash", name: "Focus Sash", icon: "🎗️", desc: "If the holder has full HP, it survives a would-be knockout with 1 HP. Consumed on use.", price: 2000, category: "held", held: { kind: "focusSash" } },
   { id: "everstone", name: "Everstone", icon: "🪨", desc: "A held Pokémon won't evolve. If it's a breeding parent, the baby inherits its Nature.", price: 300, category: "held" },
   { id: "destiny-knot", name: "Destiny Knot", icon: "🪢", desc: "If it's a breeding parent, the baby inherits 5 IVs instead of 3.", price: 2000, category: "held" },
 
@@ -68,6 +76,7 @@ export const ITEMS = [
   // Klíčové předměty z Kroku 5 (Cerulean → Vermilion).
   { id: "ss-anne-ticket", name: "S.S. Anne Ticket", icon: "🎫", desc: "A ticket that grants passage aboard the luxury liner S.S. Anne, docked at Vermilion City.", price: 0, category: "special" },
   { id: "hm01-cut", name: "HM01 Cut", icon: "🌿", desc: "A Hidden Machine that teaches Cut. Also used to clear small trees blocking the way.", price: 0, category: "special" },
+  { id: "hm02-fly", name: "HM02 Fly", icon: "🕊️", desc: "A Hidden Machine that teaches Fly. A powerful two-turn Flying-type attack.", price: 0, category: "special" },
 
   // Klíčový předmět z Kroku 6 (Vermilion → Lavender).
   { id: "hm05-flash", name: "HM05 Flash", icon: "🔦", desc: "A Hidden Machine that teaches Flash. Also lights up pitch-dark caves like Rock Tunnel.", price: 0, category: "special" },
@@ -88,6 +97,24 @@ export const ITEMS = [
   { id: "fresh-water", name: "Fresh Water", icon: "🥤", desc: "Cool, refreshing water from a Celadon vending machine. A parched guard at Silph Co. in Saffron would love one.", price: 0, category: "special" },
 ];
 
+// --- TM (Technical Machines): generované z data/tms.js ---
+// Každý TM je item kategorie "tm" (id "tm01".."tm50"), který jednorázově naučí
+// kompatibilního Pokémona daný tah (viz src/systems/tmSystem.js). Kupitelné jsou
+// jen ty s `price` (obchod filtruje price>0); zbytek se získá dropem / od gym
+// leaderů / v Game Corneru. Pole `tm` (číslo) a `move` (id tahu) drží vazbu.
+for (const tm of TMS) {
+  ITEMS.push({
+    id: tmItemId(tm.num),
+    name: tmDisplayName(tm),
+    icon: "💿",
+    desc: `Teaches ${tm.name} to a compatible Pokémon. Single use.`,
+    price: tm.price ?? 0,
+    category: "tm",
+    tm: tm.num,
+    move: tm.move,
+  });
+}
+
 /**
  * Definice itemu podle id (nebo null).
  * @param {string} id
@@ -104,6 +131,7 @@ export const ITEM_CATEGORIES = [
   { key: "revive", name: "Revives", icon: "✨" },
   { key: "evolution", name: "Evolution", icon: "🪨" },
   { key: "held", name: "Held Items", icon: "💎" },
+  { key: "tm", name: "TMs", icon: "💿" },
   // Pozn.: kategorie "special" (klíčové/příběhové itemy jako fosílie) ZÁMĚRNĚ
   // není v tomto seznamu – Poké Mart iteruje přes ITEM_CATEGORIES, takže se
   // neprodejné příběhové itemy v obchodě neobjeví. Batoh je ukazuje ve vlastní
