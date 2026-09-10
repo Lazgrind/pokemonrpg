@@ -34,6 +34,7 @@ python -m http.server 8000
 
 ## Rozsah projektu
 <!-- LOC:START -->
+
 **Celkem 36 444 řádků** v 98 souborech (k 2026-09-10, bez `assets/`).
 
 | Kategorie | Soubory | Řádky |
@@ -42,6 +43,7 @@ python -m http.server 8000
 | Nástroje | 10 | 1 400 |
 | Dokumentace | 5 | 3 980 |
 | **Celkem** | **98** | **36 444** |
+
 <!-- LOC:END -->
 
 Přegenerování: `python tools/count_lines.py`
