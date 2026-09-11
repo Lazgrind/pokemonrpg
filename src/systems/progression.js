@@ -6,6 +6,7 @@ import { learnLevelUpMoves } from "./pokemonSystem.js";
 import { getState } from "../core/state.js";
 import { GYMS } from "../../data/gyms.js";
 import { getTrainer, LEAGUE } from "../../data/trainers.js";
+import { xpBoostMult } from "./buildingSystem.js";
 
 /** Nejvyšší dosažitelný level jedince. Evoluce je dobrovolná (viz
  *  evolutionSystem) – i nevyvinutý druh může dorůst až sem. */
@@ -74,6 +75,9 @@ export function grantXp(pokemon, amount, { auto = false } = {}) {
   // Efektivní strop: nikdy víc než MAX_LEVEL, ale zapnutý level cap ho může
   // stáhnout níž (dle postupu příběhem). Na stropu už jedinec XP nesbírá.
   const cap = Math.max(1, Math.min(MAX_LEVEL, currentLevelCap()));
+  // ⭐ Boost linka „XP" z Trainer Boost Center (Celadon) násobí VŠECHEN zisk XP
+  // (souboj i idle). Bez budovy = ×1.
+  amount = Math.round(amount * xpBoostMult());
   pokemon.xp += amount;
   let leveledUp = false;
   while (pokemon.level < cap && pokemon.xp >= xpForNextLevel(pokemon.level)) {
@@ -84,4 +88,23 @@ export function grantXp(pokemon, amount, { auto = false } = {}) {
   if (pokemon.level >= cap) pokemon.xp = 0; // na stropu už XP nesbírá
   if (leveledUp) learnLevelUpMoves(pokemon, prevLevel, { auto });
   return leveledUp;
+}
+
+/**
+ * Rare Candy: okamžitý +1 level. Respektuje efektivní strop (MAX_LEVEL i zapnutý
+ * level cap dle postupu). XP se nastaví na začátek nového levelu (zbytek se
+ * zahodí, jako v kánonu). Nové tahy z learnsetu se nabídnou přes frontu
+ * (auto=false → moveLearnView vyskočí i mimo souboj, viz initMoveLearnPrompts).
+ * Mutuje jedince. Vrací true při úspěchu, false když je už na stropu.
+ * @param {import("../core/state.js").OwnedPokemon} pokemon
+ * @returns {boolean}
+ */
+export function rareCandyLevelUp(pokemon) {
+  const cap = Math.max(1, Math.min(MAX_LEVEL, currentLevelCap()));
+  if (pokemon.level >= cap) return false;
+  const prevLevel = pokemon.level;
+  pokemon.level += 1;
+  pokemon.xp = 0;
+  learnLevelUpMoves(pokemon, prevLevel, { auto: false });
+  return true;
 }

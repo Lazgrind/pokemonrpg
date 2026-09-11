@@ -22,6 +22,15 @@ import { getSpecies } from "../../data/pokemon.js";
 import { TMS, getTm, tmDisplayName } from "../../data/tms.js";
 import { grantTm } from "../systems/tmSystem.js";
 import { showPopup } from "./popup.js";
+import { openMarket, openTrainingPicker } from "./buildingView.js";
+import { getBuilding } from "../../data/buildings.js";
+import {
+  BOOST_CENTER_ID,
+  getTrackLevel,
+  trackUpgradeCost,
+  isTrackMaxed,
+  upgradeTrack,
+} from "../systems/buildingSystem.js";
 
 /** Kolik Potionů dá máma (jednorázově). Poké Bally už hráč má ve startu. */
 const MOM_POTIONS = 5;
@@ -100,6 +109,7 @@ const VIEWS = {
   "pokemon-tower": pokemonTowerView,
   "mr-fuji-house": mrFujiHouseView,
   "dept-store": deptStoreView,
+  "boost-center": boostCenterView,
   "game-corner": gameCornerView,
   "warden-house": wardenHouseView,
   "pokemon-mansion": pokemonMansionView,
@@ -115,7 +125,7 @@ const VIEWS = {
 /** Cena Fresh Water v Celadon Dept Store (drink pro strážce Silph Co). */
 const DRINK_COST = 200;
 
-/** Level oživené fosílie (Omanyte/Kabuto) v Museum of Science. */
+/** Level oživené fosílie (Omanyte/Kabuto/Aerodactyl) v Cinnabar Pokémon Labu. */
 const FOSSIL_REVIVE_LEVEL = 20;
 
 /**
@@ -241,7 +251,7 @@ function oakLabView() {
   const action = hasStarter
     ? `<p class="story-text">"So, how's your <strong>${starterName}</strong> doing? Remember, the Pokédex is your faithful companion on the road."</p>
        <button class="btn" data-open-pokedex>📕 Open Pokédex</button>`
-    : `<p class="story-text">"Welcome! Choose your very first partner."</p>
+    : `<p class="story-text">"Welcome! Every Trainer needs a first partner to set off on their journey. I have three Pokémon right here — go on, pick the one that feels right to you!"</p>
        <button class="btn" data-choose-starter>Choose your starter</button>`;
 
   // Capstone Gen 1: kompletní dex → Oak udělí Diplom + Shiny Charm (jednorázově).
@@ -305,30 +315,13 @@ function pewterMuseumView() {
     : `<p class="story-text">A scientist greets you warmly. "A new trainer! Take these on the house — travelers should always be prepared."</p>
        <button class="btn" data-museum-reward>🎁 Accept welcome gift (${MUSEUM_POTIONS}× Potion)</button>`;
 
-  // Oživení fosílií: kdo drží Helix/Dome fosílii, může ji tu nechat oživit na
-  // Omanyte/Kabuto (fosílie se spotřebuje). Věrné duchu hry (revival lab).
-  const items = getState().resources?.items ?? {};
-  const revivable = Object.keys(FOSSIL_TO_SPECIES).filter((id) => (items[id] ?? 0) > 0);
-  let fossilSection = "";
-  if (revivable.length) {
-    const buttons = revivable
-      .map((id) => {
-        const species = getSpecies(FOSSIL_TO_SPECIES[id])?.name ?? FOSSIL_TO_SPECIES[id];
-        const fname = id === "dome-fossil" ? "Dome Fossil" : id === "old-amber" ? "Old Amber" : "Helix Fossil";
-        return `<button class="btn" data-revive-fossil="${id}">🧬 Revive ${fname} → ${species}</button>`;
-      })
-      .join("");
-    fossilSection = `<hr class="story-sep">
-      <p class="story-text">The lead scientist eyes your bag. "Is that a <strong>fossil</strong>? Our machine can bring it back to life — would you like me to try?"</p>
-      ${buttons}`;
-  }
-
   return {
     title: "🏛️ Museum of Science",
     body: `<p class="story-text">Inside, glass cases display ancient <strong>fossils</strong>, a glittering <strong>Moon Stone</strong>, and — up on the second floor — a real piece of a <strong>space rocket</strong>.</p>
       <hr class="story-sep">
       ${reward}
-      ${fossilSection}`,
+      <hr class="story-sep">
+      <p class="placeholder">A note by the fossil case reads: "To bring a fossil back to life, visit the <strong>Pokémon Lab on Cinnabar Island</strong>."</p>`,
   };
 }
 
@@ -432,18 +425,68 @@ function mrFujiHouseView() {
 }
 
 function deptStoreView() {
-  // Věrný Kanto (Krok 11): Celadon Dept Store – rooftop drink stand prodává Fresh
-  // Water, kterým napojíš vyčerpaného strážce u Silph Co v Saffronu. Zbytek nákupu
-  // je zatím flavour (plný nákup přijde později).
+  // Věrný Kanto (Krok 11): Celadon Dept Store – Kanto's biggest store. Prémiové
+  // patra (tlačítko „Shop the floors" → tabovaný obchod, viz buildingView.openMarket)
+  // prodávají VŠECHNO kupitelné: míčky, léčení, TM, evoluční kameny, held itemy a
+  // prémiové boosty (Rare Candy / PP Up / PP Max) = kanonický gold sink. Rooftop
+  // drink stand navíc prodává Fresh Water pro vyčerpaného strážce u Silph Co.
   const gold = getState().resources?.gold ?? 0;
   const owned = getState().resources?.items?.["fresh-water"] ?? 0;
   return {
     title: "🏬 Celadon Dept. Store",
-    body: `<p class="story-text">The biggest store in Kanto rises floor after floor — Poké Balls, healing items, TMs, and a rooftop drink stand, the works.</p>
+    body: `<p class="story-text">The biggest store in Kanto rises floor after floor — Poké Balls, healing items, TMs, evolution stones, held items and rare boosts, plus a rooftop drink stand. The works.</p>
+      <button class="btn" data-shop-floors>🛒 Shop the floors</button>
       <p class="story-text">At the rooftop vending machine you can buy a <strong>Fresh Water</strong> for <strong>${DRINK_COST}₽</strong>. A thirsty guard over in Saffron City would surely appreciate one.</p>
       ${owned > 0 ? `<p class="placeholder">In your Bag: <strong>${owned}× Fresh Water</strong>.</p>` : ""}
-      <button class="btn" data-buy-drink ${gold < DRINK_COST ? "disabled" : ""}>🥤 Buy Fresh Water — ${DRINK_COST}₽</button>
-      <p class="placeholder">(Full department-store shopping will open up in a later update. For now, stock up at the Poké Mart.)</p>`,
+      <button class="btn" data-buy-drink ${gold < DRINK_COST ? "disabled" : ""}>🥤 Buy Fresh Water — ${DRINK_COST}₽</button>`,
+  };
+}
+
+/** Formátuje bonus linky jako procenta (1 desetinné místo, bez zbytečné „.0"). */
+function boostPct(level, perLevel) {
+  const v = level * perLevel * 100;
+  return (Math.round(v * 10) / 10).toString();
+}
+
+/** HTML jedné boost linie (level, aktuální bonus, progress bar, tlačítko upgrade). */
+function boostLineHtml(key, def, effectLabel) {
+  const gold = getState().resources?.gold ?? 0;
+  const level = getTrackLevel(BOOST_CENTER_ID, key);
+  const maxed = isTrackMaxed(BOOST_CENTER_ID, key);
+  const cost = trackUpgradeCost(BOOST_CENTER_ID, key);
+  const cur = boostPct(level, def.perLevel);
+  const cap = boostPct(def.maxLevel, def.perLevel);
+  const fillPct = Math.round((level / def.maxLevel) * 100);
+  const btn = maxed
+    ? `<button class="btn btn-sm" disabled>Maxed</button>`
+    : `<button class="btn btn-sm" data-boost-up="${key}" ${gold < cost ? "disabled" : ""}>Upgrade — ${cost}₽</button>`;
+  return `
+    <div class="boost-line">
+      <div class="boost-line-head">
+        <span class="boost-line-name">${def.icon} ${def.name}</span>
+        <span class="placeholder">Lv ${level}/${def.maxLevel}</span>
+      </div>
+      <div class="boost-bar"><div class="boost-bar-fill" style="width:${fillPct}%"></div></div>
+      <div class="boost-line-foot">
+        <span class="boost-line-effect">${effectLabel}: <strong>+${cur}%</strong> <span class="placeholder">(max +${cap}%)</span></span>
+        ${btn}
+      </div>
+    </div>`;
+}
+
+function boostCenterView() {
+  // Idle-boost budova v Celadonu (viz data/buildings.js "boost-center"). Tři
+  // TRVALÉ linie s tvrdým stropem 50 a exponenciální cenou; efekty čte a aplikuje
+  // buildingSystem (grantXp / battleSystem gold+shiny / idle offline gold).
+  const def = getBuilding(BOOST_CENTER_ID);
+  const t = def?.tracks ?? {};
+  return {
+    title: "💪 Trainer Boost Center",
+    body: `<p class="story-text">A members-only facility in Celadon. Pour your winnings into three lifelong perks. Each level is a little pricier than the last, so max ranks are a long-haul goal — not a quick shortcut.</p>
+      ${boostLineHtml("xp", t.xp, "XP gain")}
+      ${boostLineHtml("yield", t.yield, "Battle gold")}
+      ${boostLineHtml("fortune", t.fortune, "Shiny chance")}
+      <p class="placeholder">Boosts apply everywhere — active battles, auto-battle, Full Auto and offline idle. Fortune stacks with the Shiny Charm.</p>`,
   };
 }
 
@@ -507,17 +550,23 @@ function celadonMansionView() {
 function fightingDojoView() {
   // Věrný Kanto (Krok 12): Fighting Dojo v Saffronu. V kánonu si vybíráš JEDNOHO
   // Hitmona – my (cíl „celý dex na 1 průchod") dáváme OBA.
+  // Dojo je zároveň domovem Training Grounds (placená EV zkratka + reset EV) –
+  // sekce „EV Training" je dostupná vždy, když do Saffronu dojdeš.
+  const evSection = `
+    <hr class="story-sep" />
+    <p class="story-text">Behind the sparring hall, the Dojo runs <strong>intensive EV training drills</strong>. For a fee the masters can drill a chosen stat into one of your Pokémon — or reset its Effort Values so you can start its spread fresh.</p>
+    <button class="btn" data-open-ev-training>🏋️ EV Training</button>`;
   if (storyFlag("hitmonsGift")) {
     return {
       title: "🥋 Fighting Dojo",
       body: `<p class="story-text">The Dojo master bows respectfully as you enter. "Your fists — and your Pokémon — are strong. Train them well."</p>
-        <p class="placeholder">✓ You received both <strong>Hitmonlee</strong> and <strong>Hitmonchan</strong> here.</p>`,
+        <p class="placeholder">✓ You received both <strong>Hitmonlee</strong> and <strong>Hitmonchan</strong> here.</p>${evSection}`,
     };
   }
   return {
     title: "🥋 Fighting Dojo",
     body: `<p class="story-text">Saffron's <strong>Fighting Dojo</strong> echoes with shouts and the crack of splitting boards. The Dojo master sizes you up, then nods at two Poké Balls resting on a rack. "A true champion deserves them both. Take my prized <strong>Hitmonlee</strong> and <strong>Hitmonchan</strong>!"</p>
-      <button class="btn" data-take-hitmons>🥋 Accept both Pokémon</button>`,
+      <button class="btn" data-take-hitmons>🥋 Accept both Pokémon</button>${evSection}`,
   };
 }
 
@@ -737,13 +786,34 @@ function startMansionPuzzle(onStatus) {
 }
 
 function pokemonLabView() {
-  // Věrný Kanto (Krok 9): Cinnabar Lab – flavour. Vědci zmiňují fosílie a
-  // pověsti o Mewtwovi (napojení na Mansion). Oživení fosílií řeší Pewter Museum.
+  // Věrný Kanto (Krok 9): Cinnabar Lab – oživení fosílií (kánon!). Kdo drží
+  // Helix/Dome fosílii nebo Old Amber, může ji tu nechat oživit na
+  // Omanyte/Kabuto/Aerodactyl (fosílie se spotřebuje). Vědci zmiňují i pověsti
+  // o Mewtwovi (napojení na Mansion).
+  const items = getState().resources?.items ?? {};
+  const revivable = Object.keys(FOSSIL_TO_SPECIES).filter((id) => (items[id] ?? 0) > 0);
+  let fossilSection;
+  if (revivable.length) {
+    const buttons = revivable
+      .map((id) => {
+        const species = getSpecies(FOSSIL_TO_SPECIES[id])?.name ?? FOSSIL_TO_SPECIES[id];
+        const fname = id === "dome-fossil" ? "Dome Fossil" : id === "old-amber" ? "Old Amber" : "Helix Fossil";
+        return `<button class="btn" data-revive-fossil="${id}">🧬 Revive ${fname} → ${species}</button>`;
+      })
+      .join("");
+    fossilSection = `<hr class="story-sep">
+      <p class="story-text">The lead scientist eyes your bag. "Is that a <strong>fossil</strong>? Our machine can bring it back to life — would you like me to try?"</p>
+      ${buttons}`;
+  } else {
+    fossilSection = `<hr class="story-sep">
+      <p class="placeholder">Bring an ancient <strong>fossil</strong> (Helix, Dome, or Old Amber) and the machine here can revive it into a living Pokémon.</p>`;
+  }
+
   return {
     title: "🧪 Pokémon Lab",
     body: `<p class="story-text">Cinnabar's research lab hums with equipment. A scientist looks up from a microscope.</p>
       <p class="story-text">"We study ancient Pokémon revived from fossils here. There are… darker rumors too, about experiments in the old mansion up the road. Best not to dwell on those."</p>
-      <p class="placeholder">(Fossil revival is handled at Pewter's Museum of Science.)</p>`,
+      ${fossilSection}`,
   };
 }
 
@@ -761,7 +831,18 @@ function wire(storyKey, overlay, onStatus, render, close) {
   });
   overlay.querySelector("[data-choose-starter]")?.addEventListener("click", () => {
     close();
-    openStarterModal();
+    openStarterModal(() => {
+      // Po výběru startéra Oak předá Pokédex, poví o rivalovi a navede na záložku Rival.
+      showPopup({
+        title: "🔬 Oak's Lab",
+        body:
+          `Professor Oak: "A fine choice! Here — take this Pokédex too. Record every Pokémon you meet, and one day you'll complete it."<br><br>` +
+          `"Oh, one more thing — <strong>${rivalName()}</strong> just picked a Pokémon as well, and can't wait to test it against yours! ` +
+          `You'll find them waiting in the <strong>Rival</strong> tab."`,
+        okLabel: "Go to the Rival tab",
+        onOk: () => openMainTab("rival"),
+      });
+    });
   });
 
   // Oak's Lab – capstone: hráč s kompletním dexem ukáže Oakovi Pokédex. Spustí se
@@ -822,7 +903,7 @@ function wire(storyKey, overlay, onStatus, render, close) {
     render();
   });
 
-  // Museum of Science – oživení fosílie: spotřebuje fosílii, přidá Omanyte/Kabuto.
+  // Cinnabar Pokémon Lab – oživení fosílie: spotřebuje fosílii, přidá druh.
   overlay.querySelectorAll("[data-revive-fossil]").forEach((btn) => {
     btn.addEventListener("click", () => {
       const fossilId = btn.getAttribute("data-revive-fossil");
@@ -991,6 +1072,12 @@ function wire(storyKey, overlay, onStatus, render, close) {
     render();
   });
 
+  // Fighting Dojo – EV Training (Training Grounds domov): otevře výběr Pokémona
+  // a pak okno tréninku/resetu EV (klíčováno na budovu "training-grounds").
+  overlay.querySelector("[data-open-ev-training]")?.addEventListener("click", () => {
+    openTrainingPicker("training-grounds", onStatus);
+  });
+
   // Silph Co. – dárek Lapras od zaměstnance (jednorázově, flag laprasGift).
   overlay.querySelector("[data-take-lapras]")?.addEventListener("click", () => {
     if (storyFlag("laprasGift")) return; // pojistka
@@ -1054,6 +1141,12 @@ function wire(storyKey, overlay, onStatus, render, close) {
     openMainTab("rockets");
   });
 
+  // Celadon Dept Store – „Shop the floors": otevře plný tabovaný obchod (všechna
+  // patra: míčky, léčení, TM, kameny, held itemy, boosty). Dept Store nemá slevu.
+  overlay.querySelector("[data-shop-floors]")?.addEventListener("click", () => {
+    openMarket("dept-store", onStatus);
+  });
+
   // Celadon Dept Store – koupě Fresh Water (drink pro strážce Silph Co).
   overlay.querySelector("[data-buy-drink]")?.addEventListener("click", () => {
     const s = getState();
@@ -1068,6 +1161,21 @@ function wire(storyKey, overlay, onStatus, render, close) {
     onStatus("You bought a Fresh Water. Take it to the thirsty guard at Silph Co. in Saffron City.");
     render();
   });
+
+  // Trainer Boost Center (Celadon) – upgrade jedné ze tří boost linií.
+  overlay.querySelectorAll("[data-boost-up]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      const key = btn.dataset.boostUp;
+      const res = upgradeTrack(BOOST_CENTER_ID, key);
+      if (!res.ok) {
+        onStatus(res.reason ?? "Can't upgrade that.");
+        return;
+      }
+      const def = getBuilding(BOOST_CENTER_ID)?.tracks?.[key];
+      onStatus(`${def?.icon ?? "💪"} ${def?.name ?? "Boost"} upgraded to Lv ${getTrackLevel(BOOST_CENTER_ID, key)}.`);
+      render();
+    })
+  );
 
   // Silph Co (Saffron) – napojení strážce: spotřebuje Fresh Water, otevře gauntlet.
   overlay.querySelector("[data-give-drink]")?.addEventListener("click", () => {

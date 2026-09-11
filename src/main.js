@@ -24,9 +24,10 @@ import { renderSettings } from "./ui/settingsView.js";
 import { initTitleScreen } from "./ui/titleScreen.js";
 import { openChangelog } from "./ui/changelogView.js";
 import { initMoveLearnPrompts } from "./ui/moveLearnView.js";
-import { initStarterPrompt } from "./ui/starterModal.js";
 import { startIntro } from "./ui/introScene.js";
+import { maybeStartTutorial } from "./ui/tutorial.js";
 import { showPopup } from "./ui/popup.js";
+import { showEvolutionPopup } from "./ui/evolutionPopup.js";
 import { ballIconHtml } from "./ui/ballIcon.js";
 import { scrollAware, preserveWindowScroll } from "./ui/scrollPreserve.js";
 import { POKEBALLS } from "../data/pokeballs.js";
@@ -39,6 +40,20 @@ function el(id) {
   const node = document.getElementById(id);
   if (!node) throw new Error(`Chybí element #${id} v index.html`);
   return node;
+}
+
+/** Navede nového hráče (po intru / bez startéra) do Oakovy laboratoře v Pallet
+ *  Townu, kde teprve dostane svého prvního Pokémona. Otevře záložku City, aby
+ *  na Oakovu laboratoř rovnou viděl. */
+function guideToOakLab() {
+  showPopup({
+    title: "🌿 Your adventure awaits",
+    body:
+      "Professor Oak has hurried back to his Lab in <strong>Pallet Town</strong>. " +
+      "Head over to <strong>Oak's Lab</strong> to receive your very first Pokémon!",
+    okLabel: "Head to the Lab",
+    onOk: () => openMainTab("city"),
+  });
 }
 
 /** Mapování klíčů pořadí na ID panelů. */
@@ -245,9 +260,13 @@ function init() {
     setStatus("💞 The Day Care couple produced an egg!");
   });
 
-  // Evoluce při level-upu (v souboji i ve výcviku): krátká hláška v liště.
+  // Evoluce (tlačítko v týmu/na kartě NEBO evoluční kámen/trade v Bagu): krátká
+  // hláška v liště + vyskakovací okno „X → Y" se sprity, ať je jasně vidět, že se
+  // Pokémon vyvinul. Centrálně tu, takže platí pro VŠECHNY cesty evoluce naráz
+  // (evolvePokemon / evolveWithItem / evolveByTrade emitují týž event) i v tutoriálu.
   bus.on(EVENTS.POKEMON_EVOLVED, (e) => {
     setStatus(`✨ ${e.fromName} evolved into ${e.toName}!`);
+    showEvolutionPopup(e);
   });
 
   // Příběhové vyskakovací okno na žádost systémové vrstvy (např. po poražení
@@ -287,14 +306,15 @@ function init() {
     }
     // Nabídky naučení tahu (plné sloty) – sleduje frontu i položky z offline.
     initMoveLearnPrompts();
-    // Nová hra: nejdřív krátké intro + pojmenování rivala, teprve pak výběr
-    // startéra. Rozehraná/starší hra (kolekce plná nebo už zadaný rival) intro
-    // přeskočí a jde rovnou na starter prompt (ten se stejně otevře jen u prázdné kolekce).
+    // Nová hra: nejdřív krátké intro + pojmenování hráče i rivala. Startera si
+    // hráč NOVĚ vybírá až v Oakově laboratoři (dojde tam po mapě), NE hned v intru.
+    // Po intru (a stejně tak u rozehrané hry bez startéra) hráče jen navedeme do
+    // Oakovy laboratoře. Rozehraná hra se startérem intro i navedení přeskočí.
     const st = getState();
     if (st.collection.length === 0 && !st.player?.rivalName) {
-      startIntro(() => initStarterPrompt());
-    } else {
-      initStarterPrompt();
+      startIntro(() => maybeStartTutorial(guideToOakLab));
+    } else if (st.collection.length === 0) {
+      maybeStartTutorial(guideToOakLab);
     }
   });
 

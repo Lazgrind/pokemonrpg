@@ -89,12 +89,16 @@ export const BUILDINGS = [
     icon: "🏋️",
     color: "#c0713b",
     sprite: "assets/buildings/training-grounds.png",
-    description: "Pay gold to train a Pokémon's Effort Values (EV) in a stat of your choice. Upgrades raise the EV gained per session. Caps: 252 per stat, 510 total.",
+    description: "Pokémon now earn Effort Values (EV) from every battle, just like in the games. Here you can buy EVs directly as a costly shortcut, or reset them — the whole spread or a single stat — for gold. Upgrades raise the EV bought per session. Caps: 252 per stat, 510 total.",
     startLevel: 1,
     maxLevel: 10,
     upgrade: { baseCost: 150, growth: 1.5 },
     // baseEv + (level-1)*perLevel EV za jednu lekci; každá lekce stojí goldCost.
-    training: { baseEv: 4, perLevel: 4, goldCost: 50 },
+    // Koupě je záměrně DRAHÝ luxus (grind ze soubojů je „zadarmo") – viz EV revamp.
+    training: { baseEv: 4, perLevel: 4, goldCost: 800 },
+    // Reset EV za gold: celý rozptyl (costAll) nebo jeden stat (costStat).
+    // Reset je dostupný úklid náhodně nabraných EV (QoL), ne trest.
+    reset: { costAll: 3000, costStat: 800 },
   },
   {
     id: "move-tutor",
@@ -146,7 +150,7 @@ export const STORY_BUILDINGS = [
     name: "Museum of Science",
     icon: "🏛️",
     color: "#7c8aa0",
-    description: "Pewter's famous Museum of Science — fossils, a moon stone, and a space exhibit. Bring a fossil here to have it revived.",
+    description: "Pewter's famous Museum of Science — fossils on display, a moon stone, and a space exhibit.",
     story: "pewter-museum",
   },
   {
@@ -210,7 +214,7 @@ export const STORY_BUILDINGS = [
     name: "Pokémon Lab",
     icon: "🧪",
     color: "#5a9bb5",
-    description: "Cinnabar Island's research laboratory. Scientists here study fossils and rare Pokémon.",
+    description: "Cinnabar Island's research laboratory. Scientists here revive fossils into living Pokémon and study rare specimens.",
     story: "pokemon-lab",
   },
   {
@@ -261,6 +265,25 @@ export const STORY_BUILDINGS = [
     description: "A sailor's house in Vermilion City. He's itching to trade a rare Pokémon.",
     story: "vermilion-trade-house",
   },
+  {
+    // Idle-boost budova v Celadonu (vedle Game Corner). Tři nezávislé, TRVALÉ
+    // upgrade linie (tracks) s tvrdým stropem 50 a exponenciální cenou, aby se
+    // nedaly rychle vyfarmit: ⭐ XP (+1 %/lvl → ×1,5), 💰 Yield gold (+1 %/lvl →
+    // ×1,5), ✨ Fortune shiny (+0,4 %/lvl → ×1,2; záměrně mrňavé, ať se to
+    // nesčítá s Shiny Charmem do OP hodnot). Efekty čte buildingSystem.boostMult.
+    id: "boost-center",
+    name: "Trainer Boost Center",
+    icon: "💪",
+    color: "#d98c2b",
+    description:
+      "A members-only training facility in bustling Celadon. Invest gold into three lifelong perks — faster XP gain, better fortune, and richer battle payouts.",
+    story: "boost-center",
+    tracks: {
+      xp: { name: "XP Boost", icon: "⭐", startLevel: 0, maxLevel: 50, baseCost: 1500, growth: 1.15, perLevel: 0.01 },
+      yield: { name: "Yield", icon: "💰", startLevel: 0, maxLevel: 50, baseCost: 1500, growth: 1.15, perLevel: 0.01 },
+      fortune: { name: "Fortune", icon: "✨", startLevel: 0, maxLevel: 50, baseCost: 1500, growth: 1.15, perLevel: 0.004 },
+    },
+  },
 ];
 
 /**
@@ -283,7 +306,7 @@ export const CITY_BUILDINGS = {
   "vermilion-city": ["poke-center", "poke-mart", "ss-anne", "vermilion-trade-house"],
   // Celadon City: služby + Dept Store + Game Corner (s skrytou Rocket základnou).
   // Gym (Erika) má vlastní tab.
-  "celadon-city": ["poke-center", "poke-mart", "dept-store", "game-corner", "celadon-mansion"],
+  "celadon-city": ["poke-center", "poke-mart", "dept-store", "game-corner", "boost-center", "celadon-mansion"],
   // Lavender Town: služby + Pokémon Tower (zamčená duchem – potřebuje Silph Scope
   // z pozdějšího kroku) + dům Mr. Fujiho. Lavender nemá gym.
   "lavender-town": ["poke-center", "poke-mart", "pokemon-tower", "mr-fuji-house"],
@@ -297,6 +320,15 @@ export const CITY_BUILDINGS = {
   // (kde hráč najde Secret Key). Gym (Blaine) má vlastní tab, zamčený dokud
   // hráč nemá Secret Key (viz gyms.js requiresStory).
   "cinnabar-island": ["poke-center", "poke-mart", "pokemon-lab", "pokemon-mansion"],
+  // Indigo Plateau (Pokémon League): Center + Mart. Dřív tu kvůli chybějícímu
+  // rosteru padal fallback na PLNOU idle pětici (viz buildingsForCity) → Day Care,
+  // Training Grounds i Move Tutor se objevovaly „až v lize", což je nekanonické.
+  // Day Care se přesunul na vlastní tab na Route 5 (viz daycareView), Move Tutor
+  // na vlastní tab na Route 8 (viz moveTutorView). Training Grounds (EV trénink +
+  // reset) se přestěhoval do Fighting Dojo v Saffronu (sekce „EV Training" ve
+  // storyBuildingView.js, klíčováno na id "training-grounds"). Indigo Plateau má
+  // teď jen kanonickou dvojici Poké Center + Poké Mart.
+  "indigo-plateau": ["poke-center", "poke-mart"],
 };
 
 /** Všechny známé budovy (idle + story) pro vyhledávání podle id. */

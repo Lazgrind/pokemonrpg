@@ -12,10 +12,10 @@
 import { bus, EVENTS } from "../core/events.js";
 import { getState, commit } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
-import { getSpeed, setSpeed } from "../systems/battleSystem.js";
 import { devAddEgg, devAddPokemon, devAddMoney, devApplyCheckpoint, devCompleteDex, DEV_CHECKPOINTS } from "../systems/devTools.js";
+import { resetTutorial, runTutorial } from "./tutorial.js";
 import { devSetLevel, devToggleShiny } from "../systems/evolutionSystem.js";
-import { scrollAware } from "./scrollPreserve.js";
+import { scrollAware, saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /**
  * Vykreslí tlačítko ⚙ do horní lišty. Klik otevře sdílené modální nastavení.
@@ -92,6 +92,11 @@ function devSectionHtml() {
         }</select>
       </div>
       ${targetControls}
+
+      <div class="dev-row">
+        <span class="dev-sublabel">Tutorial</span>
+        <button class="btn btn-sm" data-dev-tutorial>▶️ Replay tutorial</button>
+      </div>
 
       <div class="dev-row">
         <span class="dev-sublabel">Map</span>
@@ -187,17 +192,7 @@ function rulesHtml() {
 
 /** HTML vnitřku nastavení (sdílené modalem – ať je zdroj pravdy jeden). */
 function settingsBodyHtml() {
-  const speed = getSpeed();
-  const speeds = [1, 2, 4]
-    .map(
-      (s) => `<button class="btn spd ${speed === s ? "active" : ""}" data-speed="${s}">${s}×</button>`
-    )
-    .join("");
   return `
-    <div class="settings-row">
-      <span class="settings-label">Game speed</span>
-      <span class="speed-group">${speeds}</span>
-    </div>
     ${layoutHtml()}
     ${stackOrderHtml()}
     ${rulesHtml()}
@@ -229,15 +224,13 @@ export function openSettingsModal() {
     if (el) el.textContent = msg; // a ukaž hned (re-render z commitu už proběhl)
   };
   const rerender = () => {
+    const _s = saveScroll(bodyEl);
     bodyEl.innerHTML = settingsBodyHtml();
+    restoreScroll(bodyEl, _s);
     wireBody();
   };
 
   const wireBody = () => {
-    bodyEl.querySelectorAll("[data-speed]").forEach((b) =>
-      b.addEventListener("click", () => setSpeed(Number(b.dataset.speed)))
-    );
-
     // Přepínač rozvržení panelů (generický, přijímá jakoukoliv hodnotu z atributu).
     bodyEl.querySelectorAll("[data-layout-set]").forEach((b) =>
       b.addEventListener("click", () => {
@@ -308,6 +301,14 @@ export function openSettingsModal() {
       const sel = bodyEl.querySelector("[data-checkpoint]");
       const r = devApplyCheckpoint(sel?.value); // commit uvnitř → re-render
       showDevMsg(r.ok ? `⏩ Skipped to: ${r.label}` : "Skip failed.");
+    });
+
+    // Znovupřehrání tutoriálu (reset flagu + rovnou spuštění).
+    const tutBtn = bodyEl.querySelector("[data-dev-tutorial]");
+    if (tutBtn) tutBtn.addEventListener("click", () => {
+      resetTutorial();
+      runTutorial();
+      showDevMsg("Tutorial restarted.");
     });
 
     // Přepínač viditelnosti uzlů na mapě: vše (dev) ↔ jen odemčené (reálný postup).

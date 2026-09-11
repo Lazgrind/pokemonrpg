@@ -14,13 +14,16 @@ import { getActiveArea, startStaticEncounter } from "../systems/battleSystem.js"
 import { getSpecies } from "../../data/pokemon.js";
 import { spriteImg } from "./sprites.js";
 import { openMainTab } from "./mainPanel.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /** Vykreslí obsah záložky Legendary do zadaného elementu. */
 export function renderLegendaryTab(root, onStatus = () => {}) {
   const area = getActiveArea();
   const leg = legendaryForArea(area?.id);
   if (!leg) {
+    const _savedScroll = saveScroll(root);
     root.innerHTML = `<h2 class="panel-title">Legendary</h2><p class="placeholder">No legendary Pokémon dwells here.</p>`;
+    restoreScroll(root, _savedScroll);
     return;
   }
 
@@ -29,6 +32,7 @@ export function renderLegendaryTab(root, onStatus = () => {}) {
   const types = (sp?.types ?? []).join(" / ");
   const sprite = spriteImg(leg.speciesId, { view: "front", alt: name, extraClass: "legendary-mon" });
 
+  const _savedScroll = saveScroll(root);
   root.innerHTML = `
     <section class="legendary-section">
       <h2 class="panel-title">${leg.tabIcon} ${leg.title}</h2>
@@ -43,6 +47,7 @@ export function renderLegendaryTab(root, onStatus = () => {}) {
       </div>
       <button class="btn legendary-fight" data-face-legendary>${leg.tabIcon} ${leg.button}</button>
     </section>`;
+  restoreScroll(root, _savedScroll);
 
   root.querySelector("[data-face-legendary]")?.addEventListener("click", () => {
     const res = startStaticEncounter(leg.speciesId, leg.level);

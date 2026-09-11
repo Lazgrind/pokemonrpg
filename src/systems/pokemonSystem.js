@@ -5,9 +5,10 @@
  * Druhy (species) jsou data (data/pokemon.js). Zde z nich vyrábíme konkrétní
  * jedince s vlastním uid, levelem, XP a individuálními hodnotami:
  *  - IV (Individual Values): 0–31 na stat, náhodné a neměnné při vzniku jedince.
- *  - EV (Effort Values): 0–252 na stat (max 510 celkem). NEROSTOU ze soubojů –
- *    budou se získávat ve speciálním tréninku (budoucí budova Training Grounds).
- *    Zde je jen datové pole, příspěvek do statů a tréninková funkce addEv().
+ *  - EV (Effort Values): 0–252 na stat (max 510 celkem). Rostou ze soubojů podle
+ *    kanonického EV yieldu poraženého druhu (data/evYields.js → grantEvYield) –
+ *    stejně jako v hrách. Navíc je lze koupit/resetovat v Training Grounds. Zde je
+ *    datové pole, příspěvek do statů, addEv() a udílení z yieldu.
  *  - shiny: vzácná barevná varianta (kosmetika, náhodné při vzniku).
  * Vzorec je zpětně kompatibilní: chybí-li IV/EV (staré save), berou se jako 0
  * a staty vyjdou stejně jako dřív.
@@ -17,6 +18,7 @@ import { getSpecies } from "../../data/pokemon.js";
 import { getLearnset, learnableMovesAtLevel } from "../../data/learnsets.js";
 import { getMove } from "../../data/moves.js";
 import { NATURES, getNature, NATURE_UP_MULT, NATURE_DOWN_MULT } from "../../data/natures.js";
+import { EV_YIELDS } from "../../data/evYields.js";
 import { getState } from "../core/state.js";
 
 let counter = 0;
@@ -434,4 +436,47 @@ export function addEv(pokemon, key, amount) {
   const add = Math.max(0, Math.min(amount, roomStat, roomTotal));
   pokemon.evs[key] = (pokemon.evs[key] ?? 0) + add;
   return add;
+}
+
+/**
+ * Kanonický EV yield druhu (kolik EV padne za jeho poražení). Vrací {} pro
+ * neznámý druh nebo dokud nejsou data (data/evYields.js) naplněná fetch skriptem.
+ * @param {string} speciesId
+ * @returns {Partial<Record<string, number>>}
+ */
+export function evYield(speciesId) {
+  return EV_YIELDS[speciesId] ?? {};
+}
+
+/**
+ * Udělí EV z poraženého druhu příjemci (aktivní jedinec), per stat, s respektem
+ * ke stropům. Volá se po každém KO v souboji. `mult` umožní zlomkové/vážené
+ * udílení (offline). Bez dat / neznámý druh = nic (bezpečný fallback).
+ * @param {import("../core/state.js").OwnedPokemon} pokemon  příjemce EV
+ * @param {string} speciesId  poražený druh
+ * @param {number} [mult]  násobič yieldu (default 1)
+ * @returns {number} kolik EV se celkem skutečně přičetlo
+ */
+export function grantEvYield(pokemon, speciesId, mult = 1) {
+  if (!pokemon) return 0;
+  const y = evYield(speciesId);
+  let added = 0;
+  for (const k of STAT_KEYS) {
+    const amt = Math.floor((y[k] ?? 0) * mult);
+    if (amt > 0) added += addEv(pokemon, k, amt);
+  }
+  return added;
+}
+
+/** Vynuluje všechny EV jedince (reset za peníze v Training Grounds). Mutuje. */
+export function resetAllEvs(pokemon) {
+  if (!pokemon) return;
+  pokemon.evs = emptyEvs();
+}
+
+/** Vynuluje EV jednoho statu. Mutuje. */
+export function resetEvStat(pokemon, key) {
+  if (!pokemon || !STAT_KEYS.includes(key)) return;
+  if (!pokemon.evs) pokemon.evs = emptyEvs();
+  pokemon.evs[key] = 0;
 }

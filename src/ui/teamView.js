@@ -108,7 +108,7 @@ export function renderTeamTab(root, onStatus) {
   root.innerHTML = `
     <div class="team-head">
       <h2 class="panel-title">Team (${team.length}/${MAX_TEAM_SIZE})</h2>
-      <button class="btn btn-sm" data-bag title="Use healing items">🎒 Bag</button>
+      <button class="btn bag-btn" data-bag title="Items, TMs, HMs &amp; healing">🎒 Bag</button>
     </div>
     ${team.length === 0 ? `<p class="placeholder">Your team is empty. Add Pokémon from the Pokédex tab.</p>` : ""}
     <div class="team-grid">

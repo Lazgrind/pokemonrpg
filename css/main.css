@@ -787,6 +787,12 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   font-weight: 600;
   color: var(--accent-2, #7fc97f);
 }
+.battle-over .over-hint {
+  font-size: 12px;
+  max-width: 260px;
+  text-align: center;
+  color: var(--text-dim);
+}
 
 /* Výherní / chytací okno mezi souboji (jen manuální mód). */
 .battle-field .battle-result {
@@ -1095,8 +1101,6 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   gap: 10px;
   margin-bottom: 10px;
 }
-.speed-group { display: flex; gap: 4px; }
-.spd.active { border-color: var(--accent); color: var(--accent); }
 
 /* Chytání v souboji: ruční tlačítko + autocatch přepínač a filtry. */
 .catch-controls {
@@ -1336,6 +1340,46 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 }
 .ball-row.ball-locked { opacity: 0.5; }
 .btn-sm { padding: 3px 8px; font-size: 12px; }
+
+/* Bag – výrazné akcentní tlačítko v hlavičce týmu, ať je jasně vidět (nesplývá). */
+/* Bag = stejný princip jako soubojové povelové tlačítko "Items" (plné oranžové,
+   tučné bílé písmo), ale kompaktní, aby nezabíralo moc místa v hlavičce Týmu. */
+.bag-btn {
+  background: #e0902e;
+  border: none;
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  padding: 8px 14px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.bag-btn:hover { background: #f0a341; border-color: transparent; color: #fff; }
+
+/* Bag – klikací podsekce (taby): Heal / Balls / TMs / HMs / Evolution / Held / Key.
+   Zobrazují se jen neprázdné kategorie; aktivní tab = žlutý accent. */
+.bag-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.bag-tab {
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bag-tab:hover { color: var(--text); border-color: var(--accent); }
+.bag-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #201a00;
+}
 
 /* Game Corner (Celadon herna): balance, automat, směnárna, prize corner. */
 .gc-balance { font-size: 14px; margin: 6px 0 4px; }
@@ -2398,6 +2442,15 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 }
 .train-info { flex: 1; min-width: 0; }
 .train-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+.train-btns { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.train-reset-all { display: flex; justify-content: flex-end; margin: 4px 0 8px; }
+/* Nenápadné (ghost) tlačítko – pro resety EV, ať vizuálně necouvá do popředí. */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid var(--border, #2a3550);
+  color: var(--muted, #8a97b8);
+}
+.btn-ghost:hover:not(:disabled) { color: #ffb3b3; border-color: #6b3550; }
 
 /* ---- Move Tutor (v0.51.0): editor aktivní sady tahů ---- */
 /* Řádek aktivních slotů (aktuální výběr). */
@@ -3028,6 +3081,75 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   50% { transform: scale(1.15); opacity: 1; }
 }
 
+/* ---- Animovaný evoluční popup (ui/evolutionPopup.js, event POKEMON_EVOLVED) ----
+ * Sekvence: intro (svítí stará forma) → probliky (bílá silueta stará↔nová,
+ * zrychluje) → záblesk → odhalení nové formy + tlačítko. */
+.evo-modal { text-align: center; }
+.evo-scene {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+  overflow: hidden;
+}
+.evo-mon {
+  position: relative;
+  width: 160px;
+  height: 160px;
+  margin: 0 auto;
+}
+.evo-slot {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 60ms linear;
+}
+.evo-slot .mon-sprite {
+  width: 160px;
+  height: 160px;
+  image-rendering: pixelated;
+}
+/* Intro: stará forma barevně, nová skrytá. */
+.evo-slot-after { opacity: 0; }
+
+/* Probliky: obě formy jako bílá silueta, JS přepíná .show-after. */
+.evo-scene.is-flicker .evo-mon {
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.85));
+}
+.evo-scene.is-flicker .evo-slot .mon-sprite img {
+  filter: brightness(0) invert(1); /* solidní bílá silueta */
+}
+.evo-scene.is-flicker .evo-slot-before { opacity: 1; }
+.evo-scene.is-flicker .evo-slot-after { opacity: 0; }
+.evo-scene.is-flicker.show-after .evo-slot-before { opacity: 0; }
+.evo-scene.is-flicker.show-after .evo-slot-after { opacity: 1; }
+
+/* Odhalení: nová forma barevně. */
+.evo-scene.is-reveal .evo-slot-before { opacity: 0; }
+.evo-scene.is-reveal .evo-slot-after { opacity: 1; }
+
+/* Bílý záblesk přes scénu při odhalení. */
+.evo-flash {
+  position: absolute;
+  inset: -60px;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.95), rgba(255, 255, 255, 0) 70%);
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.evo-scene.is-reveal .evo-flash { animation: evo-flash 0.6s ease-out; }
+@keyframes evo-flash {
+  0% { opacity: 0; }
+  25% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.evo-caption { min-height: 1.4em; margin: 2px 0 0; }
+.evo-ok[hidden] { display: none; }
+
 /* ---- Gym Challenge (minihry před gym souboji, gymChallengeView.js) ---- */
 /* Karta v Gym tabu, dokud není hádanka splněná. */
 .gym-challenge-card {
@@ -3095,3 +3217,83 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 .gc-win { padding: 10px 4px; text-align: center; }
 .gc-win .story-text, .gc-win .placeholder { text-align: center; }
 .gc-enter { margin-top: 8px; }
+
+/* ============================================================= *
+ *  Tutorial (onboarding) – coach-mark overlay se spotlightem.
+ *  Vlastní ho src/ui/tutorial.js. Overlay nechytá kliky (pointer-events
+ *  none), aby šlo v demo-souboji klikat na zvýrazněný prvek; jen bublina
+ *  je interaktivní.
+ * ============================================================= */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000; /* nad panely I nad .modal-overlay (300) → spotlight svítí i na vnitřek Bagu */
+  pointer-events: none;
+}
+/* Spotlight = průhledná „díra"; obří box-shadow ztmaví okolí. */
+.tutorial-spot {
+  position: absolute;
+  border-radius: 10px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.62);
+  outline: 2px solid rgba(255, 210, 90, 0.9);
+  transition: left 0.15s ease, top 0.15s ease, width 0.15s ease, height 0.15s ease;
+  pointer-events: none;
+}
+/* Po splnění akce (clearOnDone) přestaň tmavit, ať hráč vidí scénu (běžící auto-souboj). */
+.tutorial-spot.is-clear { box-shadow: none; outline: none; }
+/* noDim: netmav vůbec (jen obrys cíle) – vhodné pro modal k prozkoumání (Bag). */
+.tutorial-spot.no-dim { box-shadow: none; }
+.tutorial-tip {
+  position: absolute;
+  max-width: 320px;
+  background: #1f2733;
+  color: #eaf0f6;
+  border: 1px solid rgba(255, 210, 90, 0.6);
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  pointer-events: none; /* nikdy neclonní klik na cíl (útoky, checkboxy, dropdown, Bag) */
+}
+/* Klikací zůstanou jen ovládací tlačítka bubliny (Next/Skip). */
+.tutorial-tip .btn { pointer-events: auto; }
+.tutorial-tip-center {
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%);
+}
+.tutorial-tip-title { margin: 0 0 6px; font-size: 1rem; }
+.tutorial-tip-text { margin: 0 0 10px; font-size: 0.9rem; line-height: 1.4; }
+.tutorial-tip-actions { display: flex; align-items: center; gap: 8px; }
+.tutorial-tip-count { font-size: 0.8rem; opacity: 0.7; margin-right: auto; }
+.tutorial-tip-hint { margin: -4px 0 10px; font-size: 0.82rem; font-style: italic; }
+
+/* --- Trainer Boost Center (idle-boost budova, storyBuildingView.boostCenterView) --- */
+.boost-line {
+  margin: 10px 0;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.boost-line-head,
+.boost-line-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.boost-line-name { font-weight: 700; }
+.boost-line-effect { font-size: 0.88rem; }
+.boost-bar {
+  height: 8px;
+  margin: 7px 0;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.boost-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #e0902e, #ffcf6b);
+  border-radius: 6px;
+  transition: width 0.2s ease;
+}

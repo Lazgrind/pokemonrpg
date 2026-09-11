@@ -11,7 +11,7 @@
 > Kód nic neregistruje – cesta se odvozuje z ID, takže po nahrání se sprite
 > objeví sám; dokud chybí, jede fallback (glyf / CSS ikona / gradient).
 
-**Stav ověřen proti disku:** 2026-09-09 (v0.85.0).
+**Stav ověřen proti disku:** 2026-09-11 (v0.104.0).
 
 ---
 
@@ -84,9 +84,11 @@ Soubory naplocho v `assets/backgrounds/` jako `<biome>-<n>.png` (poměr ~3:2).
 Story budovy (`data/buildings.js` `STORY_BUILDINGS`) se renderují CSS domečkem
 s emoji ikonou (záměr: radší prázdno než cizí placeholder). Sprite je kosmetika:
 dej ho do `assets/buildings/<id>.png` a přidej `sprite:` do dané definice budovy.
-Níže je **úplný** seznam všech 20 story budov seřazený podle postupu hrou (5 idle
+Níže je **úplný** seznam všech 21 story budov seřazený podle postupu hrou (5 idle
 budov – Poké Center/Mart, Day-Care, Training Grounds, Move Tutor – už sprity na
-disku má, ty tu nejsou).
+disku má, ty tu nejsou). Pozn.: Training Grounds už není samostatná budova na
+mapě (EV trénink se od v0.104.0 otevírá z Fighting Dojo), ale jeho sprite na
+disku je a jinde se používá.
 
 **Pallet Town**
 - [ ] **`assets/buildings/oak-lab.png`** — Oak's Lab (ikona 🔬) – starter + Pokédex.
@@ -114,6 +116,7 @@ disku má, ty tu nejsou).
 - [ ] **`assets/buildings/dept-store.png`** — Celadon Dept. Store (ikona 🏬) – nákup Fresh Water.
 - [ ] **`assets/buildings/game-corner.png`** — Rocket Game Corner (ikona 🎰) – vchod do Rocket Hideoutu; po vyčištění „Plná herna" (automat + coiny + prize corner → Porygon). Slot UI je jen emoji, sprite je kosmetika budovy.
 - [ ] **`assets/buildings/celadon-mansion.png`** — Celadon Mansion (ikona 🏨) – dárková budova, Eevee (automatický level dle týmu).
+- [ ] **`assets/buildings/boost-center.png`** — Trainer Boost Center (ikona 💪) – idle-boost budova (⭐ XP / 💰 Yield / ✨ Fortune), přidána v0.102.0.
 
 **Saffron City**
 - [ ] **`assets/buildings/silph-co.png`** — Silph Co. (ikona 🏢) – Rocket gauntlet, Master Ball, dárek Lapras.

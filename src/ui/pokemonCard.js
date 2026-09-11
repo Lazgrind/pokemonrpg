@@ -17,10 +17,6 @@ import { getPokeball } from "../../data/pokeballs.js";
 import { getMove } from "../../data/moves.js";
 import { getItem, isHeldItem } from "../../data/items.js";
 import { heldItemOf, equipHeldItem, unequipHeldItem } from "../systems/itemSystem.js";
-import { learnableTmsFor, teachTm } from "../systems/tmSystem.js";
-import { getTm } from "../../data/tms.js";
-import { learnableHmsFor, teachHm } from "../systems/hmSystem.js";
-import { getHm } from "../../data/hms.js";
 import { bus, EVENTS } from "../core/events.js";
 import { saveScroll, restoreScroll, scrollAware } from "./scrollPreserve.js";
 import {
@@ -32,6 +28,7 @@ import {
   ivTotal,
   ivPercent,
   evTotal,
+  evYield,
 } from "../systems/pokemonSystem.js";
 import { getNature, isNeutralNature } from "../../data/natures.js";
 import { xpForNextLevel } from "../systems/progression.js";
@@ -68,6 +65,13 @@ function genderRatioLabel(species) {
   const g = species.genderRatio;
   if (g === "genderless") return "Genderless";
   return `♂ ${pct(g.m)}% · ♀ ${pct(g.f)}%`;
+}
+
+/** Krátký popisek EV yieldu druhu („+2 Attack, +1 Speed"). Prázdný yield → null. */
+function evYieldLabel(speciesId) {
+  const y = evYield(speciesId);
+  const parts = STAT_KEYS.filter((k) => (y[k] ?? 0) > 0).map((k) => `+${y[k]} ${STAT_LABELS[k]}`);
+  return parts.length ? parts.join(", ") : null;
 }
 
 /** Odznaky typů druhu. */
@@ -269,94 +273,9 @@ function movesList(owned) {
   return `<ul class="mc-moves">${rows}</ul>`;
 }
 
-// Rozpracované naučení TM, které vyžaduje výběr slotu k přepsání (jedinec má
-// plný počet tahů). Drží se na úrovni modulu, ať přežije překreslení karty.
-// { uid, num, name } nebo null.
-let pendingTm = null;
-
-/**
- * Sekce TM – naučení tahu z Technical Machine (jednorázově, kompatibilní druhy).
- * Když má jedinec plné 4 tahy, přepne se na výběr tahu k přepsání (pendingTm).
- */
-function tmSection(owned) {
-  // Režim výběru slotu k přepsání (jedinec má plno).
-  if (pendingTm && pendingTm.uid === owned.uid) {
-    const moves = Array.isArray(owned.moves) ? owned.moves : [];
-    const slots = moves
-      .map((slot, i) => {
-        const mv = getMove(slot.id);
-        return `<button class="btn btn-sm" data-act="tm-replace" data-slot="${i}">${esc(mv?.name ?? slot.id)}</button>`;
-      })
-      .join("");
-    return `
-      <h4 class="mc-section">Teach ${esc(pendingTm.name)}</h4>
-      <p class="placeholder">This Pokémon already knows 4 moves. Choose one to forget:</p>
-      <div class="tm-replace-slots">${slots}
-        <button class="btn btn-sm btn-ghost" data-act="tm-cancel">Cancel</button>
-      </div>`;
-  }
-
-  const learnable = learnableTmsFor(owned.uid);
-  const options = learnable
-    .map((t) => `<option value="${t.num}">TM${String(t.num).padStart(2, "0")} ${esc(t.name)} ×${t.count}</option>`)
-    .join("");
-
-  return `
-    <h4 class="mc-section">Teach TM</h4>
-    <div class="held-item-controls">
-      ${
-        options
-          ? `<select class="held-equip-select" data-tm-select>${options}</select>
-             <button class="btn btn-sm" data-act="teach-tm">Teach</button>`
-          : `<span class="placeholder">No compatible TMs in your Bag.</span>`
-      }
-    </div>`;
-}
-
-// Rozpracované naučení HM, které vyžaduje výběr slotu k přepsání (jedinec má
-// plný počet tahů). Drží se na úrovni modulu, ať přežije překreslení karty.
-// { uid, num, name } nebo null.
-let pendingHm = null;
-
-/**
- * Sekce HM – naučení tahu z Hidden Machine. NA ROZDÍL OD TM se HM NEspotřebuje,
- * lze ho učit opakovaně libovolným kompatibilním druhům (jako v kánonu).
- * Když má jedinec plné 4 tahy, přepne se na výběr tahu k přepsání (pendingHm).
- */
-function hmSection(owned) {
-  // Režim výběru slotu k přepsání (jedinec má plno).
-  if (pendingHm && pendingHm.uid === owned.uid) {
-    const moves = Array.isArray(owned.moves) ? owned.moves : [];
-    const slots = moves
-      .map((slot, i) => {
-        const mv = getMove(slot.id);
-        return `<button class="btn btn-sm" data-act="hm-replace" data-slot="${i}">${esc(mv?.name ?? slot.id)}</button>`;
-      })
-      .join("");
-    return `
-      <h4 class="mc-section">Teach ${esc(pendingHm.name)}</h4>
-      <p class="placeholder">This Pokémon already knows 4 moves. Choose one to forget:</p>
-      <div class="tm-replace-slots">${slots}
-        <button class="btn btn-sm btn-ghost" data-act="hm-cancel">Cancel</button>
-      </div>`;
-  }
-
-  const learnable = learnableHmsFor(owned.uid);
-  const options = learnable
-    .map((h) => `<option value="${h.num}">HM${String(h.num).padStart(2, "0")} ${esc(h.name)}</option>`)
-    .join("");
-
-  return `
-    <h4 class="mc-section">Teach HM</h4>
-    <div class="held-item-controls">
-      ${
-        options
-          ? `<select class="held-equip-select" data-hm-select>${options}</select>
-             <button class="btn btn-sm" data-act="teach-hm">Teach</button>`
-          : `<span class="placeholder">No compatible HMs in your Bag.</span>`
-      }
-    </div>`;
-}
+// Pozn.: Učení TM/HM se od v0.98.0 dělá z BATOHU (klik na TM/HM item → výběr
+// Pokémona), ne z karty – viz src/ui/bagView.js. Sekce „Teach TM/HM" tu proto už
+// nejsou.
 
 /** Sekce Held item – zobrazení + nasazení/sundání přímo z karty (i mimo batoh). */
 function heldItemSection(owned) {
@@ -425,8 +344,6 @@ function ownedBody(owned) {
     ${ownedStatsTable(owned, species)}
     <h4 class="mc-section">Moves</h4>
     ${movesList(owned)}
-    ${tmSection(owned)}
-    ${hmSection(owned)}
     ${heldItemSection(owned)}
     <dl class="mc-meta">
       <dt>Caught in</dt><dd>${
@@ -440,6 +357,10 @@ function ownedBody(owned) {
           : `${genderSymbolHtml(owned.gender)} ${owned.gender === "m" ? "Male" : "Female"}`
       }</dd>
       <dt>Nature</dt><dd>${natureLabel(owned.nature)}</dd>
+      ${(() => {
+        const yl = evYieldLabel(owned.speciesId);
+        return yl ? `<dt title="EVs this species gives when defeated">EV yield</dt><dd>${esc(yl)}</dd>` : "";
+      })()}
       ${(() => {
         const ev = evolutionInfo(owned);
         if (!ev) return "";
@@ -545,8 +466,6 @@ export function openPokemonCard(arg = {}) {
   }
 
   function close() {
-    pendingTm = null; // zahoď rozpracovaný výběr TM slotu
-    pendingHm = null; // i HM slotu
     unsub();
     document.removeEventListener("keydown", onKey);
     overlay.remove();
@@ -586,77 +505,7 @@ export function openPokemonCard(arg = {}) {
       if (!res.ok && res.reason) window.alert?.(res.reason);
       return;
     }
-    // Naučit TM: přečti vybraný TM ze selectu. Když má jedinec plno, přepni na
-    // výběr slotu (pendingTm) a překresli ručně (teachTm bez slotu nekomituje).
-    const teachBtn = e.target.closest?.('[data-act="teach-tm"]');
-    if (teachBtn && owned) {
-      const sel = overlay.querySelector("[data-tm-select]");
-      const num = Number(sel?.value);
-      if (num) {
-        const res = teachTm(owned.uid, num, null);
-        if (res.needsSlot) {
-          pendingTm = { uid: owned.uid, num, name: getTm(num)?.name ?? `TM${num}` };
-          rerenderBody();
-        } else if (!res.ok && res.reason) {
-          window.alert?.(`Can't teach this TM (${res.reason}).`);
-        }
-        // Úspěch → commit v teachTm → STATE_CHANGED překreslí tělo.
-      }
-      return;
-    }
-    // Výběr tahu k přepsání při plných slotech.
-    const tmReplaceBtn = e.target.closest?.('[data-act="tm-replace"]');
-    if (tmReplaceBtn && owned && pendingTm) {
-      const slot = Number(tmReplaceBtn.dataset.slot);
-      const num = pendingTm.num;
-      pendingTm = null;
-      const res = teachTm(owned.uid, num, slot);
-      if (!res.ok && res.reason) window.alert?.(`Can't teach this TM (${res.reason}).`);
-      else rerenderBody(); // pro jistotu (commit obvykle překreslí sám)
-      return;
-    }
-    // Zrušení výběru slotu.
-    const tmCancelBtn = e.target.closest?.('[data-act="tm-cancel"]');
-    if (tmCancelBtn) {
-      pendingTm = null;
-      rerenderBody();
-      return;
-    }
-    // Naučit HM: stejný pattern jako TM, ale HM se nespotřebuje (učitelné opakovaně).
-    const teachHmBtn = e.target.closest?.('[data-act="teach-hm"]');
-    if (teachHmBtn && owned) {
-      const sel = overlay.querySelector("[data-hm-select]");
-      const num = Number(sel?.value);
-      if (num) {
-        const res = teachHm(owned.uid, num, null);
-        if (res.needsSlot) {
-          pendingHm = { uid: owned.uid, num, name: getHm(num)?.name ?? `HM${num}` };
-          rerenderBody();
-        } else if (!res.ok && res.reason) {
-          window.alert?.(`Can't teach this HM (${res.reason}).`);
-        }
-        // Úspěch → commit v teachHm → STATE_CHANGED překreslí tělo.
-      }
-      return;
-    }
-    // Výběr tahu k přepsání při plných slotech (HM).
-    const hmReplaceBtn = e.target.closest?.('[data-act="hm-replace"]');
-    if (hmReplaceBtn && owned && pendingHm) {
-      const slot = Number(hmReplaceBtn.dataset.slot);
-      const num = pendingHm.num;
-      pendingHm = null;
-      const res = teachHm(owned.uid, num, slot);
-      if (!res.ok && res.reason) window.alert?.(`Can't teach this HM (${res.reason}).`);
-      else rerenderBody(); // pro jistotu (commit obvykle překreslí sám)
-      return;
-    }
-    // Zrušení výběru slotu (HM).
-    const hmCancelBtn = e.target.closest?.('[data-act="hm-cancel"]');
-    if (hmCancelBtn) {
-      pendingHm = null;
-      rerenderBody();
-      return;
-    }
+    // Učení TM/HM se od v0.98.0 dělá z batohu (bagView.js), ne odsud.
   });
   overlay.querySelector('[data-act="close"]').addEventListener("click", close);
 }

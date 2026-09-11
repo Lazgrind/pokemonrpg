@@ -3,4 +3,4 @@
  * a snadno provázat s CHANGELOG.md.
  * @type {string}
  */
-export const VERSION = "0.96.0";
+export const VERSION = "0.104.0";

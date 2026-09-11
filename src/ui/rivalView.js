@@ -14,13 +14,16 @@ import { getState } from "../core/state.js";
 import { startTrainerBattle, getActiveArea } from "../systems/battleSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { openMainTab } from "./mainPanel.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /** Vykreslí obsah záložky Rival do zadaného elementu. */
 export function renderRivalTab(root, onStatus = () => {}) {
   const area = getActiveArea();
   const rival = rivalForArea(area?.id);
   if (!rival) {
+    const _savedScroll = saveScroll(root);
     root.innerHTML = `<h2 class="panel-title">Rival</h2><p class="placeholder">No rival is waiting here.</p>`;
+    restoreScroll(root, _savedScroll);
     return;
   }
 
@@ -47,6 +50,7 @@ export function renderRivalTab(root, onStatus = () => {}) {
       : `<div class="rival-cleared">✓ You've beaten your Rival here — the path ahead is open.</div>`
     : `<button class="btn rival-fight" data-trainer="${rival.id}">⚔ Challenge your Rival</button>`;
 
+  const _savedScroll = saveScroll(root);
   root.innerHTML = `
     <section class="rival-section">
       <h2 class="panel-title">🔥 Rival Battle</h2>
@@ -60,6 +64,7 @@ export function renderRivalTab(root, onStatus = () => {}) {
       </div>
       ${action}
     </section>`;
+  restoreScroll(root, _savedScroll);
 
   const btn = root.querySelector(".rival-fight");
   if (btn)

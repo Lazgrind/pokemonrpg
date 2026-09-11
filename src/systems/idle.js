@@ -12,11 +12,12 @@
  */
 
 import { getState, commit } from "../core/state.js";
-import { createPokemon } from "./pokemonSystem.js";
+import { createPokemon, addEv, evYield } from "./pokemonSystem.js";
 import { grantXp } from "./progression.js";
 import { makeCombatant, avgDamage, battleRewards } from "./battleSystem.js";
+import { goldBoostMult } from "./buildingSystem.js";
 import { expectedLoot } from "./loot.js";
-import { AREAS } from "../../data/areas.js";
+import { AREAS, areaEncounters } from "../../data/areas.js";
 
 /** Účinnost offline progresu vůči aktivnímu hraní. Laditelné jedním číslem. */
 export const OFFLINE_EFFICIENCY = 0.1; // 1/10 – aktivní hraní je jasně výhodnější
@@ -63,7 +64,9 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
   // Odměny počítáme ze zlomku a teprve pak zaokrouhlíme dolů.
   const { xp, gold } = battleRewards(enemyLevel);
   const totalXp = Math.floor(effectiveKills * xp);
-  const totalGold = Math.floor(effectiveKills * gold);
+  // 💰 Yield boost (Trainer Boost Center) platí i pro offline zisk goldu. XP boost
+  // aplikuje grantXp centrálně. Bez budovy = ×1.
+  const totalGold = Math.floor(effectiveKills * gold * goldBoostMult());
   const area = AREAS.find((a) => a.id === savedBattle.areaId) ?? AREAS[0];
   const loot = expectedLoot(area, effectiveKills);
 
@@ -73,6 +76,24 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
 
   // Aplikace na stav.
   grantXp(owned, totalXp, { auto: true }); // offline zisk → tahy přepiš samy (bez popupu)
+  // EV: offline neumí zabít konkrétní jedince, tak udělí VÁŽENÝ PRŮMĚR EV yieldů
+  // oblasti (dle rarita-vah encounterů) × počet zabití. Věrné „co bys tu nachytal";
+  // strop 252/510 ořízne. Kanonická data data/evYields.js (bez dat = 0).
+  let evGained = 0;
+  const enc = areaEncounters(area);
+  const wSum = enc.reduce((s, e) => s + e.weight, 0);
+  if (wSum > 0) {
+    const perStat = {};
+    for (const e of enc) {
+      const y = evYield(e.id);
+      const frac = e.weight / wSum;
+      for (const k of Object.keys(y)) perStat[k] = (perStat[k] ?? 0) + (y[k] ?? 0) * frac;
+    }
+    for (const [k, v] of Object.entries(perStat)) {
+      const amt = Math.floor(v * effectiveKills);
+      if (amt > 0) evGained += addEv(owned, k, amt);
+    }
+  }
   const res = getState().resources;
   res.gold += totalGold;
   for (const [resource, amount] of Object.entries(loot)) {
@@ -86,6 +107,7 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
     kills: Math.round(effectiveKills),
     xp: totalXp,
     gold: totalGold,
+    ev: evGained,
     loot,
   };
 }

@@ -206,6 +206,14 @@ function applyOne(s, key) {
       s.progress.activeAreaId = "cerulean-city";
       break;
     case "vermilion":
+      // Cerulean Gym (Misty) poražen → Cascade Badge. `cerulean` checkpoint tě
+      // nechává JEN „u Misty" (na test souboje); do dalšího postupu ji tu tedy
+      // dokončíme (jinak by cascade-badge/Misty chyběly ve všech krocích za ní).
+      addUnique(s.progress.defeatedTrainers, "cerulean-gym-swimmer-luis");
+      addUnique(s.progress.defeatedTrainers, "cerulean-gym-jr-diana");
+      addUnique(s.progress.defeatedTrainers, "misty");
+      addUnique(s.progress.badges, "cascade-badge");
+      s.story.mistyCleared = true;
       // Cesta Cerulean → Route 24/25 (Bill) → Route 5/6 → Vermilion; na S.S. Anne
       // poražen rival → HM Cut. Vermilion Gym (Lt. Surge) je tím odemčený.
       addUnique(s.progress.visited, "route-24");

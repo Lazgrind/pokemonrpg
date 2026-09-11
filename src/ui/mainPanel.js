@@ -15,6 +15,8 @@
  */
 
 import { renderCity } from "./cityView.js";
+import { renderDaycareTab } from "./daycareView.js";
+import { renderMoveTutorTab } from "./moveTutorView.js";
 import { renderPokedexTab } from "./pokedexView.js";
 import { renderPcTab } from "./pcView.js";
 import { renderProfileTab } from "./profileView.js";
@@ -41,6 +43,8 @@ const ALL_TABS = [
   { id: "legendary", label: "Legendary" },
   { id: "league", label: "🏆 League" },
   { id: "city", label: "City" },
+  { id: "daycare", label: "🐣 Day Care" },
+  { id: "move-tutor", label: "📖 Move Tutor" },
   { id: "pc", label: "PC" },
   { id: "pokedex", label: "Pokédex" },
   { id: "profile", label: "Profile" },
@@ -81,6 +85,12 @@ function visibleTabs() {
   // League tab: jen na Indigo Plateau (kde Liga je). Dostat se sem = mít 8 odznaků
   // (Route 22 → Victory Road → Indigo je za earth-badge), takže žádný extra gate.
   const hasLeague = !!leagueForArea(area?.id);
+  // Day Care tab: jen na Route 5 (kanonické místo Day Care v Gen 1). Route 5 je
+  // za Cascade Badge (Misty), takže žádný extra gate netřeba.
+  const atDaycare = area?.id === "route-05";
+  // Move Tutor tab: jen na Route 8 (střed Kanta, Saffron↔Lavender). Move Tutor
+  // v Gen 1 neexistoval – volné umístění jako quality-of-life služba.
+  const atMoveTutor = area?.id === "route-08";
   return ALL_TABS.filter((t) => {
     if (t.id === "profile") return false; // skrytá – jen z horní lišty
     if (t.id === "battle") return !inSafari; // v Safari se nebojuje – Battle mizí
@@ -91,6 +101,8 @@ function visibleTabs() {
     if (t.id === "rockets") return hasRockets; // jen na oblasti s Rocket gauntletem
     if (t.id === "legendary") return hasLegendary; // jen na oblasti s (nechyceným) legendárním
     if (t.id === "league") return hasLeague; // jen na Indigo Plateau (Pokémon League)
+    if (t.id === "daycare") return atDaycare; // jen na Route 5 (kanonická Day Care)
+    if (t.id === "move-tutor") return atMoveTutor; // jen na Route 8 (Move Tutor's House)
     return true;
   });
 }
@@ -119,7 +131,7 @@ export function renderMainPanel(root, onStatus = () => {}) {
   // viditelné. Profile je skrytá záložka z horní lišty, tu neresetujeme (není v `tabs`).
   // battle+safari jsou také podmíněné (v safari-zone se prohodí). Když aktivní
   // záložka zmizí, spadni na první viditelnou (v safari-zone = Safari, jinak Battle).
-  const conditional = new Set(["city", "gym", "rival", "rockets", "legendary", "league", "battle", "safari"]);
+  const conditional = new Set(["city", "daycare", "move-tutor", "gym", "rival", "rockets", "legendary", "league", "battle", "safari"]);
   if (conditional.has(activeTab) && !tabs.some((t) => t.id === activeTab)) {
     activeTab = tabs[0]?.id ?? "battle";
   }
@@ -170,6 +182,8 @@ export function renderMainPanel(root, onStatus = () => {}) {
     if (activeTab === "pc") renderPcTab(restPane, onStatus);
     else if (activeTab === "pokedex") renderPokedexTab(restPane, onStatus);
     else if (activeTab === "city") renderCity(restPane, onStatus);
+    else if (activeTab === "daycare") renderDaycareTab(restPane, onStatus);
+    else if (activeTab === "move-tutor") renderMoveTutorTab(restPane, onStatus);
     else if (activeTab === "gym") renderGymTab(restPane, onStatus);
     else if (activeTab === "rival") renderRivalTab(restPane, onStatus);
     else if (activeTab === "rockets") renderRocketsTab(restPane, onStatus);

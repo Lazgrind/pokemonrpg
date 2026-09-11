@@ -3,20 +3,27 @@ import sys
 
 files = [
     "src/systems/pokemonSystem.js", "src/systems/battleSystem.js",
+    "src/systems/itemSystem.js", "src/systems/progression.js",
     "src/systems/breedingSystem.js", "src/systems/team.js",
     "src/systems/save.js", "src/core/state.js", "src/core/version.js",
     "src/ui/profileView.js", "src/ui/settingsView.js", "src/systems/devTools.js",
     "src/ui/diploma.js", "src/ui/popup.js",
     "src/ui/gymView.js", "src/ui/gymChallengeView.js",
-    "data/areas.js",
+    "src/ui/rivalView.js", "src/ui/rocketView.js", "src/ui/cityView.js",
+    "src/ui/legendaryView.js", "src/ui/leagueView.js",
+    "src/ui/daycareView.js", "src/ui/moveTutorView.js", "src/ui/mainPanel.js",
+    "src/ui/bagView.js", "src/systems/buildingSystem.js",
+    "src/systems/idle.js",
+    "data/areas.js", "data/buildings.js", "data/evYields.js",
     "data/moves.js", "data/items.js", "data/tms.js", "data/tmCompat.js",
     "data/hms.js", "data/hmCompat.js",
     "data/pokeballs.js",
     "src/systems/tmSystem.js", "src/systems/pokeballSystem.js",
     "src/systems/hmSystem.js",
-    # POZN.: storyBuildingView.js A main.js vynechány – používají vnořené template
-    # literály (backtick uvnitř ${...}) s apostrofy (It'll/don't), což tenhle naivní
-    # tokenizer neumí sledovat a hlásil by false-positive. Kontroluj je očima.
+    "src/ui/introScene.js", "src/ui/starterModal.js",
+    # POZN.: storyBuildingView.js, safariView.js A main.js vynechány – používají vnořené
+    # template literály (backtick uvnitř ${...}) s apostrofy (It'll/don't/can't), což tenhle
+    # naivní tokenizer neumí sledovat a hlásil by false-positive. Kontroluj je očima.
 ]
 
 BACK = chr(92)  # backslash

@@ -9,6 +9,9 @@
  *   { kind: "heal",   amount: number | "full" }              – doplní HP
  *   { kind: "cure",   status: "poison"|"burn"|"paralysis"|"any" } – sundá stav
  *   { kind: "revive", healFrac: number | "full" }            – oživí vyřazeného
+ *   { kind: "level" }                                        – Rare Candy: +1 level (respektuje level cap i MAX_LEVEL)
+ *   { kind: "ppUp" }                                         – PP Up: +1 stupeň max PP jednoho tahu (max 3×, +20 % základu za stupeň)
+ *   { kind: "ppMax" }                                        – PP Max: max PP jednoho tahu rovnou na strop (3 stupně naráz)
  *
  * @typedef {Object} ItemDef
  * @property {string} id
@@ -20,6 +23,9 @@
  * @property {{ kind: "heal", amount: number|"full" }
  *          | { kind: "cure", status: "poison"|"burn"|"paralysis"|"any" }
  *          | { kind: "revive", healFrac: number|"full" }
+ *          | { kind: "level" }
+ *          | { kind: "ppUp" }
+ *          | { kind: "ppMax" }
  *          | undefined } effect
  * @property {{ kind: "endTurnHeal", fraction: number }
  *          | { kind: "lowHpHeal", threshold: number, amount: number }
@@ -49,6 +55,14 @@ export const ITEMS = [
   // --- Revive: oživení vyřazeného Pokémona ---
   { id: "revive", name: "Revive", icon: "✨", desc: "Revives a fainted Pokémon with half HP.", price: 200, category: "revive", effect: { kind: "revive", healFrac: 0.5 } },
   { id: "max-revive", name: "Max Revive", icon: "🌟", desc: "Revives a fainted Pokémon and fully restores HP.", price: 500, category: "revive", effect: { kind: "revive", healFrac: "full" } },
+
+  // --- Boosts: trvalá vylepšení jednotlivců (dlouhodobé gold sinky) ---
+  // Rare Candy = okamžitý +1 level (respektuje level cap i MAX_LEVEL 100).
+  // PP Up/PP Max zvyšují maximální PP JEDNOHO tahu (výběr tahu je v batohu):
+  // PP Up +20 % základu za kus (max 3× = +60 %), PP Max rovnou na strop.
+  { id: "rare-candy", name: "Rare Candy", icon: "🍬", desc: "Raises a Pokémon's level by 1.", price: 4800, category: "boost", effect: { kind: "level" } },
+  { id: "pp-up", name: "PP Up", icon: "🔼", desc: "Slightly raises the max PP of a single selected move (up to 3 times).", price: 9800, category: "boost", effect: { kind: "ppUp" } },
+  { id: "pp-max", name: "PP Max", icon: "⏫", desc: "Maximizes the PP of a single selected move at once.", price: 12000, category: "boost", effect: { kind: "ppMax" } },
 
   // --- Evoluční kameny a Linking Cord ---
   { id: "fire-stone", name: "Fire Stone", icon: "🔥", desc: "Evolves certain Pokémon exposed to fire energy.", price: 1500, category: "evolution", evolution: true },
@@ -129,6 +143,7 @@ export const ITEM_CATEGORIES = [
   { key: "hp", name: "Potions", icon: "🧴" },
   { key: "status", name: "Status Heals", icon: "💊" },
   { key: "revive", name: "Revives", icon: "✨" },
+  { key: "boost", name: "Boosts", icon: "🍬" },
   { key: "evolution", name: "Evolution", icon: "🪨" },
   { key: "held", name: "Held Items", icon: "💎" },
   { key: "tm", name: "TMs", icon: "💿" },

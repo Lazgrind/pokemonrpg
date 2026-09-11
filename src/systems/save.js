@@ -27,6 +27,11 @@ export function hasSave() {
 /** Uloží aktuální stav do localStorage. */
 export function saveGame() {
   const state = getState();
+  // Pojistka: během tutoriálového DEMO-souboje je stav dočasně „naaranžovaný"
+  // (tutorial-Pokémon vložený do collection/team apod.). Nesmí se uložit –
+  // autosave (30 s / beforeunload) i ruční Save ho tu přeskočí; čistý stav
+  // uloží tutorial sám po demu (přes restore snapshotu). Flag drží tutorial.js.
+  if (state.tutorialDemoActive) return false;
   state.meta.lastSaved = Date.now();
   localStorage.setItem(SAVE_KEY, JSON.stringify(state));
   return true;

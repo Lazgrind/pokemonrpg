@@ -34,6 +34,10 @@ import {
   trainingEvPerSession,
   trainingCost,
   trainEv,
+  evResetAllCost,
+  evResetStatCost,
+  resetEvsAll,
+  resetEvStatGold,
 } from "../systems/buildingSystem.js";
 import {
   STAT_KEYS,
@@ -351,7 +355,7 @@ export function openBuilding(id, onStatus = () => {}) {
  * @param {string} id  id budovy (Training Grounds)
  * @param {(msg: string) => void} onStatus
  */
-function openTrainingPicker(id, onStatus) {
+export function openTrainingPicker(id, onStatus) {
   const avail = getState().collection;
   openPokemonPicker({
     title: "Choose a Pokémon to train",
@@ -398,6 +402,8 @@ function openTrainingStats(id, uid, onStatus) {
     const gold = getState().resources.gold;
     const cost = trainingCost(id);
     const perSession = trainingEvPerSession(id);
+    const resetAllCost = evResetAllCost(id);
+    const resetStatCost = evResetStatCost(id);
     const evs = p.evs ?? {};
     const total = evTotal(p);
     const totalFull = total >= EV_MAX_TOTAL;
@@ -408,14 +414,26 @@ function openTrainingStats(id, uid, onStatus) {
       const pctW = Math.max(0, Math.min(100, (ev / EV_MAX_PER_STAT) * 100));
       const disabled = statFull || totalFull || gold < cost;
       const label = statFull ? "Max" : `+${perSession} · ${cost} 💰`;
+      // Reset jednoho statu: jen když v něm nějaké EV jsou (jinak schováno).
+      const resetDisabled = gold < resetStatCost;
+      const resetBtn = ev > 0
+        ? `<button class="btn btn-sm btn-ghost" data-reset-stat="${k}" ${resetDisabled ? "disabled" : ""} title="Reset this stat's EV">↺ ${resetStatCost} 💰</button>`
+        : "";
       return `<div class="train-row">
         <div class="train-info">
           <div class="train-name">${STAT_LABELS[k]} <span class="placeholder">${ev}/${EV_MAX_PER_STAT} EV</span></div>
           <span class="mc-bar ev"><span style="width:${pctW}%"></span></span>
         </div>
-        <button class="btn btn-sm" data-train="${k}" ${disabled ? "disabled" : ""}>${label}</button>
+        <div class="train-btns">
+          ${resetBtn}
+          <button class="btn btn-sm" data-train="${k}" ${disabled ? "disabled" : ""}>${label}</button>
+        </div>
       </div>`;
     }).join("");
+
+    // Reset celého rozptylu: aktivní jen když je co resetovat a je dost goldu.
+    const resetAllDisabled = total <= 0 || gold < resetAllCost;
+    const resetAllBtn = `<button class="btn btn-sm btn-ghost" data-reset-all ${resetAllDisabled ? "disabled" : ""}>↺ Reset all EVs · ${resetAllCost} 💰</button>`;
 
     // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
     const savedScroll = saveScroll(overlay);
@@ -424,7 +442,9 @@ function openTrainingStats(id, uid, onStatus) {
       <div class="modal building-modal">
         <h2 class="panel-title">🏋️ Train ${speciesName(p)}${p.shiny ? " ✨" : ""} · Lv ${p.level}</h2>
         <p class="placeholder">💰 Your gold: <strong>${gold}</strong> · EV total: <strong>${total}/${EV_MAX_TOTAL}</strong>${totalFull ? " (max)" : ""}</p>
+        <p class="placeholder">Pokémon now gain EVs from battles. Buy them here as a shortcut, or reset below.</p>
         <div class="train-list">${rows}</div>
+        <div class="train-reset-all">${resetAllBtn}</div>
         <button class="btn btn-close" data-act="close">Close</button>
       </div>
     `;
@@ -439,6 +459,20 @@ function openTrainingStats(id, uid, onStatus) {
       })
     );
 
+    overlay.querySelectorAll("[data-reset-stat]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const k = btn.dataset.resetStat;
+        const r = resetEvStatGold(uid, k, id);
+        onStatus(r.ok ? `${STAT_LABELS[k]} EV reset ✓` : r.reason);
+      })
+    );
+
+    const resetAllEl = overlay.querySelector("[data-reset-all]");
+    if (resetAllEl) resetAllEl.addEventListener("click", () => {
+      const r = resetEvsAll(uid, id);
+      onStatus(r.ok ? "All EVs reset ✓" : r.reason);
+    });
+
     overlay.querySelector('[data-act="close"]').addEventListener("click", close);
   }
 
@@ -451,7 +485,7 @@ function openTrainingStats(id, uid, onStatus) {
  * @param {string} id  id budovy (Move Tutor)
  * @param {(msg: string) => void} onStatus
  */
-function openMoveTutorPicker(id, onStatus) {
+export function openMoveTutorPicker(id, onStatus) {
   const avail = getState().collection;
   openPokemonPicker({
     title: "Choose a Pokémon to reteach",
@@ -587,7 +621,7 @@ function openMoveTutorEditor(id, uid, onStatus) {
  * @param {string} id  id budovy (školky)
  * @param {(msg: string) => void} onStatus
  */
-function openBreeders(id, onStatus) {
+export function openBreeders(id, onStatus) {
   const def = getBuilding(id);
   if (!def?.tracks) return;
 
@@ -689,7 +723,7 @@ function openBreeders(id, onStatus) {
  * @param {string} id  id budovy (školky)
  * @param {(msg: string) => void} onStatus
  */
-function openBreeding(id, onStatus) {
+export function openBreeding(id, onStatus) {
   const def = getBuilding(id);
   if (!def?.daycare) return;
 
@@ -831,7 +865,7 @@ function trackUpgradeEffect(key, level, t) {
  * @param {string} id
  * @param {(msg: string) => void} onStatus
  */
-function openUpgrades(id, onStatus) {
+export function openUpgrades(id, onStatus) {
   const def = getBuilding(id);
   if (!def) return;
 
@@ -956,77 +990,44 @@ function openUpgrades(id, onStatus) {
  * @param {string} id
  * @param {(msg: string) => void} onStatus
  */
-function openMarket(id, onStatus) {
-  const def = getBuilding(id);
-  if (!def) return;
+// Oddělení obchodu = taby (jako v Bagu). "balls" má vlastní vykreslení (karty
+// míčků), ostatní jsou položky z ITEMS filtrované podle kategorií. Dlouhý seznam
+// „Items" je tím rozsekaný na přehledné podkategorie.
+const SHOP_DEPTS = [
+  { key: "balls", icon: "⚪", label: "Balls", cats: null },
+  { key: "heal", icon: "🧴", label: "Healing", cats: ["hp", "status", "revive"] },
+  { key: "boost", icon: "🍬", label: "Boosts", cats: ["boost"] },
+  { key: "evolution", icon: "🪨", label: "Evolution", cats: ["evolution"] },
+  { key: "held", icon: "💎", label: "Held", cats: ["held"] },
+  { key: "tm", icon: "💿", label: "TMs", cats: ["tm"] },
+];
 
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  document.body.appendChild(overlay);
-
-  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
-
-  function close() {
-    unsub();
-    document.removeEventListener("keydown", onKey);
-    overlay.remove();
-  }
-  function onKey(e) {
-    if (e.key === "Escape") close();
-  }
-  document.addEventListener("keydown", onKey);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) close();
-  });
-
-  function render() {
-    const gold = getState().resources.gold;
-
-    // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
-    const savedScroll = saveScroll(overlay);
-
-    overlay.innerHTML = `
-      <div class="modal building-modal">
-        <h2 class="panel-title">${def.icon} ${def.name} — Market</h2>
-        <p class="placeholder">💰 Your gold: <strong>${gold}</strong> · pick a department.</p>
-        <div class="market-depts">
-          <button class="dept-card" data-section="balls">
-            <span class="dept-icon">${ballIconHtml("poke", { size: 28 })}</span>
-            <span class="dept-name">Poké Balls</span>
-          </button>
-          <button class="dept-card" data-section="items">
-            <span class="dept-icon">🧴</span>
-            <span class="dept-name">Items</span>
-          </button>
-        </div>
-        <button class="btn btn-close" data-act="close">Close</button>
-      </div>
-    `;
-
-    // Obnoví scroll pozici PO přepsání obsahu.
-    restoreScroll(overlay, savedScroll);
-
-    const balls = overlay.querySelector('[data-section="balls"]');
-    if (balls) balls.addEventListener("click", () => openBallShop(id, onStatus));
-
-    const items = overlay.querySelector('[data-section="items"]');
-    if (items) items.addEventListener("click", () => openItemShop(id, onStatus));
-
-    overlay.querySelector('[data-act="close"]').addEventListener("click", close);
-  }
-
-  render();
+// Která oddělení daná budova nabízí (kanonicky). Běžný Poké Mart = jen základ
+// (míčky + léčení); Celadon Dept Store = kompletní katalog (vč. TM, evolučních
+// kamenů, held itemů a prémiových boostů), takže půlka věcí, co dřív nešla nikde
+// koupit, má konečně domov – a boosty jsou gatované příchodem do Celadonu (gold sink).
+const SHOP_DEPT_SETS = {
+  "poke-mart": ["balls", "heal"],
+  "dept-store": ["balls", "heal", "boost", "evolution", "held", "tm"],
+};
+/** Klíče oddělení nabízených danou budovou (fallback = základ). */
+function shopDeptsFor(id) {
+  return SHOP_DEPT_SETS[id] ?? ["balls", "heal"];
 }
 
 /**
- * Okno sekce Poké Balls: každý typ jako karta („okno"), ne řádek. Odemčené lze
- * koupit po kusu, zamčené/speciální jsou náhled.
+ * Obchod budovy: jedno okno s taby oddělení (jako Bag). Které oddělení jsou
+ * dostupné, řídí shopDeptsFor(id). Množství na nákup je sdílené přes celý obchod.
  * @param {string} id
  * @param {(msg: string) => void} onStatus
  */
-function openBallShop(id, onStatus) {
+export function openMarket(id, onStatus) {
   const def = getBuilding(id);
   if (!def) return;
+
+  const depts = SHOP_DEPTS.filter((d) => shopDeptsFor(id).includes(d.key));
+  let activeDept = depts[0]?.key ?? "balls";
+  let qty = 1;
 
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
@@ -1047,56 +1048,26 @@ function openBallShop(id, onStatus) {
     if (e.target === overlay) close();
   });
 
-  // Zvolené množství na nákup (sdílené pro celý obchod). "max" = kolik utáhne zlato.
-  let qty = 1;
-
   function render() {
     const gold = getState().resources.gold;
-    const balls = getState().resources.balls ?? {};
-    // Zamčené / neprodejné (dosud neodemčené) věci do obchodu neplníme – ať je
-    // seznam přehledný a ukazuje jen to, co jde teď koupit.
-    const forSale = POKEBALLS.filter((ball) => ball.price != null && isBallUnlocked(ball));
-    const rows = forSale
-      .map((ball) => {
-        const owned = balls[ball.id] ?? 0;
-        const price = ballPrice(ball.id, id);
-        const count = buyCount(qty, price, gold);
-        const cost = price * count;
-        const canBuy = count > 0;
-        return `<div class="ball-row">
-          <span>${ballIconHtml(ball.id, { size: 18 })} <strong>${ball.name}</strong> <span class="placeholder">— ${ball.desc}</span></span>
-          <span class="ball-buy">×${owned}
-            <button class="btn btn-sm" data-buy-ball="${ball.id}" ${canBuy ? "" : "disabled"}>${buyLabel(count, cost, price)}</button>
-          </span>
-        </div>`;
-      })
-      .join("");
-
-    // Náhled zamčených typů (další tier) – ukáže, co odemkne postup (odznaky).
-    // Neprodejné (tier/price null) a comingSoon se nezobrazují.
-    const lockedRows = POKEBALLS.filter(
-      (ball) => ball.price != null && ball.tier != null && !ball.comingSoon && !isBallUnlocked(ball)
-    )
-      .map((ball) => {
-        const need = badgesForBallTier(ball.tier);
-        return `<div class="ball-row ball-locked">
-          <span>${ballIconHtml(ball.id, { size: 18 })} <strong>${ball.name}</strong> <span class="placeholder">— ${ball.desc}</span></span>
-          <span class="ball-buy placeholder">🔒 ${need} badge${need === 1 ? "" : "s"}</span>
-        </div>`;
-      })
-      .join("");
-
-    const body =
-      (rows || `<p class="placeholder">No Poké Balls available yet.</p>`) +
-      (lockedRows ? `<div class="ball-shop-locked">${lockedRows}</div>` : "");
+    const dept = depts.find((d) => d.key === activeDept) ?? depts[0];
 
     // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
     const savedScroll = saveScroll(overlay);
 
+    const tabs = depts
+      .map((d) => `<button class="bag-tab${d.key === activeDept ? " active" : ""}" data-shop-dept="${d.key}">${d.icon} ${d.label}</button>`)
+      .join("");
+
+    const body = dept?.key === "balls"
+      ? ballSectionHtml(id, qty, gold)
+      : itemSectionHtml(dept?.cats ?? [], qty, gold);
+
     overlay.innerHTML = `
       <div class="modal building-modal">
-        <h2 class="panel-title">${ballIconHtml("poke", { size: 20 })} Poké Balls</h2>
+        <h2 class="panel-title">${def.icon} ${def.name}</h2>
         <p class="placeholder">💰 Your gold: <strong>${gold}</strong></p>
+        <div class="bag-tabs">${tabs}</div>
         ${qtyBarHtml(qty)}
         <div class="ball-shop">${body}</div>
         <button class="btn btn-close" data-act="close">Close</button>
@@ -1105,6 +1076,13 @@ function openBallShop(id, onStatus) {
 
     // Obnoví scroll pozici PO přepsání obsahu.
     restoreScroll(overlay, savedScroll);
+
+    overlay.querySelectorAll("[data-shop-dept]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        activeDept = btn.dataset.shopDept;
+        render();
+      })
+    );
 
     wireQtyBar(overlay, qty, (v) => {
       qty = v;
@@ -1122,6 +1100,18 @@ function openBallShop(id, onStatus) {
       })
     );
 
+    overlay.querySelectorAll("[data-buy-item]").forEach((btn) =>
+      btn.addEventListener("click", () => {
+        const itemId = btn.dataset.buyItem;
+        const itemDef = ITEMS.find((it) => it.id === itemId);
+        if (!itemDef) return;
+        const count = buyCount(qty, itemDef.price, getState().resources.gold);
+        if (count <= 0) return;
+        const r = buyItem(itemId, count);
+        onStatus(r.ok ? `Bought ×${count} ✓` : r.reason);
+      })
+    );
+
     overlay.querySelector('[data-act="close"]').addEventListener("click", close);
   }
 
@@ -1129,42 +1119,65 @@ function openBallShop(id, onStatus) {
 }
 
 /**
- * Okno sekce Items (léčivé předměty): potiony, léčení statusů, revivy. Zboží
- * je seskupené po kategoriích; nakupuje se po kusu. Zásoba se ukazuje u ceny.
- * @param {string} id
- * @param {(msg: string) => void} onStatus
+ * HTML oddělení Poké Ballů: každý typ jako řádek. Odemčené lze koupit po kusu,
+ * náhled zamčených tierů (kolik odznaků chybí) je pod nimi.
+ * @param {string} id  budova (kvůli slevě dle úrovně)
+ * @param {number} qty  zvolené množství
+ * @param {number} gold
+ * @returns {string}
  */
-function openItemShop(id, onStatus) {
-  const def = getBuilding(id);
-  if (!def) return;
+function ballSectionHtml(id, qty, gold) {
+  const balls = getState().resources.balls ?? {};
+  // Zamčené / neprodejné (dosud neodemčené) věci do obchodu neplníme.
+  const forSale = POKEBALLS.filter((ball) => ball.price != null && isBallUnlocked(ball));
+  const rows = forSale
+    .map((ball) => {
+      const owned = balls[ball.id] ?? 0;
+      const price = ballPrice(ball.id, id);
+      const count = buyCount(qty, price, gold);
+      const cost = price * count;
+      const canBuy = count > 0;
+      return `<div class="ball-row">
+        <span>${ballIconHtml(ball.id, { size: 18 })} <strong>${ball.name}</strong> <span class="placeholder">— ${ball.desc}</span></span>
+        <span class="ball-buy">×${owned}
+          <button class="btn btn-sm" data-buy-ball="${ball.id}" ${canBuy ? "" : "disabled"}>${buyLabel(count, cost, price)}</button>
+        </span>
+      </div>`;
+    })
+    .join("");
 
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay";
-  document.body.appendChild(overlay);
+  // Náhled zamčených typů (další tier) – ukáže, co odemkne postup (odznaky).
+  const lockedRows = POKEBALLS.filter(
+    (ball) => ball.price != null && ball.tier != null && !ball.comingSoon && !isBallUnlocked(ball)
+  )
+    .map((ball) => {
+      const need = badgesForBallTier(ball.tier);
+      return `<div class="ball-row ball-locked">
+        <span>${ballIconHtml(ball.id, { size: 18 })} <strong>${ball.name}</strong> <span class="placeholder">— ${ball.desc}</span></span>
+        <span class="ball-buy placeholder">🔒 ${need} badge${need === 1 ? "" : "s"}</span>
+      </div>`;
+    })
+    .join("");
 
-  const unsub = bus.on(EVENTS.STATE_CHANGED, scrollAware(render));
+  return (
+    (rows || `<p class="placeholder">No Poké Balls available yet.</p>`) +
+    (lockedRows ? `<div class="ball-shop-locked">${lockedRows}</div>` : "")
+  );
+}
 
-  function close() {
-    unsub();
-    document.removeEventListener("keydown", onKey);
-    overlay.remove();
-  }
-  function onKey(e) {
-    if (e.key === "Escape") close();
-  }
-  document.addEventListener("keydown", onKey);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) close();
-  });
-
-  // Zvolené množství na nákup (sdílené pro celý obchod). "max" = kolik utáhne zlato.
-  let qty = 1;
-
-  function render() {
-    const gold = getState().resources.gold;
-    const groups = ITEM_CATEGORIES.map((cat) => {
-      // Jen kupitelné (price>0): nekupitelné itemy (např. TM získatelné jen
-      // dropem / od gym leaderů) se v Martu nezobrazují.
+/**
+ * HTML oddělení položek pro dané kategorie (jen kupitelné, price>0), seskupené
+ * po kategoriích s nadpisem. Prázdné kategorie se vynechají.
+ * @param {string[]} cats  klíče kategorií (ITEM_CATEGORIES) tohoto oddělení
+ * @param {number} qty
+ * @param {number} gold
+ * @returns {string}
+ */
+function itemSectionHtml(cats, qty, gold) {
+  const groups = ITEM_CATEGORIES.filter((cat) => cats.includes(cat.key))
+    .map((cat) => {
+      // Jen kupitelné (price>0): nekupitelné itemy (např. TM jen dropem / od gym
+      // leaderů, HM přes příběh) se v obchodě nezobrazují.
       const rows = ITEMS.filter((it) => it.category === cat.key && it.price > 0)
         .map((it) => {
           const owned = itemCount(it.id);
@@ -1179,49 +1192,13 @@ function openItemShop(id, onStatus) {
           </div>`;
         })
         .join("");
-      return rows
-        ? `<h3 class="shop-cat">${cat.icon} ${cat.name}</h3>${rows}`
-        : "";
-    }).join("");
-
-    // Ulož scroll pozici PŘED přepsáním obsahu (scroll je na vnitřních kontejnerech).
-    const savedScroll = saveScroll(overlay);
-
-    overlay.innerHTML = `
-      <div class="modal building-modal">
-        <h2 class="panel-title">🧴 Items</h2>
-        <p class="placeholder">💰 Your gold: <strong>${gold}</strong></p>
-        ${qtyBarHtml(qty)}
-        <div class="ball-shop">${groups}</div>
-        <button class="btn btn-close" data-act="close">Close</button>
-      </div>
-    `;
-
-    // Obnoví scroll pozici PO přepsání obsahu.
-    restoreScroll(overlay, savedScroll);
-
-    wireQtyBar(overlay, qty, (v) => {
-      qty = v;
-      render();
-    });
-
-    overlay.querySelectorAll("[data-buy-item]").forEach((btn) =>
-      btn.addEventListener("click", () => {
-        const itemId = btn.dataset.buyItem;
-        const def = ITEMS.find((it) => it.id === itemId);
-        if (!def) return;
-        const count = buyCount(qty, def.price, getState().resources.gold);
-        if (count <= 0) return;
-        const r = buyItem(itemId, count);
-        onStatus(r.ok ? `Bought ×${count} ✓` : r.reason);
-      })
-    );
-
-    overlay.querySelector('[data-act="close"]').addEventListener("click", close);
-  }
-
-  render();
+      return rows ? `<h3 class="shop-cat">${cat.icon} ${cat.name}</h3>${rows}` : "";
+    })
+    .join("");
+  return groups || `<p class="placeholder">Nothing here right now.</p>`;
 }
+
+// (openBallShop/openItemShop nahrazeny tabovaným openMarket + ballSectionHtml/itemSectionHtml výše.)
 
 /** Rarity v pořadí od nejběžnější (pro filtrovací přepínače a řazení). */
 const RARITY_ORDER = ["common", "uncommon", "rare", "epic", "legendary"];
@@ -1396,7 +1373,7 @@ function openPokemonPicker({ title, avail, onPick, okMsg, onStatus }) {
  * @param {string} id  id budovy (školky)
  * @param {(msg: string) => void} onStatus
  */
-function openDaycarePicker(id, onStatus) {
+export function openDaycarePicker(id, onStatus) {
   const br = getBreedingSlot();
   const avail = getState().collection.filter(
     (p) => !isInTeam(p.uid) && p.uid !== br.a && p.uid !== br.b

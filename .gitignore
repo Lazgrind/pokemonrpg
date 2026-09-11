@@ -11,6 +11,10 @@ desktop.ini
 *.log
 *.tmp
 
+# Python bytecode (tools/jscheck atd.)
+__pycache__/
+*.pyc
+
 # Velké zdrojové obrázky mapy – ve hře se používá jen zkomprimovaný kanto.webp
 # (viz docs/NOTES.md). Zdrojové PNG jsou ballast, do repa nepatří.
 assets/map/Mapa-Kanto.png
