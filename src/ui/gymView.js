@@ -17,6 +17,7 @@ import { startTrainerBattle, getActiveArea } from "../systems/battleSystem.js";
 import { openMainTab } from "./mainPanel.js";
 import { showPopup } from "./popup.js";
 import { hasGymChallenge, isGymChallengeDone, startGymChallenge } from "./gymChallengeView.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /**
  * Text „zamčené brány" gymu, dokud není splněný gym.requiresStory flag. Per-gym,
@@ -46,7 +47,9 @@ export function renderGymTab(root, onStatus = () => {}) {
   const cityId = getActiveArea()?.id ?? null;
   const gym = getGymForCity(cityId);
   if (!gym) {
+    const _savedScroll = saveScroll(root);
     root.innerHTML = `<h2 class="panel-title">Gym</h2><p class="placeholder">There's no Gym here.</p>`;
+    restoreScroll(root, _savedScroll);
     return;
   }
   // Zavřený gym (např. Viridian bez 7 odznaků) – tab se zobrazí, ale místo
@@ -55,10 +58,12 @@ export function renderGymTab(root, onStatus = () => {}) {
   if (!isGymOpen(gym, ownedBadges)) {
     const need = gym.requiresBadges ?? 0;
     const have = ownedBadges.filter((b) => b !== gym.badge).length;
+    const _savedScroll = saveScroll(root);
     root.innerHTML = `<h2 class="panel-title">🔒 ${gym.name}</h2>
       <p class="story-text">The Gym's doors are firmly shut.</p>
       <p class="placeholder">A notice reads: "The Leader is away. Return once you've proven yourself across Kanto — earn the other ${need} Gym Badges first."</p>
       <p class="placeholder">Badges earned: ${have} / ${need}</p>`;
+    restoreScroll(root, _savedScroll);
     return;
   }
 
@@ -83,7 +88,9 @@ export function renderGymTab(root, onStatus = () => {}) {
       body: `<p class="story-text">The Gym's entrance is blocked.</p>
         <p class="placeholder">You'll need to advance the story before you can challenge this Leader.</p>`,
     };
+    const _savedScroll = saveScroll(root);
     root.innerHTML = `<h2 class="panel-title">${gate.icon} ${gym.name}</h2>${gate.body}`;
+    restoreScroll(root, _savedScroll);
     return;
   }
   const badge = getBadge(gym.badge);
@@ -120,6 +127,7 @@ export function renderGymTab(root, onStatus = () => {}) {
     }
   }
 
+  const _savedScroll = saveScroll(root);
   const rows = trainers
     .map((t, i) => {
       const isDefeated = defeated.includes(t.id);
@@ -173,6 +181,7 @@ export function renderGymTab(root, onStatus = () => {}) {
       ${challengeHtml}
       <ul class="gym-trainer-list">${rows}</ul>
     </section>`;
+  restoreScroll(root, _savedScroll);
 
   root.querySelector(".gym-challenge-start")?.addEventListener("click", () =>
     startGymChallenge(gym.id, { onComplete: () => renderGymTab(root, onStatus) })

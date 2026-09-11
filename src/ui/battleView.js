@@ -15,9 +15,10 @@ import {
   setAutocatch,
   getAutoBattle,
   setAutoBattle,
+  getFullAuto,
+  setFullAuto,
   getSelectedBall,
   setSelectedBall,
-  healTeam,
   teamNeedsHeal,
   playerMove,
   playerSwitch,
@@ -254,8 +255,12 @@ function combatantHtml(c, side, view, showXp = false, animated = false) {
     extraClass: "battle-sprite",
   });
 
+  // Full Auto = bezobslužný idling: souboj i soupeř se ukazují (vidíš, s čím
+  // bojuješ), ale skrýváme jen měřáky HP/EXP – hráč je nesleduje.
+  const hideStats = getFullAuto();
+
   let xpHtml = "";
-  if (showXp) {
+  if (showXp && !hideStats) {
     const need = xpForNextLevel(c.ref.level);
     const xpPct = Math.max(0, Math.min(100, Math.round((c.ref.xp / need) * 100)));
     xpHtml = `
@@ -265,16 +270,20 @@ function combatantHtml(c, side, view, showXp = false, animated = false) {
 
   // U soupeře skrýváme číselné HP (hráč nemá znát přesné hodnoty) – bar zůstává.
   const hpText =
-    side === "player"
+    side === "player" && !hideStats
       ? `<div class="hptext">${c.hp} / ${c.stats.maxHp} HP</div>`
       : "";
+
+  const hpBar = hideStats
+    ? ""
+    : `<div class="hpbar"><div class="hpfill${low}" style="width:${pct}%"></div></div>`;
 
   return `
     <div class="combatant ${side}">
       ${sprite}
       <div class="c-info">
         <div class="c-head"><strong>${name}</strong> · Lv ${c.ref.level} ${types}${status}</div>
-        <div class="hpbar"><div class="hpfill${low}" style="width:${pct}%"></div></div>
+        ${hpBar}
         ${hpText}
         ${xpHtml}
       </div>
@@ -295,7 +304,7 @@ function headHtml(b) {
   // Catch tlačítko patří do lišty jen v Auto módu (v manuálu se chytá přes Items).
   // Když dojdou Poké Bally, tlačítko rovnou hlásí „No Poké Balls" (i tooltip).
   let catchBtn = "";
-  if (b && !b.result && getAutoBattle()) {
+  if (b && !b.result && autoModeOn()) {
     const balls = getState().resources.balls ?? {};
     const selCount = balls[getSelectedBall()] ?? 0;
     const canCatch = b.enemy && b.enemy.hp > 0 && selCount > 0;
@@ -344,11 +353,17 @@ function headHtml(b) {
       ${pauseBtn}
       ${catchBtn}
       <label class="tg ${b?.forceManual ? "tg-disabled" : ""}" title="${b?.forceManual ? "Gym battles are manual only." : ""}"><input type="checkbox" id="tg-autobattle" ${getAutoBattle() ? "checked" : ""} ${b?.forceManual ? "disabled" : ""}/> Auto battle</label>
+      <label class="tg ${b?.forceManual ? "tg-disabled" : ""}" title="${b?.forceManual ? "Gym battles are manual only." : "Idle safely — your Pokémon lose no HP or PP, but rewards are cut to ~1/10."}"><input type="checkbox" id="tg-fullauto" ${getFullAuto() ? "checked" : ""} ${b?.forceManual ? "disabled" : ""}/> Full Auto</label>
       <label class="tg"><input type="checkbox" id="tg-autocatch" ${ac.enabled ? "checked" : ""}/> Auto catch</label>
       ${acMode}
       ${acBall}
     </div>
   </div>`;
+}
+
+/** Běží některý automatický režim? Auto battle i Full Auto = souboj jede sám (skryj manuál). */
+function autoModeOn() {
+  return getAutoBattle() || getFullAuto();
 }
 
 /**
@@ -357,13 +372,13 @@ function headHtml(b) {
  * překryté přímo ve scéně (viz {@link battleCmdHtml}) a tady je jen řádek na hlášku.
  */
 function bottomControlsHtml(b) {
-  if (getAutoBattle()) return "";
+  if (autoModeOn()) return "";
   return `<div id="battle-msg" class="placeholder" style="margin-top:6px"></div>`;
 }
 
 /** Zda se v manuálním módu teď dá hrát (a tedy zobrazit menu ve scéně). */
 function manualPlayable(b) {
-  return !getAutoBattle() && b.running && !b.result && b.enemy && b.enemy.hp > 0;
+  return !autoModeOn() && b.running && !b.result && b.enemy && b.enemy.hp > 0;
 }
 
 /**
@@ -698,9 +713,9 @@ function drawInner(root) {
   const defeated = b.result === "defeat";
   const interlude = !defeated && !!b.interlude;
   const showCmd = !defeated && !interlude && manualPlayable(b);
-  // Animované gif sprity jen v manuálním souboji; v auto módu jedou rychlé
+  // Animované gif sprity jen v manuálním souboji; v auto/full-auto módu jedou rychlé
   // kola, kde by animace nebyla vidět → statické png.
-  const anim = !getAutoBattle();
+  const anim = !autoModeOn();
 
   root.innerHTML = `
     ${headHtml(b)}
@@ -718,7 +733,7 @@ function drawInner(root) {
                <p class="over-sub">Your whole team fainted.</p>
                <div class="over-actions">
                  ${teamNeedsHeal()
-                   ? `<button class="btn over-btn" id="heal-team">🏥 Heal team</button>`
+                   ? `<div class="over-hint">🏥 Heal your team at a Poké Center, at home, or another healing spot before battling again.</div>`
                    : `<div class="over-healed">✓ Team healed — ready to go</div>`}
                  <button class="btn over-btn" id="new-battle">▶ New battle</button>
                </div>
@@ -773,13 +788,14 @@ function wire(root) {
       if (ls?.active) openMainTab("league");
     });
 
-  // Rychlé vyléčení týmu přímo z obrazovky prohry (bez proklikávání města).
-  const healBtn = root.querySelector("#heal-team");
-  if (healBtn) healBtn.addEventListener("click", () => healTeam()); // redraw → tlačítko vystřídá „Team healed"
+  // Léčení už NENÍ v souboji – hráč musí do Poké Centra / domů / jiné budovy,
+  // co to dovoluje (viz zpráva v overlay prohry). Idle bez léčení řeší Full Auto.
 
   // Přepínače vpravo nahoře.
   const tgAuto = root.querySelector("#tg-autobattle");
   if (tgAuto) tgAuto.addEventListener("change", (e) => setAutoBattle(e.target.checked));
+  const tgFull = root.querySelector("#tg-fullauto");
+  if (tgFull) tgFull.addEventListener("change", (e) => setFullAuto(e.target.checked));
   const tgCatch = root.querySelector("#tg-autocatch");
   if (tgCatch) tgCatch.addEventListener("change", (e) => setAutocatch({ enabled: e.target.checked }));
   // Auto-catch rozbalovací menu: tlačítko přepíná otevření (bez změny stavu →

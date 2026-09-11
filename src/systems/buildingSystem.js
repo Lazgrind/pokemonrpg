@@ -9,7 +9,7 @@
 import { getState, commit } from "../core/state.js";
 import { getBuilding } from "../../data/buildings.js";
 import { getPokeball } from "../../data/pokeballs.js";
-import { addEv } from "./pokemonSystem.js";
+import { addEv, evTotal, resetAllEvs, resetEvStat } from "./pokemonSystem.js";
 
 /** Aktuální úroveň budovy (výchozí = startLevel z definice). */
 export function getLevel(id) {
@@ -61,7 +61,9 @@ export function ballPrice(ballId, id = "poke-mart") {
   const ball = getPokeball(ballId);
   if (!ball || ball.price == null) return Infinity;
   const def = getBuilding(id);
-  const level = getLevel(id);
+  // Fallback na 1: story budovy (např. Celadon Dept Store) nemají startLevel →
+  // getLevel vrátí undefined a bez tohoto by (level-1) dalo NaN → NaN cena.
+  const level = getLevel(id) ?? 1;
   const discount = Math.min(
     def?.ball?.maxDiscount ?? 0,
     (level - 1) * (def?.ball?.discountPerLevel ?? 0)
@@ -125,6 +127,59 @@ export function trainEv(uid, statKey, id = "training-grounds") {
   res.gold -= cost;
   commit();
   return { ok: true, added };
+}
+
+/** Cena resetu VŠECH EV jedince (0 = budova reset neumí). */
+export function evResetAllCost(id = "training-grounds") {
+  return getBuilding(id)?.reset?.costAll ?? 0;
+}
+
+/** Cena resetu EV JEDNOHO statu. */
+export function evResetStatCost(id = "training-grounds") {
+  return getBuilding(id)?.reset?.costStat ?? 0;
+}
+
+/**
+ * Reset všech EV jedince za gold. Když nemá co resetovat, gold se NEstrhne.
+ * @param {string} uid  jedinec z kolekce
+ * @param {string} [id]  budova (Training Grounds)
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function resetEvsAll(uid, id = "training-grounds") {
+  const def = getBuilding(id);
+  if (!def || !def.reset) return { ok: false, reason: "No Training Grounds." };
+  const pokemon = getState().collection.find((p) => p.uid === uid);
+  if (!pokemon) return { ok: false, reason: "Unknown Pokémon." };
+  if (evTotal(pokemon) <= 0) return { ok: false, reason: "No EVs to reset." };
+  const cost = evResetAllCost(id);
+  const res = getState().resources;
+  if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
+  resetAllEvs(pokemon);
+  res.gold -= cost;
+  commit();
+  return { ok: true };
+}
+
+/**
+ * Reset EV jednoho statu za gold. Když stat nemá EV, gold se NEstrhne.
+ * @param {string} uid  jedinec z kolekce
+ * @param {string} statKey  klíč statu (viz STAT_KEYS)
+ * @param {string} [id]  budova (Training Grounds)
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function resetEvStatGold(uid, statKey, id = "training-grounds") {
+  const def = getBuilding(id);
+  if (!def || !def.reset) return { ok: false, reason: "No Training Grounds." };
+  const pokemon = getState().collection.find((p) => p.uid === uid);
+  if (!pokemon) return { ok: false, reason: "Unknown Pokémon." };
+  if ((pokemon.evs?.[statKey] ?? 0) <= 0) return { ok: false, reason: "That stat has no EVs." };
+  const cost = evResetStatCost(id);
+  const res = getState().resources;
+  if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
+  resetEvStat(pokemon, statKey);
+  res.gold -= cost;
+  commit();
+  return { ok: true };
 }
 
 /** Kolik XP za minutu dává Školka na aktuální úrovni (0 = není školka). */
@@ -193,6 +248,39 @@ export function ppRegenPercent(id = "poke-center") {
   if (!def) return 0;
   const level = getTrackLevel(id, "ppRegen");
   return Math.min(100, level * (def.perLevel ?? 0));
+}
+
+/* ---------- Idle-boost budova (Celadon) – 3 linie multiplikátorů ---------- */
+
+/** Id boost budovy (3 linie: xp / yield / fortune). */
+export const BOOST_CENTER_ID = "boost-center";
+
+/**
+ * Multiplikátor dané boost linie = 1 + level × perLevel (z datové definice).
+ * Vrací 1, když linie/budova neexistuje nebo je na levelu 0 → bezpečné všude.
+ * @param {"xp"|"yield"|"fortune"} key
+ * @returns {number}
+ */
+export function boostMult(key) {
+  const def = getTrackDef(BOOST_CENTER_ID, key);
+  if (!def) return 1;
+  const level = getTrackLevel(BOOST_CENTER_ID, key);
+  return 1 + level * (def.perLevel ?? 0);
+}
+
+/** ⭐ Multiplikátor získaného XP (souboj i idle). */
+export function xpBoostMult() {
+  return boostMult("xp");
+}
+
+/** 💰 Multiplikátor získaného goldu z opakovatelných soubojů (i idle). */
+export function goldBoostMult() {
+  return boostMult("yield");
+}
+
+/** ✨ Multiplikátor shiny šance u divokých setkání. */
+export function shinyBoostMult() {
+  return boostMult("fortune");
 }
 
 /** Bonus rychlosti líhnutí v % (0–50) podle linie „hatchSpeed" Školky. */

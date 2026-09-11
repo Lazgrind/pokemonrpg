@@ -40,6 +40,12 @@ EXT_CATEGORY = {
 }
 CATEGORIES = ["Kód", "Nástroje", "Dokumentace"]
 
+# Obrázky/grafika – počítají se napříč CELÝM repem VČETNĚ assets/ (sprity, mapy,
+# pozadí, míčky i tvé vlastní speciální soubory). Pořadí drží IMAGE_EXTS.
+IMAGE_EXTS = [".png", ".gif", ".jpg", ".jpeg", ".webp", ".svg", ".bmp", ".ico"]
+# Složky, které i u obrázků přeskakujeme (verzovací / cache), assets/ se NEskáče.
+IMG_SKIP_DIRS = {".git", "node_modules", "__pycache__"}
+
 
 def count_lines(path):
     """Počet řádků souboru (tolerantní k binárnímu obsahu / kódování)."""
@@ -65,12 +71,38 @@ def scan():
     return stats
 
 
+def scan_images():
+    """Vrátí {přípona: počet} obrázků napříč repem (VČETNĚ assets/) + celkem."""
+    counts = {ext: 0 for ext in IMAGE_EXTS}
+    total_bytes = 0
+    for dirpath, dirnames, filenames in os.walk(ROOT):
+        dirnames[:] = [d for d in dirnames if d not in IMG_SKIP_DIRS and not d.startswith(".")]
+        for name in filenames:
+            ext = os.path.splitext(name)[1].lower()
+            if ext in counts:
+                counts[ext] += 1
+                try:
+                    total_bytes += os.path.getsize(os.path.join(dirpath, name))
+                except OSError:
+                    pass
+    return counts, total_bytes
+
+
 def fmt(n):
     """Číslo s mezerou jako oddělovačem tisíců (12345 → '12 345')."""
     return f"{n:,}".replace(",", " ")
 
 
-def render(stats):
+def fmt_size(nbytes):
+    """Velikost v čitelných jednotkách (KB/MB)."""
+    if nbytes >= 1024 * 1024:
+        return f"{nbytes / (1024 * 1024):.1f} MB"
+    if nbytes >= 1024:
+        return f"{nbytes / 1024:.0f} KB"
+    return f"{nbytes} B"
+
+
+def render(stats, images, image_bytes):
     total_lines = sum(s["lines"] for s in stats.values())
     total_files = sum(s["files"] for s in stats.values())
     lines = [
@@ -85,6 +117,20 @@ def render(stats):
         s = stats[cat]
         lines.append(f"| {cat} | {s['files']} | {fmt(s['lines'])} |")
     lines.append(f"| **Celkem** | **{total_files}** | **{fmt(total_lines)}** |")
+
+    # Obrázky/grafika (napříč celým repem vč. assets/: sprity, mapy, pozadí, …).
+    total_imgs = sum(images.values())
+    lines += [
+        "",
+        f"**Obrázků celkem: {fmt(total_imgs)}** ({fmt_size(image_bytes)}, vč. `assets/`).",
+        "",
+        "| Typ | Počet |",
+        "| --- | ---: |",
+    ]
+    for ext in IMAGE_EXTS:
+        if images.get(ext):
+            lines.append(f"| `{ext}` | {fmt(images[ext])} |")
+    lines.append(f"| **Celkem** | **{fmt(total_imgs)}** |")
     lines.append(END)
     return "\n".join(lines)
 
@@ -105,13 +151,15 @@ def update_readme(block):
 
 def main():
     stats = scan()
-    block = render(stats)
+    images, image_bytes = scan_images()
+    block = render(stats, images, image_bytes)
     if "--print" in sys.argv:
         print(block)
         return
     update_readme(block)
     total = sum(s["lines"] for s in stats.values())
-    print(f"README.md aktualizováno: {total} řádků celkem.")
+    total_imgs = sum(images.values())
+    print(f"README.md aktualizováno: {total} řádků, {total_imgs} obrázků.")
 
 
 if __name__ == "__main__":

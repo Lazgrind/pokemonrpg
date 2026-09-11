@@ -115,7 +115,8 @@ export function createNewGame() {
     pokedex: { seen: [] }, // druhy potkané v souboji (viz pokedex.js)
     settings: {
       autoBattle: false, // výchozí je normální (manuální) souboj
-      speed: 1, // herní rychlost (1/2/4) – globální, ovládá se v horní liště
+      fullAuto: false, // "Full Auto": jako auto-battle, ale hráči neubývá HP ani PP (bezpečný idling) výměnou za ~1/10 odměn
+      speed: 1, // (ZASTARALÉ) volba rychlosti odebrána – hra běží vždy 1×; klíč zůstává kvůli save kompatibilitě
       selectedBall: "poke",
       layout: "auto", // rozvržení panelů: auto (responzivní) | wide (2 sloupce) | stacked (1 sloupec) | mobile (1 sloupec + svislé rozdělení souboje)
       stackOrder: ["battle", "map", "tabs"], // pořadí panelů ve skládaném režimu (shora dolů)

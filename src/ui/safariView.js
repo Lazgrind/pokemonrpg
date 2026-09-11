@@ -15,7 +15,7 @@ import { bus, EVENTS } from "../core/events.js";
 import { getState } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { spriteImg } from "./sprites.js";
-import { scrollAware } from "./scrollPreserve.js";
+import { scrollAware, saveScroll, restoreScroll } from "./scrollPreserve.js";
 import {
   getSafari,
   isSafariActive,
@@ -63,7 +63,9 @@ function bar(value, max, color) {
 function draw() {
   const root = rootRef;
   if (!root) return;
+  const _savedScroll = saveScroll(root);
   root.innerHTML = isSafariActive() ? activeHtml() : lobbyHtml();
+  restoreScroll(root, _savedScroll);
   wire();
 }
 

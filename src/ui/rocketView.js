@@ -14,13 +14,16 @@ import { rocketGauntletForArea, rocketTrainers, trainerSpriteUrl } from "../../d
 import { getState } from "../core/state.js";
 import { startTrainerBattle, getActiveArea } from "../systems/battleSystem.js";
 import { openMainTab } from "./mainPanel.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /** Vykreslí obsah záložky Rockets do zadaného elementu. */
 export function renderRocketsTab(root, onStatus = () => {}) {
   const areaId = getActiveArea()?.id ?? null;
   const gaunt = rocketGauntletForArea(areaId);
   if (!gaunt) {
+    const _savedScroll = saveScroll(root);
     root.innerHTML = `<h2 class="panel-title">Rockets</h2><p class="placeholder">There's nothing to fight here.</p>`;
+    restoreScroll(root, _savedScroll);
     return;
   }
 
@@ -31,6 +34,7 @@ export function renderRocketsTab(root, onStatus = () => {}) {
   const cleared = nextIdx === -1;
   const beatenCount = trainers.filter((t) => defeated.includes(t.id)).length;
 
+  const _savedScroll = saveScroll(root);
   const rows = trainers
     .map((t, i) => {
       const isDefeated = defeated.includes(t.id);
@@ -71,6 +75,7 @@ export function renderRocketsTab(root, onStatus = () => {}) {
       <div class="gym-badge-row">${progressState}</div>
       <ul class="gym-trainer-list">${rows}</ul>
     </section>`;
+  restoreScroll(root, _savedScroll);
 
   root.querySelectorAll(".gym-fight").forEach((btn) =>
     btn.addEventListener("click", () => {

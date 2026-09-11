@@ -20,12 +20,15 @@ import {
   forfeitLeagueRun,
 } from "../systems/battleSystem.js";
 import { openMainTab } from "./mainPanel.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /** Vykreslí obsah záložky League do zadaného elementu. */
 export function renderLeagueTab(root, onStatus = () => {}) {
   const st = leagueState();
   if (!st) {
+    const _savedScroll = saveScroll(root);
     root.innerHTML = `<h2 class="panel-title">Pokémon League</h2><p class="placeholder">The Pokémon League is not here.</p>`;
+    restoreScroll(root, _savedScroll);
     return;
   }
 
@@ -33,6 +36,7 @@ export function renderLeagueTab(root, onStatus = () => {}) {
   const members = league.order.map((id) => getTrainer(id)).filter(Boolean);
   const total = members.length;
 
+  const _savedScroll = saveScroll(root);
   const rows = members
     .map((t, i) => {
       const maxLv = Math.max(...t.team.map((m) => m.level ?? 1));
@@ -103,6 +107,7 @@ export function renderLeagueTab(root, onStatus = () => {}) {
       <ul class="gym-trainer-list">${rows}</ul>
       ${controls}
     </section>`;
+  restoreScroll(root, _savedScroll);
 
   const start = () => {
     const res = startLeagueRun();

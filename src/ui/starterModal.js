@@ -26,7 +26,7 @@ let modalOpen = false;
 /** Karta jednoho startéra: sprite, jméno, barevné typy. */
 function starterCardHtml(id, secret = false) {
   const sp = getSpecies(id);
-  const sprite = spriteImg(id, { view: "front", alt: sp.name, extraClass: "starter-sprite" });
+  const sprite = spriteImg(id, { view: "front", alt: sp.name, extraClass: "starter-sprite", animated: true });
   const types = sp.types.map(typeBadge).join("");
   return `<button class="starter-card${secret ? " secret" : ""}" data-starter="${id}">
       ${sprite}
@@ -35,8 +35,8 @@ function starterCardHtml(id, secret = false) {
     </button>`;
 }
 
-/** Otevře okno výběru startéra (pokud už není otevřené). */
-function open() {
+/** Otevře okno výběru startéra (pokud už není otevřené). onDone se zavolá po volbě. */
+function open(onDone = () => {}) {
   if (modalOpen) return;
   modalOpen = true;
 
@@ -66,6 +66,7 @@ function open() {
         chooseStarter(pending);
         overlay.remove();
         modalOpen = false;
+        onDone();
       });
       overlay.querySelector("[data-confirm-no]")?.addEventListener("click", () => {
         declined.add(pending);
@@ -110,9 +111,9 @@ function maybeOpen() {
   if (getState().collection.length === 0) open();
 }
 
-/** Veřejné otevření výběru startéra (např. z Oakovy laboratoře). */
-export function openStarterModal() {
-  open();
+/** Veřejné otevření výběru startéra (např. z Oakovy laboratoře). onDone po volbě. */
+export function openStarterModal(onDone) {
+  open(onDone);
 }
 
 /** Napojí sledování stavu. Volat jednou při startu. */

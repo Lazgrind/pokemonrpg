@@ -7,6 +7,27 @@ ještě nejsou hotové. Ať na ně nezapomeneme. Detaily rozhodnutí viz
 Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v kódu) · 🔵 částečně · ✅ hotovo (ponecháno kvůli navazující práci)
 
 ---
+## Achievementy (in-game) — PŘED 1.0.0
+
+- ⚪ **Achievementy in-game (rozhodnuto uživatelem 2026-09-11, dělat před 1.0.0).**
+  Systém herních úspěchů/odznaků za milníky – uživatel je chce mít hotové ještě
+  před vydáním 1.0.0. Zatím jen rozhodnuto, nic v kódu. **Návrhové poznámky (k
+  upřesnění, až na to dojde):**
+  - Datově řízený registr `data/achievements.js` (`{ id, name, desc, icon,
+    category, condition }`) + `state.achievements` (unlocked ids + timestamp).
+  - Průběžné vyhodnocování na existujících eventech (STATE_CHANGED / chycení /
+    evoluce / výhra nad gymem / vylíhnutí / shiny…), toast/popup při odemčení.
+  - Kandidáti na kategorie: **Pokédex** (chyť 10/50/151, celý dex, první shiny,
+    X shiny), **Souboj/Trenéři** (poraž 1./všechny gym leadery, Elite Four,
+    Champion, X trenérů), **Sběr** (naplň box, X druhů, každý typ), **Breeding/
+    vejce** (první vylíhnutí, shiny z vejce), **Ekonomika/idle** (našetři X gold,
+    X hodin idle), **Boosty/budovy** (max linka boost budovy). Napojit na
+    idle-boost budovu i shiny charm až budou hotové.
+  - UI: nový tab/sekce v **Profile** (`profileView.js`) – mřížka odemčených/
+    zamčených úspěchů (ztmavené jako badge case). Provázat s trainer card.
+  - Pravidla: respektovat single-playthrough dostupnost, žádný nevratný lock.
+
+---
 ## ROADMAP – Kanto / všechny generace (před 1.0)
 
 - ✅ **Datová expanze Kanto (v0.54.0) – HOTOVO:**

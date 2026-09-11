@@ -89,17 +89,19 @@ const FIXED_TRAINERS = [
     reward: 5000,
     quote: "Smell ya later! ...Just kidding. Let's see if you're ready for the League!",
   },
-  // První setkání s rivalem v Pallet Townu (věrné hře): rival má Eevee. NENÍ to
-  // tvrdá brána (Route 1 je otevřená od startu) – jen příběhový souboj přes Rival
-  // tab. Jméno se bere z playthrough (viz rivalView → player.rivalName).
+  // První setkání s rivalem v Pallet Townu (věrné hře): rival si vezme startéra,
+  // který TYPOVĚ COUNTRUJE hráčova (counterStarter → COUNTER_STARTER mapa), jako
+  // v originále. NENÍ to tvrdá brána (Route 1 je otevřená od startu) – jen
+  // příběhový souboj přes Rival tab. Jméno se bere z playthrough (rivalView).
   {
     id: "rival-pallet",
     kind: "rival",
     class: "rival",
     name: "Rival",
-    // Level 4 a jen slabé tahy (bez „covet" 60 BP STAB, který jinak dává default
-    // movepool) – aby šel porazit i v manuálu hned na startu.
-    team: [{ speciesId: "eevee", level: 4, moves: ["tackle", "tail-whip"] }],
+    // counterStarter = engine dopočítá druh dle hráčova startéra (Fire vs Grass…).
+    // Level 4 a jen slabé NE-STAB tahy (tackle/tail-whip) → typová výhoda je jen
+    // tematická, žádný super-efektivní nuke; jde porazit i v manuálu hned na startu.
+    team: [{ speciesId: null, level: 4, counterStarter: true, moves: ["tackle", "tail-whip"] }],
     reward: 200,
     quote: "I'll take the strongest one! Show me what you've got!",
     // Úplně první souboj: záměrně hodně snadný (0 IV, 0 EV, žádná optim. povaha),
@@ -1055,6 +1057,8 @@ export const COUNTER_STARTER = {
   bulbasaur: "charmander",
   charmander: "squirtle",
   squirtle: "bulbasaur",
+  // Skrytý 4. startér (Pikachu): rival vezme Eevee (kánon Pokémon Yellow).
+  pikachu: "eevee",
 };
 
 /**

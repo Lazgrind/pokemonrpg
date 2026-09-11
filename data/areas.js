@@ -266,7 +266,9 @@ export const AREAS = [
     order: 13,
     x: 64.6,
     y: 25.2,
-    unlock: { visited: "cerulean-city" },
+    // Badge-gate (gym gating): cesta na jih k Vermilionu je zavřená, dokud
+    // neporazíš Misty (Cascade Badge). Bez toho by šel Cerulean Gym přeskočit.
+    unlock: { visited: "cerulean-city", badge: "cascade-badge" },
     recommendedLevel: 13,
     description: "A quiet path south of Cerulean City, filled with tall grass.",
     species: ["oddish", "bellsprout", "pidgey", "meowth", "mankey", { id: "abra", rarity: "rare" }],
@@ -340,7 +342,9 @@ export const AREAS = [
     order: 18,
     x: 76.3,
     y: 17.2,
-    unlock: { visited: "cerulean-city" },
+    // Badge-gate (gym gating): východní cesta z Cerulean (k Rock Tunnelu) je také
+    // za Cascade Badge – aby Misty nešla obejít ani tudy.
+    unlock: { visited: "cerulean-city", badge: "cascade-badge" },
     recommendedLevel: 14,
     description: "A scenic mountain path connecting Cerulean City to Rock Tunnel.",
     species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }],
@@ -357,7 +361,9 @@ export const AREAS = [
     y: 20.7,
     // Věrný Kanto (Krok 6): temná jeskyně – potřebuješ HM05 Flash (dostaneš ho
     // na Route 9). Bez něj se dovnitř nedostaneš (story.hasFlash, viz areas gating).
-    unlock: { visited: "route-09", story: "hasFlash" },
+    // Badge-gate (gym gating): vstup do Lavender oblasti navíc vyžaduje Thunder
+    // Badge (Lt. Surge ve Vermilionu) – vynucuje kanonické pořadí gymů.
+    unlock: { visited: "route-09", story: "hasFlash", badge: "thunder-badge" },
     recommendedLevel: 16,
     description: "A dark cavern filled with dangerous rock formations and wild Pokémon.",
     species: ["zubat", "geodude", { id: "machop", rarity: "uncommon" }, "onix", { id: "cubone", rarity: "rare" }],
@@ -520,7 +526,9 @@ export const AREAS = [
     x: 50.2,
     y: 70.4,
     // Věrný Kanto (Krok 8): hlavní cesta do Fuchsia vede z jihu (Route 15). Cycling Road (route-18) zůstává boční slepá větev z Celadonu.
-    unlock: { visited: "route-15" },
+    // Badge-gate (gym gating): vstup do Fuchsia vyžaduje Rainbow Badge (Erika
+    // v Celadonu) – vynucuje kanonické pořadí Rainbow → Soul.
+    unlock: { visited: "route-15", badge: "rainbow-badge" },
     recommendedLevel: 25,
     description: "An isolated city to the south. Janine's Poison Gym is hidden deep within.",
     species: [],
@@ -615,7 +623,9 @@ export const AREAS = [
     x: 49.6,
     y: 87.8,
     // Věrný Kanto (Krok 8): moře na jih od Fuchsia – potřebuješ HM03 Surf (z Safari Zone).
-    unlock: { visited: "fuchsia-city", story: "hasSurf" },
+    // Badge-gate (gym gating): cesta na Cinnabar navíc vyžaduje Soul Badge (Koga
+    // ve Fuchsii) – vynucuje kanonické pořadí gymů před Blainem.
+    unlock: { visited: "fuchsia-city", story: "hasSurf", badge: "soul-badge" },
     recommendedLevel: 30,
     description: "A vast ocean expanse. Surfing Pokémon and Water-types patrol the waves.",
     species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }],

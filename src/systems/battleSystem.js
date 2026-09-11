@@ -4,8 +4,8 @@
  * Souboj je běhový (transient) stav – neukládá se do save. Do herního stavu
  * se promítá jen výsledek (XP, level, gold), přes commit() → autosave.
  *
- * Kolo (tick) = jedna výměna úderů v pořadí podle rychlosti. Rychlost hry
- * (1×/2×/4×) mění interval kol. Po poražení nepřítele se hned objeví další;
+ * Kolo (tick) = jedna výměna úderů v pořadí podle rychlosti. Interval kola je
+ * napevno 1 s (volba rychlosti odebrána). Po poražení nepřítele se hned objeví další;
  * po vyřazení hráčova Pokémona nastupuje další z týmu, jinak prohra.
  */
 
@@ -14,7 +14,7 @@ import { bus, EVENTS } from "../core/events.js";
 import { getTeamPokemon, ownsSpecies, acquirePokemon, releasePokemon, getStarterSpeciesId } from "./team.js";
 import { getPokeball, POKEBALLS } from "../../data/pokeballs.js";
 import { ballMultiplier } from "./pokeballSystem.js";
-import { createPokemon, computeStats, STAT_KEYS, SHINY_CHANCE, SHINY_CHARM_MULT } from "./pokemonSystem.js";
+import { createPokemon, computeStats, grantEvYield, STAT_KEYS, SHINY_CHANCE, SHINY_CHARM_MULT } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getMove, MOVES } from "../../data/moves.js";
 import { TMS, TM_BY_BADGE, getTm } from "../../data/tms.js";
@@ -23,7 +23,7 @@ import { typeMultiplier } from "../../data/types.js";
 import { grantXp } from "./progression.js";
 import { rollLoot } from "./loot.js";
 import { rollEggDrop } from "./eggSystem.js";
-import { healPercent, ppRegenPercent } from "./buildingSystem.js";
+import { healPercent, ppRegenPercent, goldBoostMult, shinyBoostMult } from "./buildingSystem.js";
 import { useItem, canUseItem, itemCount, heldItemOf } from "./itemSystem.js";
 import { getItem, ITEMS } from "../../data/items.js";
 import { markSeen, dexCounts } from "./pokedex.js";
@@ -150,6 +150,10 @@ export function makeCombatant(owned) {
       return owned.hp;
     },
     set(v) {
+      // Full Auto: hráčův aktuální bojovník NESMÍ přijít o HP (bezpečný idling).
+      // Blokujeme jen SNÍŽENÍ – léčení projde. Pokrývá to VŠECHNY zdroje poškození
+      // (útok, recoil, zmatení, jed/popálení – vše jde přes tenhle setter).
+      if (getFullAuto() && battle && c === battle.player && v < owned.hp) return;
       // clamp vůči AKTUÁLNÍM statům bojovníka (po level-upu se c.stats mění)
       owned.hp = Math.max(0, Math.min(c.stats.maxHp, v));
     },
@@ -203,9 +207,15 @@ function pickBackground(area) {
   return urls[Math.floor(Math.random() * urls.length)];
 }
 
+/** Násobič odměn (gold i XP) v režimu Full Auto – cena za idling bez úbytku HP/PP. */
+const FULL_AUTO_REWARD_MULT = 0.1;
+
 /** Odměna za poražení nepřítele daného levelu (sdíleno s idle systémem). */
 export function battleRewards(level) {
-  return { xp: 10 + level * 5, gold: 3 + level * 2 };
+  // Gold je záměrně skromný (~½ oproti staré 3+lvl*2), aby měly nákupy váhu a
+  // gold sinky nebyly triviální – ale early game zůstává jemné (lvl5≈7, ne 3).
+  // XP necháváme štědré: leveling na 100 je poctivý grind sám o sobě.
+  return { xp: 10 + level * 5, gold: 2 + level };
 }
 
 /**
@@ -263,7 +273,9 @@ function spawnEnemy(area) {
   // Musí být vlastněný A zapnutý v horní liště (settings.shinyCharmActive).
   const st = getState();
   const charmOn = st.story?.shinyCharm && st.settings?.shinyCharmActive !== false;
-  const shinyChance = SHINY_CHANCE * (charmOn ? SHINY_CHARM_MULT : 1);
+  // ✨ Fortune linka z Trainer Boost Center násobí shiny šanci (max ×1,2 při
+  // plné lince) – záměrně mrňavé, ať se to nesčítá s Charmem do OP hodnot.
+  const shinyChance = SHINY_CHANCE * (charmOn ? SHINY_CHARM_MULT : 1) * shinyBoostMult();
   return makeCombatant(createPokemon(id, level, { shinyChance }));
 }
 
@@ -296,6 +308,8 @@ export function serialize() {
   // prostě neobnoví; defeatedTrainers se zapisuje až po plné výhře, takže se nic
   // neztratí a nic nerozbije). Divoké souboje se ukládají normálně.
   if (battle.trainer) return null;
+  // Tutoriálový DEMO-souboj se také NEserializuje (izolace onboardingu).
+  if (battle.demo) return null;
   return {
     areaId: battle.area.id,
     running: battle.running,
@@ -862,7 +876,10 @@ function useMove(attacker, defender, action) {
   if (attacker.volatile) attacker.volatile.lastMoveId = move.id;
 
   // Spotřeba PP – release tah dvoukola PP NEspotřebuje (spotřeboval se při nabíjení).
-  if (action.slot && !action._release) action.slot.pp = Math.max(0, (action.slot.pp ?? 0) - 1);
+  // Full Auto: hráčovo PP se nespotřebovává (bezpečný idling); PP nepřítele je stejně
+  // jen běhové (neukládá se), takže na něm nezáleží.
+  if (action.slot && !action._release && !(getFullAuto() && side === "player"))
+    action.slot.pp = Math.max(0, (action.slot.pp ?? 0) - 1);
 
   // Dvoukolový tah: v prvním kole se jen nabíjí, samotný úder přijde příště (release).
   if (move.effect?.kind === "twoTurn" && !action._release) {
@@ -1387,7 +1404,7 @@ function turnOrder(actions) {
  */
 function schedule() {
   clearTimeout(timer);
-  if (!battle || !battle.running || !getAutoBattle()) return;
+  if (!battle || !battle.running || !autoLoopActive()) return;
   timer = setTimeout(tick, 1000 / getSpeed());
 }
 
@@ -1900,9 +1917,20 @@ function handleFaint(winner) {
       return;
     }
     const enemy = battle.enemy;
-    const { xp, gold } = battleRewards(enemy.ref.level);
+    let { xp, gold } = battleRewards(enemy.ref.level);
+    // Full Auto = bezpečný idling (bez úbytku HP/PP) výměnou za jen zlomek odměn.
+    if (getFullAuto()) {
+      xp = Math.max(1, Math.floor(xp * FULL_AUTO_REWARD_MULT));
+      gold = Math.max(1, Math.floor(gold * FULL_AUTO_REWARD_MULT));
+    }
+    // 💰 Yield linka z Trainer Boost Center násobí gold z opakovatelných soubojů
+    // (i ve Full Auto). XP boost řeší centrálně grantXp. Bez budovy = ×1.
+    gold = Math.max(1, Math.floor(gold * goldBoostMult()));
     // Auto battle → tahy se při plných slotech přepíšou samy; manuál → dozeptá se.
-    const leveled = grantXp(battle.player.ref, xp, { auto: getAutoBattle() });
+    const leveled = grantXp(battle.player.ref, xp, { auto: autoLoopActive() });
+    // EV: aktivní jedinec dostane kanonický EV yield poraženého druhu (jako v hrách).
+    // Platí i pro Auto/Full Auto (v plné výši – yieldy jsou malé a strop 252/510 je konečný).
+    grantEvYield(battle.player.ref, enemy.ref.speciesId);
     const res = getState().resources;
     res.gold += gold;
     // Loot: datově řízené dropy z oblasti.
@@ -2009,7 +2037,8 @@ function handleFaint(winner) {
       if (battle.trainer?.gateOnFight) {
         const s = getState();
         if (!Array.isArray(s.progress.defeatedTrainers)) s.progress.defeatedTrainers = [];
-        if (!s.progress.defeatedTrainers.includes(battle.trainer.id)) {
+        const wasNew = !s.progress.defeatedTrainers.includes(battle.trainer.id);
+        if (wasNew) {
           s.progress.defeatedTrainers.push(battle.trainer.id);
         }
         if (!s.story) s.story = {};
@@ -2017,6 +2046,16 @@ function handleFaint(winner) {
         commit();
         const rname = s.player?.rivalName?.trim() || battle.trainer.name;
         pushLog(`${rname} smirked at you and set off on their own journey...`, "enemy");
+        // Jednorázový popup (jako u výhry, jen bez „porazil jsi ho") – navede hráče
+        // pokračovat dál po mapě na sever. Prohra první rivala tě nezastaví.
+        if (wasNew) {
+          bus.emit(EVENTS.STORY_POPUP, {
+            title: "The battle is lost...",
+            body: `<p class="story-text">${rname}: "Heh, is that all you've got? Smell ya later!"</p>
+              <p class="story-text">${rname} dashes off north, out of Pallet Town — you'll surely cross paths again somewhere down the road.</p>
+              <p class="placeholder">➜ Head north on the map to continue your journey.</p>`,
+          });
+        }
       }
     }
   }
@@ -2255,6 +2294,8 @@ function handleTrainerEnemyDown() {
   const enemy = battle.enemy;
   const { xp } = battleRewards(enemy.ref.level);
   const leveled = grantXp(battle.player.ref, xp, { auto: getAutoBattle() });
+  // EV yield i z trenérových Pokémonů (kanonicky se počítají stejně jako divocí).
+  grantEvYield(battle.player.ref, enemy.ref.speciesId);
   commit();
   pushLog(`${enemy.name} fainted! +${xp} XP`, "player");
   if (leveled) {
@@ -2302,6 +2343,17 @@ function finishTrainerBattle(t, lastEnemy) {
       if (tmObj) {
         pushLog(`${t.name} gave you TM${String(tmNum).padStart(2, "0")} ${tmObj.name}!`, "player");
       }
+    }
+    // Věrný Kanto (Krok 1): první rival poražen v Pallet Townu → uteče na sever
+    // z města; popup navádí hráče pokračovat dál po mapě. Jednorázově (!already).
+    if (t.id === "rival-pallet") {
+      const rname = s.player?.rivalName?.trim() || t.name;
+      bus.emit(EVENTS.STORY_POPUP, {
+        title: "🔥 You beat your Rival!",
+        body: `<p class="story-text">${rname}: "...Heh! Not bad at all. But I'm still gonna be the world's greatest Pokémon trainer — you'll see!"</p>
+          <p class="story-text">${rname} dashes off north, out of Pallet Town. You'll surely cross paths again somewhere down the road...</p>
+          <p class="placeholder">➜ Head north on the map to continue your journey.</p>`,
+      });
     }
     // Věrný Kanto: první zisk Boulder Badge (Brock) = drobná odměna + gratulace
     // v samostatném okně (info o otevřené Route 3). Jednorázově (story flag).
@@ -3236,6 +3288,41 @@ export function startStaticEncounter(speciesId, level) {
   return { ok: true };
 }
 
+/**
+ * Spustí izolovaný TUTORIÁLOVÝ DEMO-souboj mezi dvěma konkrétními jedinci.
+ * Používá ho jen onboarding (src/ui/tutorial.js). `demo:true` zajistí, že se
+ * souboj NIKDY neukládá (serialize() u něj vrací null), takže nešahne na reálný
+ * postup. Volající si celý stav zálohuje/obnovuje snapshotem – tady jen boj
+ * postavíme z dodaných jedinců (klidně dočasně vložených do collection/team).
+ * @param {object} playerOwned  hráčův jedinec (objekt z createPokemon)
+ * @param {object} enemyOwned   soupeř (objekt z createPokemon)
+ * @returns {{ ok: boolean }}
+ */
+export function startDemoBattle(playerOwned, enemyOwned) {
+  const activeArea = getActiveArea();
+  battle = {
+    running: true,
+    log: [],
+    area: activeArea,
+    teamCursor: 0,
+    turn: 0,
+    result: null,
+    background: pickBackground(activeArea),
+    interlude: null,
+    resolving: false,
+    demo: true, // izolovaný tutoriálový souboj – NEUKLÁDÁ se (viz serialize)
+    weather: null,
+    tailwind: { player: 0, enemy: 0 },
+    player: makeCombatant(playerOwned),
+    enemy: makeCombatant(enemyOwned),
+  };
+  pushLog(`A wild ${battle.enemy.name} appeared!`, "enemy");
+  pushLog(`Go, ${battle.player.name}!`, "player");
+  emit();
+  schedule();
+  return { ok: true };
+}
+
 export function pauseBattle() {
   if (battle) {
     battle.running = false;
@@ -3438,19 +3525,13 @@ export function playerRun() {
 
 /* --------------------------- Globální nastavení --------------------------- */
 
-/** Herní rychlost (1/2/4) – GLOBÁLNÍ nastavení (ovládá se v horní liště, ne v boji). */
+/**
+ * Herní rychlost je napevno 1× (jedno kolo za sekundu). Volba rychlosti byla
+ * odebrána – necháváme funkci kvůli `schedule()`/idle, ať je interval na jednom
+ * místě. (`settings.speed` ve starých savech se ignoruje.)
+ */
 export function getSpeed() {
-  return getState().settings?.speed ?? 1;
-}
-
-/** Nastaví globální rychlost (1/2/4), uloží a přeplánuje případný běžící souboj. */
-export function setSpeed(mult) {
-  const s = getState();
-  if (!s.settings) s.settings = {};
-  s.settings.speed = mult;
-  commit(); // → STATE_CHANGED (překreslí nastavení v liště)
-  bus.emit(EVENTS.BATTLE_UPDATE);
-  if (battle && battle.running) schedule();
+  return 1;
 }
 
 /**
@@ -3480,6 +3561,33 @@ export function setAutoBattle(on) {
   else clearTimeout(timer); // manuální mód: žádné automatické tiky
   bus.emit(EVENTS.BATTLE_UPDATE);
   return s.settings.autoBattle;
+}
+
+/**
+ * Full Auto mód: chová se jako Auto battle (automatická kola), ale hráčovým
+ * Pokémonům NEUBÝVÁ HP ani PP – nekonečný bezpečný idling výměnou za jen ~1/10
+ * odměn (viz FULL_AUTO_REWARD_MULT). Stejně jako Auto battle je zakázaný v gymu.
+ */
+export function getFullAuto() {
+  if (battle && battle.forceManual) return false;
+  return getState().settings?.fullAuto ?? false;
+}
+
+/** Zapne/vypne Full Auto. Rozbíhá/zastavuje automatická kola stejně jako Auto battle. */
+export function setFullAuto(on) {
+  const s = getState();
+  if (!s.settings) s.settings = {};
+  s.settings.fullAuto = !!on;
+  commit();
+  if (on) schedule();
+  else if (!getAutoBattle()) clearTimeout(timer); // zastav tiky, jen když neběží ani Auto battle
+  bus.emit(EVENTS.BATTLE_UPDATE);
+  return s.settings.fullAuto;
+}
+
+/** Běží některý z automatických režimů (Auto battle nebo Full Auto)? Řídí smyčku schedule(). */
+function autoLoopActive() {
+  return getAutoBattle() || getFullAuto();
 }
 
 /**

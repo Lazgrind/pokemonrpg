@@ -13,6 +13,7 @@ import { openStoryBuilding } from "./storyBuildingView.js";
 import { getActiveArea } from "../systems/battleSystem.js";
 import { getState, commit } from "../core/state.js";
 import { showPopup } from "./popup.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /**
  * Vykreslí panel města do zadaného elementu. Roster budov závisí na aktivním
@@ -28,6 +29,7 @@ export function renderCity(root, onStatus = () => {}) {
   const buildings = buildingsForCity(cityId);
   const bgStyle = cityId ? ` style="--city-bg:url('assets/city/${cityId}.png')"` : "";
 
+  const _savedScroll = saveScroll(root);
   root.innerHTML = `
     <h2 class="panel-title">${area?.name ?? "City"}</h2>
     <p class="placeholder">Click a building to open its options.</p>
@@ -35,6 +37,7 @@ export function renderCity(root, onStatus = () => {}) {
       ${buildings.map(buildingCell).join("")}
     </div>
   `;
+  restoreScroll(root, _savedScroll);
 
   wire(root, onStatus);
 }

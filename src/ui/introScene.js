@@ -2,9 +2,10 @@
  * introScene.js – krátká úvodní scéna nové hry (věrná duchu hry).
  *
  * Přeskočitelné textové okno: profesor Oak přivítá, zmínka o útěku Mew, a na
- * konci si hráč v textovém poli POJMENUJE svého rivala. Jméno se uloží do
- * `state.player.rivalName` a používá se celý playthrough (viz rivalView,
- * storyBuildingView). Po dokončení se volá `onDone` (typicky výběr startéra).
+ * konci si hráč v textových polích POJMENUJE sebe (`state.player.name`) i svého
+ * rivala (`state.player.rivalName`). Jména se používají celý playthrough (viz
+ * rivalView, storyBuildingView). Po dokončení se volá `onDone` – NOVĚ už NE výběr
+ * startéra (ten se dělá až v Oakově laboratoři), ale navedení hráče na mapu.
  *
  * Scéna se spouští JEN u nové hry (prázdná kolekce a ještě nezadané jméno
  * rivala) – wiring v main.js po Continue z title screenu.
@@ -52,11 +53,14 @@ export function startIntro(onDone = () => {}) {
   let step = 0; // index vyprávění; === STEPS.length => formulář se jménem
 
   const finish = () => {
-    const input = overlay.querySelector("#rival-name-input");
-    const name = (input?.value ?? "").trim();
+    const playerInput = overlay.querySelector("#player-name-input");
+    const rivalInput = overlay.querySelector("#rival-name-input");
+    const playerName = (playerInput?.value ?? "").trim();
+    const rivalName = (rivalInput?.value ?? "").trim();
     const s = getState();
     if (!s.player) s.player = { name: "Trainer" };
-    s.player.rivalName = name || "Rival"; // prázdné pole → rozumný default
+    s.player.name = playerName || "Trainer"; // prázdné pole → rozumný default
+    s.player.rivalName = rivalName || "Rival"; // prázdné pole → rozumný default
     commit();
     overlay.remove();
     onDone();
@@ -69,18 +73,23 @@ export function startIntro(onDone = () => {}) {
         <div class="modal intro-modal">
           <h2 class="panel-title">🌿 The journey begins</h2>
           ${oakPortrait()}
-          <p class="story-text">One more thing... This cheeky kid is your eternal rival — you've been competing since you were little. What's their name?</p>
+          <p class="story-text">Before you set off — tell me, what's your name, young Trainer?</p>
+          <input id="player-name-input" class="text-input" type="text" maxlength="16" placeholder="Your name" autocomplete="off">
+          <p class="story-text">And this cheeky kid over here is your eternal rival — you've been competing since you were little. What's their name?</p>
           <input id="rival-name-input" class="text-input" type="text" maxlength="16" placeholder="Rival's name" autocomplete="off">
           <div class="intro-actions">
             <button class="btn" data-start>Begin your journey ➜</button>
           </div>
         </div>
       `;
-      const input = overlay.querySelector("#rival-name-input");
-      input?.focus();
-      input?.addEventListener("keydown", (e) => {
+      const playerInput = overlay.querySelector("#player-name-input");
+      const rivalInput = overlay.querySelector("#rival-name-input");
+      playerInput?.focus();
+      const onEnter = (e) => {
         if (e.key === "Enter") finish();
-      });
+      };
+      playerInput?.addEventListener("keydown", onEnter);
+      rivalInput?.addEventListener("keydown", onEnter);
       overlay.querySelector("[data-start]")?.addEventListener("click", finish);
       return;
     }
