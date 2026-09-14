@@ -13,7 +13,9 @@ import { getState } from "../core/state.js";
 
 /** Výchozí hodnoty hlasitosti (0–100). */
 export const AUDIO_DEFAULTS = {
-  master: 70,
+  // master škáluje všechny kanály (final = master/100 * kanál/100), takže
+  // ztlumení na polovinu řešíme jedním číslem: 70 -> 35 = ~o půlku tišší default.
+  master: 35,
   music: 50,
   sfx: 80,
   mute: false,
