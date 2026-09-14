@@ -7,38 +7,35 @@
  * odsud. Odemčení řídí navštívené oblasti (isAreaUnlocked nad progress.visited);
  * zamčené uzly nejdou kliknout a hráč je nevidí (jen dev „reveal" je ukáže).
  *
- * REŽIM UMÍSTĚNÍ (📍): protože art mapa nemá popisky, hráč si pozice uzlů
- * naklikká sám – vybere uzel v liště a klikne na mapu, kam patří. Pozice se
- * uloží do state.mapPositions (override nad areas.js) a zobrazí se textový
- * výpis, který se pak přepíše natvrdo do data/areas.js.
+ * REŽIM UMÍSTĚNÍ (dev, jen localhost): naklikání pozic uzlů + textový výpis pro
+ * přepis do areas.js řeší samostatný dev modul `src/dev/devMapPlacement.js`;
+ * tento panel ho jen zapojuje přes malé API (viz komentář u importu níže).
  */
 
 import { AREAS, getArea, isAreaUnlocked, areaLevelRange } from "../../data/areas.js";
 import { setActiveArea, getActiveAreaId, applyFossilChoice, startTrainerBattle } from "../systems/battleSystem.js";
 import { endSafari, isSafariActive } from "../systems/safariSystem.js";
-import { getState, commit } from "../core/state.js";
+import { getState } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { showPopup } from "./popup.js";
 import { openMainTab } from "./mainPanel.js";
+import {
+  mapPlacementActive,
+  mapPlacementTarget,
+  mapPlacementHideLabels,
+  renderPlacementButtons,
+  renderPlacementBar,
+  wirePlacement,
+  handlePlacementClick,
+} from "../dev/devMapPlacement.js";
 
 const MAP_IMG = "assets/map/kanto.webp";
 
-/* ===================== DEV: Map placement mode =====================
- * Vývojový nástroj pro naklikání pozic uzlů na mapě (tlačítko 📍 Place nodes)
- * + výpis pozic (📋), který se ručně přepíše do data/areas.js.
- *
- * PŘED OSTRÝM RELEASEM: přepni DEV_MAP_PLACEMENT = false → celý nástroj zmizí
- * z UI (tlačítko se nevykreslí, edit režim je nedostupný, žádné mapPositions).
- * Pro ÚPLNÉ smazání kódu vyřízni bloky ohraničené značkami
- * `DEV-PLACEMENT-START` … `DEV-PLACEMENT-END` níže.
- * (Konvence stejná jako u ostatních dev věcí – viz „🔧 Dev tools" v Nastavení.)
- * =================================================================== */
-const DEV_MAP_PLACEMENT = true;
+/* DEV nástroj pro naklikání pozic uzlů na mapě (tlačítko Place nodes + výpis
+ * pozic) žije ve `src/dev/devMapPlacement.js` – zapojuje se sem jen přes malé
+ * API (render/wire/handle funkce) a ukáže se JEN na localhostu. Na ostré verzi
+ * se nevykreslí a edit režim nejde zapnout. */
 
-/** Režim umístění uzlů + aktuálně vybraný uzel (modulový stav UI). */
-let editMode = false;
-let editTarget = null;
-let editHideLabels = false; // v edit režimu skrýt názvy → jen tečky (nepřekáží v kliku)
 let unsub = null;
 let rootRef = null;
 
@@ -72,17 +69,6 @@ function posOf(area) {
   const o = getState().mapPositions?.[area.id];
   return o && typeof o.x === "number" ? o : { x: area.x, y: area.y };
 }
-
-/** Zapíše naklikanou pozici uzlu (override) a uloží. */
-function setMapPos(areaId, x, y) {
-  const s = getState();
-  if (!s.mapPositions) s.mapPositions = {};
-  s.mapPositions[areaId] = { x: round1(x), y: round1(y) };
-  commit();
-}
-
-const round1 = (n) => Math.round(n * 10) / 10;
-const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
 /**
  * Vykreslí klikací mapu do zadaného elementu.
@@ -120,72 +106,28 @@ export function renderMap(root) {
     <div class="map-head">
       <h2 class="panel-title">Map</h2>
       <div class="map-head-actions">
-        ${editMode ? `<button class="btn btn-sm" data-toggle-labels>${editHideLabels ? "🏷 Labels: off" : "🏷 Labels: on"}</button>` : ""}
-        ${editMode ? `<button class="btn btn-sm" data-show-dump title="Show position dump to submit">📋 Position dump</button>` : ""}
-        ${DEV_MAP_PLACEMENT ? `<button class="btn btn-sm map-edit-toggle" data-edit-toggle>${editMode ? "✓ Done" : "📍 Place nodes"}</button>` : ""}
+        ${renderPlacementButtons()}
       </div>
     </div>
-    <div class="kanto-map ${editMode ? "is-editing" : ""}">
-      <div class="map-stage ${editMode ? "is-editing" : ""} ${editMode && editHideLabels ? "hide-labels" : ""}">
+    <div class="kanto-map ${mapPlacementActive() ? "is-editing" : ""}">
+      <div class="map-stage ${mapPlacementActive() ? "is-editing" : ""} ${mapPlacementHideLabels() ? "hide-labels" : ""}">
         <img class="map-img" src="${MAP_IMG}" alt="Map of Kanto" draggable="false" />
         ${nodesHtml}
       </div>
-      ${editMode ? editPanelHtml() : `<div class="map-info" aria-live="polite"></div>`}
+      ${mapPlacementActive() ? renderPlacementBar() : `<div class="map-info" aria-live="polite"></div>`}
     </div>
   `;
 
   const stage = root.querySelector(".map-stage");
   const info = root.querySelector(".map-info");
 
-  // Přepínač režimu umístění (dev; tlačítko existuje jen když DEV_MAP_PLACEMENT).
-  const editToggle = root.querySelector("[data-edit-toggle]");
-  if (editToggle) {
-    editToggle.addEventListener("click", () => {
-      editMode = !editMode;
-      editTarget = editMode ? firstUnplaced() : null;
-      renderMap(root);
-    });
-  }
-
-  // Výběr uzlu k umístění (čipy v liště) + kopírování výpisu.
-  if (editMode) {
-    for (const chip of root.querySelectorAll("[data-pick]")) {
-      chip.addEventListener("click", () => {
-        editTarget = chip.dataset.pick;
-        renderMap(root);
-      });
-    }
-    const labelsBtn = root.querySelector("[data-toggle-labels]");
-    if (labelsBtn) {
-      labelsBtn.addEventListener("click", () => {
-        editHideLabels = !editHideLabels;
-        renderMap(root);
-      });
-    }
-    const dumpBtn = root.querySelector("[data-show-dump]");
-    if (dumpBtn) dumpBtn.addEventListener("click", openPositionsModal);
-  }
+  // DEV placement nástroj (jen localhost) – tlačítka i posluchače řeší modul.
+  wirePlacement(root, () => renderMap(root));
 
   // Klik na scénu.
   stage.addEventListener("click", (e) => {
-    if (editMode) {
-      // Klik na existující uzel = vyber ho k přesunu (ne umístit).
-      const hit = e.target.closest(".map-node");
-      if (hit) {
-        editTarget = hit.dataset.area;
-        renderMap(root);
-        return;
-      }
-      // Klik do prázdna = umísti vybraný uzel sem. Cíl zůstává vybraný,
-      // takže jde pozici hned doladit dalším klikem (žádný auto-skok).
-      if (!editTarget) return;
-      const rect = stage.getBoundingClientRect();
-      const x = clamp(((e.clientX - rect.left) / rect.width) * 100, 0, 100);
-      const y = clamp(((e.clientY - rect.top) / rect.height) * 100, 0, 100);
-      setMapPos(editTarget, x, y); // → STATE_CHANGED přesune marker
-      renderMap(root);
-      return;
-    }
+    // V edit režimu klik obslouží placement modul (umístění/výběr uzlu).
+    if (handlePlacementClick(e, stage, () => renderMap(root))) return;
     const btn = e.target.closest(".map-node");
     if (!btn || btn.disabled) return;
     const area = getArea(btn.dataset.area);
@@ -493,91 +435,6 @@ function pickFossil() {
   });
 }
 
-/* ---------- DEV-PLACEMENT-START (celý blok lze při releasu smazat) ---------- */
-
-/** Lišta režimu umístění: čipy uzlů + instrukce + výpis pozic. */
-function editPanelHtml() {
-  const chips = AREAS.map((a) => {
-    const placed = !!getState().mapPositions?.[a.id];
-    const active = a.id === editTarget;
-    return `<button class="map-chip ${active ? "active" : ""} ${placed ? "placed" : ""}"
-              data-pick="${a.id}">${placed ? "✓ " : ""}${a.name}</button>`;
-  }).join("");
-  return `
-    <div class="map-edit">
-      <p class="map-edit-hint">Pick a node (click its dot on the map or the chip below), then click the map where it belongs. Click empty space to fine-tune. Finally click <strong>📋 Position dump</strong> above and send me the dump.</p>
-      <div class="map-chips">${chips}</div>
-    </div>`;
-}
-
-/**
- * Vyskakovací okno s textovým výpisem pozic (nad vším → neořízne ho overflow
- * panelu mapy). Uživatel ho zkopíruje a pošle → přepíše se do data/areas.js.
- */
-function openPositionsModal() {
-  // Guard proti dvojímu otevření.
-  if (document.querySelector(".map-pos-modal")) return;
-
-  const overlay = document.createElement("div");
-  overlay.className = "modal-overlay map-pos-modal";
-  overlay.innerHTML = `
-    <div class="modal map-pos-card">
-      <h3 style="margin:0 0 8px">📋 Node position dump</h3>
-      <p style="margin:0 0 10px;font-size:12px;opacity:0.8">Copy the whole dump and send it to me – I'll hardcode it into <code>data/areas.js</code> and it'll ship to production.</p>
-      <textarea class="map-pos-dump" readonly rows="10">${positionsDump()}</textarea>
-      <div style="display:flex;gap:8px;margin-top:10px;justify-content:flex-end">
-        <button class="btn btn-sm" data-copy>📋 Copy</button>
-        <button class="btn btn-sm" data-close>Close</button>
-      </div>
-    </div>`;
-
-  const close = () => {
-    document.removeEventListener("keydown", onKey);
-    overlay.remove();
-  };
-  const onKey = (e) => {
-    if (e.key === "Escape") close();
-  };
-
-  const ta = overlay.querySelector(".map-pos-dump");
-  overlay.querySelector("[data-copy]").addEventListener("click", (e) => {
-    ta.select();
-    navigator.clipboard?.writeText(ta.value).catch(() => {});
-    // Fallback pro prostředí bez clipboard API: text je vybraný, jde Ctrl+C.
-    try {
-      document.execCommand("copy");
-    } catch {}
-    const b = e.currentTarget;
-    b.textContent = "✓ Copied";
-    setTimeout(() => (b.textContent = "📋 Copy"), 1500);
-  });
-  overlay.querySelector("[data-close]").addEventListener("click", close);
-  overlay.addEventListener("click", (e) => {
-    if (e.target === overlay) close();
-  });
-  document.addEventListener("keydown", onKey);
-
-  document.body.appendChild(overlay);
-  ta.focus();
-  ta.select();
-}
-
-/** Textový výpis aktuálních pozic (pro přepis do data/areas.js). */
-function positionsDump() {
-  return AREAS.map((a) => {
-    const p = posOf(a);
-    return `${a.id}: x: ${p.x}, y: ${p.y}`;
-  }).join("\n");
-}
-
-/** První uzel bez naklikané pozice (jinak první uzel). */
-function firstUnplaced() {
-  const mp = getState().mapPositions ?? {};
-  return (AREAS.find((a) => !mp[a.id]) ?? AREAS[0]).id;
-}
-
-/* ---------- DEV-PLACEMENT-END ---------- */
-
 /** Přepočítá stavové třídy + pozice markerů a popisek aktivní oblasti. */
 function updateStates(root) {
   if (!root.isConnected) return;
@@ -591,16 +448,17 @@ function updateStates(root) {
     const area = getArea(btn.dataset.area);
     if (!area) continue;
     const unlocked = isAreaUnlocked(area, visited, badges, beaten, story);
+    const editing = mapPlacementActive();
     // Hráč vidí jen odemčené; zamčené se skryjí (mimo edit režim a dev „reveal").
-    const visible = unlocked || editMode || reveal;
+    const visible = unlocked || editing || reveal;
     const p = posOf(area);
     btn.style.left = `${p.x}%`;
     btn.style.top = `${p.y}%`;
-    btn.disabled = !unlocked && !editMode;
+    btn.disabled = !unlocked && !editing;
     btn.classList.toggle("is-hidden", !visible);
     btn.classList.toggle("is-locked", !unlocked);
     btn.classList.toggle("is-active", area.id === activeId);
-    btn.classList.toggle("is-target", editMode && area.id === editTarget);
+    btn.classList.toggle("is-target", editing && area.id === mapPlacementTarget());
     btn.classList.toggle("type-city", area.type === "city");
     btn.classList.toggle("type-route", area.type !== "city");
   }
