@@ -16,14 +16,14 @@ import { createPokemon, addEv, evYield } from "./pokemonSystem.js";
 import { grantXp } from "./progression.js";
 import { makeCombatant, avgDamage, battleRewards } from "./battleSystem.js";
 import { goldBoostMult } from "./buildingSystem.js";
-import { expectedLoot } from "./loot.js";
+import { expectedLoot, applyLoot } from "./loot.js";
 import { AREAS, areaEncounters } from "../../data/areas.js";
 
 /** Účinnost offline progresu vůči aktivnímu hraní. Laditelné jedním číslem. */
-export const OFFLINE_EFFICIENCY = 0.1; // 1/10 – aktivní hraní je jasně výhodnější
+export const OFFLINE_EFFICIENCY = 0.15; // ~1/7 – aktivní hraní je pořád jasně výhodnější
 
 /** Strop offline času (delší nepřítomnost se dál nepočítá). */
-export const OFFLINE_CAP_HOURS = 8;
+export const OFFLINE_CAP_HOURS = 12;
 
 /** Kratší nepřítomnost než tohle ignorujeme (běžný refresh). */
 const MIN_OFFLINE_SECONDS = 15;
@@ -101,7 +101,7 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
   const res = getState().resources;
   res.gold += totalGold;
   for (const [resource, amount] of Object.entries(loot)) {
-    res[resource] = (res[resource] ?? 0) + amount;
+    applyLoot(res, resource, amount);
   }
   commit();
 

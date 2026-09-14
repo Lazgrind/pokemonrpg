@@ -5,6 +5,30 @@
  * s pravděpodobnostmi. Přidání nového dropu = úprava dat, ne logiky.
  */
 
+import { getPokeball } from "../../data/pokeballs.js";
+
+/**
+ * Přičte jeden vylosovaný loot do resources. Zdroj se směruje podle typu:
+ * "gold" → ploché `res.gold`; id Poké Ballu → vnořená mapa `res.balls[id]`
+ * (bally se drží po typech, viz pokeballSystem); cokoli jiného → obecný
+ * top-level klíč. Sdílené aktivním soubojem i offline výpočtem.
+ * @param {*} res       state.resources
+ * @param {string} resource
+ * @param {number} amount
+ */
+export function applyLoot(res, resource, amount) {
+  if (resource === "gold") {
+    res.gold = (res.gold ?? 0) + amount;
+    return;
+  }
+  if (getPokeball(resource)) {
+    if (!res.balls) res.balls = {};
+    res.balls[resource] = (res.balls[resource] ?? 0) + amount;
+    return;
+  }
+  res[resource] = (res[resource] ?? 0) + amount;
+}
+
 /**
  * Vylosuje loot za jednoho poraženého nepřítele.
  * @param {import("../../data/areas.js").Area} area

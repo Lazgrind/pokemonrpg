@@ -65,7 +65,12 @@ export function openStoryBuilding(storyKey, onStatus = () => {}) {
   if (open) return;
   open = true;
 
-  if (storyKey === "game-corner") lastSpin = null; // čerstvý automat při každém otevření
+  if (storyKey === "game-corner") {
+    lastSpin = null; // čerstvý automat při každém otevření
+    bjGame = null; // žádná rozehraná partie blackjacku
+    bjBet = BJ_BETS[0]; // sázka zpět na nejnižší hodnotu
+    gcTab = "slots"; // vždy začni na automatu
+  }
 
   const overlay = document.createElement("div");
   overlay.className = "modal-overlay";
@@ -219,6 +224,131 @@ function slotPayout([a, b, c]) {
   if (cherries === 1) return 1;
   return 0;
 }
+
+/* --------------------------- Blackjack (Game Corner) ---------------------- */
+// Druhá hra v herně. Coiny jako sázka. Pravidla jsou mírně ve prospěch podniku,
+// aby herna nebyla tiskárnou peněz (coiny -> Porygon): krupiér stojí na 17,
+// remíza vrací sázku, přirozené 21 platí 1:1 (ne 3:2). House edge ~2 %.
+
+/** Nabízené výše sázky blackjacku (coiny) – hráč si vybere před rozdáním. */
+const BJ_BETS = [5, 25, 100];
+
+/** Aktuálně zvolená výše sázky (drží se přes partie, reset při otevření). */
+let bjBet = BJ_BETS[0];
+
+/** Hodnoty karet (eso = 11, sníží se na 1 při přetažení). */
+const BJ_RANKS = [
+  { r: "A", v: 11 }, { r: "2", v: 2 }, { r: "3", v: 3 }, { r: "4", v: 4 },
+  { r: "5", v: 5 }, { r: "6", v: 6 }, { r: "7", v: 7 }, { r: "8", v: 8 },
+  { r: "9", v: 9 }, { r: "10", v: 10 }, { r: "J", v: 10 }, { r: "Q", v: 10 }, { r: "K", v: 10 },
+];
+const BJ_SUITS = ["♠", "♥", "♦", "♣"]; // spades, hearts, diamonds, clubs
+
+/** Aktuální partie blackjacku (mimo save, drží se jen pro překreslení okna). */
+let bjGame = null;
+
+/** Vytáhne náhodnou kartu (nekonečný „shoe" – losování s návratem, pro casual hru). */
+function bjDraw() {
+  const rank = BJ_RANKS[Math.floor(Math.random() * BJ_RANKS.length)];
+  const suit = BJ_SUITS[Math.floor(Math.random() * BJ_SUITS.length)];
+  return { r: rank.r, v: rank.v, s: suit };
+}
+
+/** Hodnota ruky s korekcí es (11 -> 1, dokud je přetaženo). */
+function bjValue(hand) {
+  let total = hand.reduce((a, c) => a + c.v, 0);
+  let aces = hand.filter((c) => c.r === "A").length;
+  while (total > 21 && aces > 0) { total -= 10; aces--; }
+  return total;
+}
+
+/** Krupiér dobírá, dokud nemá aspoň 17 (stojí na všech 17). */
+function bjDealerPlay(game) {
+  while (bjValue(game.dealer) < 17) game.dealer.push(bjDraw());
+}
+
+/** Vyhodnotí partii, připíše výhru/vrácení sázky do coinů. Vrací hlášku. */
+function bjSettle(game) {
+  const p = bjValue(game.player);
+  const d = bjValue(game.dealer);
+  const s = getState();
+  if (!s.resources) s.resources = {};
+  // Natural = blackjack z prvních dvou karet (21 na 2 kartách). Platí 3:2.
+  const playerNatural = game.player.length === 2 && p === 21;
+  let result, msg;
+  if (p > 21) { result = "lose"; msg = "Bust! You lose."; }
+  else if (d > 21) { result = "win"; msg = "Dealer busts — you win!"; }
+  else if (p > d) { result = "win"; msg = playerNatural ? "Blackjack! You win 3:2!" : "You win!"; }
+  else if (p < d) { result = "lose"; msg = "Dealer wins."; }
+  else { result = "push"; msg = "Push — bet returned."; }
+  if (result === "win") {
+    // Výhra vrací sázku + výhru. Natural platí 3:2, běžná výhra 1:1.
+    const winnings = playerNatural ? Math.floor(game.bet * 1.5) : game.bet;
+    s.resources.coins = (s.resources.coins ?? 0) + game.bet + winnings;
+  } else if (result === "push") {
+    s.resources.coins = (s.resources.coins ?? 0) + game.bet;
+  }
+  game.phase = "done";
+  game.result = result;
+  game.msg = msg;
+  commit();
+  return msg;
+}
+
+/** Rozdá novou partii (odečte sázku). Přirozené 21 vyhodnotí hned. */
+function bjDeal(onStatus) {
+  const s = getState();
+  const coins = s.resources?.coins ?? 0;
+  if (coins < bjBet) { onStatus("Not enough coins to deal."); return; }
+  s.resources.coins = coins - bjBet;
+  bjGame = {
+    phase: "playing", bet: bjBet, result: null, msg: "",
+    player: [bjDraw(), bjDraw()], dealer: [bjDraw(), bjDraw()],
+  };
+  commit();
+  if (bjValue(bjGame.player) === 21 || bjValue(bjGame.dealer) === 21) {
+    onStatus("🃏 " + bjSettle(bjGame));
+  } else {
+    onStatus("🃏 Cards dealt — Hit or Stand?");
+  }
+}
+
+/** Hráč si bere kartu; přetažení = okamžitá prohra. */
+function bjHit(onStatus) {
+  if (!bjGame || bjGame.phase !== "playing") return;
+  bjGame.player.push(bjDraw());
+  if (bjValue(bjGame.player) > 21) {
+    onStatus("🃏 " + bjSettle(bjGame));
+  } else {
+    onStatus("🃏 Hit — Hit or Stand?");
+  }
+}
+
+/** Hráč stojí; dochytá krupiér a partie se vyhodnotí. */
+function bjStand(onStatus) {
+  if (!bjGame || bjGame.phase !== "playing") return;
+  bjDealerPlay(bjGame);
+  onStatus("🃏 " + bjSettle(bjGame));
+}
+
+/** HTML jedné karty (rub, když je skrytá krupiérova). */
+function bjCardHtml(c, hidden) {
+  if (hidden) return `<span class="bj-card bj-back">🂠</span>`;
+  const red = c.s === "♥" || c.s === "♦" ? " bj-red" : "";
+  return `<span class="bj-card${red}">${c.r}${c.s}</span>`;
+}
+
+/* --------------------------- Game Corner: taby ---------------------------- */
+
+/** Aktivní tab herny (Slots / Blackjack / Prizes / Exchange). Reset při otevření. */
+let gcTab = "slots";
+
+const GC_TABS = [
+  { id: "slots", label: "🎰 Slots" },
+  { id: "blackjack", label: "🃏 Blackjack" },
+  { id: "prizes", label: "🎁 Prizes" },
+  { id: "exchange", label: "💱 Exchange" },
+];
 
 /** Fosílie → oživený druh (data/items.js special item id → speciesId). */
 const FOSSIL_TO_SPECIES = {
@@ -654,22 +784,41 @@ function gameCornerView() {
           : `<span class="gc-lose">No match — spin again!</span>`)
       : `Insert ${SLOT_BET} coins and pull the lever!`;
 
-    return {
-      title: "🎰 Game Corner",
-      body: `
-        <p class="story-text">With Team Rocket gone, the Celadon Game Corner is an honest — and very loud — arcade again. Coins jingle everywhere.</p>
-        <p class="gc-balance">🪙 Coins: <strong>${coins}</strong> &nbsp;·&nbsp; 💰 Money: <strong>${gold}₽</strong></p>
+    const tabsHtml = GC_TABS.map((t) =>
+      `<button class="btn btn-sm gc-tab ${gcTab === t.id ? "active" : ""}" data-gc-tab="${t.id}">${t.label}</button>`
+    ).join("");
 
-        <h3 class="gc-h">🎰 Slot Machine <span class="gc-sub">(${SLOT_BET} coins / spin)</span></h3>
-        <div class="gc-reels">${reels}</div>
-        <p class="gc-spinmsg">${spinMsg}</p>
-        <button class="btn" data-slot-spin ${coins < SLOT_BET ? "disabled" : ""}>🎰 Spin (${SLOT_BET} 🪙)</button>
-
-        <h3 class="gc-h">💱 Coin Exchange</h3>
-        <div class="gc-row">
-          ${COIN_PACKS.map((p) => `<button class="btn btn-sm" data-buy-coins="${p.coins}" ${gold < p.gold ? "disabled" : ""}>Buy ${p.coins} 🪙 — ${p.gold}₽</button>`).join("")}
+    let content;
+    if (gcTab === "blackjack") {
+      const g = bjGame;
+      const playing = g && g.phase === "playing";
+      const dealerCards = g
+        ? g.dealer.map((c, i) => bjCardHtml(c, playing && i === 1)).join(" ")
+        : `${bjCardHtml(null, true)} ${bjCardHtml(null, true)}`;
+      const playerCards = g ? g.player.map((c) => bjCardHtml(c, false)).join(" ") : "—";
+      const dealerTotal = g ? (playing ? `${bjValue([g.dealer[0]])} + ?` : bjValue(g.dealer)) : "—";
+      const playerTotal = g ? bjValue(g.player) : "—";
+      const msg = g ? (g.msg || "Hit or Stand?") : "Choose your bet and deal.";
+      const resClass = g && g.phase === "done"
+        ? (g.result === "win" ? "gc-win" : g.result === "push" ? "" : "gc-lose") : "";
+      const betPicker = BJ_BETS.map((b) =>
+        `<button class="btn btn-sm bj-bet ${b === bjBet ? "active" : ""}" data-bj-bet="${b}" ${coins < b ? "disabled" : ""}>${b} 🪙</button>`
+      ).join("");
+      content = `
+        <h3 class="gc-h">🃏 Blackjack</h3>
+        <div class="bj-table">
+          <div class="bj-hand"><span class="bj-label">Dealer</span><span class="bj-total">${dealerTotal}</span><div class="bj-cards">${dealerCards}</div></div>
+          <div class="bj-hand"><span class="bj-label">You</span><span class="bj-total">${playerTotal}</span><div class="bj-cards">${playerCards}</div></div>
         </div>
-
+        <p class="gc-spinmsg ${resClass}">${msg}</p>
+        ${playing ? "" : `<div class="gc-row bj-bets"><span class="bj-label">Bet:</span>${betPicker}</div>`}
+        <div class="gc-row">
+          ${playing
+            ? `<button class="btn" data-bj-hit>🂠 Hit</button><button class="btn" data-bj-stand>✋ Stand</button>`
+            : `<button class="btn" data-bj-deal ${coins < bjBet ? "disabled" : ""}>🃏 Deal (${bjBet} 🪙)</button>`}
+        </div>`;
+    } else if (gcTab === "prizes") {
+      content = `
         <h3 class="gc-h">🎁 Prize Corner</h3>
         <div class="gc-row gc-prizes">
           ${GAME_CORNER_PRIZES.map((pr) => {
@@ -681,14 +830,34 @@ function gameCornerView() {
           }).join("")}
         </div>
         <p class="placeholder">The clerk winks: "That <strong>Porygon</strong> is one of a kind — you'll only ever get one here."</p>
-
         <h3 class="gc-h">💿 TM Prizes</h3>
         <div class="gc-row gc-prizes">
           ${TMS.filter((tm) => tm.coins).map((tm) => {
             const afford = coins >= tm.coins;
             return `<button class="btn btn-sm gc-prize" data-buy-tm="${tm.num}" ${afford ? "" : "disabled"}>${tmDisplayName(tm)} — ${tm.coins} 🪙</button>`;
           }).join("")}
-        </div>
+        </div>`;
+    } else if (gcTab === "exchange") {
+      content = `
+        <h3 class="gc-h">💱 Coin Exchange</h3>
+        <div class="gc-row">
+          ${COIN_PACKS.map((p) => `<button class="btn btn-sm" data-buy-coins="${p.coins}" ${gold < p.gold ? "disabled" : ""}>Buy ${p.coins} 🪙 — ${p.gold}₽</button>`).join("")}
+        </div>`;
+    } else {
+      content = `
+        <h3 class="gc-h">🎰 Slot Machine <span class="gc-sub">(${SLOT_BET} coins / spin)</span></h3>
+        <div class="gc-reels">${reels}</div>
+        <p class="gc-spinmsg">${spinMsg}</p>
+        <button class="btn" data-slot-spin ${coins < SLOT_BET ? "disabled" : ""}>🎰 Spin (${SLOT_BET} 🪙)</button>`;
+    }
+
+    return {
+      title: "🎰 Game Corner",
+      body: `
+        <p class="story-text">With Team Rocket gone, the Celadon Game Corner is an honest — and very loud — arcade again. Coins jingle everywhere.</p>
+        <p class="gc-balance">🪙 Coins: <strong>${coins}</strong> &nbsp;·&nbsp; 💰 Money: <strong>${gold}₽</strong></p>
+        <div class="gc-tabs">${tabsHtml}</div>
+        ${content}
       `,
     };
   }
@@ -1011,6 +1180,36 @@ function wire(storyKey, overlay, onStatus, render, close) {
   overlay.querySelector("[data-goto-rockets]")?.addEventListener("click", () => {
     close();
     openMainTab("rockets");
+  });
+
+  // Game Corner – přepínání her (Slots / Blackjack / Prizes / Exchange).
+  overlay.querySelectorAll("[data-gc-tab]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      gcTab = btn.getAttribute("data-gc-tab");
+      render();
+    });
+  });
+
+  // Game Corner – blackjack: výběr velikosti sázky.
+  overlay.querySelectorAll("[data-bj-bet]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      bjBet = Number(btn.getAttribute("data-bj-bet"));
+      render();
+    });
+  });
+
+  // Game Corner – blackjack: rozdat / hit / stand.
+  overlay.querySelector("[data-bj-deal]")?.addEventListener("click", () => {
+    bjDeal(onStatus);
+    render();
+  });
+  overlay.querySelector("[data-bj-hit]")?.addEventListener("click", () => {
+    bjHit(onStatus);
+    render();
+  });
+  overlay.querySelector("[data-bj-stand]")?.addEventListener("click", () => {
+    bjStand(onStatus);
+    render();
   });
 
   // Game Corner – automat: vsadí SLOT_BET coinů, roztočí válce, připíše výhru.

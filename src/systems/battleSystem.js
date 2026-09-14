@@ -22,7 +22,7 @@ import { grantTm } from "./tmSystem.js";
 import { grantHmToPlayer } from "./hmSystem.js";
 import { typeMultiplier } from "../../data/types.js";
 import { grantXp } from "./progression.js";
-import { rollLoot } from "./loot.js";
+import { rollLoot, applyLoot } from "./loot.js";
 import { rollEggDrop } from "./eggSystem.js";
 import { healPercent, ppRegenPercent, goldBoostMult, shinyBoostMult } from "./buildingSystem.js";
 import { useItem, canUseItem, itemCount, heldItemOf } from "./itemSystem.js";
@@ -209,7 +209,7 @@ function pickBackground(area) {
 }
 
 /** Násobič odměn (gold i XP) v režimu Full Auto – cena za idling bez úbytku HP/PP. */
-const FULL_AUTO_REWARD_MULT = 0.1;
+const FULL_AUTO_REWARD_MULT = 0.15;
 
 /** Odměna za poražení nepřítele daného levelu (sdíleno s idle systémem). */
 export function battleRewards(level) {
@@ -2111,7 +2111,7 @@ function handleFaint(winner) {
     res.gold += gold;
     // Loot: datově řízené dropy z oblasti.
     const loot = rollLoot(battle.area);
-    for (const d of loot) res[d.resource] = (res[d.resource] ?? 0) + d.amount;
+    for (const d of loot) applyLoot(res, d.resource, d.amount);
     // TM drop: velmi malá šance (~1,5 %), že divoký souboj upustí náhodný TM
     // (jakýkoli z TM01–TM50). Uloží se jako item do res.items (viz tmSystem.js).
     let tmDrop = null;
@@ -3803,7 +3803,7 @@ export function setAutoBattle(on) {
 
 /**
  * Full Auto mód: chová se jako Auto battle (automatická kola), ale hráčovým
- * Pokémonům NEUBÝVÁ HP ani PP – nekonečný bezpečný idling výměnou za jen ~1/10
+ * Pokémonům NEUBÝVÁ HP ani PP – nekonečný bezpečný idling výměnou za jen ~1/7
  * odměn (viz FULL_AUTO_REWARD_MULT). Stejně jako Auto battle je zakázaný v gymu.
  */
 export function getFullAuto() {

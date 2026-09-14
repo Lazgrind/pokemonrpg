@@ -104,7 +104,7 @@ const STEPS = [
   },
   {
     title: "♾️ Full Auto — hands-off idling",
-    text: "Full Auto is the second idle mode. It fights on its own like Auto-battle, but your Pokémon lose NO HP and NO PP — so you can leave it running forever with no healing. The trade-off: rewards (gold & XP) are cut to about 1/10. Rule of thumb: Auto-battle for faster gains while you watch, Full Auto for safe, walk-away idling. Tick it to try, then continue.",
+    text: "Full Auto is the second idle mode. It fights on its own like Auto-battle, but your Pokémon lose NO HP and NO PP — so you can leave it running forever with no healing. The trade-off: rewards (gold & XP) are cut to about 1/7. Rule of thumb: Auto-battle for faster gains while you watch, Full Auto for safe, walk-away idling. Tick it to try, then continue.",
     target: "#tg-fullauto",
     tipEdge: "bottom",
     onEnter: ensureDemoBattleRunning,

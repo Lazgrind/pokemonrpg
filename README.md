@@ -34,14 +34,14 @@ python -m http.server 8000
 
 ## Rozsah projektu
 <!-- LOC:START -->
-**Celkem 41 616 řádků** v 115 souborech (k 2026-09-14, bez `assets/`).
+**Celkem 42 044 řádků** v 116 souborech (k 2026-09-14, bez `assets/`).
 
 | Kategorie | Soubory | Řádky |
 | --- | ---: | ---: |
-| Kód | 98 | 35 688 |
+| Kód | 99 | 36 065 |
 | Nástroje | 12 | 1 691 |
-| Dokumentace | 5 | 4 237 |
-| **Celkem** | **115** | **41 616** |
+| Dokumentace | 5 | 4 288 |
+| **Celkem** | **116** | **42 044** |
 
 **Obrázků celkem: 1 396** (30.9 MB, vč. `assets/`).
 

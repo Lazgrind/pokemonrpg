@@ -5,7 +5,8 @@
 
 import { getSpecies } from "../../data/pokemon.js";
 import { MAX_TEAM_SIZE } from "../core/state.js";
-import { getTeamPokemon, removeFromTeam, moveInTeam } from "../systems/team.js";
+import { getTeamPokemon, removeFromTeam, moveInTeam, addToTeamAt, reorderTeam } from "../systems/team.js";
+import { dragState, beginDrag, endDrag } from "./dragState.js";
 import { healStatus } from "../systems/battleSystem.js";
 import { ivPercent, evTotal, computeStats } from "../systems/pokemonSystem.js";
 import { xpForNextLevel } from "../systems/progression.js";
@@ -17,6 +18,9 @@ import { statusBadge } from "./statusBadge.js";
 import { heldItemOf } from "../systems/itemSystem.js";
 import { ballIconHtml } from "./ballIcon.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
+
+/** Právě proběhlo tažení? (potlačí otevření karty po dropu). */
+let didDrag = false;
 
 /** Jméno druhu daného jedince. */
 function speciesName(p) {
@@ -86,7 +90,7 @@ export function renderTeamTab(root, onStatus) {
     const p = team[i];
     if (p) {
       slots.push(`
-        <div class="card team-slot clickable" data-open="${p.uid}" title="Show card">
+        <div class="card team-slot clickable" data-open="${p.uid}" data-slot="${i}" data-uid="${p.uid}" draggable="true" title="Show card · drag to reorder or move to PC">
           <span class="slot-num">${i + 1}</span>
           <div><strong>${displayName(p)}</strong> ${genderSymbolHtml(p.gender)} · Lv ${p.level} ${p.owned?.caughtBall ? ballIconHtml(p.owned.caughtBall, { size: 16 }) : ""} ${typeBadges(p)}${statusBadge(p.status)}</div>
           <div>${ivEvLine(p)}</div>
@@ -100,7 +104,7 @@ export function renderTeamTab(root, onStatus) {
           </div>
         </div>`);
     } else {
-      slots.push(`<div class="card team-slot empty"><span class="slot-num">${i + 1}</span>Empty</div>`);
+      slots.push(`<div class="card team-slot empty" data-slot="${i}"><span class="slot-num">${i + 1}</span>Empty</div>`);
     }
   }
 
@@ -142,11 +146,55 @@ export function renderTeamTab(root, onStatus) {
       onStatus(res.ok ? `✨ ${res.fromName} evolved into ${res.toName}!` : res.reason ?? "Can't evolve.");
     })
   );
-  // Klik na slot (mimo tlačítka) → karta Pokémona.
+  // Klik na slot (mimo tlačítka) → karta Pokémona (pokud se zrovna netáhlo).
   root.querySelectorAll("[data-open]").forEach((slot) =>
     slot.addEventListener("click", (e) => {
       if (e.target.closest("button")) return;
+      if (didDrag) { didDrag = false; return; }
       openPokemonCard({ uid: slot.dataset.open });
     })
   );
+
+  // --- Drag & drop: přeuspořádání týmu + přesun z/do PC boxů ---
+  // Zdroj tažení = obsazený slot týmu. Sdílený `dragState` (dragState.js) drží
+  // uid + source ("team"), aby to fungovalo i při dropu do PC panelu (jiný DOM
+  // kontejner). Cíl = kterýkoli slot týmu (obsazený i prázdný).
+  root.querySelectorAll(".team-slot[draggable='true']").forEach((slot) => {
+    slot.addEventListener("dragstart", (e) => {
+      didDrag = true;
+      beginDrag(slot.dataset.uid, "team");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", slot.dataset.uid);
+      slot.classList.add("dragging");
+    });
+    slot.addEventListener("dragend", () => {
+      slot.classList.remove("dragging");
+      endDrag();
+      setTimeout(() => { didDrag = false; }, 0);
+    });
+  });
+
+  root.querySelectorAll(".team-slot").forEach((slot) => {
+    slot.addEventListener("dragover", (e) => {
+      if (!dragState.uid) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      slot.classList.add("drag-over");
+    });
+    slot.addEventListener("dragleave", () => slot.classList.remove("drag-over"));
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      slot.classList.remove("drag-over");
+      const uid = dragState.uid;
+      const source = dragState.source;
+      if (!uid) return;
+      const toIndex = Number(slot.dataset.slot);
+      if (source === "team") {
+        reorderTeam(uid, toIndex); // commit → překreslení
+      } else if (source === "pc") {
+        const ok = addToTeamAt(uid, toIndex);
+        onStatus(ok ? "Added to team" : "Team is full (max 6)");
+      }
+    });
+  });
 }
