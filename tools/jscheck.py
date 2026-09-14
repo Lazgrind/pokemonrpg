@@ -8,6 +8,7 @@ files = [
     "src/systems/save.js", "src/core/state.js", "src/core/version.js",
     "src/ui/profileView.js", "src/ui/settingsView.js",
     "src/dev/devEnv.js", "src/dev/devPanel.js", "src/dev/devTools.js",
+    "src/dev/devMapPlacement.js",
     "src/ui/diploma.js", "src/ui/popup.js",
     "src/ui/gymView.js", "src/ui/gymChallengeView.js",
     "src/ui/rivalView.js", "src/ui/rocketView.js", "src/ui/cityView.js",
