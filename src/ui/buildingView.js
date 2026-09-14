@@ -999,12 +999,13 @@ const SHOP_DEPTS = [
   { key: "boost", icon: "🍬", label: "Boosts", cats: ["boost"] },
   { key: "evolution", icon: "🪨", label: "Evolution", cats: ["evolution"] },
   { key: "held", icon: "💎", label: "Held", cats: ["held"] },
+  { key: "fishing", icon: "🎣", label: "Fishing", cats: ["fishing"] },
   { key: "tm", icon: "💿", label: "TMs", cats: ["tm"] },
 ];
 
 // Která oddělení daná budova nabízí (kanonicky). Běžný Poké Mart = jen základ
 // (míčky + léčení); Celadon Dept Store = kompletní katalog (vč. TM, evolučních
-// kamenů, held itemů a prémiových boostů), takže půlka věcí, co dřív nešla nikde
+// kamenů, held itemů, pruty a prémiových boostů), takže půlka věcí, co dřív nešla nikde
 // koupit, má konečně domov – a boosty jsou gatované příchodem do Celadonu (gold sink).
 const SHOP_DEPT_SETS = {
   "poke-mart": ["balls", "heal"],

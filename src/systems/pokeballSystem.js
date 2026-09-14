@@ -121,6 +121,10 @@ export function ballMultiplier(ball, ctx) {
       // Dive Ball: lepší ve vodních oblastech (surf/moře; potápění nemáme).
       if (ctx.biome === "water") m = b.mult;
       break;
+    case "fishing":
+      // Lure Ball: bonus pouze při rybaření.
+      if (ctx.fishing) m = b.mult;
+      break;
   }
   return m;
 }

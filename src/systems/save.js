@@ -623,6 +623,51 @@ function migrate(data) {
     data.saveVersion = 44;
   }
 
+  // v44 → v45: in-game Achievements (unlock tracking + statistiky).
+  // Starým savům doplníme prázdné achievement data – hráči si je postupně sbírají.
+  if (data.saveVersion < 45) {
+    if (!data.achievements || typeof data.achievements !== "object") {
+      data.achievements = { unlocked: {}, stats: { catches: 0, hatches: 0, evolves: 0 } };
+    }
+    if (!data.achievements.unlocked) data.achievements.unlocked = {};
+    if (!data.achievements.stats) data.achievements.stats = { catches: 0, hatches: 0, evolves: 0 };
+    data.saveVersion = 45;
+  }
+
+  // v45 → v46: Hall of Fame (historie týmů, které pokořily Ligu). Starým savům
+  // doplníme prázdné pole; už-Championové dostanou jeden retro záznam z aktuálního
+  // týmu, aby jejich síň slávy nebyla prázdná.
+  if (data.saveVersion < 46) {
+    if (!Array.isArray(data.hallOfFame)) data.hallOfFame = [];
+    if (data.story?.isChampion && data.hallOfFame.length === 0) {
+      const uids = Array.isArray(data.team) ? data.team : [];
+      const coll = Array.isArray(data.collection) ? data.collection : [];
+      const team = uids
+        .map((uid) => coll.find((p) => p && p.uid === uid))
+        .filter(Boolean)
+        .map((p) => ({
+          speciesId: p.speciesId,
+          level: p.level ?? 1,
+          nickname: p.nickname ?? null,
+          shiny: !!p.shiny,
+        }));
+      if (team.length > 0) {
+        data.hallOfFame.push({ timestamp: data.meta?.lastSaved ?? Date.now(), team });
+      }
+    }
+    data.saveVersion = 46;
+  }
+
+  // v46 → v47: nový autocatch filtr „Better IVs" (chytat jedince, co zlepší IV
+  // druhu, co už máš). Starým savům doplníme vypnuto (false), ať se chování
+  // nezmění – filtr si hráč zapne sám v liště Auto catch.
+  if (data.saveVersion < 47) {
+    if (data.settings?.autocatch && typeof data.settings.autocatch.catchBetterIv !== "boolean") {
+      data.settings.autocatch.catchBetterIv = false;
+    }
+    data.saveVersion = 47;
+  }
+
   return data;
 }
 

@@ -11,7 +11,7 @@
 
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
-import { getTeamPokemon, ownsSpecies, acquirePokemon, releasePokemon, getStarterSpeciesId } from "./team.js";
+import { getTeamPokemon, ownsSpecies, ivWouldImprove, acquirePokemon, releasePokemon, getStarterSpeciesId } from "./team.js";
 import { getPokeball, POKEBALLS } from "../../data/pokeballs.js";
 import { ballMultiplier } from "./pokeballSystem.js";
 import { createPokemon, computeStats, grantEvYield, STAT_KEYS, SHINY_CHANCE, SHINY_CHARM_MULT } from "./pokemonSystem.js";
@@ -19,6 +19,7 @@ import { getSpecies } from "../../data/pokemon.js";
 import { getMove, MOVES } from "../../data/moves.js";
 import { TMS, TM_BY_BADGE, getTm } from "../../data/tms.js";
 import { grantTm } from "./tmSystem.js";
+import { grantHmToPlayer } from "./hmSystem.js";
 import { typeMultiplier } from "../../data/types.js";
 import { grantXp } from "./progression.js";
 import { rollLoot } from "./loot.js";
@@ -276,6 +277,8 @@ function spawnEnemy(area) {
   // ✨ Fortune linka z Trainer Boost Center násobí shiny šanci (max ×1,2 při
   // plné lince) – záměrně mrňavé, ať se to nesčítá s Charmem do OP hodnot.
   const shinyChance = SHINY_CHANCE * (charmOn ? SHINY_CHARM_MULT : 1) * shinyBoostMult();
+  // Cry zvuk divokého Pokémona při vstupu do souboje (viz main.js WILD_APPEARED).
+  bus.emit(EVENTS.WILD_APPEARED, { speciesId: id });
   return makeCombatant(createPokemon(id, level, { shinyChance }));
 }
 
@@ -388,7 +391,8 @@ export function restore(saved) {
 
 /**
  * Náhradní útok, když Pokémonovi dojdou PP na všech tazích. Typeless (bez STAB
- * i typové efektivity), slabý. Recoil (zpětné poškození) přidáme později.
+ * i typové efektivity), slabý. Kanonicky bere útočníkovi recoil (¼ způsobeného
+ * poškození) – řeší `applyMoveEffects` case "recoil" přes dmgDealt.
  */
 const STRUGGLE = {
   id: "struggle",
@@ -398,6 +402,7 @@ const STRUGGLE = {
   power: 40,
   accuracy: 100,
   priority: 0,
+  effect: { kind: "recoil", frac: 0.25 },
 };
 
 /** Typová efektivita tahu vůči obránci (typeless tah → 1). */
@@ -467,6 +472,11 @@ const STAT_LABEL = {
  */
 function applyStatStage(c, stat, delta, side) {
   if (!c || c.hp <= 0) return;
+  // Mist: chrání před snížením statů (drží se do výměny, kdy se volatile vynuluje).
+  if (delta < 0 && c.volatile?.mist) {
+    pushLog(`${c.name} is protected from stat loss by Mist!`, side);
+    return;
+  }
   const cur = c.stages[stat] || 0;
   const next = Math.max(-6, Math.min(6, cur + delta));
   if (next === cur) {
@@ -686,7 +696,8 @@ function calcMoveDamage(attacker, defender, move, avg = false) {
  * @returns {{ slot: import("../core/state.js").MoveSlot | null, move: object }}
  */
 function chooseAction(attacker, defender) {
-  const slots = activeMoves(attacker).filter((m) => (m.pp ?? 0) > 0);
+  const disabledId = attacker.volatile?.disabled?.moveId;
+  const slots = activeMoves(attacker).filter((m) => (m.pp ?? 0) > 0 && m.id !== disabledId);
   let best = null;
   let bestScore = -1;
   // Sebe-poškozující (recoil) tahy drží stranou jako KRAJNÍ fallback – auto je
@@ -711,9 +722,24 @@ function chooseAction(attacker, defender) {
         const chance = (mv.ailmentChance ?? 100) / 100;
         score *= 1 + 0.25 * chance;
       }
+    } else if (mv.effect?.kind === "fixedDamage") {
+      // Sonic Boom / Dragon Rage – pevný počet HP, imunita → 0.
+      score = moveTypeMult(mv, defender) === 0 ? 0 : (mv.effect.amount ?? 20) * (acc / 100);
+    } else if (mv.effect?.kind === "levelDamage") {
+      // Seismic Toss / Night Shade – poškození = level útočníka.
+      score = moveTypeMult(mv, defender) === 0 ? 0 : attacker.ref.level * (acc / 100);
+    } else if (mv.effect?.kind === "fixedDamageHalf") {
+      // Super Fang – polovina aktuálního HP obránce.
+      score = Math.floor(defender.hp / 2) * (acc / 100);
+    } else if (mv.effect?.kind === "ohko") {
+      // OHKO – jen když útočník není pomalejší (jinak v Gen 1 selže); vážené přesností.
+      score =
+        moveTypeMult(mv, defender) !== 0 && effSpeed(attacker) >= effSpeed(defender)
+          ? defender.hp * (acc / 100)
+          : 0;
     } else {
-      // Čistý status tah (power 0) – ve hře zatím žádný. Užitečný jen na zdravém
-      // soupeři bez statusu; malé skóre, aby ho nikdy nepřebilo damage.
+      // Čistý status tah (power 0) – užitečný jen na zdravém soupeři bez statusu;
+      // malé skóre, aby ho nikdy nepřebilo damage.
       score = mv.ailment && targetHealthy ? 1 : 0;
     }
 
@@ -869,6 +895,21 @@ function useMove(attacker, defender, action) {
     return { dmg: 0, crit: false };
   }
 
+  // Disable: dokud počítadlo běží, nesmí útočník použít zakázaný tah (bez ztráty PP).
+  // Odtikává každé jeho kolo; po vypršení se povolí. (Auto ho stejně přeskočí – viz
+  // filtr ve chooseAction.)
+  if (attacker.volatile?.disabled) {
+    const dis = attacker.volatile.disabled;
+    dis.turns -= 1;
+    if (dis.turns <= 0) {
+      attacker.volatile.disabled = null;
+      pushLog(`${attacker.name} is no longer disabled!`, side);
+    } else if (move.id === dis.moveId) {
+      pushLog(`${attacker.name}'s ${move.name} is disabled! It can't be used!`, side);
+      return { dmg: 0, crit: false };
+    }
+  }
+
   // Rage: pokud útočník tentokrát nepoužil Rage, jeho „vztek" opadne.
   if (attacker.volatile && move.id !== "rage") attacker.volatile.rageActive = false;
 
@@ -940,6 +981,61 @@ function useMove(attacker, defender, action) {
   if (move.accuracy != null && Math.random() * 100 >= move.accuracy * accMult) {
     pushLog(`${attacker.name} used ${move.name} — but it missed!`, side);
     return { dmg: 0, crit: false };
+  }
+
+  // Teleport (Gen 1): útěk z divokého souboje. Proti trenérovi vždy selže.
+  // Hráčův Teleport = konec souboje (jako Run); nepřítelův = uteče a naskočí nové
+  // setkání. Skutečné ukončení řeší round loop po návratu (flag battle._teleportFlee),
+  // aby se nesahalo na battle=null uprostřed useMove.
+  if (move.effect?.kind === "escape") {
+    if (battle.trainer) {
+      pushLog(`${attacker.name} used ${move.name}, but it failed to escape a trainer!`, side);
+      return { dmg: 0, crit: false };
+    }
+    battle._teleportFlee = side; // "player" | "enemy"
+    pushLog(`${attacker.name} used ${move.name} and fled from battle!`, side);
+    return { dmg: 0, crit: false };
+  }
+
+  // Zvláštní Gen 1 tahy s pevným/OHKO/level poškozením (power 0, ale dělají damage).
+  //  ohko        – jednorázové sražení (Guillotine/Horn Drill/Fissure); v Gen 1 selže
+  //                proti rychlejšímu obránci; accuracy (30) už proběhla výše.
+  //  fixedDamage – pevný počet HP (Sonic Boom 20, Dragon Rage 40).
+  //  levelDamage – poškození = level útočníka (Seismic Toss, Night Shade).
+  // Všechny respektují typovou imunitu (Ghost→Normal, Ground→Flying…): eff 0 = neúčinné.
+  const sdKind = move.effect?.kind;
+  if (sdKind === "ohko" || sdKind === "fixedDamage" || sdKind === "levelDamage") {
+    if (moveTypeMult(move, defender) === 0) {
+      pushLog(`${attacker.name} used ${move.name}, but it doesn't affect ${defender.name}…`, side);
+      return { dmg: 0, crit: false };
+    }
+    if (sdKind === "ohko" && effSpeed(defender) > effSpeed(attacker)) {
+      pushLog(`${attacker.name} used ${move.name}, but it failed!`, side);
+      return { dmg: 0, crit: false };
+    }
+    let dmg;
+    if (sdKind === "ohko") dmg = defender.hp;
+    else if (sdKind === "fixedDamage") dmg = move.effect.amount ?? 20;
+    else dmg = attacker.ref.level; // levelDamage
+    // Substitute pohltí i pevné poškození.
+    if (defender.volatile?.substitute > 0) {
+      const before = defender.volatile.substitute;
+      defender.volatile.substitute = Math.max(0, before - dmg);
+      const absorbed = before - defender.volatile.substitute;
+      pushLog(`${attacker.name} used ${move.name}! The substitute took the hit! (-${absorbed})`, side);
+      if (defender.volatile.substitute <= 0) pushLog(`${defender.name}'s substitute faded!`, side);
+      return { dmg: absorbed, crit: false };
+    }
+    dmg = Math.max(1, Math.min(dmg, defender.hp));
+    defender.hp = Math.max(0, defender.hp - dmg);
+    const koNote = sdKind === "ohko" ? " It's a one-hit KO!" : "";
+    pushLog(`${attacker.name} used ${move.name}! ${defender.name} took ${dmg}.${koNote}`, side);
+    if (dmg > 0 && defender.volatile) {
+      defender.volatile.lastHitDmg = dmg;
+      defender.volatile.lastHitPhysical = move.category === "physical";
+      if (defender.volatile.biding) defender.volatile.biding.dmg += dmg;
+    }
+    return { dmg, crit: false };
   }
 
   // Fixní poškození poloviny HP (Super Fang – power 0, ale dělá damage). Řešeno
@@ -1102,6 +1198,44 @@ function applyMoveEffects(attacker, defender, action, side, dmgDealt) {
     }
     case "flinch": {
       if (defender.hp > 0) defender.volatile.flinch = true;
+      break;
+    }
+    case "disable": {
+      // Zakáže obránci jeho POSLEDNÍ použitý tah na několik kol. Selže, když žádný
+      // nemá nebo už je zakázaný. Odtikání + vynucení řeší useMove/chooseAction.
+      const lastId = defender.volatile?.lastMoveId;
+      if (defender.hp > 0 && lastId && !defender.volatile.disabled) {
+        defender.volatile.disabled = { moveId: lastId, turns: 4 + Math.floor(Math.random() * 3) };
+        const dm = getMove(lastId);
+        pushLog(`${defender.name}'s ${dm?.name ?? lastId} was disabled!`, side);
+      } else {
+        pushLog(`But it failed!`, side);
+      }
+      break;
+    }
+    case "mist": {
+      // Zahalí útočníka do mlhy – chrání jeho staty před snížením (viz applyStatStage),
+      // dokud se nevrátí (volatile se při výměně vynuluje).
+      if (attacker.volatile) attacker.volatile.mist = true;
+      pushLog(`${attacker.name} became shrouded in mist!`, side);
+      break;
+    }
+    case "conversion": {
+      // Conversion (Gen 1): útočník (Porygon) změní svůj typ na typ jednoho ze
+      // svých vlastních tahů. Transientní přes bojovníka – po výměně/souboji mizí
+      // (typy se nastaví znovu při makeCombatant). Vybíráme přednostně typ, který
+      // ještě nemá; jinak z jakéhokoli tahu.
+      const cur = attacker.types?.[0];
+      const allTypes = activeMoves(attacker).map((m) => m.type).filter(Boolean);
+      const fresh = allTypes.filter((t) => t !== cur);
+      const choices = fresh.length ? fresh : allTypes;
+      if (choices.length) {
+        const newType = choices[Math.floor(Math.random() * choices.length)];
+        attacker.types = [newType];
+        pushLog(`${attacker.name} converted to the ${newType} type!`, side);
+      } else {
+        pushLog(`But it failed!`, side);
+      }
       break;
     }
     case "confuse": {
@@ -1495,6 +1629,24 @@ function tick() {
     enemy: enemyAction(), // respektuje vynucený tah (charge/thrash)
   });
 
+  // Teleport – útěk z divokého souboje. Hráčův útěk ukončí souboj (jako Run),
+  // nepřítelův útěk vyvolá nové setkání a idle grind pokračuje dál.
+  if (battle._teleportFlee) {
+    const fleeSide = battle._teleportFlee;
+    battle._teleportFlee = false;
+    if (fleeSide === "player") {
+      emit();
+      flushHits(hits);
+      stopBattle();
+      return;
+    }
+    replaceEnemyBlownAway();
+    emit();
+    flushHits(hits);
+    schedule();
+    return;
+  }
+
   // Konec kola: otrava/popálení uberou HP (v auto módu synchronně, bez animace).
   applyStatusDotAuto();
 
@@ -1654,6 +1806,8 @@ function runActions(actions) {
       replaceEnemyBlownAway();
       break;
     }
+    // Teleport – útěk z divokého souboje. Konec kola; dořeší volající po návratu.
+    if (battle._teleportFlee) break;
     if (defender.hp <= 0) {
       handleFaint(who); // obránce padl – vítěz je útočník
       break;
@@ -1750,6 +1904,25 @@ function runManualStep(order, i, actions) {
     return;
   }
 
+  // Teleport – útěk z divokého souboje. Hráčův útěk ukončí souboj (jako Run),
+  // nepřítelův vyvolá nové setkání.
+  if (battle._teleportFlee) {
+    const fleeSide = battle._teleportFlee;
+    battle._teleportFlee = false;
+    clearTimeout(stepTimer);
+    stepTimer = setTimeout(() => {
+      if (!battle) return;
+      if (fleeSide === "player") {
+        stopBattle();
+      } else {
+        replaceEnemyBlownAway();
+        battle.resolving = false;
+        emit();
+      }
+    }, MANUAL_STEP_HIT_MS);
+    return;
+  }
+
   clearTimeout(stepTimer);
   stepTimer = setTimeout(() => {
     if (!battle) return;
@@ -1761,7 +1934,7 @@ function runManualStep(order, i, actions) {
       // přednost (zabíjecí rána); jinak padl sám útočník a vyhrává obránce.
       const faintSide = defenderFainted ? (who === "player" ? "enemy" : "player") : who;
       const winnerSide = defenderFainted ? who : who === "player" ? "enemy" : "player";
-      bus.emit(EVENTS.BATTLE_FAINT, { side: faintSide });
+      bus.emit(EVENTS.BATTLE_FAINT, { side: faintSide, speciesId: battle[faintSide]?.ref?.speciesId });
       clearTimeout(stepTimer);
       stepTimer = setTimeout(() => {
         if (!battle) return;
@@ -1826,7 +1999,7 @@ function processResiduals(events, k) {
   stepTimer = setTimeout(() => {
     if (!battle) return;
     if (c.hp <= 0) {
-      bus.emit(EVENTS.BATTLE_FAINT, { side: ev.who });
+      bus.emit(EVENTS.BATTLE_FAINT, { side: ev.who, speciesId: battle[ev.who]?.ref?.speciesId });
       clearTimeout(stepTimer);
       stepTimer = setTimeout(() => {
         if (!battle) return;
@@ -1899,7 +2072,10 @@ function enemySnapshot(c) {
  * pokračujeme plynule dál. Vrací true, když jsme přešli do pauzy.
  */
 function pauseForInterlude(interlude) {
-  if (getAutoBattle()) {
+  // Rybaření = jednorázové setkání: NIKDY nespouštěj další divoký souboj (ani
+  // v auto módu). Vždy ukaž výherní/chytací okno, ať se dá přes tlačítko vrátit
+  // na záložku Fishing (viz battleView #next-encounter).
+  if (getAutoBattle() && !battle.fishing) {
     spawnNext();
     return false;
   }
@@ -2173,6 +2349,28 @@ function makeTrainerState(trainer, { gymId = null, returnToWild = false } = {}) 
  * @param {{ gymId?: string|null }} [opts]
  * @returns {{ ok: boolean, reason?: string }}
  */
+/**
+ * Vybere kontext BGM (hudby) podle typu soupeře. Mapuje se na soubor
+ * assets/audio/bgm/<kontext>.mp3 (viz mainPanel.syncBattleBgm + audioSystem.playBgm).
+ * Pořadí je záměrné: Liga přebíjí vše (i Blue = champion-blue je člen Ligy).
+ * @param {object|null} trainer záznam trenéra (nebo null = divoký souboj)
+ * @param {string|null} gymId id gymu (nenull → gym leader)
+ * @returns {"wild"|"trainer"|"rival"|"gym"|"champion"}
+ */
+function battleMusicFor(trainer, gymId) {
+  if (!trainer) return "wild";
+  const league = leagueForArea(getActiveArea()?.id);
+  if (league && league.order.includes(trainer.id)) return "champion";
+  if (typeof trainer.id === "string" && trainer.id.startsWith("rival")) return "rival";
+  if (gymId || trainer.badge) return "gym";
+  return "trainer";
+}
+
+/** Vrátí kontext BGM běžícího souboje ("wild"/"trainer"/"rival"/"gym"/"champion") nebo null. */
+export function battleBgm() {
+  return battle && battle.running ? (battle.bgm ?? "wild") : null;
+}
+
 export function startTrainerBattle(trainerId, { gymId = null, forceManual = false } = {}) {
   const trainer = getTrainer(trainerId);
   if (!trainer) return { ok: false, reason: "Unknown trainer." };
@@ -2200,6 +2398,8 @@ export function startTrainerBattle(trainerId, { gymId = null, forceManual = fals
     trainer: makeTrainerState(trainer, { gymId, returnToWild: false }),
     // Gym i Rocket gauntlet souboje jsou POVINNĚ manuální – auto battle je v nich zakázané.
     forceManual: !!gymId || forceManual,
+    // Kontext hudby (wild/trainer/rival/gym/champion) – viz mainPanel.syncBattleBgm.
+    bgm: battleMusicFor(trainer, gymId),
   };
   battle.enemy = spawnTrainerMon(battle.trainer, 0);
   if (trainer.quote) pushLog(`${trainer.name}: ${trainer.quote}`);
@@ -2315,6 +2515,13 @@ function handleTrainerEnemyDown() {
     finishTrainerBattle(t, enemy);
   }
 }
+
+/**
+ * Násobek zlaťáků za ODVETU (rematch) proti již poraženému leaderovi/Lize.
+ * Post-game idle farming: menší, ale opakovatelná odměna (proti prvnímu, plnému
+ * zisku). Balanc lze ladit tady na jednom místě.
+ */
+const REMATCH_GOLD_MULT = 0.5;
 
 /** Trenér poražen: jednorázová odměna (gold + odznak), evidence, interlude/konec. */
 function finishTrainerBattle(t, lastEnemy) {
@@ -2522,9 +2729,7 @@ function finishTrainerBattle(t, lastEnemy) {
             // až při návratu na Route 9 (viz setActiveArea) – žádný soft-lock.
             const caught = dexCounts().caught;
             if (caught >= 10 && !s.story.hasFlash) {
-              s.story.hasFlash = true;
-              if (!s.resources.items) s.resources.items = {};
-              s.resources.items["hm05-flash"] = (s.resources.items["hm05-flash"] ?? 0) + 1;
+              grantHmToPlayer(5); // HM05 Flash – flag + item centralizovaně
               pushLog("Oak's aide gave you HM05 Flash!", "player");
               bus.emit(EVENTS.STORY_POPUP, {
                 title: "🔦 HM05 Flash!",
@@ -2589,13 +2794,11 @@ function finishTrainerBattle(t, lastEnemy) {
       if (!s.story) s.story = {};
       if (!s.story.ssAnneCleared) {
         s.story.ssAnneCleared = true;
-        s.story.hasCut = true;
-        s.story.hasFly = true;
-        if (!s.resources.items) s.resources.items = {};
-        s.resources.items["hm01-cut"] = (s.resources.items["hm01-cut"] ?? 0) + 1;
+        // Centralizované udělení HM (flag + item atomicky, viz hmSystem.grantHmToPlayer).
+        grantHmToPlayer(1); // HM01 Cut – odemkne kácení stromu u Vermilion Gymu
         // HM02 Fly: kapitán (téma cestování) přidá i letecký HM. HM je znovupoužitelný
         // (nespotřebuje se), Fly je čistě bojový dvoutahový Flying útok – ne cestování.
-        if ((s.resources.items["hm02-fly"] ?? 0) < 1) s.resources.items["hm02-fly"] = 1;
+        grantHmToPlayer(2); // HM02 Fly
         pushLog("The S.S. Anne captain gave you HM01 Cut and HM02 Fly!", "player");
         bus.emit(EVENTS.STORY_POPUP, {
           title: "🌿 HM01 Cut & 🕊️ HM02 Fly!",
@@ -2636,6 +2839,17 @@ function finishTrainerBattle(t, lastEnemy) {
         });
       }
     }
+  } else {
+    // --- ODVETA (rematch): opakovatelná zmenšená odměna pro post-game idle farming. ---
+    // Platí JEN pro gym leadery (mají t.badge) a členy Ligy (Elite Four + Champion);
+    // běžní route/gym trenéři se za odvetu neodměňují (proti exploitu). XP se dává
+    // v defeatEnemy vždy, takže odveta má smysl i pro grind zkušeností.
+    const curLeague = leagueForArea(getActiveArea()?.id);
+    const isLeagueMember = !!(curLeague && curLeague.order.includes(t.id));
+    if (t.badge || isLeagueMember) {
+      goldGain = Math.floor((t.reward ?? 0) * REMATCH_GOLD_MULT);
+      if (goldGain) s.resources.gold += goldGain;
+    }
   }
   // Věrný Kanto (Krok 10): postup Ligou (Elite Four → Champion). Běží MIMO blok
   // `!already`, ať funguje i při odvetě. Posune leagueStep jen když je běh aktivní
@@ -2654,6 +2868,18 @@ function finishTrainerBattle(t, lastEnemy) {
           const firstTime = !s.story[league.clearFlag];
           s.story[league.clearFlag] = true; // leagueCleared
           if (league.clearStoryFlag) s.story[league.clearStoryFlag] = true; // isChampion
+          // Hall of Fame: každé pokoření Ligy zapíše snapshot vítězného týmu
+          // (druh/level/přezdívka/shiny) + čas. Zobrazuje se v Profilu.
+          if (!Array.isArray(s.hallOfFame)) s.hallOfFame = [];
+          const hofTeam = getTeamPokemon().map((p) => ({
+            speciesId: p.speciesId,
+            level: p.level ?? 1,
+            nickname: p.nickname ?? null,
+            shiny: !!p.shiny,
+          }));
+          if (hofTeam.length > 0) {
+            s.hallOfFame.push({ timestamp: Date.now(), team: hofTeam });
+          }
           if (firstTime) {
             const bonus = league.clearReward?.gold ?? 0;
             if (bonus) {
@@ -2733,6 +2959,7 @@ function catchContext() {
     turn: battle.turn ?? 1,
     owns: ownsSpecies(battle.enemy.ref.speciesId),
     biome: battle.area?.biome ?? null,
+    fishing: battle.fishing ?? false,
   };
 }
 
@@ -2804,12 +3031,13 @@ export function getAutocatch() {
     catchAll: hasNew ? !!s.catchAll : s?.mode === "all",
     catchNew: hasNew ? !!s.catchNew : false,
     catchShiny: hasNew ? !!s.catchShiny : s?.mode === "shiny",
+    catchBetterIv: !!s?.catchBetterIv,
   };
 }
 
 /** Je aktivní aspoň jeden autocatch filtr? Bez něj autocatch nemá co chytat. */
 function autocatchActive(ac) {
-  return ac.catchAll || ac.catchNew || ac.catchShiny;
+  return ac.catchAll || ac.catchNew || ac.catchShiny || ac.catchBetterIv;
 }
 
 /** Změní nastavení autocatch (částečný patch), uloží a překreslí UI souboje. */
@@ -2824,13 +3052,17 @@ export function setAutocatch(patch) {
 
 /**
  * Má se hra pokusit tohoto nepřítele automaticky chytit? Filtry se sčítají přes
- * NEBO: All = vše; Shiny = shiny; New = druh, který ještě nemáš. Takže New+Shiny
- * chytá nové, shiny i „nové shiny". Žádný filtr = nechytat.
+ * NEBO: All = vše; Shiny = shiny; New = druh, který ještě nemáš; Better IVs =
+ * jedinec, co zlepší IV druhu, co už máš. Takže víc filtrů se kombinuje. Žádný
+ * filtr = nechytat.
  */
 function shouldAutocatch(ref, ac) {
   if (ac.catchAll) return true;
   if (ac.catchShiny && ref.shiny) return true;
   if (ac.catchNew && !ownsSpecies(ref.speciesId)) return true;
+  // Better IVs = jedinec téhož druhu, který zlepší aspoň jeden IV toho, co už máš
+  // (merge v acquirePokemon si vezme lepší hodnoty). U druhu, co nemáš, vrací false.
+  if (ac.catchBetterIv && ivWouldImprove(ref)) return true;
   return false;
 }
 
@@ -2869,6 +3101,8 @@ function doCatch(ballId) {
   } else {
     pushLog(`Caught ${enemy.name}, but your own was better — released`, "player");
   }
+  // Emit event pro achievement systém
+  bus.emit(EVENTS.POKEMON_CAUGHT, { speciesId: enemy.ref.speciesId, shiny: enemy.ref.shiny, pokemon: enemy.ref });
   // Auto: rovnou další soupeř. Manuál: pauza a „chytací okno" s hozeným ballem.
   pauseForInterlude({
     kind: "catch",
@@ -3008,9 +3242,7 @@ export function setActiveArea(areaId) {
     event = "route-09-arrival";
   } else if (areaId === "route-09" && !story.hasFlash && story.route9HikersCleared && dexCounts().caught >= 10) {
     // Návrat na Route 9 – Hikeři poražení a teď už máš 10 druhů → Flash konečně.
-    story.hasFlash = true;
-    if (!s.resources.items) s.resources.items = {};
-    s.resources.items["hm05-flash"] = (s.resources.items["hm05-flash"] ?? 0) + 1;
+    grantHmToPlayer(5); // HM05 Flash – flag + item centralizovaně
     event = "flash-gift";
   } else if (areaId === "lavender-town" && !story.lavenderArrival) {
     // Věrný Kanto (Krok 6): ponuré město s Pokémon Tower a duchy.
@@ -3231,6 +3463,7 @@ export function startBattle() {
     tailwind: { player: 0, enemy: 0 }, // zbývající kola Tailwindu per strana
     player: makeCombatant(team[firstAlive]),
     enemy: null,
+    bgm: "wild", // kontext hudby – divoký souboj (viz mainPanel.syncBattleBgm)
   };
   battle.enemy = spawnEnemy(battle.area);
   pushLog(`Battle at ${battle.area.name}: ${battle.player.name} vs ${battle.enemy.name}`);
@@ -3247,9 +3480,10 @@ export function startBattle() {
  * flagem tady, ale u volajícího (kontrola vlastnictví druhu / arrival event).
  * @param {string} speciesId
  * @param {number} level
+ * @param {object} [opts={}] opcionální konfigurace (např. { fishing: true })
  * @returns {{ ok: boolean, reason?: string }}
  */
-export function startStaticEncounter(speciesId, level) {
+export function startStaticEncounter(speciesId, level, opts = {}) {
   const team = getTeamPokemon();
   if (team.length === 0) return { ok: false, reason: "You have no Pokémon in your team." };
   const firstAlive = team.findIndex((p) => hpOf(p) > 0);
@@ -3271,6 +3505,7 @@ export function startStaticEncounter(speciesId, level) {
     background: pickBackground(activeArea),
     interlude: null,
     resolving: false,
+    fishing: !!opts.fishing,
     // Legendární setkání = VŽDY manuál (jako gym/boss). Bez toho by Auto battle
     // Pokémona automaticky ubilo k smrti a hráč by neměl šanci hodit ball – a
     // legendární musí jít chytit (celý dex 151). Útěk/prohra/KO ho nezablokují:
@@ -3280,9 +3515,12 @@ export function startStaticEncounter(speciesId, level) {
     tailwind: { player: 0, enemy: 0 },
     player: makeCombatant(team[firstAlive]),
     enemy: makeCombatant(createPokemon(speciesId, level)),
+    bgm: "wild", // kontext hudby – statické/legendární setkání jako divoké (viz mainPanel)
   };
   pushLog(`A wild ${battle.enemy.name} appeared!`, "enemy");
   pushLog(`Go, ${battle.player.name}!`, "player");
+  // Cry zvuk statického/legendárního Pokémona při vstupu do souboje.
+  bus.emit(EVENTS.WILD_APPEARED, { speciesId });
   emit();
   schedule();
   return { ok: true };
@@ -3640,6 +3878,11 @@ export function teamNeedsHeal() {
     if (Array.isArray(p.moves)) return p.moves.some((m) => m.pp < (m.maxPp ?? m.pp));
     return false;
   });
+}
+
+/** Má tým aspoň jednoho bojeschopného (HP > 0) Pokémona? (celý wipe = false) */
+export function teamHasFighter() {
+  return getTeamPokemon().some((p) => (p.hp ?? computeStats(p).maxHp) > 0);
 }
 
 /**

@@ -11,12 +11,14 @@ import { getState, commit } from "./core/state.js";
 import { loadGame, newGame, saveGame } from "./systems/save.js";
 import { renderMainPanel, openMainTab } from "./ui/mainPanel.js";
 import { renderTeamTab } from "./ui/teamView.js";
-import { restore as restoreBattle } from "./systems/battleSystem.js";
+import { restore as restoreBattle, getAutoBattle, getFullAuto } from "./systems/battleSystem.js";
+import { playSfx, playCry, playBgm, applyAudioSettings } from "./systems/audioSystem.js";
 import { applyOfflineProgress } from "./systems/idle.js";
 import { applyDaycareOffline, startDaycareLoop } from "./systems/daycare.js";
 import { applyEggOffline, startEggLoop } from "./systems/eggSystem.js";
 import { applyBreedingOffline, startBreedingLoop } from "./systems/breedingSystem.js";
 import { ensureStartersSeen } from "./systems/pokedex.js";
+import { initAchievements } from "./systems/achievementSystem.js";
 import { showOfflineSummary } from "./ui/offlineView.js";
 import { renderMap } from "./ui/mapView.js";
 import { renderSaveControls } from "./ui/saveControls.js";
@@ -249,6 +251,28 @@ function init() {
   startDaycareLoop();
   startEggLoop();
   startBreedingLoop();
+  initAchievements();
+
+  // Zvuky a BGM: napojení na event sběrnici.
+  bus.on(EVENTS.BATTLE_HIT, () => {
+    if (!getAutoBattle() && !getFullAuto()) playSfx("hit");
+  });
+  bus.on(EVENTS.BATTLE_FAINT, (p) => {
+    if (!getAutoBattle() && !getFullAuto()) {
+      playSfx("faint");
+      if (p?.speciesId) playCry(p.speciesId); // cry padlého Pokémona
+    }
+  });
+  // Cry divokého/statického Pokémona při vstupu do souboje (v auto režimu ticho).
+  bus.on(EVENTS.WILD_APPEARED, (p) => {
+    if (!getAutoBattle() && !getFullAuto() && p?.speciesId) playCry(p.speciesId);
+  });
+  bus.on(EVENTS.POKEMON_CAUGHT, () => playSfx("catch"));
+  bus.on(EVENTS.LEVEL_UP, () => playSfx("levelup"));
+  bus.on(EVENTS.EGG_HATCHED, (r) => {
+    playSfx("hatch");
+    if (r?.speciesId) playCry(r.speciesId); // cry vylíhnutého Pokémona (vždy)
+  });
 
   // Vejce vylíhnuté při běžící hře: krátká hláška v liště.
   bus.on(EVENTS.EGG_HATCHED, (r) => {
@@ -265,6 +289,7 @@ function init() {
   // Pokémon vyvinul. Centrálně tu, takže platí pro VŠECHNY cesty evoluce naráz
   // (evolvePokemon / evolveWithItem / evolveByTrade emitují týž event) i v tutoriálu.
   bus.on(EVENTS.POKEMON_EVOLVED, (e) => {
+    playSfx("evolve");
     setStatus(`✨ ${e.fromName} evolved into ${e.toName}!`);
     showEvolutionPopup(e);
   });
@@ -295,6 +320,9 @@ function init() {
   // naučení tahu (fronta z offline) a výběr startéra u nové hry. Do té doby
   // vidí hráč jen title screen (SETTINGS jde otevřít i z něj).
   initTitleScreen(() => {
+    // Spusť BGM po vstupu do hry (respektuj autoplay policy: až po akci uživatele).
+    playBgm("main");
+
     if (hasOffline) {
       showOfflineSummary({
         elapsedSec,
@@ -316,6 +344,11 @@ function init() {
     } else if (st.collection.length === 0) {
       maybeStartTutorial(guideToOakLab);
     }
+  });
+
+  // Globální click handler na UI zvuky (tlačítka).
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("button, .btn")) playSfx("click");
   });
 
   // Indikator nacitani na title screenu → hotovo (hra je pod overlayem pripravena).

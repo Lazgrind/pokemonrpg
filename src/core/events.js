@@ -42,9 +42,13 @@ export const EVENTS = {
   BATTLE_UPDATE: "battle:update",
   BATTLE_HIT: "battle:hit",
   BATTLE_FAINT: "battle:faint",
+  // Divoký/statický Pokémon vstoupil do souboje (payload: {speciesId}) – pro cry zvuk.
+  WILD_APPEARED: "battle:wild",
   EGG_HATCHED: "egg:hatched",
   EGG_BRED: "egg:bred",
   POKEMON_EVOLVED: "pokemon:evolved",
+  POKEMON_CAUGHT: "pokemon:caught",
+  LEVEL_UP: "pokemon:levelup",
   // Systémová vrstva požádá UI o příběhové vyskakovací okno (payload: {title, body, okLabel?}).
   STORY_POPUP: "story:popup",
 };

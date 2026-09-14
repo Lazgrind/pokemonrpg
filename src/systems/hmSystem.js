@@ -42,6 +42,23 @@ export function grantHm(num, qty = 1) {
   if ((res.items[hm.itemId] ?? 0) < 1) res.items[hm.itemId] = 1;
 }
 
+/**
+ * Kanonické zpřístupnění HM hráči z příběhového eventu: nastaví story flag
+ * (`state.story[flag]`, který gatuje oblasti přes `unlock.hm`) A přidá HM item
+ * atomicky. Jediný správný způsob, jak dát hráči HM – sjednocuje dřív roztroušené
+ * páry „setStoryFlag(...) + přidání itemu" napříč battle/safari/story eventy.
+ * Nevolá commit() – to nechává na volajícím (event blok obvykle commituje sám).
+ * @param {number} num  číslo HM (1–5)
+ */
+export function grantHmToPlayer(num) {
+  const hm = getHm(num);
+  if (!hm) return;
+  const s = getState();
+  if (!s.story) s.story = {};
+  s.story[hm.flag] = true;
+  grantHm(num);
+}
+
 /** Jedinec z kolekce podle uid (nebo null). */
 function ownedByUid(uid) {
   return getState().collection.find((p) => p.uid === uid) ?? null;

@@ -21,6 +21,7 @@ import { bus, EVENTS } from "../core/events.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { createPokemon } from "./pokemonSystem.js";
 import { acquirePokemon } from "./team.js";
+import { grantHmToPlayer } from "./hmSystem.js";
 
 /* ------------------------------- Konstanty ------------------------------- */
 
@@ -198,8 +199,7 @@ function grantDepthReward(depth) {
     return "gold-teeth";
   }
   if (depth >= 4 && !s.story.hasSurf) {
-    s.story.hasSurf = true;
-    s.resources.items["hm03-surf"] = (s.resources.items["hm03-surf"] ?? 0) + 1;
+    grantHmToPlayer(3); // HM03 Surf – flag + item centralizovaně (viz hmSystem)
     bus.emit(EVENTS.STORY_POPUP, {
       title: "🌊 HM03 Surf!",
       body: `<p class="story-text">Deep in the reserve you reach the lonely <strong>Secret House</strong>. On the table lies a Hidden Machine — you pocket <strong>HM03 Surf</strong>!</p>

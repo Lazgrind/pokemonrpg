@@ -20,7 +20,7 @@ export const BACKGROUND_BIOMES = {
   cave: ["cave-1.png", "cave-2.png", "cave-3.png", "cave-4.png"],
   water: ["water-1.png", "water-2.png", "water-3.png", "water-4.png"],
   forest: ["forest-1.png", "forest-2.png", "forest-3.png", "forest-4.png"],
-  mountain: ["mountain-1.png"],
+  mountain: ["mountain-1.png", "mountain-2.png"],
 };
 
 /**

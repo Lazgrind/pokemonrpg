@@ -123,6 +123,7 @@ export const BUILDINGS = [
 export const STORY_BUILDINGS = [
   {
     id: "oak-lab",
+    sprite: "assets/buildings/oak-lab.png",
     name: "Oak's Lab",
     icon: "🔬",
     color: "#c9a24b",
@@ -131,6 +132,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "player-home",
+    sprite: "assets/buildings/player-home.png",
     name: "Your Home",
     icon: "🏠",
     color: "#6fae54",
@@ -139,6 +141,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "rival-home",
+    sprite: "assets/buildings/rival-home.png",
     name: "Rival's Home",
     icon: "🏡",
     color: "#b06a4b",
@@ -147,6 +150,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "pewter-museum",
+    sprite: "assets/buildings/pewter-museum.png",
     name: "Museum of Science",
     icon: "🏛️",
     color: "#7c8aa0",
@@ -155,6 +159,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "ss-anne",
+    sprite: "assets/buildings/ss-anne.png",
     name: "S.S. Anne",
     icon: "🚢",
     color: "#4a7bb5",
@@ -163,6 +168,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "pokemon-tower",
+    sprite: "assets/buildings/pokemon-tower.png",
     name: "Pokémon Tower",
     icon: "🗼",
     color: "#6b5b8a",
@@ -171,6 +177,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "mr-fuji-house",
+    sprite: "assets/buildings/mr-fuji-house.png",
     name: "Mr. Fuji's House",
     icon: "🏡",
     color: "#a06a4b",
@@ -179,6 +186,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "dept-store",
+    sprite: "assets/buildings/dept-store.png",
     name: "Celadon Dept. Store",
     icon: "🏬",
     color: "#5a8bbf",
@@ -187,6 +195,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "game-corner",
+    sprite: "assets/buildings/game-corner.png",
     name: "Rocket Game Corner",
     icon: "🎰",
     color: "#c25b7a",
@@ -195,6 +204,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "warden-house",
+    sprite: "assets/buildings/warden-house.png",
     name: "Warden's House",
     icon: "🏡",
     color: "#a06a4b",
@@ -203,6 +213,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "pokemon-mansion",
+    sprite: "assets/buildings/pokemon-mansion.png",
     name: "Pokémon Mansion",
     icon: "🏚️",
     color: "#8a5a3c",
@@ -211,6 +222,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "pokemon-lab",
+    sprite: "assets/buildings/pokemon-lab.png",
     name: "Pokémon Lab",
     icon: "🧪",
     color: "#5a9bb5",
@@ -219,6 +231,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "silph-co",
+    sprite: "assets/buildings/silph-co.png",
     name: "Silph Co.",
     icon: "🏢",
     color: "#5566aa",
@@ -227,6 +240,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "celadon-mansion",
+    sprite: "assets/buildings/celadon-mansion.png",
     name: "Celadon Mansion",
     icon: "🏨",
     color: "#8a6ab0",
@@ -235,6 +249,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "fighting-dojo",
+    sprite: "assets/buildings/fighting-dojo.png",
     name: "Fighting Dojo",
     icon: "🥋",
     color: "#b5623c",
@@ -243,6 +258,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "viridian-trade-house",
+    sprite: "assets/buildings/viridian-trade-house.png",
     name: "Trade House",
     icon: "🏠",
     color: "#8fae6a",
@@ -251,6 +267,7 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "cerulean-trade-house",
+    sprite: "assets/buildings/cerulean-trade-house.png",
     name: "Trade House",
     icon: "🏠",
     color: "#6a9fae",
@@ -259,11 +276,30 @@ export const STORY_BUILDINGS = [
   },
   {
     id: "vermilion-trade-house",
+    sprite: "assets/buildings/vermilion-trade-house.png",
     name: "Trade House",
     icon: "🏠",
     color: "#c9a24b",
     description: "A sailor's house in Vermilion City. He's itching to trade a rare Pokémon.",
     story: "vermilion-trade-house",
+  },
+  {
+    id: "vermilion-fishing-hut",
+    sprite: "assets/buildings/vermilion-fishing-hut.png",
+    name: "Fishing Hut",
+    icon: "🎣",
+    color: "#6a9fae",
+    description: "A humble fishing hut by the waters of Vermilion City. An old fisherman teaches trainers the art of fishing.",
+    story: "vermilion-fishing-hut",
+  },
+  {
+    id: "fuchsia-fishing-house",
+    sprite: "assets/buildings/fuchsia-fishing-house.png",
+    name: "Fishing House",
+    icon: "🎣",
+    color: "#a87c5c",
+    description: "A cozy house near the Safari Zone in Fuchsia City. A master fisherman lives here with knowledge of rare fishing techniques.",
+    story: "fuchsia-fishing-house",
   },
   {
     // Idle-boost budova v Celadonu (vedle Game Corner). Tři nezávislé, TRVALÉ
@@ -272,6 +308,7 @@ export const STORY_BUILDINGS = [
     // ×1,5), ✨ Fortune shiny (+0,4 %/lvl → ×1,2; záměrně mrňavé, ať se to
     // nesčítá s Shiny Charmem do OP hodnot). Efekty čte buildingSystem.boostMult.
     id: "boost-center",
+    sprite: "assets/buildings/boost-center.png",
     name: "Trainer Boost Center",
     icon: "💪",
     color: "#d98c2b",
@@ -303,7 +340,7 @@ export const CITY_BUILDINGS = {
   "cerulean-city": ["poke-center", "poke-mart", "cerulean-trade-house"],
   // Vermilion City: služby + příběhová S.S. Anne (loď). Gym (Lt. Surge) má vlastní
   // tab, ale je zamčený stromem dokud hráč nemá HM Cut (viz gyms.js requiresStory).
-  "vermilion-city": ["poke-center", "poke-mart", "ss-anne", "vermilion-trade-house"],
+  "vermilion-city": ["poke-center", "poke-mart", "ss-anne", "vermilion-trade-house", "vermilion-fishing-hut"],
   // Celadon City: služby + Dept Store + Game Corner (s skrytou Rocket základnou).
   // Gym (Erika) má vlastní tab.
   "celadon-city": ["poke-center", "poke-mart", "dept-store", "game-corner", "boost-center", "celadon-mansion"],
@@ -315,7 +352,7 @@ export const CITY_BUILDINGS = {
   "saffron-city": ["poke-center", "poke-mart", "silph-co", "fighting-dojo"],
   // Fuchsia City: služby + Warden's House (kde hráč vrací Gold Teeth a dostane HM04 Strength).
   // Gym (Koga) má vlastní tab.
-  "fuchsia-city": ["poke-center", "poke-mart", "warden-house"],
+  "fuchsia-city": ["poke-center", "poke-mart", "warden-house", "fuchsia-fishing-house"],
   // Cinnabar Island: služby + Pokémon Lab (flavour) + vyhořelý Pokémon Mansion
   // (kde hráč najde Secret Key). Gym (Blaine) má vlastní tab, zamčený dokud
   // hráč nemá Secret Key (viz gyms.js requiresStory).

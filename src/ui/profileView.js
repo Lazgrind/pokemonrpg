@@ -14,8 +14,10 @@
 import { getState, commit } from "../core/state.js";
 import { dexCounts, getPokedex } from "../systems/pokedex.js";
 import { BADGES } from "../../data/badges.js";
+import { ACHIEVEMENTS } from "../../data/achievements.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 import { showDiplomaModal } from "./diploma.js";
+import { getSpecies } from "../../data/pokemon.js";
 
 /** ms → „Xd Yh" / „Yh Zm" / „Zm" (odehraný čas). */
 function formatPlaytime(ms) {
@@ -42,6 +44,64 @@ function badgeSlotHtml(badge, earned) {
 /** Řádek statistiky (label + hodnota). */
 function statRow(label, value) {
   return `<div class="profile-stat"><span class="ps-label">${label}</span><span class="ps-value">${value}</span></div>`;
+}
+
+/** Sekce achievementů. */
+function renderAchievementsSection(state) {
+  const unlocked = state.achievements?.unlocked ?? {};
+  const unlockedCount = Object.keys(unlocked).length;
+
+  const achRows = ACHIEVEMENTS.map((ach) => {
+    const isUnlocked = !!unlocked[ach.id];
+    const timestamp = unlocked[ach.id];
+    const status = isUnlocked ? `<span class="achv-check">✓</span>` : `<span class="achv-locked">◇</span>`;
+    const dateStr = isUnlocked ? new Date(timestamp).toLocaleDateString() : "";
+    return `<div class="achv-row ${isUnlocked ? "unlocked" : "locked"}">
+      <div class="achv-icon">${ach.icon}</div>
+      <div class="achv-info">
+        <div class="achv-name">${ach.name}</div>
+        <div class="achv-desc">${ach.desc}</div>
+      </div>
+      <div class="achv-status">
+        <div>${status}</div>
+        ${dateStr ? `<div class="achv-date">${dateStr}</div>` : ""}
+      </div>
+    </div>`;
+  }).join("");
+
+  return `
+    <h3 class="profile-subtitle">Achievements <span class="dex-count">${unlockedCount} / ${ACHIEVEMENTS.length}</span></h3>
+    <div class="achv-list">
+      ${achRows}
+    </div>
+  `;
+}
+
+/** Sekce Hall of Fame — historie týmů, které pokořily Ligu (nejnovější nahoře). */
+function renderHallOfFame(state) {
+  const hof = Array.isArray(state.hallOfFame) ? state.hallOfFame : [];
+  if (hof.length === 0) return "";
+  const entries = hof
+    .map((entry, i) => ({ entry, num: i + 1 }))
+    .reverse()
+    .map(({ entry, num }) => {
+      const date = entry.timestamp ? new Date(entry.timestamp).toLocaleDateString() : "";
+      const team = (entry.team ?? [])
+        .map((p) => {
+          const name = p.nickname || getSpecies(p.speciesId)?.name || p.speciesId;
+          return `<span class="hof-mon">${p.shiny ? "✨ " : ""}${name} <span class="hof-lv">Lv ${p.level}</span></span>`;
+        })
+        .join("");
+      return `<div class="hof-entry">
+        <div class="hof-entry-head"><span class="hof-rank">🏆 #${num}</span><span class="hof-date">${date}</span></div>
+        <div class="hof-team">${team}</div>
+      </div>`;
+    })
+    .join("");
+  return `
+    <h3 class="profile-subtitle">Hall of Fame <span class="dex-count">${hof.length}</span></h3>
+    <div class="hof-list">${entries}</div>
+  `;
 }
 
 /**
@@ -102,6 +162,9 @@ export function renderProfileTab(root, onStatus = () => {}) {
     <div class="badge-case">
       ${BADGES.map((b) => badgeSlotHtml(b, badges.includes(b.id))).join("")}
     </div>
+
+    ${renderAchievementsSection(s)}
+    ${renderHallOfFame(s)}
   `;
   restoreScroll(root, _savedScroll);
 
