@@ -6,6 +6,14 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [1.0.1] – 2026-09-14 · First post-release fixes
+### Fixed
+- **Tutorial Pokémon can no longer faint** (`src/systems/battleSystem.js`): during the tutorial the player's active Pokémon is now protected from HP loss in the demo battle, covering the auto-battle and full-auto steps. A newcomer hasn't learned where/how to heal yet, so fainting there would leave them stuck and confused looking for a Poké Center. Implemented by extending the existing HP-setter guard with `battle.demo` (the tutorial demo flag set in `startDemoBattle`); only HP *decreases* are blocked (healing still applies), and it covers every damage source (attack, recoil, confusion, poison/burn) since all HP changes go through that one setter. Real post-tutorial battles are unchanged — you can still faint normally.
+### Changed
+- **Default volume lowered by ~half** (`src/systems/audioSystem.js`): the default master volume dropped 70 → 35, so a fresh install starts noticeably quieter across BGM, SFX and cries (master scales every channel: `final = master/100 * channel/100`). Only affects new players / anyone who hasn't set their own audio levels — saved settings take precedence.
+### Notes
+- No save-version bump (still v47): pure logic/constant tuning, no data or schema change.
+
 ## [1.0.0] – 2026-09-14 · 🎉 Gen 1 complete — first stable release
 ### Milestone
 - **Kanto is done.** All 151 Pokémon are catchable on a single save (no irreversible choices — both fossils, both Hitmons, all trades and Game Corner mons), the full story runs city-by-city through the whole region, all 8 gyms (with their pre-battle puzzle minigames) + the Elite Four + Champion are beatable, and the endgame capstone (Dex Diploma + Shiny Charm) is in. The battle engine is Gen 1 feature-complete: real move system, manual + auto + Full-Auto idling, status/stat/volatile effects, HMs as reusable field moves, TMs, breeding/eggs, EV/IV, natures, held items, achievements, and both Game Corner games (Slots + Blackjack).

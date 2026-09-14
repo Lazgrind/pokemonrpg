@@ -151,10 +151,13 @@ export function makeCombatant(owned) {
       return owned.hp;
     },
     set(v) {
-      // Full Auto: hráčův aktuální bojovník NESMÍ přijít o HP (bezpečný idling).
+      // Hráčův aktuální bojovník NESMÍ přijít o HP, když:
+      //  - běží Full Auto (bezpečný idling), nebo
+      //  - jde o tutoriálový demo-souboj (nováček ještě neví, kde/jak léčit, a
+      //    omdlení v auto/full-auto demu by ho poslalo hledat Poké Centrum naslepo).
       // Blokujeme jen SNÍŽENÍ – léčení projde. Pokrývá to VŠECHNY zdroje poškození
       // (útok, recoil, zmatení, jed/popálení – vše jde přes tenhle setter).
-      if (getFullAuto() && battle && c === battle.player && v < owned.hp) return;
+      if (battle && c === battle.player && v < owned.hp && (getFullAuto() || battle.demo)) return;
       // clamp vůči AKTUÁLNÍM statům bojovníka (po level-upu se c.stats mění)
       owned.hp = Math.max(0, Math.min(c.stats.maxHp, v));
     },
