@@ -15,8 +15,9 @@
 import { getSpecies } from "../../data/pokemon.js";
 import { getState } from "../core/state.js";
 import { getBoxes, storedCount, moveToSlot, moveToBox, renameBox } from "../systems/pcSystem.js";
-import { addToTeam, isInTeam } from "../systems/team.js";
+import { addToTeam, isInTeam, removeFromTeam } from "../systems/team.js";
 import { pokemonEngagement } from "../systems/buildingSystem.js";
+import { dragState, beginDrag, endDrag } from "./dragState.js";
 import { spriteImg } from "./sprites.js";
 import { openPokemonCard } from "./pokemonCard.js";
 import { genderSymbolHtml } from "./gender.js";
@@ -224,6 +225,7 @@ export function renderPcTab(root, onStatus = () => {}) {
   root.querySelectorAll(".pc-slot.filled").forEach((slot) => {
     slot.addEventListener("dragstart", (e) => {
       draggingUid = slot.dataset.uid;
+      beginDrag(draggingUid, "pc"); // sdílený stav (i pro drop do panelu Týmu)
       didDrag = true;
       e.dataTransfer.effectAllowed = "move";
       e.dataTransfer.setData("text/plain", draggingUid);
@@ -232,6 +234,7 @@ export function renderPcTab(root, onStatus = () => {}) {
     slot.addEventListener("dragend", () => {
       slot.classList.remove("dragging");
       draggingUid = null;
+      endDrag();
       hidePicker(); // zavři případně otevřený box-picker
       // didDrag necháme na true jen do nejbližšího kliknutí (potlačí kartu).
       setTimeout(() => { didDrag = false; }, 0);
@@ -240,7 +243,7 @@ export function renderPcTab(root, onStatus = () => {}) {
 
   root.querySelectorAll(".pc-slot").forEach((slot) => {
     slot.addEventListener("dragover", (e) => {
-      if (!draggingUid) return;
+      if (!dragState.uid) return;
       e.preventDefault();
       e.dataTransfer.dropEffect = "move";
       slot.classList.add("drag-over");
@@ -250,10 +253,18 @@ export function renderPcTab(root, onStatus = () => {}) {
       e.preventDefault();
       slot.classList.remove("drag-over");
       hidePicker(); // zavři případně otevřený picker
-      const uid = draggingUid ?? e.dataTransfer.getData("text/plain");
+      const uid = dragState.uid ?? e.dataTransfer.getData("text/plain");
       if (!uid) return;
       const toSlot = Number(slot.dataset.slot);
-      moveToSlot(uid, activeBox, toSlot); // commit → překreslení
+      if (dragState.source === "team") {
+        // Přesun z týmu do PC: nejdřív z týmu ven (reconcile ho někam uklidí),
+        // pak přesuň na konkrétní cílový slot (prohození, když je obsazený).
+        removeFromTeam(uid);
+        moveToSlot(uid, activeBox, toSlot);
+        onStatus("Moved to PC");
+      } else {
+        moveToSlot(uid, activeBox, toSlot); // commit → překreslení
+      }
     });
   });
 

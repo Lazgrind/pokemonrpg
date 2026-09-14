@@ -142,6 +142,46 @@ export function addToTeam(uid) {
 }
 
 /**
+ * Přidá jedince z kolekce do týmu na KONKRÉTNÍ pozici (index). Používá drag &
+ * drop z PC boxu na daný slot týmu. Index se ořízne do platného rozsahu
+ * (0..délka týmu = vložení na konec). Stejné guardy jako addToTeam.
+ * @param {string} uid
+ * @param {number} index
+ * @returns {boolean}
+ */
+export function addToTeamAt(uid, index) {
+  const s = getState();
+  if (s.team.includes(uid)) return false;
+  if (s.team.length >= MAX_TEAM_SIZE) return false;
+  if (!s.collection.some((p) => p.uid === uid)) return false;
+  if (pokemonEngagement(uid)) return false;
+  const i = Math.max(0, Math.min(Number(index) || 0, s.team.length));
+  s.team.splice(i, 0, uid);
+  commit();
+  return true;
+}
+
+/**
+ * Přeuspořádá tým – přesune jedince na cílový index (drag & drop v rámci týmu).
+ * Cíl se ořízne do platného rozsahu. Vrací false, když jedinec není v týmu nebo
+ * by se nic nezměnilo.
+ * @param {string} uid
+ * @param {number} toIndex
+ * @returns {boolean}
+ */
+export function reorderTeam(uid, toIndex) {
+  const s = getState();
+  const from = s.team.indexOf(uid);
+  if (from === -1) return false;
+  const to = Math.max(0, Math.min(Number(toIndex) || 0, s.team.length - 1));
+  if (from === to) return false;
+  s.team.splice(from, 1);
+  s.team.splice(to, 0, uid);
+  commit();
+  return true;
+}
+
+/**
  * Odebere jedince z týmu (zůstává v kolekci).
  * @param {string} uid
  * @returns {boolean}

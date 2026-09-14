@@ -355,7 +355,7 @@ function headHtml(b) {
       ${pauseBtn}
       ${catchBtn}
       <label class="tg ${b?.forceManual ? "tg-disabled" : ""}" title="${b?.forceManual ? "Gym battles are manual only." : ""}"><input type="checkbox" id="tg-autobattle" ${getAutoBattle() ? "checked" : ""} ${b?.forceManual ? "disabled" : ""}/> Auto battle</label>
-      <label class="tg ${b?.forceManual ? "tg-disabled" : ""}" title="${b?.forceManual ? "Gym battles are manual only." : "Idle safely — your Pokémon lose no HP or PP, but rewards are cut to ~1/10."}"><input type="checkbox" id="tg-fullauto" ${getFullAuto() ? "checked" : ""} ${b?.forceManual ? "disabled" : ""}/> Full Auto</label>
+      <label class="tg ${b?.forceManual ? "tg-disabled" : ""}" title="${b?.forceManual ? "Gym battles are manual only." : "Idle safely — your Pokémon lose no HP or PP, but rewards are cut to ~1/7."}"><input type="checkbox" id="tg-fullauto" ${getFullAuto() ? "checked" : ""} ${b?.forceManual ? "disabled" : ""}/> Full Auto</label>
       <label class="tg"><input type="checkbox" id="tg-autocatch" ${ac.enabled ? "checked" : ""}/> Auto catch</label>
       ${acMode}
       ${acBall}

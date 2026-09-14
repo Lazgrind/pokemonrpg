@@ -89,7 +89,7 @@ export const AREAS = [
     species: ["pidgey", "rattata"],
     // Prostředí → sdílený pool pozadí (data/backgrounds.js). Route 1 je louka.
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.08, amount: 1 }],
   },
   {
     id: "viridian-city",
@@ -120,7 +120,7 @@ export const AREAS = [
     species: ["rattata", "spearow", "nidoran-m", "nidoran-f", "mankey", "poliwag"],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.08, amount: 1 }],
   },
   {
     id: "route-02",
@@ -137,7 +137,7 @@ export const AREAS = [
     description: "The path north of Viridian, leading toward Viridian Forest.",
     species: ["caterpie", "weedle", "pidgey", "rattata"],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.08, amount: 1 }],
   },
   {
     id: "viridian-forest",
@@ -154,7 +154,7 @@ export const AREAS = [
     // biome "forest" – vlastní pool pozadí zatím v data/backgrounds.js NENÍ,
     // takže se použije fallback gradient. Přidat forest obrázky později.
     biome: "forest",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.08, amount: 1 }],
   },
   {
     id: "pewter-city",
@@ -187,7 +187,7 @@ export const AREAS = [
     description: "A rocky path leading northeast from Pewter City toward Mt. Moon.",
     species: ["spearow", "rattata", "pidgey", { id: "jigglypuff", rarity: "rare" }, "mankey", "ekans", { id: "sandshrew", rarity: "uncommon" }],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.08, amount: 1 }],
   },
   {
     id: "mt-moon",
@@ -202,7 +202,7 @@ export const AREAS = [
     description: "A mysterious mountain cave. Fossils and ancient Pokémon dwell here.",
     species: ["zubat", "geodude", "paras", { id: "clefairy", rarity: "rare" }, { id: "sandshrew", rarity: "uncommon" }],
     biome: "cave",
-    drops: [],
+    drops: [{ resource: "great", chance: 0.05, amount: 1 }, { resource: "ultra", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-04",
@@ -218,7 +218,7 @@ export const AREAS = [
     species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }, "mankey"],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.08, amount: 1 }],
   },
   {
     id: "cerulean-city",
@@ -249,7 +249,7 @@ export const AREAS = [
     species: ["oddish", "bellsprout", "pidgey", "caterpie", "weedle", { id: "abra", rarity: "rare" }, "poliwag"],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.08, amount: 1 }],
   },
   {
     id: "route-25",
@@ -265,7 +265,7 @@ export const AREAS = [
     species: ["oddish", "bellsprout", "pidgey", "caterpie", "weedle", { id: "abra", rarity: "rare" }, "kakuna", "metapod", "poliwag"],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-05",
@@ -282,7 +282,7 @@ export const AREAS = [
     description: "A quiet path south of Cerulean City, filled with tall grass.",
     species: ["oddish", "bellsprout", "pidgey", "meowth", "mankey", { id: "abra", rarity: "rare" }],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-06",
@@ -298,7 +298,7 @@ export const AREAS = [
     species: ["oddish", "bellsprout", "pidgey", "meowth", "mankey", { id: "abra", rarity: "rare" }, "poliwag"],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "vermilion-city",
@@ -329,7 +329,7 @@ export const AREAS = [
     species: ["spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }, "drowzee", "rattata", { id: "lickitung", rarity: "veryrare" }],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "digletts-cave",
@@ -344,7 +344,7 @@ export const AREAS = [
     description: "A narrow cave home to Diglett and Dugtrio. Watch your step!",
     species: ["diglett", { id: "dugtrio", rarity: "uncommon" }],
     biome: "cave",
-    drops: [],
+    drops: [{ resource: "great", chance: 0.05, amount: 1 }, { resource: "ultra", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-09",
@@ -361,7 +361,7 @@ export const AREAS = [
     description: "A scenic mountain path connecting Cerulean City to Rock Tunnel.",
     species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "rock-tunnel",
@@ -380,7 +380,7 @@ export const AREAS = [
     description: "A dark cavern filled with dangerous rock formations and wild Pokémon.",
     species: ["zubat", "geodude", { id: "machop", rarity: "uncommon" }, "onix", { id: "cubone", rarity: "rare" }],
     biome: "cave",
-    drops: [],
+    drops: [{ resource: "great", chance: 0.05, amount: 1 }, { resource: "ultra", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-10",
@@ -396,7 +396,7 @@ export const AREAS = [
     species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }, "voltorb", { id: "machop", rarity: "uncommon" }],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "power-plant",
@@ -412,7 +412,7 @@ export const AREAS = [
     species: ["voltorb", "magnemite", { id: "pikachu", rarity: "rare" }, { id: "electabuzz", rarity: "rare" }, "grimer", { id: "magneton", rarity: "uncommon" }, { id: "magmar", rarity: "rare" }],
     biome: "building",
     background: "power-plant.png",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "lavender-town",
@@ -441,7 +441,7 @@ export const AREAS = [
     description: "A path west of Lavender Town toward Saffron City.",
     species: ["pidgey", "ekans", { id: "sandshrew", rarity: "uncommon" }, "meowth", { id: "growlithe", rarity: "rare" }, { id: "vulpix", rarity: "rare" }, { id: "abra", rarity: "rare" }, "drowzee", "gastly", { id: "haunter", rarity: "uncommon" }],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "saffron-city",
@@ -470,7 +470,7 @@ export const AREAS = [
     description: "A scenic route connecting Saffron City and Celadon City to the west.",
     species: ["pidgey", "oddish", "bellsprout", "meowth", { id: "growlithe", rarity: "rare" }, { id: "vulpix", rarity: "rare" }, { id: "abra", rarity: "rare" }],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "celadon-city",
@@ -500,7 +500,7 @@ export const AREAS = [
     description: "A path south of Celadon City, leading toward the seaside.",
     species: ["spearow", "doduo", "rattata", { id: "raticate", rarity: "uncommon" }, "grimer", "koffing"],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-17",
@@ -516,7 +516,7 @@ export const AREAS = [
     description: "A thrilling downhill cycling road with fast-moving trainers and wild Pokémon.",
     species: ["spearow", "doduo", { id: "ponyta", rarity: "rare" }, "grimer", { id: "raticate", rarity: "uncommon" }, "koffing", { id: "weezing", rarity: "uncommon" }],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-18",
@@ -534,7 +534,7 @@ export const AREAS = [
     species: ["spearow", "doduo", { id: "raticate", rarity: "uncommon" }, "grimer", "koffing", { id: "weezing", rarity: "uncommon" }],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "fuchsia-city",
@@ -584,7 +584,7 @@ export const AREAS = [
     description: "A path between Fuchsia City and the Safari Zone entrance.",
     species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", { id: "ditto", rarity: "rare" }],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-14",
@@ -599,7 +599,7 @@ export const AREAS = [
     description: "A winding route connecting the inland areas toward the western side.",
     species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", { id: "ditto", rarity: "rare" }],
     biome: "grassland",
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-13",
@@ -617,7 +617,7 @@ export const AREAS = [
     species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", { id: "ditto", rarity: "rare" }, { id: "goldeen", rarity: "uncommon" }, { id: "seaking", rarity: "uncommon" }],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-12",
@@ -634,7 +634,7 @@ export const AREAS = [
     species: ["oddish", "bellsprout", "venonat", "pidgey", { id: "ditto", rarity: "rare" }, "gastly", { id: "goldeen", rarity: "uncommon" }],
     biome: "grassland",
     water: true,
-    drops: [],
+    drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-19",
@@ -653,7 +653,7 @@ export const AREAS = [
     species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }],
     biome: "water",
     water: true,
-    drops: [],
+    drops: [{ resource: "great", chance: 0.04, amount: 1 }, { resource: "ultra", chance: 0.02, amount: 1 }],
   },
   {
     id: "route-20",
@@ -670,7 +670,7 @@ export const AREAS = [
     species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }],
     biome: "water",
     water: true,
-    drops: [],
+    drops: [{ resource: "great", chance: 0.04, amount: 1 }, { resource: "ultra", chance: 0.02, amount: 1 }],
   },
   {
     id: "seafoam-islands",
@@ -689,7 +689,7 @@ export const AREAS = [
     // Speciální oblast – vlastní pozadí (per-area override v battleSystem.pickBackground)
     // místo sdíleného „cave" poolu. Ledová jeskyně Seafoam Islands.
     background: "seafoam-islands.png",
-    drops: [],
+    drops: [{ resource: "great", chance: 0.05, amount: 1 }, { resource: "ultra", chance: 0.03, amount: 1 }],
   },
   {
     id: "route-21",
@@ -706,7 +706,7 @@ export const AREAS = [
     species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }, "pidgey", "rattata", "magikarp"],
     biome: "water",
     water: true,
-    drops: [],
+    drops: [{ resource: "great", chance: 0.04, amount: 1 }, { resource: "ultra", chance: 0.02, amount: 1 }],
   },
   {
     id: "cinnabar-island",
@@ -740,7 +740,7 @@ export const AREAS = [
     species: ["spearow", { id: "fearow", rarity: "uncommon" }, "ekans", { id: "arbok", rarity: "uncommon" }, { id: "sandshrew", rarity: "uncommon" }, { id: "sandslash", rarity: "uncommon" }, "mankey", { id: "primeape", rarity: "uncommon" }, { id: "ponyta", rarity: "rare" }, { id: "ditto", rarity: "rare" }],
     biome: "mountain",
     water: true,
-    drops: [],
+    drops: [{ resource: "great", chance: 0.04, amount: 1 }, { resource: "ultra", chance: 0.02, amount: 1 }],
   },
   {
     id: "victory-road",
@@ -757,7 +757,7 @@ export const AREAS = [
     species: ["zubat", { id: "golbat", rarity: "uncommon" }, "geodude", { id: "graveler", rarity: "uncommon" }, "onix", { id: "machop", rarity: "uncommon" }, { id: "machoke", rarity: "uncommon" }, { id: "marowak", rarity: "uncommon" }],
     biome: "cave",
     background: "victory-road.png",
-    drops: [],
+    drops: [{ resource: "great", chance: 0.05, amount: 1 }, { resource: "ultra", chance: 0.03, amount: 1 }],
   },
   {
     id: "indigo-plateau",
@@ -789,7 +789,7 @@ export const AREAS = [
     description: "A mysterious cave harboring legendary and powerful Pokémon of unknown strength.",
     species: [{ id: "golbat", rarity: "uncommon" }, { id: "magneton", rarity: "uncommon" }, { id: "machoke", rarity: "uncommon" }, { id: "kadabra", rarity: "rare" }, { id: "ditto", rarity: "rare" }, { id: "chansey", rarity: "veryrare" }, { id: "rhydon", rarity: "uncommon" }, { id: "electrode", rarity: "uncommon" }, { id: "parasect", rarity: "uncommon" }],
     biome: "cave",
-    drops: [],
+    drops: [{ resource: "great", chance: 0.05, amount: 1 }, { resource: "ultra", chance: 0.03, amount: 1 }],
   },
 ];
 

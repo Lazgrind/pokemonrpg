@@ -53,6 +53,16 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
   localhost/127.0.0.1/[::1]/file://); na ostré GitHub/GitLab Pages doméně se soubory
   sice fyzicky nahrají, ale dev UI se nikde nevytvoří (hráč ho neuvidí). Žádný
   build-krok, runtime brána; přenositelné mezi počítači přes repozitář. BEZ save bumpu.
+- ✅ **Finální rebalanc ekonomiky – HOTOVO v0.119.0** (poslední pre-1.0.0 položka).
+  Po mapě celé ekonomiky (Haiku) + ověření v kódu: Game Corner kurz/ceny jsou ZAMČENÉ
+  (pravidlo uživatele), takže dex-critical Porygon (9999 coinů ≈ 200k gold přes
+  směnárnu) spoléhal na grind moc jako na *idle* hru. Uživatel vybral „Jemný dotek":
+  **Full Auto mult 0.1→0.15**, **OFFLINE_EFFICIENCY 0.1→0.15** (oba idle režimy ~1/7
+  místo ~1/10), **OFFLINE_CAP_HOURS 8→12**. Base gold (`2+level`) i Yield strop (×1,5)
+  ZÁMĚRNĚ beze změny → ceny ballů/itemů a balanc aktivního hraní netknuté, aktivní
+  hraní pořád jasně nejrychlejší. Idle příjem ~+50 % (Porygon čistým idlem ~7 h→~4,7 h).
+  Strop se přes sdílený `OFFLINE_CAP_HOURS` promítá i do breedingu/daycare/líhnutí. BEZ
+  save bumpu (v47). **Tím je punch-list 1.0.0 prázdný.**
 
 ### ✅ Ověřené PLANÉ POPLACHY (audit tvrdil chybu, kód říká OK — NIC nedělat)
 - **Mew „nezískatelný"** → FALSE. Event „Mew pod náklaďákem" u S.S. Anne
@@ -67,7 +77,7 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
 - **Type chart Bug↔Poison „obráceně"** → NENÍ bug. Záměrná moderní 18-typová
   tabulka (`data/types.js:3`, viz [alldex-data-strategy]); hra je v tom konzistentní.
 - **Save/idle/breeding/ekonomika** → bez chyb a bez exploitů (prodej = 50 % nákupu,
-  offline ×0.1 + cap 8 h, UID bezpečné, žádné double-rewards).
+  offline ×0.15 + cap 12 h od v0.119.0, UID bezpečné, žádné double-rewards).
 
 ---
 ## Achievementy (in-game) — ✅ HOTOVO v0.105.0
@@ -281,10 +291,14 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
   (`pokemonCard.js`). (Řádek slotu Týmu = drobná kosmetika, pokud vůbec.)
 - ⚪ **Fast Ball práh** – teď base speed ≥ 100; naši startovní druhy tak rychlí
   nejsou, uplatní se až u rychlejších druhů (záměr, případně doladit).
-- 🔵 **Bally jako loot (pozor).** Loot tabulka oblastí zůstává, ale ball dropy
-  jsme zrušili (bally jen z obchodu, R-020). Kdyby se někdy měl ball dropovat,
-  loot aplikace (`handleFaint`/`idle.js`) počítá `res[resource]` – ball id by
-  muselo jít do `res.balls[id]`, ne přímo do `resources`.
+- ✅ **Bally jako loot – HOTOVO v0.117.0.** Spící loot systém zapnut: všech 33 rout/
+  jeskyní má v `data/areas.js` skromné, odstupňované ball dropy (early poke ~8 %,
+  mid poke ~6 %+great ~3 %, late great ~4 %+ultra ~2 %, jeskyně great ~5 %+ultra ~3 %;
+  města a Safari Zone prázdné). Opraveno i směrování: nový helper `applyLoot(res,
+  resource, amount)` v `loot.js` posílá `"gold"` do `res.gold`, ball id do
+  `res.balls[id]` a ostatní do obecného klíče (dřív ploché `res[resource]` uložilo
+  ball do nepoužitelného `res.poke`). Platí v aktivním souboji i v offline idle.
+  (Vzácný TM drop ~1,5 % a vejce už běžely dřív.)
 - 🔵 **Rezervované bally (comingSoon) – ČÁSTEČNĚ HOTOVO (v0.62.0, v0.94.0).** ✅ Odemčeny
   **Love** (`loveMatch` ×8), **Heavy** (`heavy`, dle hmotnosti), **Dream**
   (`statusEnemy` ×4/×6 spící), **Moon** (`moonStone` ×4) v0.62.0. ✅ v0.94.0 přidány
@@ -426,8 +440,13 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
 - ✅ **PC boxy – doladit – HOTOVO v0.58.0.** Drag & drop **mezi boxy** (drop na
   ◀/▶ → `pcSystem.moveToBox`), **přejmenování boxu** (klik na jméno →
   `renameBox`), **30 boxů napevno** (`PC_BOX_COUNT`, ＋ Box zrušen). Volitelně
-  do budoucna: řazení/hromadné operace, počet obsazených na boxu, „odeslat do
-  boxu" přímo z Týmu.
+  do budoucna: řazení/hromadné operace, počet obsazených na boxu.
+- ✅ **Drag & drop Tým ↔ PC (obousměrně, na konkrétní pozici) – HOTOVO
+  v0.118.0.** Jedince lze přetáhnout z PC boxu přímo na zvolený slot Týmu i zpět
+  na libovolný slot PC, a v rámci Týmu přeuspořádat na konkrétní pozici (ne jen
+  přes tlačítka). Sdílený `src/ui/dragState.js` (uid + zdroj „pc"/„team"), nové
+  `addToTeamAt`/`reorderTeam` v `team.js`, drop team→PC nejdřív odebere z týmu.
+  Tím je vyřešeno i dřívější volitelné „odeslat do boxu přímo z Týmu".
 
 ## Mapa světa
 
@@ -781,3 +800,7 @@ nový bojový mód. Auto AI odbojuje frontu; autocatch se u trenéra vypne.
 
 - ⚪ **Šance na shiny** – aktuálně `SHINY_CHANCE = 1/8192` (klasika). Laditelné
   jedním číslem v `pokemonSystem.js`.
+- ⚪ **Game Corner – rozšíření (nápad uživatele 2026-09-14).** Ceny/kurz coinů
+  zůstávají BEZE ZMĚNY (audit ekonomiky je nechal být). Do budoucna: přidat další
+  minihry do herny nebo vylepšit stávající automat (`storyBuildingView.js` –
+  SLOT_TRIPLES). Není blokátor 1.0.0, jen budoucí obsah.
