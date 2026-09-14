@@ -6,6 +6,169 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [0.116.0] – 2026-09-14 · Dev menu isolated into `src/dev/` + shown only on localhost
+### Changed
+- **Dev menu moved into its own `src/dev/` folder** (`src/dev/devTools.js`, `src/dev/devPanel.js`, `src/dev/devEnv.js`): all developer tooling is now in one place instead of being scattered. `devTools.js` (spawn / money / Complete Dex / story checkpoints) moved out of `src/systems/`; the two per-Pokémon dev helpers `devSetLevel` / `devToggleShiny` were pulled out of `src/systems/evolutionSystem.js` into `src/dev/devTools.js`; the whole Dev section UI (HTML + event wiring) was extracted from `src/ui/settingsView.js` into `src/dev/devPanel.js`. `settingsView.js` is now just real settings (audio / layout / panel order / game rules).
+- **Dev menu only renders on localhost** (`src/dev/devEnv.js`): a new `isDevEnv()` check (`location.hostname` is `localhost` / `127.0.0.1` / `[::1]` / `file://`) gates whether the Dev section is built and wired. On the live GitHub/GitLab Pages build the files are still shipped but the Dev section never appears in the Settings modal — so players can't see or use it, while it stays available to me on any machine that runs the game from a local server. No build step required.
+### Notes
+- No save-version bump (still v47): pure code reorganization + runtime gate, no data or state changes. No gameplay change on localhost; the only difference on the deployed build is that the Dev section is hidden.
+
+## [0.115.0] – 2026-09-14 · Teleport + Conversion (last two Gen 1 utility moves) + centralized HM field-gating
+### Added
+- **Teleport now works** (`data/moves.js`, `src/systems/battleSystem.js`): the Gen 1 escape move. In a **wild** battle the user flees — the player's Teleport ends the fight (like the Run button); an enemy's Teleport makes the wild Pokémon escape and a fresh encounter spawns, so the idle grind keeps going. Against a **trainer** it always fails (canon). Handled safely from both the auto tick and the manual step loop via a `_teleportFlee` flag (no mid-`useMove` teardown). The auto-AI never picks it (power 0), so it won't interrupt idle auto-battles.
+- **Conversion now works** (`data/moves.js`, `src/systems/battleSystem.js`): the Gen 1 Porygon move changes the user's own type to that of one of its known moves (prefers a type it doesn't already have). Transient on the combatant like Transform — it resets on switch / after the battle.
+### Changed
+- **Centralized HM field-gating** (`data/hms.js`, `data/areas.js`, `src/systems/hmSystem.js`, `src/systems/battleSystem.js`, `src/systems/safariSystem.js`, `src/ui/storyBuildingView.js`): area gates no longer hard-code magic story-flag strings. `isAreaUnlocked` now understands `unlock.hm: <HM number>`, which it resolves to the right story flag through the central `HMS` table (`data/hms.js`). The three HM-gated areas (Rock Tunnel → HM05 Flash, Route 19 → HM03 Surf, Victory Road → HM04 Strength) were converted to `unlock.hm`. A new canonical `grantHmToPlayer(num)` (`hmSystem.js`) sets the story flag **and** grants the HM item atomically; the five scattered "set flag + add item" story sites (S.S. Anne Cut + Fly, Route 9 Flash ×2, Safari Surf, Warden Strength) now go through it. No behaviour change — gating and rewards are identical, just single-sourced.
+### Notes
+- No save-version bump (still v47): gating reads the same story flags, `grantHmToPlayer` sets the same flags/items, so existing saves are unaffected.
+- This finishes the two utility moves that v0.114.0 had deliberately left as no-ops, and closes the "HM field-gating not centralized" punch-list item.
+
+## [0.114.0] – 2026-09-14 · 1.0.0 completeness audit — Gen 1 move effects (OHKO / fixed / level damage + Disable / Mist), Struggle recoil
+### Added
+- **Gen 1 special-damage moves now work** (`data/moves.js`, `src/systems/battleSystem.js`): moves that were defined but did nothing (power 0, no effect) now deal their canonical damage. **OHKO** — Guillotine / Horn Drill / Fissure (one-hit KO; fails against a faster target, respects type immunity, 30 % accuracy as before). **Fixed damage** — Sonic Boom (20 HP), Dragon Rage (40 HP). **Level damage** — Seismic Toss, Night Shade (= attacker's level). All respect type immunity (e.g. Night Shade doesn't affect Normal) and can hit a Substitute. The auto-battle AI now scores these correctly (`chooseAction`), so they're actually used in idle/auto fights (this also fixes Super Fang never being auto-selected).
+- **Disable & Mist** (`data/moves.js`, `src/systems/battleSystem.js`): **Disable** locks the target's last-used move for several turns (uses the existing `lastMoveId`; the auto-AI skips a disabled move, the engine blocks it without spending PP). **Mist** shrouds the user and blocks stat drops until it switches out (guarded in `applyStatStage`).
+- **Low Kick** (`data/moves.js`): now a real 50-power Fighting move with a 30 % flinch (Gen 1 behaviour), instead of doing nothing.
+### Fixed
+- **Struggle now deals recoil** (`src/systems/battleSystem.js`): the fallback move used when all PP is gone now costs the user ¼ of the damage dealt (canon), via the existing recoil pipeline — previously it was a free typeless attack.
+- **Offline-progress guard** (`src/systems/idle.js`): `applyOfflineProgress` now bails out on a non-finite or negative elapsed time (missing `lastSaved` → `NaN`, or the system clock moved backwards), which previously could slip past the minimum-time check.
+### Notes
+- No save-version bump (data-only move `effect` fields + engine logic; existing saves unaffected).
+- **Big 1.0.0 completeness/correctness audit done** (6 dimensions, every finding verified against code): **no hard release blockers**. Confirmed false alarms — Mew *is* obtainable (the "truck by the S.S. Anne" event, `storyBuildingView.js`), Porygon (Celadon Game Corner prize), Achievements (done since v0.105.0), the type chart is the intended modern 18-type table. Still deliberately left as harmless no-ops: **Teleport** (its "flee" only makes sense in the wild loop, where the Run button already covers it) and **Conversion** (Porygon-only type change; needs type-mutation plumbing for near-zero benefit). See `docs/BACKLOG.md` punch-list.
+
+## [0.113.0] – 2026-09-14 · Per-area fishing pools (freshwater vs ocean) + "Better IVs" auto-catch filter
+### Added
+- **"Better IVs" auto-catch filter** (`src/ui/battleView.js`, `src/systems/battleSystem.js`, `src/core/state.js`): a fourth independent Auto catch toggle (alongside All / New / Shiny) that catches a wild Pokémon when it would **improve the IVs** of one you already own (the duplicate-merge in `acquirePokemon` keeps the better per-stat values). Filters combine with OR; the summary chip shows `IV+`. Uses the existing `ivWouldImprove()` helper (defined since the IV rework but never wired to auto-catch).
+### Changed
+- **Per-area fishing pools (freshwater vs ocean)** (`data/fishing.js`, `src/systems/fishingSystem.js`): fishing now varies by location instead of one global table per rod. Inland water uses the default **freshwater** pool (Poliwag/Goldeen/Psyduck/Slowpoke/Krabby); coastal cities and sea routes (Vermilion, Fuchsia, Cinnabar, Routes 11/12/13/18/19/20/21) use a new **ocean** pool (Tentacool/Horsea/Shellder/Staryu; Super Rod adds Seadra/Tentacruel/Kingler/Gyarados). New `FISHING_POOLS` + `AREA_FISHING` map and a `poolFor(rod, area)` helper; unmapped areas fall back to freshwater. Per-rod level ranges unchanged.
+- **Water-type badge in the fishing minigame** (`src/ui/fishingView.js`, `src/systems/fishingSystem.js`, `css/main.css`): a badge in the top-right of the scene shows whether you're fishing **🏞️ Freshwater** or **🌊 Ocean**, so it's clear the catch depends on the location. New `fishingBiome(area)` helper.
+### Notes
+- Save v46 → v47 adds `catchBetterIv:false` for old saves (auto-catch behaviour unchanged until you toggle it).
+- **Wild-encounter audit (Gen 1):** rarities and per-area level bands were reviewed against FR/LG and found already canon-accurate — no changes needed. The dex stays fully obtainable in one playthrough: Farfetch'd / Mr. Mime / Jynx come from the city Trade Houses (`CITY_TRADES` in `storyBuildingView.js`), not wild spawns.
+
+## [0.112.0] – 2026-09-14 · Fishing rework — dedicated tab with a reaction minigame, rods from NPCs, fish anywhere there's water
+### Added
+- **Fishing tab (new)** (`src/ui/fishingView.js`): fishing is now its own tab, not an in-battle button. Cast the line → wait for a bite → a big **"!"** appears → click the water in time to hook the Pokémon, which starts the battle (auto-switches to the Battle tab). Reeling in too early or too late lets it get away. The minigame is **redraw-safe** — its state lives in module vars and timers aren't tied to the DOM, so the ~1×/s `STATE_CHANGED` re-render (idle grind) never resets it (guarded by the new `currentMainTab()` export).
+- **Rods are now NPC gifts (canon)**: Old Rod from the **Vermilion Fishing Hut**, Good Rod **and** Super Rod from the **Fuchsia Fishing House** (near the Safari Zone). Two new `STORY_BUILDINGS` + views in `storyBuildingView.js`; one-time via story flags `oldRodGift` / `goodRodGift` / `superRodGift`.
+### Changed
+- **Fish anywhere there's water** (`data/areas.js`, `src/systems/fishingSystem.js`): fishing is gated on a per-area `water: true` flag (20 areas: Pallet, Viridian, Cerulean, Vermilion, Fuchsia, Cinnabar + Routes 4/6/10/11/12/13/18/19/20/21/22/23/24/25) instead of only `biome:"water"` (which was just Routes 19/20/21). New helpers `areaHasWater()` / `canFishHere()`; `castRod()` uses the flag. Safari Zone is intentionally excluded (different catch rules — deferred).
+- **Fishing tab visibility** (`src/ui/mainPanel.js`): the tab shows only where there's water **and** the player owns a rod (hidden in the Safari Zone).
+- **Return to the Fishing tab after a fishing battle** (`src/ui/battleView.js`, `src/systems/battleSystem.js`): when a battle started from fishing ends — win, catch, or defeat — the "Next battle" / "New battle" button now takes the player **back to the Fishing tab** instead of chaining another wild fight or leaving them on the Battle tab. Fishing is a one-off encounter: `pauseForInterlude` no longer auto-spawns a next enemy for fishing battles (even in Auto mode), so the return path always fires.
+- **Fishing minigame — nicer water visual** (`src/ui/fishingView.js`, `css/main.css`): the flat blue box is replaced by a layered, animated **water scene** (pure CSS, no assets) — sky with a sun glint, a rippling surface with three drifting wave bands, a fishing line down to a bobbing float, expanding ripple rings, and a proper "!" speech-bubble on the bite (the surface brightens and the float dips under). Redraw-safe as before.
+- **Pick your rod in the minigame** (`src/ui/fishingView.js`, `src/systems/fishingSystem.js`): rod chips (Old / Good / Super — only the ones you own) overlay the top of the scene; the active one is highlighted, and the choice decides which pool/level range you fish. `castRod(rodId)` takes an optional rod (falls back to the best owned); new `ownedRods()` helper. Rod switching is locked while a cast is in progress (as in the games — you pick before you cast).
+- **Cast by clicking the water, full-size scene** (`src/ui/fishingView.js`, `css/main.css`): the "Cast line" button is gone — you now click the water itself to cast (and to reel in on a bite / cast again after a result). The scene stretches across the whole tab area (`clamp(300px, 62vh, 560px)`), with the hint text as an overlaid caption at the bottom.
+- **Fishing blocked with a wiped team** (`src/systems/fishingSystem.js`, `src/systems/battleSystem.js`): `canFishHere()` now refuses to cast when the **whole team has fainted** (new `teamHasFighter()` helper) — prevents casting straight into an instant loss after returning from a lost fishing battle.
+- **Dev skip grants rods** (`src/systems/devTools.js`): "Skip to Vermilion" gives the Old Rod; "Skip to Fuchsia" gives Good + Super — so fishing is testable after a skip.
+- **Lure Ball pipeline preserved**: `castRod()` still starts the encounter with `{ fishing: true }`, so `ctx.fishing` reaches `ballMultiplier` and the Lure Ball keeps its ×3 catch bonus while fishing (already active, tier 2, 400₽).
+### Removed
+- **In-battle 🎣 button** (`src/ui/battleView.js`): superseded by the Fishing tab.
+- **Rods removed from the shop** (`src/ui/buildingView.js`): the Celadon Dept. Store no longer sells Old/Good/Super Rod (`"fishing"` dropped from its category list) — they're NPC gifts only now.
+### Fixed
+- **Fishing building sprites wired in** (`assets/buildings/`): the user-supplied `fishing-house.png` is processed (white-background removal + normalize) into **both** `fuchsia-fishing-house.png` and `vermilion-fishing-hut.png` (same art for both fishing buildings), replacing the 🎣 emoji fallback.
+- **All building sprites normalized to a uniform size** (`assets/buildings/*.png`, `tools/prep_building.py`): several buildings had been hand-cropped to inconsistent content sizes (32–80 % canvas fill), so they rendered at visibly different scales in the city view. New `--normalize-only` mode (crop to alpha bbox → longest side = 232 px → center on 256²) re-applied to all 24 buildings so every one fills the canvas consistently. Originals backed up outside the repo first (not a git repo).
+- **In-battle Items menu now lists only usable items** (`src/ui/battleView.js`): a `BATTLE_ITEM_CATEGORIES` whitelist (`hp` / `status` / `revive`) filters the bag — TMs, HMs, evolution stones, held/key items no longer appear mid-battle.
+- **Fossil revival text points to Cinnabar, not Pewter** (`data/items.js`, `src/ui/mapView.js`): the Helix/Dome/Old Amber item descriptions and both Mt. Moon fossil popups now say "the Pokémon Lab on Cinnabar Island" (revival moved there in v0.88.0; the old "Museum of Science in Pewter City" wording was stale).
+### Notes
+- No save-version bump — fishing adds only story flags and item counts to existing structures.
+
+## [0.111.0] – 2026-09-14 · Art drop — 41 user sprites wired in (cities, Elite Four, buildings, backgrounds, item) + main theme
+### Added
+- **City backgrounds (11/11)**: every `type:"city"` area now has a scene backdrop at `assets/city/<areaId>.png` (Pallet Town … Indigo Plateau). Fallback grass gradient retired for cities.
+- **League portraits (5/5)**: Elite Four (Lorelei, Bruno, Agatha, Lance) + Champion Blue at `assets/gym-leaders/<id>/front.png`.
+- **Story building sprites (16 new)**: all remaining `STORY_BUILDINGS` now render an image instead of the CSS emoji house — `assets/buildings/<id>.png` + `sprite:` field (oak-lab, player-home, rival-home, trade houses, museums, S.S. Anne, Pokémon Tower, dept-store, game-corner, Silph Co, Fighting Dojo, mansions, boost-center, …).
+- **Battle backgrounds**: a per-area scene for the Power Plant (`power-plant.png`, wired via `background:` in `data/areas.js`), a 2nd `mountain` variant, and per-area scenes for Seafoam Islands, Victory Road, and Indigo Plateau.
+- **Shiny Charm item sprite**: `assets/items/shiny-charm.png` (new `assets/items/` folder).
+- **Main theme**: `main.mp3` mapped to Showdown's `dpp-trainer` in `tools/fetch_music.ps1` — the hub/map/menu track off the Battle tab.
+### Changed
+- **`data/backgrounds.js`**: `BACKGROUND_BIOMES.mountain` gains `mountain-2.png`.
+- **Cycling Road is now a two-way branch** (`data/areas.js`): `unlock.visited` accepts an **array** (OR) in `isAreaUnlocked`, and Route 16/17/18 unlock from either end — Route 18 now opens on reaching Fuchsia (canon: it exits right by Fuchsia), Route 17 from 16 *or* 18, Route 16 from Celadon *or* 17. Previously the branch was one-directional (Celadon → 16 → 17 → 18 only).
+- **Dev "Skip to Celadon" now marks Route 16/17/18 visited** (`src/systems/devTools.js`): the optional Cycling Road branch no longer stays locked after a skip (the skip follows the main axis and never walked it).
+- **Old building sprites normalized to 256²** (`day-care`, `poke-center`, `poke-mart`): re-cropped/centred on the standard transparent 256×256 canvas to match the v0.111.0 batch (were 161×207 / 678×592 / 271×263).
+### Fixed
+- **Building sprites now show ONLY the building — no scenery** (`tools/prep_building.py`, new): the 19 story-building sources are full pixel-art scenes (building on grass/sky), and `prep_sprite.py` only strips *white*, so colored backdrops leaked through. New tool floods from the edges **anchored to the seed (edge) color** rather than the neighbor — this cuts the anti-aliased "bridge" where a beige roof shares the grass's green/blue channels and only differs in red. All 19 buildings reprocessed to building-only on a transparent 256² canvas (per-image `--tol`: white-on-white `pokemon-mansion` at 15, the rest at 40). Verified via checkerboard contact sheet.
+### Notes
+- All 41 supplied sprites processed with `tools/prep_sprite.py` / `tools/prep_building.py` (subjects → transparent 256² canvas: buildings, portraits, item) or plain copy (full 3:2 scenes: city + battle backgrounds). League portraits + item had pure-white corners, so `prep_sprite` (white removal) sufficed. Power Plant is a route with `biome:"building"`, not a building — its user-made background is wired as a per-area override (`power-plant.png`), so that area no longer falls back to a gradient.
+- `docs/SPRITES-TODO.md` re-audited against the whole game (see that file for the remaining gaps).
+
+## [0.110.0] – 2026-09-14 · Battle BGM — context-based music (wild / trainer / rival / gym / champion)
+### Added
+- **Battle music**: five context-based tracks from Pokémon Showdown play on the Battle tab depending on the opponent — wild encounters, regular trainers, rivals, Gym Leaders, and the Elite Four/Champion. Music loops continuously through idle grinding.
+- **Music download script** (`tools/fetch_music.ps1`): predownloads the five tracks into `assets/audio/bgm/` under context names (`wild.mp3`, `trainer.mp3`, `rival.mp3`, `gym.mp3`, `champion.mp3`). Run manually like `tools/fetch_cries.ps1`. ASCII-only (Windows PowerShell 5.1 without BOM misreads non-ASCII).
+### Changed
+- **BGM switching** (`src/ui/mainPanel.js`, `syncBattleBgm()`): on the Battle tab a battle plays its context track; elsewhere the game falls back to `main.mp3` (map/menu theme, user-supplied). Idempotent — `playBgm()` never restarts the same track, so idle chains and map browsing stay gap-free. Runs on `STATE_CHANGED` and `BATTLE_UPDATE`.
+- **Battle context** (`src/systems/battleSystem.js`): each battle now carries a `bgm` context; new `battleMusicFor(trainer, gymId)` classifier (League members → champion, `rival*` ids → rival, gym leaders → gym, else trainer; wild/static → wild) and exported `battleBgm()`.
+### Notes
+- Layering respected: `battleSystem` only tags/exposes the context; the UI (`mainPanel`) calls `audioSystem.playBgm`. BGM plays in auto/full-auto too (unlike hit/faint SFX and cries) — continuous music is the point of idle.
+- Showdown only hosts battle music, so map/overworld music stays `main.mp3` (or silence if not supplied).
+
+## [0.109.0] – 2026-09-14 · Pokémon cries — species voices on spawn, evolution, hatch, and faint
+### Added
+- **Pokémon cries**: each species now plays its cry (voice) sound at four moments — a wild/static Pokémon appearing in battle, an evolution reveal, an egg hatching, and a Pokémon fainting.
+- **Cry playback** (`src/systems/audioSystem.js`, `playCry(speciesId)`): plays `assets/audio/cries/<speciesId>.mp3` at SFX volume with a per-species throttle and silent fallback (missing file never crashes the game).
+- **Cry download script** (`tools/fetch_cries.ps1`): predownloads all 151 Gen 1 cries from Pokémon Showdown into `assets/audio/cries/`; maps our `speciesId` to Showdown's toID (lowercase, non-alphanumerics stripped). Run manually like `tools/fetch_ev_yields.ps1`.
+### Changed
+- **New event** `WILD_APPEARED` (`src/core/events.js`, `"battle:wild"`): emitted by `spawnEnemy()` and `startStaticEncounter()` with `{ speciesId }` so the cry can play on encounter.
+- **BATTLE_FAINT payload** now includes `speciesId` (both emit sites in `battleSystem.js`); the faint cry plays only in manual mode (muted during auto/full-auto, like hit/faint SFX).
+- **EGG_HATCHED payload** now includes `speciesId` (`src/systems/eggSystem.js`); the hatch cry always plays.
+### Notes
+- Layering respected: `battleSystem`/`eggSystem`/`evolutionPopup` emit or call, `main.js` subscribes and calls `audioSystem`. Wild-spawn and faint cries are muted in auto modes; evolution and hatch cries always play.
+
+## [0.108.0] – 2026-09-14 · Post-game rematches — Elite Four, Champion, and Gym Leader re-challenges; Hall of Fame
+### Added
+- **Elite Four & Champion rematches**: after becoming Champion, use "Challenge the League again" at the Indigo Plateau to re-run the whole gauntlet (Elite Four + Champion) for repeatable gold + XP (idle farming).
+- **Gym Leader rematches**: once a Gym is fully cleared, its Leader can be re-challenged from the Gym tab for repeatable rewards.
+- **Rematch rewards**: reduced to 50% of the original prize money; story bonuses (extra gold, gifts, badges, TMs) are still only granted on first victory. XP is always awarded, so rematches are also useful for leveling.
+- **Hall of Fame**: every League victory records your team (species, level, nickname, shiny status) with a timestamp on the Profile tab, shown newest first.
+### Notes
+- Rematch reward logic lives in `finishTrainerBattle()` (`REMATCH_GOLD_MULT`, applied only to Gym Leaders and League members); Hall of Fame is written in the League-clear block of the same function.
+- Hall of Fame data is stored in `state.hallOfFame` as an array of `{ timestamp, team }` entries (save v46).
+
+## [0.107.0] – 2026-09-14 · Fishing system — tiered water encounter pools via rods, Lure Ball bonus
+### Added
+- **Fishing rods** (`data/items.js`, category "fishing"): three tiers purchasable in Celadon Dept. Store—Old Rod (500g, reels in Magikarp/Tentacool, Lv 5–15), Good Rod (2500g, 8 species, Lv 10–25), Super Rod (6000g, 16 species, Lv 20–40).
+- **Fishing pools** (`data/fishing.js`, `ROD_POOLS`, `ROD_ORDER`): weighted species pools per rod tier; highest owned rod auto-selected when casting.
+- **Fishing System** (`src/systems/fishingSystem.js`): `bestRod()`, `hasAnyRod()`, `castRod()` functions. Cast behavior: checks rod ownership, water biome, picks weighted species, random level in tier range, then `startStaticEncounter(speciesId, level, { fishing: true })`.
+- **🎣 Fish button** in Battle Area header (manual mode only, visible in water biomes when rod owned): manual casting trigger. Shows encounter/combat normally (can catch).
+- **Lure Ball** upgrade (`data/pokeballs.js`, tier 2, 400g): changed from comingSoon to active ball with bonus `{ type: "fishing", mult: 3 }` (×3 catch rate only during fishing).
+- **Fishing context** (`src/systems/battleSystem.js`): `startStaticEncounter()` now accepts `opts` param; `battle.fishing` flag tracks encounter origin; `catchContext()` includes `fishing: true/false` for bonus evaluation.
+- **Fishing bonus case** (`src/systems/pokeballSystem.js`): `ballMultiplier()` now handles `case "fishing"` → if `ctx.fishing`, apply `b.mult` (×3 for Lure Ball).
+- **Fishing shop tab** (`src/ui/buildingView.js`): added "🎣 Fishing" department to Celadon Dept. Store (SHOP_DEPT_SETS).
+- **Fishing category** (`data/items.js`, `ITEM_CATEGORIES`): new "fishing" category for rods, visible in Bag and shop.
+### Changed
+- **Poké Ball data comment** (`data/pokeballs.js`): removed legacy note about fishing not being implemented; Lure Ball is now active.
+- **Dept. Store description** (`src/ui/buildingView.js`): updated to mention rods alongside other offerings.
+### Notes
+- No save migration required (v45 persists). Rods are ordinary items in `resources.items`; Lure Ball is an ordinary Poké Ball.
+- Lure Ball bonus (`×3`) applies *only* when `fishing: true` in battle context, ensuring it doesn't affect regular water encounters (Surfs, scuba dives).
+
+## [0.106.0] – 2026-09-14 · Audio system — SFX + BGM with Master/Music/SFX volume controls
+### Added
+- **Audio system** (`src/systems/audioSystem.js`): handles SFX and BGM playback with automatic tichý fallback (missing files/blocked autoplay cause no errors). Exports `playSfx(name)`, `playBgm(name)`, `stopBgm()`, `applyAudioSettings()` and `audioSettings()` getter.
+- **9 sound effect channels**: hit, faint, catch, catch-fail, levelup, evolve, hatch, achievement, click (all optional assets in `assets/audio/sfx/`).
+- **BGM loop** (`assets/audio/bgm/main.mp3`): plays automatically after title screen (respects browser autoplay policy by triggering on user interaction).
+- **Audio Settings in UI** (`src/ui/settingsView.js`, `css/main.css`): new "🔊 Audio" section with three range sliders (Master, Music, SFX; 0–100) and a "Mute all" checkbox. Live volume adjustment via `applyAudioSettings()`.
+- **Event-driven sound triggers** (`src/main.js`): SFX auto-fire on BATTLE_HIT, BATTLE_FAINT, POKEMON_CAUGHT, POKEMON_EVOLVED, LEVEL_UP, EGG_HATCHED; UI click handler for button taps.
+- **Throttling for idle modes** (autoSystem.js): hit/faint SFX suppressed during auto-battle and full-auto (70 ms debounce) to prevent spam during grinding sessions.
+- **Asset guide** (`assets/audio/README.md` + `.gitkeep` structure): documents expected file paths, suggests CC0 sound sources (Freesound, Zapsplat, OpenGameArt), clarifies that missing files cause no errors.
+### Changed
+- **Settings schema** (`src/core/state.js`): added `audio: { master: 70, music: 50, sfx: 80, mute: false }` to default settings.
+- **SAVE_VERSION remains 45**: no migration needed — audio settings read with fallback to defaults for old saves.
+### Notes
+- **Tichý fallback design**: browser autoplay restrictions and missing MP3s are silently ignored. Hra pracuje bez zvuků do chvíle, kdy je hráč dodá.
+- Sound playback uses native `new Audio()` + `.play().catch(() => {})` for broad browser support and offline resilience.
+
+## [0.105.0] – 2026-09-14 · In-Game Achievements system — 16 unlockable achievements with rewards
+### Added
+- **16 in-game achievements across 5 categories** (`data/achievements.js`, `src/systems/achievementSystem.js`): Collection (first catch, Dex milestones 10/50/100/151, shiny hunter), Battle (Level 100), Story (gym badges, champion), Breeding (eggs, evolutions), Economy (gold milestones). Each achievement tracks a simple condition, unlocks once and grants a one-time reward (gold/coins/items).
+- **Achievement toast notifications** (`src/ui/achievementToast.js`, `css/main.css`): non-blocking toasts appear in the bottom-right corner when an achievement unlocks, showing icon, name, description and reward summary, auto-dismiss after 4 seconds or on click.
+- **Achievement progress in Profile tab** (`src/ui/profileView.js`): new "Achievements" section lists all 16 unlockables with their current status (locked/unlocked + date), sorted by unlock order, with a counter "X / 16 unlocked".
+- **Achievement event hooks** (`src/core/events.js`): new EVENTS.POKEMON_CAUGHT and EVENTS.LEVEL_UP for tracking catches, hatches (EGG_HATCHED), evolves (POKEMON_EVOLVED) and level-ups automatically.
+- **Persistence and auto-evaluation** (`src/systems/achievementSystem.js`): achievements are tracked in `state.achievements.unlocked` and `.stats` (catches/hatches/evolves counters). The system subscribes to game events and evaluates all eligible achievements automatically; rewards are applied only on first unlock.
+### Changed
+- **SAVE_VERSION bumped to 45**: migration adds empty achievement structures to existing saves so they can unlock achievements immediately.
+### Notes
+- Rare Candy item confirmed (`data/items.js`) — achievement rewards reference it directly.
+- Achievement unlock is **one-time and irreversible** — no reset, no re-rolling; designed to track genuine milestones.
+
 ## [0.104.0] – 2026-09-11 · Training Grounds finds a canonical home — EV Training moves into Saffron's Fighting Dojo
 ### Changed
 - **Training Grounds (EV training + reset) now lives inside the Fighting Dojo in Saffron** (`src/ui/storyBuildingView.js`, `src/ui/buildingView.js`, `data/buildings.js`): the homeless Training Grounds building no longer squats on the Indigo Plateau roster. Instead the **Fighting Dojo** — Kanto's canonical training establishment — gains an **"🏋️ EV Training"** section (available on both visits, before and after receiving the Hitmons) that opens the existing Pokémon picker → EV train/reset window. The training logic is unchanged and still keyed to the `training-grounds` building id, so all buy/upgrade/reset pricing, levels and caps carry over verbatim.

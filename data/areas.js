@@ -51,6 +51,8 @@
  *   Když biome chybí/nemá obrázky, prosvítá fallback gradient.
  */
 
+import { getHm } from "./hms.js";
+
 /**
  * @type {Area[]}
  * Pozice x/y naklikány uživatelem v placement módu mapy (2026-09-07, celé Kanto).
@@ -68,6 +70,7 @@ export const AREAS = [
     recommendedLevel: 1,
     description: "Your home town. Shops and services will open here later.",
     species: [],
+    water: true,
     drops: [],
   },
   {
@@ -100,6 +103,7 @@ export const AREAS = [
     recommendedLevel: 3,
     description: "The first city on your journey. Its Gym is locked for now.",
     species: [],
+    water: true,
     drops: [],
   },
   {
@@ -115,6 +119,7 @@ export const AREAS = [
     description: "The road west toward Victory Road. Home to scrappy wild Pokémon.",
     species: ["rattata", "spearow", "nidoran-m", "nidoran-f", "mankey", "poliwag"],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -212,6 +217,7 @@ export const AREAS = [
     description: "A desert-like passage on the far side of Mt. Moon.",
     species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }, "mankey"],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -226,6 +232,7 @@ export const AREAS = [
     recommendedLevel: 12,
     description: "A city of waterfalls and bridges. The Cerulean Gym leader awaits.",
     species: [],
+    water: true,
     drops: [],
   },
   {
@@ -241,6 +248,7 @@ export const AREAS = [
     description: "A coastal path north of Cerulean City, blooming with flowers.",
     species: ["oddish", "bellsprout", "pidgey", "caterpie", "weedle", { id: "abra", rarity: "rare" }, "poliwag"],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -256,6 +264,7 @@ export const AREAS = [
     description: "An eastern route beyond Route 24. Home to rare botanical Pokémon.",
     species: ["oddish", "bellsprout", "pidgey", "caterpie", "weedle", { id: "abra", rarity: "rare" }, "kakuna", "metapod", "poliwag"],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -288,6 +297,7 @@ export const AREAS = [
     description: "A path leading to the coast, where the roar of waves echoes.",
     species: ["oddish", "bellsprout", "pidgey", "meowth", "mankey", { id: "abra", rarity: "rare" }, "poliwag"],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -302,6 +312,7 @@ export const AREAS = [
     recommendedLevel: 15,
     description: "A bustling port city. The Vermilion Gym leader, Lieutenant Surge, resides here.",
     species: [],
+    water: true,
     drops: [],
   },
   {
@@ -317,6 +328,7 @@ export const AREAS = [
     description: "An eastern route from Vermilion City, home to wild Pokémon and trainers.",
     species: ["spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }, "drowzee", "rattata", { id: "lickitung", rarity: "veryrare" }],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -363,7 +375,7 @@ export const AREAS = [
     // na Route 9). Bez něj se dovnitř nedostaneš (story.hasFlash, viz areas gating).
     // Badge-gate (gym gating): vstup do Lavender oblasti navíc vyžaduje Thunder
     // Badge (Lt. Surge ve Vermilionu) – vynucuje kanonické pořadí gymů.
-    unlock: { visited: "route-09", story: "hasFlash", badge: "thunder-badge" },
+    unlock: { visited: "route-09", hm: 5, badge: "thunder-badge" }, // hm 5 = Flash
     recommendedLevel: 16,
     description: "A dark cavern filled with dangerous rock formations and wild Pokémon.",
     species: ["zubat", "geodude", { id: "machop", rarity: "uncommon" }, "onix", { id: "cubone", rarity: "rare" }],
@@ -383,6 +395,7 @@ export const AREAS = [
     description: "A mountain path on the eastern slope, leading to Lavender Town.",
     species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }, "voltorb", { id: "machop", rarity: "uncommon" }],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -398,6 +411,7 @@ export const AREAS = [
     description: "An industrial facility overflowing with Electric-type Pokémon.",
     species: ["voltorb", "magnemite", { id: "pikachu", rarity: "rare" }, { id: "electabuzz", rarity: "rare" }, "grimer", { id: "magneton", rarity: "uncommon" }, { id: "magmar", rarity: "rare" }],
     biome: "building",
+    background: "power-plant.png",
     drops: [],
   },
   {
@@ -480,7 +494,8 @@ export const AREAS = [
     order: 27,
     x: 38.2,
     y: 34.9,
-    unlock: { visited: "celadon-city" },
+    // Cycling Road je obousměrná boční větev: route-16 jde z Celadonu i zpět z route-17.
+    unlock: { visited: ["celadon-city", "route-17"] },
     recommendedLevel: 18,
     description: "A path south of Celadon City, leading toward the seaside.",
     species: ["spearow", "doduo", "rattata", { id: "raticate", rarity: "uncommon" }, "grimer", "koffing"],
@@ -495,7 +510,8 @@ export const AREAS = [
     order: 28,
     x: 36,
     y: 51.2,
-    unlock: { visited: "route-16" },
+    // Prostřední článek – přístupný z obou konců (route-16 shora i route-18 zdola).
+    unlock: { visited: ["route-16", "route-18"] },
     recommendedLevel: 22,
     description: "A thrilling downhill cycling road with fast-moving trainers and wild Pokémon.",
     species: ["spearow", "doduo", { id: "ponyta", rarity: "rare" }, "grimer", { id: "raticate", rarity: "uncommon" }, "koffing", { id: "weezing", rarity: "uncommon" }],
@@ -510,11 +526,14 @@ export const AREAS = [
     order: 29,
     x: 40.4,
     y: 74.8,
-    unlock: { visited: "route-17" },
+    // Route 18 ústí přímo u Fuchsia (kánon) → odemyká se i po dosažení Fuchsia,
+    // nejen shora z route-17. Obousměrná cesta.
+    unlock: { visited: ["route-17", "fuchsia-city"] },
     recommendedLevel: 24,
     description: "A coastal route where the wind blows strong and wild Pokémon roam freely.",
     species: ["spearow", "doduo", { id: "raticate", rarity: "uncommon" }, "grimer", "koffing", { id: "weezing", rarity: "uncommon" }],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -532,6 +551,7 @@ export const AREAS = [
     recommendedLevel: 25,
     description: "An isolated city to the south. Janine's Poison Gym is hidden deep within.",
     species: [],
+    water: true,
     drops: [],
   },
   {
@@ -596,6 +616,7 @@ export const AREAS = [
     description: "A grassy route where trainers test their skills against wild creatures.",
     species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", { id: "ditto", rarity: "rare" }, { id: "goldeen", rarity: "uncommon" }, { id: "seaking", rarity: "uncommon" }],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -612,6 +633,7 @@ export const AREAS = [
     description: "A scenic waterfront route with both land and aquatic Pokémon.",
     species: ["oddish", "bellsprout", "venonat", "pidgey", { id: "ditto", rarity: "rare" }, "gastly", { id: "goldeen", rarity: "uncommon" }],
     biome: "grassland",
+    water: true,
     drops: [],
   },
   {
@@ -625,11 +647,12 @@ export const AREAS = [
     // Věrný Kanto (Krok 8): moře na jih od Fuchsia – potřebuješ HM03 Surf (z Safari Zone).
     // Badge-gate (gym gating): cesta na Cinnabar navíc vyžaduje Soul Badge (Koga
     // ve Fuchsii) – vynucuje kanonické pořadí gymů před Blainem.
-    unlock: { visited: "fuchsia-city", story: "hasSurf", badge: "soul-badge" },
+    unlock: { visited: "fuchsia-city", hm: 3, badge: "soul-badge" }, // hm 3 = Surf
     recommendedLevel: 30,
     description: "A vast ocean expanse. Surfing Pokémon and Water-types patrol the waves.",
     species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }],
     biome: "water",
+    water: true,
     drops: [],
   },
   {
@@ -646,6 +669,7 @@ export const AREAS = [
     description: "A narrow channel with swirling currents, running west from the Seafoam Islands to Cinnabar Island.",
     species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }],
     biome: "water",
+    water: true,
     drops: [],
   },
   {
@@ -681,6 +705,7 @@ export const AREAS = [
     description: "A long seaway north of Cinnabar Island, winding back toward Pallet Town.",
     species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }, "pidgey", "rattata", "magikarp"],
     biome: "water",
+    water: true,
     drops: [],
   },
   {
@@ -695,6 +720,7 @@ export const AREAS = [
     recommendedLevel: 30,
     description: "A volcanic island where Fire-type Pokémon roam. Blaine's Gym awaits here.",
     species: [],
+    water: true,
     drops: [],
   },
   {
@@ -713,6 +739,7 @@ export const AREAS = [
     description: "A mountain passage leading north toward the ultimate challenge of Victory Road.",
     species: ["spearow", { id: "fearow", rarity: "uncommon" }, "ekans", { id: "arbok", rarity: "uncommon" }, { id: "sandshrew", rarity: "uncommon" }, { id: "sandslash", rarity: "uncommon" }, "mankey", { id: "primeape", rarity: "uncommon" }, { id: "ponyta", rarity: "rare" }, { id: "ditto", rarity: "rare" }],
     biome: "mountain",
+    water: true,
     drops: [],
   },
   {
@@ -724,11 +751,12 @@ export const AREAS = [
     x: 12,
     y: 26.7,
     // Věrný Kanto (Krok 8): Victory Road blokují balvany – potřebuješ HM04 Strength (od Wardena ve Fuchsia).
-    unlock: { visited: "route-23", story: "hasStrength" },
+    unlock: { visited: "route-23", hm: 4 }, // hm 4 = Strength
     recommendedLevel: 34,
     description: "The final gauntlet before the Pokémon League. Powerful trainers and Pokémon await.",
     species: ["zubat", { id: "golbat", rarity: "uncommon" }, "geodude", { id: "graveler", rarity: "uncommon" }, "onix", { id: "machop", rarity: "uncommon" }, { id: "machoke", rarity: "uncommon" }, { id: "marowak", rarity: "uncommon" }],
     biome: "cave",
+    background: "victory-road.png",
     drops: [],
   },
   {
@@ -743,6 +771,7 @@ export const AREAS = [
     recommendedLevel: 40,
     description: "The legendary headquarters of the Pokémon League. The Elite Four reside here.",
     species: [],
+    background: "indigo-plateau.png",
     drops: [],
   },
   {
@@ -923,7 +952,20 @@ export function isAreaUnlocked(area, visited = [], badges = [], defeatedTrainers
   if (u.trainer && !(defeatedTrainers ?? []).includes(u.trainer)) return false;
   // Příběhová podmínka (jednorázový event, např. doručení Oak's Parcel).
   if (u.story && !(story ?? {})[u.story]) return false;
+  // HM field-gating (Cut/Surf/Strength/Flash) – centralizované přes tabulku HMS:
+  // `unlock.hm = <číslo HM>` se přeloží na příslušný story flag (getHm(n).flag),
+  // takže v datech oblastí nejsou magické stringy „hasSurf" apod.
+  if (u.hm != null) {
+    const flag = getHm(u.hm)?.flag;
+    if (flag && !(story ?? {})[flag]) return false;
+  }
   if (u.start) return true;
-  if (u.visited) return (visited ?? []).includes(u.visited);
+  // `visited` může být string (1 podmínka) NEBO pole (OR – stačí jedna navštívená).
+  // Pole se hodí na obousměrné cesty: uzel jde odemknout z kteréhokoli konce
+  // (např. Cycling Road route-18 z route-17 i z fuchsia-city).
+  if (u.visited) {
+    const req = Array.isArray(u.visited) ? u.visited : [u.visited];
+    return req.some((v) => (visited ?? []).includes(v));
+  }
   return true; // bez podmínky = dostupné (jen odznak/trenér/story už prošli výše)
 }

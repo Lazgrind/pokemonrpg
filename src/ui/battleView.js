@@ -25,6 +25,7 @@ import {
   playerCatch,
   playerUseItem,
   playerRun,
+  stopBattle,
   nextEncounter,
   hpOf,
   lootLabel,
@@ -321,7 +322,7 @@ function headHtml(b) {
   // přes NEBO). „New" = druh, který ještě nemáš. Souhrn na tlačítku:
   const acSummary = ac.catchAll
     ? "All"
-    : [ac.catchNew ? "New" : null, ac.catchShiny ? "Shiny" : null].filter(Boolean).join(" + ") || "None";
+    : [ac.catchNew ? "New" : null, ac.catchShiny ? "Shiny" : null, ac.catchBetterIv ? "IV+" : null].filter(Boolean).join(" + ") || "None";
   const acMode = `<div class="ac-dd${acMenuOpen ? " open" : ""}">
       <button type="button" id="ac-dd-btn" class="ac-mode ac-dd-btn" ${ac.enabled ? "" : "disabled"} title="Auto catch: which Pokémon to catch. New = species you don't own yet. Tick several.">
         Catch: ${acSummary} <span class="ac-dd-caret">▾</span>
@@ -330,6 +331,7 @@ function headHtml(b) {
         <label class="ac-dd-item"><input type="checkbox" id="ac-all" ${ac.catchAll ? "checked" : ""}/> All</label>
         <label class="ac-dd-item"><input type="checkbox" id="ac-new" ${ac.catchNew ? "checked" : ""}/> New <span class="ac-dd-hint">(not owned)</span></label>
         <label class="ac-dd-item"><input type="checkbox" id="ac-shiny" ${ac.catchShiny ? "checked" : ""}/> Shiny</label>
+        <label class="ac-dd-item"><input type="checkbox" id="ac-iv" ${ac.catchBetterIv ? "checked" : ""}/> Better IVs <span class="ac-dd-hint">(upgrade owned)</span></label>
       </div>
     </div>`;
   // Výběr míčku vyhrazeného pro autocatch (nezávislý na ručním selectedBall).
@@ -486,6 +488,12 @@ function fightMenuHtml(b) {
 }
 
 /** Podmenu Items (batoh): léčivé itemy (výběr cíle) + výběr ballu a hod. */
+// V souboji se smí použít jen léčivé předměty: HP lektvary, léky na status a revive.
+// Ostatní kategorie (tm, special = HM/klíčové itemy/fosílie, evolution kameny, held,
+// fishing pruty, boost = Rare Candy/PP) do bojového batohu NEPATŘÍ – spravují se
+// z batohu na záložce Tým / z karty Pokémona.
+const BATTLE_ITEM_CATEGORIES = new Set(["hp", "status", "revive"]);
+
 function bagMenuHtml(b) {
   const balls = getState().resources.balls ?? {};
   const items = getState().resources.items ?? {};
@@ -498,7 +506,9 @@ function bagMenuHtml(b) {
   // Léčivé itemy (bez podmínky na aktivního – výběr cíle přijde v item-target módu).
   // Herní pravidla No items / No potions můžou předměty v souboji zakázat.
   const rules = getRules();
-  const allItems = ITEMS.filter((it) => (items[it.id] ?? 0) > 0 && itemsAllowed(it.id));
+  const allItems = ITEMS.filter(
+    (it) => (items[it.id] ?? 0) > 0 && BATTLE_ITEM_CATEGORIES.has(it.category) && itemsAllowed(it.id)
+  );
   const itemBtns = allItems
     .map(
       (it) =>
@@ -774,12 +784,29 @@ function wire(root) {
   }
   // „New battle" po prohře (overlay přímo ve scéně).
   const newBattle = root.querySelector("#new-battle");
-  if (newBattle) newBattle.addEventListener("click", () => toggleBattle());
+  if (newBattle)
+    newBattle.addEventListener("click", () => {
+      // Rybaření: po prohře se vrací rovnou na záložku Fishing, ne do dalšího
+      // souboje. Souboj ukončíme (stopBattle), ať nezůstane viset stav „defeat".
+      if (getBattle()?.fishing) {
+        stopBattle();
+        openMainTab("fishing");
+        return;
+      }
+      toggleBattle();
+    });
 
   // „Next battle" ve výherním/chytacím okně (manuální mód) → další soupeř.
   const nextBtn = root.querySelector("#next-encounter");
   if (nextBtn)
     nextBtn.addEventListener("click", () => {
+      // Rybaření je jednorázové setkání: po výhře/chycení se NEspouští další
+      // divoký souboj – ukončíme ho a vrátíme hráče na záložku Fishing.
+      if (getBattle()?.fishing) {
+        playerRun(); // ukončí divoký souboj (stopBattle) + zavře výherní okno
+        openMainTab("fishing");
+        return;
+      }
       nextEncounter();
       // Liga: po dokončení jednoho zápasu (běh stále aktivní) přepni rovnou na
       // League tab, ať hráč vidí postup a tlačítko „Continue" (mezitím může přes
@@ -814,6 +841,8 @@ function wire(root) {
   if (acNew) acNew.addEventListener("change", (e) => { acMenuOpen = true; setAutocatch({ catchNew: e.target.checked }); });
   const acShiny = root.querySelector("#ac-shiny");
   if (acShiny) acShiny.addEventListener("change", (e) => { acMenuOpen = true; setAutocatch({ catchShiny: e.target.checked }); });
+  const acIv = root.querySelector("#ac-iv");
+  if (acIv) acIv.addEventListener("change", (e) => { acMenuOpen = true; setAutocatch({ catchBetterIv: e.target.checked }); });
   // Klik kdekoli mimo menu ho zavře (navázáno jen jednou pro celý modul).
   if (!acDocBound) {
     acDocBound = true;

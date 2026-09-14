@@ -80,12 +80,17 @@ export const ITEMS = [
   { id: "everstone", name: "Everstone", icon: "🪨", desc: "A held Pokémon won't evolve. If it's a breeding parent, the baby inherits its Nature.", price: 300, category: "held" },
   { id: "destiny-knot", name: "Destiny Knot", icon: "🪢", desc: "If it's a breeding parent, the baby inherits 5 IVs instead of 3.", price: 2000, category: "held" },
 
+  // --- Fishing rods: dostupné v Celadon Dept. Store ---
+  { id: "old-rod", name: "Old Rod", icon: "🎣", desc: "An old fishing rod. Reels in the most common water Pokémon.", price: 500, category: "fishing" },
+  { id: "good-rod", name: "Good Rod", icon: "🎣", desc: "A decent fishing rod. Reels in more varied water Pokémon.", price: 2500, category: "fishing" },
+  { id: "super-rod", name: "Super Rod", icon: "🎣", desc: "The finest fishing rod. Reels in the rarest water Pokémon.", price: 6000, category: "fishing" },
+
   // --- Special: příběhové/klíčové předměty (neprodejné v Martu, jen z eventů) ---
   // Fosílie z Mt. Moon – hráč si vybere jednu. Oživení (na Omanyte/Kabuto)
   // doděláme později (Museum/Lab); zatím drží místo v batohu jako klíčový item.
-  { id: "helix-fossil", name: "Helix Fossil", icon: "🐚", desc: "A fossil of an ancient sea Pokémon. It can be revived into Omanyte at the Museum of Science.", price: 0, category: "special" },
-  { id: "dome-fossil", name: "Dome Fossil", icon: "🗿", desc: "A fossil of an ancient sea Pokémon. It can be revived into Kabuto at the Museum of Science.", price: 0, category: "special" },
-  { id: "old-amber", name: "Old Amber", icon: "🟠", desc: "A piece of amber holding the genetic material of an ancient Pokémon. It can be revived into Aerodactyl at the Museum of Science.", price: 0, category: "special" },
+  { id: "helix-fossil", name: "Helix Fossil", icon: "🐚", desc: "A fossil of an ancient sea Pokémon. It can be revived into Omanyte at the Pokémon Lab on Cinnabar Island.", price: 0, category: "special" },
+  { id: "dome-fossil", name: "Dome Fossil", icon: "🗿", desc: "A fossil of an ancient sea Pokémon. It can be revived into Kabuto at the Pokémon Lab on Cinnabar Island.", price: 0, category: "special" },
+  { id: "old-amber", name: "Old Amber", icon: "🟠", desc: "A piece of amber holding the genetic material of an ancient Pokémon. It can be revived into Aerodactyl at the Pokémon Lab on Cinnabar Island.", price: 0, category: "special" },
 
   // Klíčové předměty z Kroku 5 (Cerulean → Vermilion).
   { id: "ss-anne-ticket", name: "S.S. Anne Ticket", icon: "🎫", desc: "A ticket that grants passage aboard the luxury liner S.S. Anne, docked at Vermilion City.", price: 0, category: "special" },
@@ -146,6 +151,7 @@ export const ITEM_CATEGORIES = [
   { key: "boost", name: "Boosts", icon: "🍬" },
   { key: "evolution", name: "Evolution", icon: "🪨" },
   { key: "held", name: "Held Items", icon: "💎" },
+  { key: "fishing", name: "Fishing", icon: "🎣" },
   { key: "tm", name: "TMs", icon: "💿" },
   // Pozn.: kategorie "special" (klíčové/příběhové itemy jako fosílie) ZÁMĚRNĚ
   // není v tomto seznamu – Poké Mart iteruje přes ITEM_CATEGORIES, takže se

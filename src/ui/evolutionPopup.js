@@ -14,6 +14,7 @@
  */
 
 import { spriteImg } from "./sprites.js";
+import { playCry } from "../systems/audioSystem.js";
 
 /** Držíme max jedno okno naráz. */
 let openEvo = false;
@@ -82,6 +83,7 @@ export function showEvolutionPopup(e) {
   const doReveal = () => {
     if (revealed) return;
     revealed = true;
+    playCry(e.toId); // cry nově vyvinutého Pokémona při odhalení
     clearTimers();
     scene.classList.remove("is-flicker", "show-after");
     scene.classList.add("is-reveal");

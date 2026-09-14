@@ -21,6 +21,7 @@ import { createPokemon } from "../systems/pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { TMS, getTm, tmDisplayName } from "../../data/tms.js";
 import { grantTm } from "../systems/tmSystem.js";
+import { grantHmToPlayer } from "../systems/hmSystem.js";
 import { showPopup } from "./popup.js";
 import { openMarket, openTrainingPicker } from "./buildingView.js";
 import { getBuilding } from "../../data/buildings.js";
@@ -120,6 +121,8 @@ const VIEWS = {
   "viridian-trade-house": () => tradeHouseView("viridian-trade-house"),
   "cerulean-trade-house": () => tradeHouseView("cerulean-trade-house"),
   "vermilion-trade-house": () => tradeHouseView("vermilion-trade-house"),
+  "vermilion-fishing-hut": vermilionFishingHutView,
+  "fuchsia-fishing-house": fuchsiaFishingHouseView,
 };
 
 /** Cena Fresh Water v Celadon Dept Store (drink pro strážce Silph Co). */
@@ -567,6 +570,50 @@ function fightingDojoView() {
     title: "🥋 Fighting Dojo",
     body: `<p class="story-text">Saffron's <strong>Fighting Dojo</strong> echoes with shouts and the crack of splitting boards. The Dojo master sizes you up, then nods at two Poké Balls resting on a rack. "A true champion deserves them both. Take my prized <strong>Hitmonlee</strong> and <strong>Hitmonchan</strong>!"</p>
       <button class="btn" data-take-hitmons>🥋 Accept both Pokémon</button>${evSection}`,
+  };
+}
+
+function vermilionFishingHutView() {
+  // Věrný Kanto (Krok ?): Vermilion Fishing Hut – starý rybář dá Old Rod (jednorázově).
+  if (storyFlag("oldRodGift")) {
+    return {
+      title: "🎣 Fishing Hut",
+      body: `<p class="story-text">The old fisherman nods knowingly. "You caught something good with that rod, eh?"</p>
+        <p class="placeholder">✓ You received the <strong>Old Rod</strong> here.</p>`,
+    };
+  }
+  return {
+    title: "🎣 Fishing Hut",
+    body: `<p class="story-text">Inside the rustic fishing hut, an old fisherman mends his nets. He looks up at you with a weathered smile.</p>
+      <p class="story-text">"You look like a young trainer with the spirit to explore. Here — take my <strong>Old Rod</strong>. With a little patience, you'll reel in some fine Pokémon from the water."</p>
+      <button class="btn" data-take-old-rod>🎣 Accept the Old Rod</button>`,
+  };
+}
+
+function fuchsiaFishingHouseView() {
+  // Věrný Kanto (Krok ?): Fuchsia Fishing House – rybářský mistr dá Good Rod a Super Rod
+  // (obojí jednorázově). V jednom domě dva dárky.
+  const hasGoodRod = storyFlag("goodRodGift");
+  const hasSuperRod = storyFlag("superRodGift");
+
+  let goodRodSection = hasGoodRod
+    ? `<p class="placeholder">✓ You received the <strong>Good Rod</strong> here.</p>`
+    : `<p class="story-text">The master fisherman gestures to a finely crafted rod on the wall. "This is my <strong>Good Rod</strong> — it will catch rarer Pokémon than the Old Rod, and in places where the currents run deeper."</p>
+       <button class="btn" data-take-good-rod>🎣 Accept the Good Rod</button>`;
+
+  let superRodSection = hasSuperRod
+    ? `<p class="placeholder">✓ You received the <strong>Super Rod</strong> here.</p>`
+    : `<p class="story-text">He points to his prized possession, a magnificent rod studded with care. "This is my <strong>Super Rod</strong> — the finest fishing tool I know. With it, you can fish in places others can only dream of. Use it well."</p>
+       <button class="btn" data-take-super-rod>🎣 Accept the Super Rod</button>`;
+
+  return {
+    title: "🎣 Fishing House",
+    body: `<p class="story-text">The master fisherman's house stands near the Safari Zone, filled with fishing memorabilia and the smell of salt water. The old master himself greets you warmly.</p>
+      <p class="story-text">"A trainer! Welcome, welcome. Few know the art of fishing like we do here near the Safari Zone. Let me share my knowledge with you."</p>
+      <hr class="story-sep">
+      ${goodRodSection}
+      <hr class="story-sep">
+      ${superRodSection}`,
   };
 }
 
@@ -1116,10 +1163,9 @@ function wire(storyKey, overlay, onStatus, render, close) {
     if ((items["gold-teeth"] ?? 0) <= 0) return; // pojistka
     items["gold-teeth"] -= 1;
     if (items["gold-teeth"] <= 0) delete items["gold-teeth"];
-    items["hm04-strength"] = (items["hm04-strength"] ?? 0) + 1;
     if (!s.story) s.story = {};
     s.story.hasGoldTeeth = false;
-    setStoryFlag("hasStrength");
+    grantHmToPlayer(4); // HM04 Strength – flag + item centralizovaně (viz hmSystem)
     setStoryFlag("wardenThanked");
     commit();
     onStatus("The Warden gave you HM04 Strength! You can now move boulders aside.");
@@ -1195,5 +1241,38 @@ function wire(storyKey, overlay, onStatus, render, close) {
   overlay.querySelector("[data-enter-silph]")?.addEventListener("click", () => {
     close();
     openMainTab("rockets");
+  });
+
+  // Vermilion Fishing Hut – dárek Old Rod (jednorázově, flag oldRodGift).
+  overlay.querySelector("[data-take-old-rod]")?.addEventListener("click", () => {
+    const s = getState();
+    if (!s.resources.items) s.resources.items = {};
+    s.resources.items["old-rod"] = (s.resources.items["old-rod"] ?? 0) + 1;
+    setStoryFlag("oldRodGift");
+    commit();
+    onStatus("You received the Old Rod!");
+    render();
+  });
+
+  // Fuchsia Fishing House – dárek Good Rod (jednorázově, flag goodRodGift).
+  overlay.querySelector("[data-take-good-rod]")?.addEventListener("click", () => {
+    const s = getState();
+    if (!s.resources.items) s.resources.items = {};
+    s.resources.items["good-rod"] = (s.resources.items["good-rod"] ?? 0) + 1;
+    setStoryFlag("goodRodGift");
+    commit();
+    onStatus("You received the Good Rod!");
+    render();
+  });
+
+  // Fuchsia Fishing House – dárek Super Rod (jednorázově, flag superRodGift).
+  overlay.querySelector("[data-take-super-rod]")?.addEventListener("click", () => {
+    const s = getState();
+    if (!s.resources.items) s.resources.items = {};
+    s.resources.items["super-rod"] = (s.resources.items["super-rod"] ?? 0) + 1;
+    setStoryFlag("superRodGift");
+    commit();
+    onStatus("You received the Super Rod!");
+    render();
   });
 }

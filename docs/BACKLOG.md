@@ -7,12 +7,76 @@ ještě nejsou hotové. Ať na ně nezapomeneme. Detaily rozhodnutí viz
 Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v kódu) · 🔵 částečně · ✅ hotovo (ponecháno kvůli navazující práci)
 
 ---
-## Achievementy (in-game) — PŘED 1.0.0
+## ⭐ PUNCH-LIST PRO VYDÁNÍ 1.0.0 (ověřeno proti kódu 2026-09-14)
 
-- ⚪ **Achievementy in-game (rozhodnuto uživatelem 2026-09-11, dělat před 1.0.0).**
-  Systém herních úspěchů/odznaků za milníky – uživatel je chce mít hotové ještě
-  před vydáním 1.0.0. Zatím jen rozhodnuto, nic v kódu. **Návrhové poznámky (k
-  upřesnění, až na to dojde):**
+Kompletní audit kódu (6 os: útoky, systémy, boj, save/idle/ekonomika, itemy/bally,
+TODO-sweep). Každý nález ověřen ČTENÍM kódu, ne jen z tohoto dokumentu. Toto je
+zdroj pravdy o tom, co reálně zbývá do 1.0.0.
+
+### 🔴 Blokátory (musí se vyřešit před 1.0.0)
+- **ŽÁDNÉ.** Po ověření kódu nemá 1.0.0 žádný tvrdý blokátor – celý dex (vč. Mew)
+  je získatelný na 1 save, všechny systémy fungují bez crashů/exploitů.
+
+### 🟡 Drobnosti
+- ✅ **Gen 1 damage tahy bez efektu – HOTOVO v0.114.0.** OHKO **Guillotine/Horn
+  Drill/Fissure** (selže proti rychlejšímu, respektuje imunitu, acc 30), fixní
+  **Sonic Boom (20)/Dragon Rage (40)**, level **Seismic Toss/Night Shade**, **Low
+  Kick** (50 power + 30 % flinch). `chooseAction` je nově skóruje (opraven i Super
+  Fang). Handler ve `useMove` (kind `ohko`/`fixedDamage`/`levelDamage`), respektuje
+  Substitute. **Splash** je korektně no-op ✅.
+- ✅ **Disable & Mist – HOTOVO v0.114.0.** Disable zamkne poslední tah cíle na
+  několik kol (`volatile.disabled`, přes existující `lastMoveId`; auto ho přeskočí,
+  engine blokne bez ztráty PP). Mist chrání staty útočníka před snížením do výměny
+  (guard v `applyStatStage`).
+- ✅ **Teleport & Conversion – HOTOVO v0.115.0.** Teleport = útěk z divokého souboje
+  (hráč = konec jako Run, nepřítel = uteče a naskočí nové setkání; proti trenérovi
+  selže; řešeno flagem `_teleportFlee` v auto i manuál smyčce). Conversion = Porygon
+  změní vlastní typ na typ jednoho ze svých tahů (transientní jako Transform). AI ani
+  jeden nevybírá (power 0), takže neruší idle. (Gen 2 tahy nightmare/curse/
+  conversion-2/flail se 1.0.0 netýkají.)
+- ✅ **Struggle recoil – HOTOVO v0.114.0.** STRUGGLE má `effect:{kind:"recoil",
+  frac:0.25}`; bere útočníkovi ¼ způsobeného poškození.
+- ✅ **idle.js guard – HOTOVO v0.114.0.** `applyOfflineProgress` odmítne nekonečný/
+  záporný `elapsedMs` (chybějící `lastSaved` = NaN, posun hodin zpět).
+- ✅ **HM field-gating centralizovaný – HOTOVO v0.115.0.** `isAreaUnlocked` umí
+  `unlock.hm:<číslo>`, které přes tabulku `HMS` (`data/hms.js`) přeloží na story flag
+  (žádné magické stringy) – 3 area gaty převedeny (Rock Tunnel→HM5, Route 19→HM3,
+  Victory Road→HM4). Nový kanonický `grantHmToPlayer(num)` (`hmSystem.js`) nastaví flag
+  i item atomicky; 5 roztroušených míst udělení (S.S. Anne Cut+Fly, Route 9 Flash ×2,
+  Safari Surf, Warden Strength) přes něj. Chování beze změny. (Gym `requiresStory` je
+  obecná story-brána – Cinnabar používá ne-HM flag – správně ponechána.)
+- ✅ **Dev menu izolováno + jen na localhostu – HOTOVO v0.116.0.** Celé dev menu
+  přesunuto do vlastní složky `src/dev/` (`devTools.js` přesunut ze `systems/` +
+  pobral `devSetLevel`/`devToggleShiny` z `evolutionSystem.js`; nový `devPanel.js` =
+  HTML+wiring dev sekce vytažené ze `settingsView.js`; nový `devEnv.js` = `isDevEnv()`).
+  Dev sekce se v Nastavení vyrenderuje JEN na localhostu (`location.hostname` =
+  localhost/127.0.0.1/[::1]/file://); na ostré GitHub/GitLab Pages doméně se soubory
+  sice fyzicky nahrají, ale dev UI se nikde nevytvoří (hráč ho neuvidí). Žádný
+  build-krok, runtime brána; přenositelné mezi počítači přes repozitář. BEZ save bumpu.
+
+### ✅ Ověřené PLANÉ POPLACHY (audit tvrdil chybu, kód říká OK — NIC nedělat)
+- **Mew „nezískatelný"** → FALSE. Event „Mew pod náklaďákem" u S.S. Anne
+  (`storyBuildingView.js:330-345, 982-985`): po `ssAnneCleared` se Surf+Strength
+  se objeví náklaďák → `startStaticEncounter("mew", ≥50)`, vrací se dokud ho
+  nechytíš (žádný trvalý zámek). Kanonicky věrné. Audit četl jen `legendaries.js`.
+- **Porygon „chybí"** → FALSE. Získatelný v Celadon Game Corner (prize corner,
+  9999 coinů, `storyBuildingView.js`).
+- **Achievementy „chybí"** → FALSE. 16 ks, HOTOVO v0.105.0 (`data/achievements.js`).
+- **Farfetch'd / Mr. Mime / Jynx „dex holes"** → FALSE. Trade domy (CITY_TRADES,
+  `storyBuildingView.js`).
+- **Type chart Bug↔Poison „obráceně"** → NENÍ bug. Záměrná moderní 18-typová
+  tabulka (`data/types.js:3`, viz [alldex-data-strategy]); hra je v tom konzistentní.
+- **Save/idle/breeding/ekonomika** → bez chyb a bez exploitů (prodej = 50 % nákupu,
+  offline ×0.1 + cap 8 h, UID bezpečné, žádné double-rewards).
+
+---
+## Achievementy (in-game) — ✅ HOTOVO v0.105.0
+
+- ✅ **Achievementy in-game – HOTOVO v0.105.0.** 16 úspěchů s odměnami (gold/coins/
+  itemy) v `data/achievements.js`; průběžné vyhodnocování na bus eventech; toast
+  (`src/ui/achievementToast.js`) při odemčení; sekce v Profilu
+  (`src/ui/profileView.js`). Splněno vč. single-playthrough pravidla (žádný
+  nevratný lock). Původní návrhové poznámky ponechány níže jen jako historie:
   - Datově řízený registr `data/achievements.js` (`{ id, name, desc, icon,
     category, condition }`) + `state.achievements` (unlocked ids + timestamp).
   - Průběžné vyhodnocování na existujících eventech (STATE_CHANGED / chycení /
@@ -93,9 +157,11 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
 
 - ✅ **Chytání jen v souboji + autocatch (R-019).** Hotovo v 0.13.0. Ruční 🔴 Catch
   na aktuálního nepřítele, šance dle jeho HP; autocatch přepínač v `settings.autocatch`.
-  Auto-catch **zjednodušen v 0.29.0** na mód `{ enabled, mode }` – `mode: "all" |
-  "shiny"` (výběr vedle přepínače Auto catch). Filtry *Better IVs* a *New species*
-  zrušeny (Better IVs případně vrátit později jako mód).
+  Auto-catch **zjednodušen v 0.29.0** na mód `{ enabled, mode }`; ~~filtry Better
+  IVs a New species zrušeny~~. ✅ **VRÁCENO jako nezávislé OR-filtry** – dnes
+  `settings.autocatch = { enabled, catchAll, catchNew, catchShiny, catchBetterIv,
+  ball }` (New species v0.30.x, **Better IVs v0.113.0** přes `ivWouldImprove`);
+  filtry se kombinují OR, dedikovaný ball, auto-vypnutí když ball dojde.
 - ✅ **Redesign Catch tlačítka + interface okna souboje (HOTOVO, ověřeno proti kódu 2026-09-03).**
   Manuální souboj má plné menu à la klasická hra (`battleView.js`): kořen
   **Battle/Run/Items/Switch** (`rootMenuHtml`), podmenu tahů s typovými barvami a
@@ -224,11 +290,12 @@ Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v
   (`statusEnemy` ×4/×6 spící), **Moon** (`moonStone` ×4) v0.62.0. ✅ v0.94.0 přidány
   **Dusk** (`darkPlace` ×3 v jeskyních `biome:"cave"`) a **Dive** (`waterPlace` ×3.5
   ve vodních oblastech `biome:"water"`) – `catchContext()` nově předává `biome`.
-  **Zbývají (stále comingSoon,** `tier:null`/`price:null`, jen sprite+id): **Lure**
-  (rybaření), Safari/Sport/Park/Cherish (eventy), Premier (kosmetika za hromadný
-  nákup), Friend (friendship) – čekají na chybějící mechaniky (rybaření/eventy/
-  friendship), záměrně nevymýšlíme naslepo. Zapojení = doplnit `tier`/`price`/`bonus`
-  + case v `ballMultiplier`.
+  ✅ v0.112.0 **Lure** (`fishing` ×3) aktivní (tier 2, 400₽) – napojen na
+  přepracované rybaření (`ctx.fishing` z `castRod`). **Zbývají (stále comingSoon,**
+  `tier:null`/`price:null`, jen sprite+id): Safari/Sport/Park/Cherish (eventy),
+  Premier (kosmetika za hromadný nákup), Friend (friendship) – čekají na chybějící
+  mechaniky (eventy/friendship), záměrně nevymýšlíme naslepo. Zapojení = doplnit
+  `tier`/`price`/`bonus` + case v `ballMultiplier`.
 - ⚪ **Beast Ball (Ultra Beasts).** Jediný chybějící ball z celého kánonu – NEMÁ
   zatím ani sprite (`beast-ball.png`) ani datovou položku. Řešit **až** s Ultra
   Beasts; teď záměrně vynecháno.
@@ -527,7 +594,7 @@ nový bojový mód. Auto AI odbojuje frontu; autocatch se u trenéra vypne.
   Toxic, Sabrina→TM46 Psywave, Blaine→TM38 Fire Blast, Giovanni→TM27 Fissure), **Poké Mart**
   (kupitelné), **Game Corner** (TM13/23/48 za coiny) a **vzácný wild drop** (~1,5 %). Batoh
   má read-only TM sekci. HM zůstávají samostatné klíčové itemy (viz níže).
-- ✅ **HM systém (v0.96.0) – HOTOVO.** HM01 Cut / HM02 Fly / HM03 Surf / HM04 Strength / HM05 Flash jsou reálné **znovupoužitelné učitelné tahy** (nespotřebují se, učí se neomezeně kompatibilním druhům). Data: `data/hms.js` (mapování HM→tah+item+flag), `data/hmCompat.js` (kanonická kompatibilita všech 151), `src/systems/hmSystem.js` (logika, `teachHm` NEspotřebovává). UI: sekce „Teach HM" na kartě (`pokemonCard.js`, vedle „Teach TM"). Odemykání HM přes story flagy beze změny (hasSurf/hasStrength apod.). Nově přidáno: item `hm02-fly`, move `flash`; Fly se uděluje na S.S. Anne, je JEN bojový move. Save v44 (backfill `hm02-fly`, `hasFly`). **Zámínka pro budoucnost:** Až bude třeba **gating po HM** (např. stromy/vodní plochy jako skutečné bloky), převést na `unlock.hm` ve vzoru `area.unlock`; zatím jsou HM oblasti volné (jen visited). Zbývá: doladit gating HM-oblastí (bude-li potřeba).
+- ✅ **HM systém (v0.96.0) – HOTOVO.** HM01 Cut / HM02 Fly / HM03 Surf / HM04 Strength / HM05 Flash jsou reálné **znovupoužitelné učitelné tahy** (nespotřebují se, učí se neomezeně kompatibilním druhům). Data: `data/hms.js` (mapování HM→tah+item+flag), `data/hmCompat.js` (kanonická kompatibilita všech 151), `src/systems/hmSystem.js` (logika, `teachHm` NEspotřebovává). UI: sekce „Teach HM" na kartě (`pokemonCard.js`, vedle „Teach TM"). Odemykání HM přes story flagy beze změny (hasSurf/hasStrength apod.). Nově přidáno: item `hm02-fly`, move `flash`; Fly se uděluje na S.S. Anne, je JEN bojový move. Save v44 (backfill `hm02-fly`, `hasFly`). **Gating po HM – HOTOVO v0.115.0:** `isAreaUnlocked` umí `unlock.hm:<číslo>` (přeloží přes tabulku `HMS` na story flag); převedeny Rock Tunnel/Route 19/Victory Road. Udělení HM centralizováno do `grantHmToPlayer(num)` (flag+item atomicky).
 
 ## Player Profile / Trainer Card (nový tab)
 
@@ -629,7 +696,9 @@ nový bojový mód. Auto AI odbojuje frontu; autocatch se u trenéra vypne.
     už engine PROVÁDÍ (viz `battleSystem.js`). ✅ **DODĚLÁNO (v0.92.0):** **Haze**
     (nuluje stat-stages obou), **Metronome** (spustí náhodný tah dedikovaným resolverem),
     **Dig/Bounce/Fly/Dive** semi-invulnerabilita během nabíjecího kola (cílené útoky
-    minou). ⚠️ **Zbývá:** **Bide** – v datech `moves.js` zatím žádný záznam (žádný dead case).
+    minou). ✅ **Bide – HOTOVO v0.95.0** (viz sekce ROADMAP výše: sbírá 2 kola, vrátí
+    ×2, `volatile.biding`). **Zbývá (drobnost):** 17 Gen 1 tahů bez efektu – viz
+    punch-list 1.0.0 na začátku dokumentu.
   - **Fáze 4 (později):** víc oblastí; Struggle recoil.
     ✅ **Auto-battle politika** (v0.48.0): `chooseAutoPlayerTurn` (auto-heal <30 %
     HP, auto-switch při enemy eff ≥2× s guardem, jinak move); `chooseAction`

@@ -1,20 +1,19 @@
 /**
- * UI: globální nastavení hry + Dev nástroje.
+ * UI: globální nastavení hry (audio, layout, pořadí panelů, herní pravidla).
  *
  * Nastavení žije ve sdíleném modálním okně (`openSettingsModal`), které se dá
  * otevřít z horní lišty (tlačítko ⚙) i z úvodní obrazovky (title screen).
- * Obsahuje herní rychlost a **globální Dev sekci** (peníze, přidání vejce/Ditta,
- * a per-jedincové úpravy level/shiny s výběrem cíle) – dřív byly dev nástroje
- * roztroušené na Kartě Pokémona, teď jsou na jednom místě. Další možnosti
- * (Lock max level, Nuzlocke…) přibudou později – viz docs/BACKLOG.md.
+ *
+ * Dev sekce (peníze, spawn, level/shiny, story skoky…) je oddělená ve složce
+ * `src/dev/` (`devPanel.js`) a zapojuje se do tohoto modalu JEN na localhostu
+ * (`isDevEnv()` z `devEnv.js`) – na ostré verzi se vůbec nevyrenderuje.
  */
 
 import { bus, EVENTS } from "../core/events.js";
 import { getState, commit } from "../core/state.js";
-import { getSpecies } from "../../data/pokemon.js";
-import { devAddEgg, devAddPokemon, devAddMoney, devApplyCheckpoint, devCompleteDex, DEV_CHECKPOINTS } from "../systems/devTools.js";
-import { resetTutorial, runTutorial } from "./tutorial.js";
-import { devSetLevel, devToggleShiny } from "../systems/evolutionSystem.js";
+import { applyAudioSettings } from "../systems/audioSystem.js";
+import { isDevEnv } from "../dev/devEnv.js";
+import { devSectionHtml, wireDevSection } from "../dev/devPanel.js";
 import { scrollAware, saveScroll, restoreScroll } from "./scrollPreserve.js";
 
 /**
@@ -28,94 +27,6 @@ export function renderSettings(root) {
 
 /** Aby se stejné okno neotevřelo dvakrát (např. rychlý dvojklik). */
 let openOverlay = null;
-
-/** Poslední hláška dev akce – přežije překreslení těla (STATE_CHANGED). */
-let lastDevMsg = "";
-
-/** uid cílového jedince dev úprav (level/shiny). Přežije překreslení těla. */
-let devTargetUid = null;
-
-/** Vrátí platný cílový uid: uložený, jinak první v kolekci, jinak null. */
-function effectiveTargetUid() {
-  const col = getState().collection;
-  if (devTargetUid && col.some((p) => p.uid === devTargetUid)) return devTargetUid;
-  return col[0]?.uid ?? null;
-}
-
-/** HTML dev sekce (peníze, spawn, per-jedinec level/shiny). */
-function devSectionHtml() {
-  const col = getState().collection;
-  const uid = effectiveTargetUid();
-  const target = col.find((p) => p.uid === uid) ?? null;
-
-  const options = col
-    .map((p) => {
-      const sp = getSpecies(p.speciesId);
-      const label = `${p.shiny ? "✨ " : ""}${sp?.name ?? p.speciesId} · Lv ${p.level}`;
-      return `<option value="${p.uid}" ${p.uid === uid ? "selected" : ""}>${label}</option>`;
-    })
-    .join("");
-
-  const targetControls = target
-    ? `<div class="dev-row dev-lvl-row">
-         <button class="btn btn-sm" data-lvl="-10">−10</button>
-         <button class="btn btn-sm" data-lvl="-1">−1</button>
-         <strong class="dev-lvl">Lv ${target.level}</strong>
-         <button class="btn btn-sm" data-lvl="1">+1</button>
-         <button class="btn btn-sm" data-lvl="10">+10</button>
-         <button class="btn btn-sm" data-lvl-set="100" title="Max level">Max</button>
-         <button class="btn btn-sm" data-toggle-shiny>${target.shiny ? "✨ Shiny: on" : "Shiny: off"}</button>
-       </div>`
-    : `<div class="dev-row"><span class="placeholder">Catch a Pokémon to edit it here.</span></div>`;
-
-  return `
-    <div class="settings-dev">
-      <div class="settings-label">🔧 Dev tools</div>
-
-      <div class="dev-row">
-        <span class="dev-sublabel">Money</span>
-        <button class="btn btn-sm" data-money="1000">+1 000 💰</button>
-        <button class="btn btn-sm" data-money="10000">+10 000 💰</button>
-      </div>
-
-      <div class="dev-row">
-        <span class="dev-sublabel">Spawn</span>
-        <button class="btn btn-sm" data-dev="egg">🥚 Add egg</button>
-        <button class="btn btn-sm" data-dev="ditto">Add Ditto</button>
-        <button class="btn btn-sm" data-dev="complete-dex">Complete Dex (all 151)</button>
-      </div>
-
-      <div class="dev-row">
-        <span class="dev-sublabel">Pokémon</span>
-        <select class="dev-select" data-dev-target ${col.length ? "" : "disabled"}>${
-          options || '<option>— none —</option>'
-        }</select>
-      </div>
-      ${targetControls}
-
-      <div class="dev-row">
-        <span class="dev-sublabel">Tutorial</span>
-        <button class="btn btn-sm" data-dev-tutorial>▶️ Replay tutorial</button>
-      </div>
-
-      <div class="dev-row">
-        <span class="dev-sublabel">Map</span>
-        <button class="btn btn-sm" data-map-reveal>${
-          getState().settings?.mapReveal ? "👁 Nodes: show all" : "🧭 Nodes: by progress"
-        }</button>
-      </div>
-
-      <div class="dev-row">
-        <span class="dev-sublabel">Skip to</span>
-        <select class="dev-select" data-checkpoint>${DEV_CHECKPOINTS.map(
-          (c) => `<option value="${c.key}">${c.label}</option>`
-        ).join("")}</select>
-        <button class="btn btn-sm" data-checkpoint-go>⏩ Jump</button>
-      </div>
-
-      <div class="dev-feedback placeholder">${lastDevMsg}</div>
-    </div>`;
-}
 
 /** Jedno pravidlo = řádek tabulky (název + popis vlevo, toggle vpravo). */
 function ruleRow(key, name, desc, on) {
@@ -190,13 +101,44 @@ function rulesHtml() {
     </div>`;
 }
 
+/** HTML audio nastavení (hlasitost + mute). */
+function audioHtml() {
+  const audio = getState().settings?.audio ?? { master: 70, music: 50, sfx: 80, mute: false };
+  return `
+    <div class="settings-audio">
+      <div class="settings-label">🔊 Audio</div>
+      <div class="audio-slider-row">
+        <label for="audio-master">Master</label>
+        <input type="range" id="audio-master" class="audio-slider" data-audio-setting="master" min="0" max="100" value="${audio.master}">
+        <span class="audio-value">${audio.master}</span>
+      </div>
+      <div class="audio-slider-row">
+        <label for="audio-music">Music</label>
+        <input type="range" id="audio-music" class="audio-slider" data-audio-setting="music" min="0" max="100" value="${audio.music}">
+        <span class="audio-value">${audio.music}</span>
+      </div>
+      <div class="audio-slider-row">
+        <label for="audio-sfx">SFX</label>
+        <input type="range" id="audio-sfx" class="audio-slider" data-audio-setting="sfx" min="0" max="100" value="${audio.sfx}">
+        <span class="audio-value">${audio.sfx}</span>
+      </div>
+      <div class="audio-checkbox-row">
+        <label for="audio-mute">
+          <input type="checkbox" id="audio-mute" data-audio-setting="mute" ${audio.mute ? "checked" : ""}>
+          Mute all
+        </label>
+      </div>
+    </div>`;
+}
+
 /** HTML vnitřku nastavení (sdílené modalem – ať je zdroj pravdy jeden). */
 function settingsBodyHtml() {
   return `
+    ${audioHtml()}
     ${layoutHtml()}
     ${stackOrderHtml()}
     ${rulesHtml()}
-    ${devSectionHtml()}`;
+    ${isDevEnv() ? devSectionHtml() : ""}`;
 }
 
 /**
@@ -218,11 +160,6 @@ export function openSettingsModal() {
   openOverlay = overlay;
 
   const bodyEl = overlay.querySelector(".settings-modal-body");
-  const showDevMsg = (msg) => {
-    lastDevMsg = msg; // uchovej pro příští překreslení
-    const el = bodyEl.querySelector(".dev-feedback");
-    if (el) el.textContent = msg; // a ukaž hned (re-render z commitu už proběhl)
-  };
   const rerender = () => {
     const _s = saveScroll(bodyEl);
     bodyEl.innerHTML = settingsBodyHtml();
@@ -231,6 +168,32 @@ export function openSettingsModal() {
   };
 
   const wireBody = () => {
+    // Audio slidery a mute checkbox.
+    bodyEl.querySelectorAll("[data-audio-setting]").forEach((el) => {
+      el.addEventListener("change", () => {
+        const s = getState();
+        if (!s.settings.audio) {
+          s.settings.audio = { master: 70, music: 50, sfx: 80, mute: false };
+        }
+        const key = el.dataset.audioSetting;
+        if (key === "mute") {
+          s.settings.audio.mute = el.checked;
+        } else {
+          s.settings.audio[key] = Number(el.value);
+        }
+        commit();
+        applyAudioSettings();
+        // Aktualizuj hodnotu vedle slideru.
+        if (el.type === "range") {
+          const parent = el.closest(".audio-slider-row");
+          if (parent) {
+            const valueSpan = parent.querySelector(".audio-value");
+            if (valueSpan) valueSpan.textContent = el.value;
+          }
+        }
+      });
+    });
+
     // Přepínač rozvržení panelů (generický, přijímá jakoukoliv hodnotu z atributu).
     bodyEl.querySelectorAll("[data-layout-set]").forEach((b) =>
       b.addEventListener("click", () => {
@@ -271,84 +234,9 @@ export function openSettingsModal() {
       })
     );
 
-    // Peníze.
-    bodyEl.querySelectorAll("[data-money]").forEach((b) =>
-      b.addEventListener("click", () => {
-        const total = devAddMoney(Number(b.dataset.money)); // commit → re-render
-        showDevMsg(`Gold is now ${total}.`);
-      })
-    );
-
-    // Spawn (vejce / Ditto / Complete Dex).
-    bodyEl.querySelectorAll("[data-dev]").forEach((b) =>
-      b.addEventListener("click", () => {
-        if (b.dataset.dev === "egg") {
-          const r = devAddEgg(); // náhodný druh; commit uvnitř
-          showDevMsg(`Added a ${r.name} egg → incubate it in the Day Care.`);
-        } else if (b.dataset.dev === "ditto") {
-          const r = devAddPokemon("ditto"); // commit uvnitř
-          showDevMsg(r.ok ? `Added ${r.name} to your collection.` : "Failed to add Ditto.");
-        } else if (b.dataset.dev === "complete-dex") {
-          const r = devCompleteDex(); // commit + capstone check uvnitř
-          showDevMsg(`Added ${r.added} new species — dex complete (${r.total}).`);
-        }
-      })
-    );
-
-    // Skok na story milník (přeskočí začátek hry pro testování).
-    const cpBtn = bodyEl.querySelector("[data-checkpoint-go]");
-    if (cpBtn) cpBtn.addEventListener("click", () => {
-      const sel = bodyEl.querySelector("[data-checkpoint]");
-      const r = devApplyCheckpoint(sel?.value); // commit uvnitř → re-render
-      showDevMsg(r.ok ? `⏩ Skipped to: ${r.label}` : "Skip failed.");
-    });
-
-    // Znovupřehrání tutoriálu (reset flagu + rovnou spuštění).
-    const tutBtn = bodyEl.querySelector("[data-dev-tutorial]");
-    if (tutBtn) tutBtn.addEventListener("click", () => {
-      resetTutorial();
-      runTutorial();
-      showDevMsg("Tutorial restarted.");
-    });
-
-    // Přepínač viditelnosti uzlů na mapě: vše (dev) ↔ jen odemčené (reálný postup).
-    const mapBtn = bodyEl.querySelector("[data-map-reveal]");
-    if (mapBtn) mapBtn.addEventListener("click", () => {
-      const s = getState().settings;
-      s.mapReveal = !s.mapReveal;
-      commit(); // STATE_CHANGED → mapa i tato sekce se překreslí
-      showDevMsg(s.mapReveal ? "Map: showing ALL nodes." : "Map: nodes by progress.");
-    });
-
-    // Výběr cílového jedince pro level/shiny.
-    const sel = bodyEl.querySelector("[data-dev-target]");
-    if (sel) sel.addEventListener("change", () => {
-      devTargetUid = sel.value;
-      rerender();
-    });
-
-    // Level úpravy cíle (relativní ± i absolutní Max).
-    bodyEl.querySelectorAll("[data-lvl]").forEach((b) =>
-      b.addEventListener("click", () => {
-        const uid = effectiveTargetUid();
-        const p = getState().collection.find((x) => x.uid === uid);
-        if (!p) return;
-        devSetLevel(uid, p.level + Number(b.dataset.lvl)); // commit → re-render
-      })
-    );
-    bodyEl.querySelectorAll("[data-lvl-set]").forEach((b) =>
-      b.addEventListener("click", () => {
-        const uid = effectiveTargetUid();
-        if (uid) devSetLevel(uid, Number(b.dataset.lvlSet) || 1);
-      })
-    );
-
-    // Shiny toggle cíle.
-    const shinyBtn = bodyEl.querySelector("[data-toggle-shiny]");
-    if (shinyBtn) shinyBtn.addEventListener("click", () => {
-      const uid = effectiveTargetUid();
-      if (uid) devToggleShiny(uid); // commit → re-render
-    });
+    // Dev sekce (peníze/spawn/level/shiny/story skoky/tutorial/mapa) – zapojí se
+    // JEN v lokálním prostředí (localhost); na ostré verzi se vůbec nevyrenderuje.
+    if (isDevEnv()) wireDevSection(bodyEl, rerender);
   };
   wireBody();
 

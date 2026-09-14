@@ -138,7 +138,12 @@ export function renderGymTab(root, onStatus = () => {}) {
 
       let statusHtml;
       if (isDefeated) {
-        statusHtml = `<span class="gym-status done">✓ Defeated</span>`;
+        // Post-game: poražený leader jde vyzvat na odvetu (rematch) až po dokončení
+        // celého gymu (cleared) — opakovatelná odměna řeší finishTrainerBattle.
+        statusHtml =
+          isLeader && cleared
+            ? `<span class="gym-status done">✓ Defeated</span> <button class="btn btn-sm gym-fight gym-rematch" data-trainer="${t.id}" data-gym="${gym.id}">Rematch ⚔</button>`
+            : `<span class="gym-status done">✓ Defeated</span>`;
       } else if (isNext && challengePending) {
         statusHtml = `<span class="gym-status locked">🔒 Solve the Gym Challenge first</span>`;
       } else if (isNext) {

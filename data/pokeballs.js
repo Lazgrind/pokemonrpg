@@ -106,12 +106,15 @@ export const POKEBALLS = [
   // neukazují (tier:null + price:null → mimo obchod; nedají se vlastnit → mimo
   // souboj). Až doděláme příslušnou mechaniku, ballu se doplní tier/price/bonus
   // a přesune se nahoru mezi prodejné. `desc` drží zamýšlený efekt.
+  // --- Rybaření: Lure Ball je aktivní (tier 2) ---
+  { id: "lure", name: "Lure Ball", icon: "🪝", tier: 2, price: 400, mult: 1,
+    bonus: { type: "fishing", mult: 3 },
+    desc: "Great for Pokémon hooked while fishing (×3 catch rate)." },
+
   { id: "premier", name: "Premier Ball", icon: "⚪", tier: null, price: null, mult: 1, comingSoon: true,
     desc: "Coming soon — kosmetický ball (odměna za hromadný nákup)." },
   { id: "friend", name: "Friend Ball", icon: "💚", tier: null, price: null, mult: 1, comingSoon: true,
     desc: "Coming soon — zvýší friendship chyceného Pokémona." },
-  // POZN.: Lure Ball vynechán záměrně – rybaření do hry přidávat NEBUDEME, takže
-  // by šlo o trvale nesplnitelný slib. Sprite zůstává v assets/, kdyby se to změnilo.
   { id: "sport", name: "Sport Ball", icon: "🐛", tier: null, price: null, mult: 1, comingSoon: true,
     desc: "Coming soon — event ball do Bug-Catching soutěže." },
   { id: "park", name: "Park Ball", icon: "🏞️", tier: null, price: null, mult: 1, comingSoon: true,

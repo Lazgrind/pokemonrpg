@@ -3,7 +3,8 @@
  */
 
 import { learnLevelUpMoves } from "./pokemonSystem.js";
-import { getState } from "../core/state.js";
+import { getState, commit } from "../core/state.js";
+import { bus, EVENTS } from "../core/events.js";
 import { GYMS } from "../../data/gyms.js";
 import { getTrainer, LEAGUE } from "../../data/trainers.js";
 import { xpBoostMult } from "./buildingSystem.js";
@@ -87,6 +88,8 @@ export function grantXp(pokemon, amount, { auto = false } = {}) {
   }
   if (pokemon.level >= cap) pokemon.xp = 0; // na stropu už XP nesbírá
   if (leveledUp) learnLevelUpMoves(pokemon, prevLevel, { auto });
+  // Emit event pro achievement systém (až po learnLevelUpMoves)
+  if (leveledUp) bus.emit(EVENTS.LEVEL_UP, { pokemon, level: pokemon.level });
   return leveledUp;
 }
 

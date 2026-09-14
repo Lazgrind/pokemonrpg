@@ -246,7 +246,7 @@ export function renderMap(root) {
         title: "🦴 Ancient Fossils",
         body: `<p class="story-text">Deep in Mt. Moon, after driving off the Rockets, you find <strong>three ancient fossils</strong> resting on a stone table — and pocket them all.</p>
           <p class="placeholder">🐚 Helix Fossil → Omanyte · 🗿 Dome Fossil → Kabuto · 🟠 Old Amber → Aerodactyl</p>
-          <p class="story-text">Take them to the <strong>Museum of Science</strong> in Pewter City to bring them back to life.</p>`,
+          <p class="story-text">Take them to the <strong>Pokémon Lab</strong> on Cinnabar Island to bring them back to life.</p>`,
         okLabel: "Take all three",
         onOk: () => pickFossil(),
       });
@@ -488,7 +488,7 @@ function pickFossil() {
   showPopup({
     title: "🦴 Fossils Obtained",
     body: `<p class="story-text">You carefully pack the <strong>Helix Fossil</strong>, <strong>Dome Fossil</strong> and <strong>Old Amber</strong> into your bag.</p>
-      <p class="placeholder">The Museum of Science in Pewter City can revive them into <strong>Omanyte</strong>, <strong>Kabuto</strong> and <strong>Aerodactyl</strong>.</p>`,
+      <p class="placeholder">The Pokémon Lab on Cinnabar Island can revive them into <strong>Omanyte</strong>, <strong>Kabuto</strong> and <strong>Aerodactyl</strong>.</p>`,
     okLabel: "Nice!",
   });
 }

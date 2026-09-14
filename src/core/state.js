@@ -68,6 +68,7 @@
  * @property {boolean} catchAll      chytat všechny divoké
  * @property {boolean} catchNew      chytat druhy, které ještě nemáš (kompletace dexu)
  * @property {boolean} catchShiny    chytat shiny (filtry se sčítají přes NEBO)
+ * @property {boolean} catchBetterIv chytat jedince, kteří by zlepšili IV druhu, co už máš
  * @property {string} ball           vyhrazený typ míčku pro autocatch (nezávislý na selectedBall);
  *                                   když dojde, autocatch se sám vypne (nesahá po jiných)
  * @property {{ buildings: Record<string, { level: number }>, daycare?: { uid: string|null, buffer: number, eggs?: Array<{ id: string, elapsedSec: number }>, breeding?: { a: string|null, b: string|null, buffer: number } } }} city  budovy města + sloty školky (výcvik + inkubace vajec + breeding)
@@ -76,7 +77,7 @@
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 44;
+export const CURRENT_SAVE_VERSION = 47;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
@@ -120,7 +121,8 @@ export function createNewGame() {
       selectedBall: "poke",
       layout: "auto", // rozvržení panelů: auto (responzivní) | wide (2 sloupce) | stacked (1 sloupec) | mobile (1 sloupec + svislé rozdělení souboje)
       stackOrder: ["battle", "map", "tabs"], // pořadí panelů ve skládaném režimu (shora dolů)
-      autocatch: { enabled: false, catchAll: false, catchNew: false, catchShiny: false, ball: "poke" }, // nezávislé filtry (All/New/Shiny, sčítají se NEBO); ball = vyhrazený typ míčku
+      autocatch: { enabled: false, catchAll: false, catchNew: false, catchShiny: false, catchBetterIv: false, ball: "poke" }, // nezávislé filtry (All/New/Shiny/Better IVs, sčítají se NEBO); ball = vyhrazený typ míčku
+      audio: { master: 70, music: 50, sfx: 80, mute: false }, // hlasitost (0–100) a mute přepínač
       // Herní pravidla / režimy (viz settingsView, battleSystem):
       //  - noItems: zakáže léčivé předměty (žádné lektvary ani jiné itemy) v souboji
       //  - noPotions: zakáže jen lektvary (Potion apod.), ostatní předměty ok
@@ -141,6 +143,11 @@ export function createNewGame() {
     // Běhový stav Safari Zone expedice (viz systems/safariSystem.js).
     // active=false → mimo výpravu; jinak steps/balls docházejí, depth = hloubka.
     safari: { active: false, steps: 0, balls: 0, depth: 1, bestDepth: 0, encounter: null },
+    // Achievements: odemčené (id → timestamp) + sledované statistiky.
+    achievements: { unlocked: {}, stats: { catches: 0, hatches: 0, evolves: 0 } },
+    // Hall of Fame: historie týmů, které pokořily Ligu. Každý clear = 1 záznam
+    // { timestamp, team: [{ speciesId, level, nickname, shiny }] } (viz battleSystem).
+    hallOfFame: [],
   };
 }
 

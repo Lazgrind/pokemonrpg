@@ -1,17 +1,20 @@
 /**
- * devTools.js – ladicí (dev) akce mimo kartu jedince.
+ * devTools.js – ladicí (dev) akce Dev menu.
  *
  * Slouží k rychlému testování mechanik bez normálního průběhu hry (výhry,
- * chytání, líhnutí). Napojeno na Dev sekci v Nastavení (⚙). Per-jedincové dev
- * nástroje (level, shiny) zůstávají na Kartě Pokémona (`pokemonCard.js`).
+ * chytání, líhnutí). Napojeno na Dev sekci v Nastavení (⚙), která se zapojuje
+ * jen na localhostu (viz `devEnv.js`). Celé Dev menu žije ve složce `src/dev/`.
+ * Per-jedincové dev nástroje (level, shiny) jsou taky tady (`devSetLevel`,
+ * `devToggleShiny`) – dřív byly přilepené v `evolutionSystem.js`.
  */
 
 import { POKEMON_SPECIES, getSpecies } from "../../data/pokemon.js";
 import { getState, commit } from "../core/state.js";
-import { createPokemon } from "./pokemonSystem.js";
-import { acquirePokemon, getStarterSpeciesId } from "./team.js";
-import { ensureStartersSeen } from "./pokedex.js";
-import { addEgg } from "./eggSystem.js";
+import { createPokemon, computeStats, defaultMovesFor } from "../systems/pokemonSystem.js";
+import { acquirePokemon, getStarterSpeciesId } from "../systems/team.js";
+import { ensureStartersSeen } from "../systems/pokedex.js";
+import { addEgg } from "../systems/eggSystem.js";
+import { MAX_LEVEL } from "../systems/progression.js";
 
 /** Náhodný druh z celého Dexu (pro „přidej něco na zkoušku"). */
 function randomSpeciesId() {
@@ -233,6 +236,9 @@ function applyOne(s, key) {
       if (!s.resources.items) s.resources.items = {};
       s.resources.items["hm01-cut"] = (s.resources.items["hm01-cut"] ?? 0) + 1;
       if ((s.resources.items["hm02-fly"] ?? 0) < 1) s.resources.items["hm02-fly"] = 1;
+      // Old Rod od rybáře ve Vermilionu (Fishing Hut) – ať jde rybaření testovat.
+      s.resources.items["old-rod"] = (s.resources.items["old-rod"] ?? 0) + 1;
+      s.story.oldRodGift = true;
       // Krok 12: Vermilion Trade House (Spearow → Farfetch'd) považ za provedený.
       giftMon(s, "farfetchd", 22, "farfetchdGift");
       s.progress.activeAreaId = "vermilion-city";
@@ -278,6 +284,11 @@ function applyOne(s, key) {
       addUnique(s.progress.visited, "route-08");
       addUnique(s.progress.visited, "route-07");
       addUnique(s.progress.visited, "celadon-city");
+      // Cycling Road (volitelná boční větev z Celadonu) – označ jako navštívené,
+      // ať po skipu nezůstane zamčená (jinak by chtěla ruční průchod 16→17→18).
+      addUnique(s.progress.visited, "route-16");
+      addUnique(s.progress.visited, "route-17");
+      addUnique(s.progress.visited, "route-18");
       addUnique(s.progress.badges, "rainbow-badge");
       addUnique(s.progress.defeatedTrainers, "celadon-gym-beauty-tamia");
       addUnique(s.progress.defeatedTrainers, "celadon-gym-lass-michelle");
@@ -333,6 +344,13 @@ function applyOne(s, key) {
       addUnique(s.progress.visited, "route-15");
       addUnique(s.progress.visited, "fuchsia-city");
       s.story.fuchsiaArrival = true;
+      // Good Rod + Super Rod od rybářského mistra ve Fuchsia Fishing House.
+      if (!s.resources) s.resources = {};
+      if (!s.resources.items) s.resources.items = {};
+      s.resources.items["good-rod"] = (s.resources.items["good-rod"] ?? 0) + 1;
+      s.resources.items["super-rod"] = (s.resources.items["super-rod"] ?? 0) + 1;
+      s.story.goodRodGift = true;
+      s.story.superRodGift = true;
       s.progress.activeAreaId = "fuchsia-city";
       break;
     case "soul":
@@ -527,4 +545,38 @@ export function devApplyCheckpoint(key) {
   for (let i = 0; i <= idx; i++) applyOne(s, DEV_CHECKPOINTS[i].key);
   commit();
   return { ok: true, label: DEV_CHECKPOINTS[idx].label };
+}
+
+/**
+ * DEV/TEST: natvrdo nastaví jedinci level (1–MAX_LEVEL), aby šlo pohodlně testovat
+ * evoluce, learnsety apod. Vynuluje XP, přenastaví tahy na výchozí sadu daného
+ * levelu (`defaultMovesFor`) a dorovná HP na plné max. Commituje.
+ * @param {string} uid
+ * @param {number} level
+ * @returns {{ ok: boolean, level?: number }}
+ */
+export function devSetLevel(uid, level) {
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false };
+  const lvl = Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(level) || 1)));
+  owned.level = lvl;
+  owned.xp = 0;
+  owned.moves = defaultMovesFor(owned.speciesId, lvl); // čistá sada tahů pro daný level
+  owned.hp = computeStats(owned).maxHp;
+  commit();
+  return { ok: true, level: lvl };
+}
+
+/**
+ * DEV/TEST: přepne jedinci shiny stav, aby šlo pohodlně testovat shiny sprity
+ * (vč. zachování shiny při evoluci). Commituje.
+ * @param {string} uid
+ * @returns {{ ok: boolean, shiny?: boolean }}
+ */
+export function devToggleShiny(uid) {
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false };
+  owned.shiny = !owned.shiny;
+  commit();
+  return { ok: true, shiny: owned.shiny };
 }

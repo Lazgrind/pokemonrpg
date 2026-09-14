@@ -21,8 +21,7 @@
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { getSpecies } from "../../data/pokemon.js";
-import { computeStats, learnLevelUpMoves, defaultMovesFor } from "./pokemonSystem.js";
-import { MAX_LEVEL } from "./progression.js";
+import { computeStats, learnLevelUpMoves } from "./pokemonSystem.js";
 
 /** Id drženého itemu, který blokuje evoluci (a v breedingu předává povahu). */
 export const EVERSTONE_ID = "everstone";
@@ -215,39 +214,4 @@ export function evolveByTrade(uid, itemId = "linking-cord") {
   commit();
   bus.emit(EVENTS.POKEMON_EVOLVED, { uid, ...evt });
   return { ok: true, ...evt };
-}
-
-/**
- * DEV/TEST: natvrdo nastaví jedinci level (1–MAX_LEVEL), aby šlo pohodlně testovat
- * evoluce, learnsety apod. Vynuluje XP, přenastaví tahy na výchozí sadu daného
- * levelu (`defaultMovesFor`) a dorovná HP na plné max. Commituje. NENÍ součást
- * běžné hry – jen debug tlačítka na kartě Pokémona.
- * @param {string} uid
- * @param {number} level
- * @returns {{ ok: boolean, level?: number }}
- */
-export function devSetLevel(uid, level) {
-  const owned = getState().collection.find((p) => p.uid === uid);
-  if (!owned) return { ok: false };
-  const lvl = Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(level) || 1)));
-  owned.level = lvl;
-  owned.xp = 0;
-  owned.moves = defaultMovesFor(owned.speciesId, lvl); // čistá sada tahů pro daný level
-  owned.hp = computeStats(owned).maxHp;
-  commit();
-  return { ok: true, level: lvl };
-}
-
-/**
- * DEV/TEST: přepne jedinci shiny stav, aby šlo pohodlně testovat shiny sprity
- * (vč. zachování shiny při evoluci). Commituje. NENÍ součást běžné hry.
- * @param {string} uid
- * @returns {{ ok: boolean, shiny?: boolean }}
- */
-export function devToggleShiny(uid) {
-  const owned = getState().collection.find((p) => p.uid === uid);
-  if (!owned) return { ok: false };
-  owned.shiny = !owned.shiny;
-  commit();
-  return { ok: true, shiny: owned.shiny };
 }

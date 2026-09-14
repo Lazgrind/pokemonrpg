@@ -39,6 +39,10 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
   // Idlujeme jen z běžícího souboje.
   if (!savedBattle || !savedBattle.running || savedBattle.result) return null;
 
+  // Robustnost: chybějící `lastSaved` → elapsedMs = NaN; posun hodin zpět → záporné.
+  // Obojí nesmí projít dál (NaN by obešel i práh MIN_OFFLINE_SECONDS níže).
+  if (!Number.isFinite(elapsedMs) || elapsedMs < 0) return null;
+
   const elapsedSec = Math.floor(elapsedMs / 1000);
   if (elapsedSec < MIN_OFFLINE_SECONDS) return null;
 

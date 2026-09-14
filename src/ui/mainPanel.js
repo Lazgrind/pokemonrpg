@@ -27,7 +27,11 @@ import { renderRocketsTab } from "./rocketView.js";
 import { renderSafariTab } from "./safariView.js";
 import { renderLegendaryTab } from "./legendaryView.js";
 import { renderLeagueTab } from "./leagueView.js";
-import { getActiveArea } from "../systems/battleSystem.js";
+import { renderFishingTab } from "./fishingView.js";
+import { hasAnyRod, areaHasWater } from "../systems/fishingSystem.js";
+import { getActiveArea, battleBgm } from "../systems/battleSystem.js";
+import { playBgm } from "../systems/audioSystem.js";
+import { bus, EVENTS } from "../core/events.js";
 import { getState } from "../core/state.js";
 import { ownsSpecies } from "../systems/team.js";
 import { getGymForCity } from "../../data/gyms.js";
@@ -37,6 +41,7 @@ import { legendaryForArea } from "../../data/legendaries.js";
 const ALL_TABS = [
   { id: "battle", label: "Battle" },
   { id: "safari", label: "Safari" },
+  { id: "fishing", label: "🎣 Fishing" },
   { id: "gym", label: "Gym" },
   { id: "rival", label: "Rival" },
   { id: "rockets", label: "Rockets" },
@@ -75,6 +80,9 @@ function visibleTabs() {
   const gaunt = rocketGauntletForArea(area?.id);
   const hasRockets = !!gaunt && (!gaunt.requiresStory || !!getState().story?.[gaunt.requiresStory]);
   const inSafari = area?.id === "safari-zone";
+  // Fishing tab: kdekoli je aspoň kousek vody (area.water) a hráč má prut.
+  // V Safari se loví jinak (Safari pravidla) → tam Fishing tab neukazujeme.
+  const canFish = !inSafari && hasAnyRod() && areaHasWater(area);
   // Legendary tab: oblast má legendárního, story-gate splněný a druh ještě nevlastníš.
   // Zmizí sám v momentě chycení (ownsSpecies) → forgiving jednorázovost pro plný dex.
   const leg = legendaryForArea(area?.id);
@@ -95,6 +103,7 @@ function visibleTabs() {
     if (t.id === "profile") return false; // skrytá – jen z horní lišty
     if (t.id === "battle") return !inSafari; // v Safari se nebojuje – Battle mizí
     if (t.id === "safari") return inSafari; // Safari tab jen v oblasti safari-zone
+    if (t.id === "fishing") return canFish; // jen u vody a s prutem
     if (t.id === "city") return inCity;
     if (t.id === "gym") return hasGym; // jen ve městě s gymem
     if (t.id === "rival") return hasRival; // jen na oblasti s rival gate
@@ -118,6 +127,27 @@ export function openMainTab(tabId) {
 }
 
 /**
+ * Aktuálně zobrazená záložka (pro moduly, které si drží vlastní stav napříč
+ * překreslením – např. reakční minihra rybaření kontroluje, zda je pořád vidět).
+ * @returns {string}
+ */
+export function currentMainTab() {
+  return activeTab;
+}
+
+/**
+ * Sladí hudbu se stavem: na Battle tabu s běžícím soubojem hraje BGM dle kontextu
+ * (wild/trainer/rival/gym/champion), jinak "main" (mapa/menu). Chybí-li soubor, playBgm
+ * tiše mlčí. Idempotentní – playBgm nerestartuje stejný track, takže idle grind i mapa
+ * hrají plynule. Volá se z renderMainPanel (STATE_CHANGED) i z BATTLE_UPDATE (okamžitě
+ * na startu/konci souboje).
+ */
+function syncBattleBgm() {
+  const bgm = activeTab === "battle" ? battleBgm() : null;
+  playBgm(bgm || "main");
+}
+
+/**
  * Vykreslí horní panel se záložkami. Battle podpanel se staví jen poprvé; při
  * dalších voláních se překreslí jen lišta + obsah nebattle záložky.
  * @param {HTMLElement} root
@@ -131,7 +161,7 @@ export function renderMainPanel(root, onStatus = () => {}) {
   // viditelné. Profile je skrytá záložka z horní lišty, tu neresetujeme (není v `tabs`).
   // battle+safari jsou také podmíněné (v safari-zone se prohodí). Když aktivní
   // záložka zmizí, spadni na první viditelnou (v safari-zone = Safari, jinak Battle).
-  const conditional = new Set(["city", "daycare", "move-tutor", "gym", "rival", "rockets", "legendary", "league", "battle", "safari"]);
+  const conditional = new Set(["city", "daycare", "move-tutor", "gym", "rival", "rockets", "legendary", "league", "battle", "safari", "fishing"]);
   if (conditional.has(activeTab) && !tabs.some((t) => t.id === activeTab)) {
     activeTab = tabs[0]?.id ?? "battle";
   }
@@ -145,6 +175,8 @@ export function renderMainPanel(root, onStatus = () => {}) {
         <div id="tab-rest" class="tab-pane"></div>
       </div>`;
     renderBattle(root.querySelector("#tab-battle"));
+    // Hudba reaguje i na dění v souboji (start/konec) mimo STATE_CHANGED tik.
+    bus.on(EVENTS.BATTLE_UPDATE, syncBattleBgm);
     built = true;
   }
 
@@ -190,6 +222,10 @@ export function renderMainPanel(root, onStatus = () => {}) {
     else if (activeTab === "legendary") renderLegendaryTab(restPane, onStatus);
     else if (activeTab === "league") renderLeagueTab(restPane, onStatus);
     else if (activeTab === "safari") renderSafariTab(restPane, onStatus);
+    else if (activeTab === "fishing") renderFishingTab(restPane, onStatus);
     else if (activeTab === "profile") renderProfileTab(restPane, onStatus);
   }
+
+  // Sladit bojovou hudbu se stavem (na Battle tabu hraje, jinde ticho).
+  syncBattleBgm();
 }

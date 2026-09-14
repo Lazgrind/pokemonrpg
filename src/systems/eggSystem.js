@@ -250,7 +250,8 @@ export function accrueIncubation(seconds) {
     const idx = eggs.findIndex((e) => e.id === egg.id);
     if (idx !== -1) eggs.splice(idx, 1);
     const outcome = acquirePokemon(poke); // volá commit()
-    hatched.push({ name, outcome, shiny, level });
+    // speciesId nese payload pro cry zvuk při vylíhnutí (viz main.js EGG_HATCHED).
+    hatched.push({ name, outcome, shiny, level, speciesId: egg.speciesId });
   }
 
   getDaycareSlot().eggs = remaining; // ponech jen nevylíhnuté sloty

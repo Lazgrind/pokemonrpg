@@ -3297,3 +3297,579 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   border-radius: 6px;
   transition: width 0.2s ease;
 }
+
+/* Achievement toast */
+#achv-toasts {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  pointer-events: none;
+}
+
+.achv-toast {
+  pointer-events: all;
+  background: linear-gradient(135deg, #1a1a2e, #16213e);
+  border: 2px solid #ffd700;
+  border-radius: 12px;
+  padding: 16px 20px;
+  min-width: 320px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  transform: translateX(400px);
+  animation: achv-toast-in 0.3s ease forwards;
+}
+
+@keyframes achv-toast-in {
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.achv-toast.show {
+  animation: achv-toast-in 0.3s ease forwards;
+}
+
+.achv-toast:not(.show) {
+  animation: achv-toast-out 0.3s ease forwards;
+}
+
+@keyframes achv-toast-out {
+  to {
+    opacity: 0;
+    transform: translateX(400px);
+  }
+}
+
+.achv-toast-content {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  color: #fff;
+}
+
+.achv-toast-icon {
+  font-size: 32px;
+  flex-shrink: 0;
+}
+
+.achv-toast-text {
+  flex: 1;
+}
+
+.achv-toast-label {
+  font-size: 12px;
+  color: #ffd700;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.achv-toast-name {
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+  margin-top: 4px;
+}
+
+.achv-toast-desc {
+  font-size: 13px;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+.achv-toast-reward {
+  font-size: 12px;
+  color: #4caf50;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+.achv-toast-close {
+  flex-shrink: 0;
+  font-size: 24px;
+  color: #888;
+  cursor: pointer;
+  user-select: none;
+}
+
+.achv-toast-close:hover {
+  color: #ffd700;
+}
+
+/* Achievement list (in Profile tab) */
+.achv-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.achv-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 60px;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.achv-row.unlocked {
+  background: rgba(76, 175, 80, 0.1);
+  border-color: rgba(76, 175, 80, 0.3);
+}
+
+.achv-row.locked {
+  opacity: 0.6;
+}
+
+.achv-icon {
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.achv-info {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.achv-name {
+  font-weight: bold;
+  font-size: 13px;
+  color: #fff;
+}
+
+.achv-desc {
+  font-size: 12px;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+.achv-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  text-align: center;
+}
+
+.achv-check {
+  font-size: 18px;
+  color: #4caf50;
+  font-weight: bold;
+}
+
+.achv-locked {
+  font-size: 16px;
+  color: #666;
+}
+
+.achv-date {
+  font-size: 10px;
+  color: #888;
+  margin-top: 2px;
+}
+
+/* Audio nastavení – slidery a mute checkbox. */
+.settings-audio {
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.audio-slider-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.audio-slider-row label {
+  min-width: 60px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.audio-slider {
+  flex: 1;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.audio-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+}
+
+.audio-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: none;
+}
+
+.audio-value {
+  min-width: 30px;
+  text-align: right;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+
+.audio-checkbox-row {
+  margin: 12px 0;
+  font-size: 13px;
+}
+
+.audio-checkbox-row input[type="checkbox"] {
+  margin-right: 6px;
+  cursor: pointer;
+}
+
+/* Hall of Fame — post-game League victory records */
+.hof-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hof-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  background: rgba(255, 203, 5, 0.08);
+  border: 1px solid rgba(255, 203, 5, 0.2);
+  border-radius: 10px;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.hof-entry:hover {
+  background: rgba(255, 203, 5, 0.12);
+  border-color: rgba(255, 203, 5, 0.3);
+}
+
+.hof-entry-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.hof-rank {
+  font-weight: bold;
+  font-size: 14px;
+  color: #fff;
+}
+
+.hof-date {
+  font-size: 12px;
+  color: var(--text-dim);
+}
+
+.hof-team {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.hof-mon {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  color: #fff;
+}
+
+.hof-lv {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.gym-rematch {
+  margin-left: 6px;
+}
+
+/* --- Fishing tab (reakcni minihra) --- */
+.fishing-tab {
+  padding: 6px;
+}
+
+/* Vrstvena vodni scena pres celou plochu tabu (ciste CSS, zadny externi asset).
+   Klik kamkoli na scenu = akce (nahodit / zabrat / dalsi nahoz). */
+.fishing-scene {
+  position: relative;
+  width: 100%;
+  height: clamp(300px, 62vh, 560px);
+  border-radius: 14px;
+  border: 2px solid var(--border);
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.35);
+}
+
+/* Nebe nad hladinou (horni ~38 %). */
+.fishing-sky {
+  position: absolute;
+  inset: 0 0 62% 0;
+  background: linear-gradient(180deg, #bfe6ff 0%, #86c6f0 60%, #cfeaf7 100%);
+}
+/* Slunecni odlesk na obloze. */
+.fishing-glint {
+  position: absolute;
+  top: 12px;
+  right: 26px;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 249, 214, 0.95) 0%, rgba(255, 240, 170, 0.35) 60%, transparent 72%);
+  filter: blur(0.5px);
+}
+
+/* Vodni hladina (spodni ~62 %). */
+.fishing-water {
+  position: absolute;
+  inset: 38% 0 0 0;
+  background: linear-gradient(180deg, #3f93d6 0%, #266fb2 45%, #164f86 100%);
+}
+
+/* Tri pasy vln posouvajici se ruznou rychlosti = dojem tekouci vody. */
+.fishing-wave {
+  position: absolute;
+  left: -50%;
+  width: 200%;
+  height: 14px;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent 18px,
+    rgba(255, 255, 255, 0.18) 18px,
+    rgba(255, 255, 255, 0.18) 34px
+  );
+  border-radius: 50%;
+  opacity: 0.7;
+}
+.fishing-wave.wave-far {
+  top: 10px;
+  height: 10px;
+  opacity: 0.4;
+  animation: fishing-drift 7s linear infinite;
+}
+.fishing-wave.wave-mid {
+  top: 46px;
+  animation: fishing-drift 5s linear infinite reverse;
+}
+.fishing-wave.wave-near {
+  top: 92px;
+  height: 18px;
+  opacity: 0.55;
+  animation: fishing-drift 3.5s linear infinite;
+}
+@keyframes fishing-drift {
+  from { transform: translateX(0); }
+  to { transform: translateX(52px); }
+}
+
+/* Vlasec od horniho okraje k plovaku. */
+.fishing-line {
+  position: absolute;
+  left: 50%;
+  top: -38%;
+  width: 2px;
+  height: calc(38% + 40px);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.25));
+  transform: translateX(-0.5px);
+}
+
+/* Plovak (bobber) na hladine. */
+.fishing-float {
+  position: absolute;
+  left: 50%;
+  top: 34px;
+  font-size: 26px;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, 0.4));
+  transition: top 0.12s ease;
+}
+.fishing-scene.is-waiting .fishing-float {
+  animation: fishing-bob 1s ease-in-out infinite;
+}
+@keyframes fishing-bob {
+  0%, 100% { top: 32px; }
+  50% { top: 42px; }
+}
+/* Zabrani – plovak prudce klesne pod hladinu. */
+.fishing-scene.is-bite .fishing-float {
+  top: 58px;
+  animation: fishing-dip 0.3s ease-in-out infinite alternate;
+}
+@keyframes fishing-dip {
+  from { top: 54px; }
+  to { top: 66px; }
+}
+
+/* Rozsirujici se kruhy vln kolem plovaku (cekani/zabrani). */
+.fishing-rings {
+  position: absolute;
+  left: 50%;
+  top: 44px;
+  transform: translateX(-50%);
+}
+.fishing-rings span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+  border: 2px solid rgba(255, 255, 255, 0.6);
+  border-radius: 50%;
+  opacity: 0;
+  animation: fishing-ring 2s ease-out infinite;
+}
+.fishing-rings span:nth-child(2) { animation-delay: 1s; }
+.fishing-rings.is-strong span {
+  border-color: rgba(255, 235, 140, 0.85);
+  animation-duration: 0.9s;
+}
+.fishing-rings.is-strong span:nth-child(2) { animation-delay: 0.45s; }
+@keyframes fishing-ring {
+  0% { transform: scale(0.4); opacity: 0.7; }
+  100% { transform: scale(4.5); opacity: 0; }
+}
+
+/* Zabrani – rozzareni hladiny. */
+.fishing-scene.is-bite {
+  box-shadow: inset 0 0 34px rgba(255, 232, 120, 0.6);
+}
+.fishing-scene.is-bite .fishing-water {
+  filter: brightness(1.12) saturate(1.1);
+}
+
+/* Bublina „!" pri zabrani. */
+.fishing-bite {
+  position: absolute;
+  left: 50%;
+  top: 12px;
+  transform: translateX(-50%);
+  width: 52px;
+  height: 52px;
+  border-radius: 50% 50% 50% 6px;
+  background: #fffdf3;
+  border: 3px solid #ffd23f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35), 0 0 18px rgba(255, 210, 63, 0.8);
+  animation: fishing-pulse 0.3s ease-in-out infinite alternate;
+}
+.fishing-bite span {
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 1;
+  color: #e8940f;
+}
+@keyframes fishing-pulse {
+  from { transform: translateX(-50%) scale(1); }
+  to { transform: translateX(-50%) scale(1.16); }
+}
+
+/* Vyber prutu – chips nad hladinou (levy horni roh sceny). */
+.fishing-rods {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  z-index: 3;
+}
+.fishing-rod-chip {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.45);
+  background: rgba(10, 40, 70, 0.55);
+  color: #eaf6ff;
+  cursor: pointer;
+  backdrop-filter: blur(2px);
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+.fishing-rod-chip:hover:not(:disabled) {
+  background: rgba(20, 70, 120, 0.7);
+}
+.fishing-rod-chip.is-active {
+  background: #ffd23f;
+  border-color: #fff3c4;
+  color: #4a3200;
+}
+.fishing-rod-chip:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* Stitek rybarskeho biomu oblasti (vpravo nahore) – co se tu chyta. */
+.fishing-biome {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  background: rgba(10, 40, 70, 0.55);
+  color: #eaf6ff;
+  font-size: 12px;
+  font-weight: 700;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  pointer-events: none;
+}
+
+/* Popisek/napoveda dole na scene. */
+.fishing-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 10px 14px;
+  text-align: center;
+  font-size: 14px;
+  color: #eaf6ff;
+  background: linear-gradient(0deg, rgba(0, 0, 0, 0.5) 0%, transparent 100%);
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  z-index: 3;
+}
+.fishing-caption em {
+  opacity: 0.85;
+  font-style: italic;
+}
