@@ -13,11 +13,11 @@ import { lootLabel } from "../systems/battleSystem.js";
  *   elapsedSec: number,
  *   battle: null | { kills: number, xp: number, gold: number, loot: Record<string, number> },
  *   daycare: null | { xp: number, name: string, fromLevel: number, toLevel: number },
- *   egg?: null | Array<{ name: string, shiny: boolean, level: number, outcome: any }>,
  *   bred?: null | Array<{ id: string, speciesId: string }>
  * }} summary
  * @param {() => void} [onClose]  zavolá se po zavření přehledu (Continue / klik mimo).
  *   Sem řetězíme reveal popupy vylíhnutých vajec, ať se neukážou pod tímto oknem.
+ *   (Vylíhnutá vejce se v tomto souhrnu NEVYPISUJÍ – jen přes reveal popupy.)
  */
 export function showOfflineSummary(summary, onClose) {
   const capped = summary.elapsedSec > OFFLINE_CAP_HOURS * 3600;
@@ -49,29 +49,9 @@ export function showOfflineSummary(summary, onClose) {
       </ul>`;
   }
 
-  if (summary.egg?.length) {
-    const lines = summary.egg
-      .map((e) => {
-        const o = e.outcome ?? {};
-        if (o.added) {
-          return `<li>🎉 A new ${e.name}${e.shiny ? " ✨" : ""} joined your collection (Lv ${e.level})</li>`;
-        }
-        if (o.improvements?.length) {
-          return `<li>${e.name}${e.shiny ? " ✨" : ""} hatched — improved ${o.improvements.join(", ")} (released)</li>`;
-        }
-        return `<li>${e.name} hatched, but your own was better — released</li>`;
-      })
-      .join("");
-    const heading =
-      summary.egg.length > 1
-        ? `🥚 ${summary.egg.length} eggs hatched at the Day Care:`
-        : "🥚 An egg hatched at the Day Care:";
-    sections += `
-      <p class="placeholder" style="margin-top:6px">${heading}</p>
-      <ul class="offline-gains">
-        ${lines}
-      </ul>`;
-  }
+  // Vylíhnutá vejce ZÁMĚRNĚ nevypisujeme – každé se ukáže jako samostatný
+  // animovaný reveal popup po zavření tohoto souhrnu (viz onClose v main.js),
+  // takže duplikovat je i tady by byla dvojí informace.
 
   if (summary.bred?.length) {
     const n = summary.bred.length;

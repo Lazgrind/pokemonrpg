@@ -374,25 +374,30 @@ function init() {
     startEggLoop();
     startBreedingLoop();
 
-    // Souhrn počítáme až tady – dwell výše mohl vejce vylíhnout, i když při bootu
-    // nebylo co hlásit (hasOffline z bootu už nestačí).
-    const showSummary = !!(offlineBattle || offlineDaycare || offlineEgg || offlineBred);
+    // Reveal popup za KAŽDÉ offline vylíhnuté vejce (fronta v hatchPopup je
+    // odklikáváš jedno po druhém) – stejný zážitek jako u živého líhnutí, jen
+    // odložený za title screen / offline souhrn. Vylíhnutá vejce se ZÁMĚRNĚ
+    // neukazují v offline souhrnu (byla by to dvojí informace) – jen tady.
+    const revealEggs = () => {
+      if (offlineEgg) for (const h of offlineEgg) showHatchPopup(h);
+    };
+
+    // Souhrn ukazujeme jen kvůli battle/day care/nově sneseným vejcím (bred).
+    // Vylíhnutá vejce (egg) do rozhodnutí nepočítáme – ta mají vlastní popupy.
+    // (dwell výše mohl vejce vylíhnout, i když při bootu nebylo co hlásit.)
+    const showSummary = !!(offlineBattle || offlineDaycare || offlineBred);
     if (showSummary) {
       showOfflineSummary(
         {
           elapsedSec,
           battle: offlineBattle,
           daycare: offlineDaycare,
-          egg: offlineEgg,
           bred: offlineBred,
         },
-        // Po zavření přehledu ukaž reveal popup za KAŽDÉ offline vylíhnuté vejce
-        // (fronta v hatchPopup je odklikáváš jedno po druhém) – stejný zážitek
-        // jako u živého líhnutí, jen odložený za title screen / offline souhrn.
-        () => {
-          if (offlineEgg) for (const h of offlineEgg) showHatchPopup(h);
-        }
+        revealEggs // reveal vajec po zavření souhrnu
       );
+    } else {
+      revealEggs(); // žádný souhrn → rovnou odhal vejce
     }
     // Nabídky naučení tahu (plné sloty) – sleduje frontu i položky z offline.
     initMoveLearnPrompts();
