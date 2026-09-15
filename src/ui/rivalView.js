@@ -12,7 +12,6 @@
 import { rivalForArea, trainerSpriteUrl } from "../../data/trainers.js";
 import { getState } from "../core/state.js";
 import { startTrainerBattle, getActiveArea } from "../systems/battleSystem.js";
-import { getSpecies } from "../../data/pokemon.js";
 import { openMainTab } from "./mainPanel.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
@@ -28,18 +27,12 @@ export function renderRivalTab(root, onStatus = () => {}) {
   }
 
   const defeated = (getState().progress?.defeatedTrainers ?? []).includes(rival.id);
-  const maxLv = Math.max(...rival.team.map((m) => m.level ?? 1));
   const sprite = trainerSpriteUrl({ id: rival.id, class: rival.class, kind: rival.kind });
   // Jméno rivala zvolené hráčem v úvodním intru (drží se celý playthrough).
   const displayName = getState().player?.rivalName?.trim() || rival.name;
 
-  // Náhled týmu (bez counter-starter kusů – ty se dopočítají za běhu).
-  const teamPreview = rival.team
-    .map((m) => {
-      const label = m.speciesId ? getSpecies(m.speciesId)?.name ?? m.speciesId : "???";
-      return `<li class="rival-mon"><span class="rival-mon-name">${label}</span> <span class="placeholder">Lv ${m.level}</span></li>`;
-    })
-    .join("");
+  // Náhled týmu ZÁMĚRNĚ chybí – soupeřovy Pokémony (počet, druhy i level) hráč
+  // odhalí až v souboji v battle area, ne dopředu v této kartě.
 
   // Story-gate prohra (jen první rival): souboj prošel i bez výhry – ukaž prohru,
   // ne falešné „beaten". Flag nastavuje battleSystem při prohře (gateOnFight).
@@ -58,8 +51,7 @@ export function renderRivalTab(root, onStatus = () => {}) {
       <div class="rival-card">
         <img class="rival-sprite" src="${sprite}" alt="${displayName}" onerror="this.style.visibility='hidden'">
         <div class="rival-meta">
-          <div class="rival-name">${displayName} <span class="placeholder">· up to Lv ${maxLv}</span></div>
-          <ul class="rival-team">${teamPreview}</ul>
+          <div class="rival-name">${displayName}</div>
         </div>
       </div>
       ${action}

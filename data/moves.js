@@ -272,7 +272,7 @@ export const MOVES = [
   { id: "shadow-ball", name: "Shadow Ball", type: "Ghost", category: "special", power: 80, accuracy: 100, pp: 15, effect: { kind: "statChange", target: "enemy", stat: "spDefense", stages: -1, chance: 20 } },
   { id: "future-sight", name: "Future Sight", type: "Psychic", category: "special", power: 120, accuracy: 100, pp: 10 },
   { id: "whirlpool", name: "Whirlpool", type: "Water", category: "special", power: 35, accuracy: 85, pp: 15 },
-  { id: "fake-out", name: "Fake Out", type: "Normal", category: "physical", power: 40, accuracy: 100, pp: 10, priority: 3, effect: { kind: "flinch" } },
+  { id: "fake-out", name: "Fake Out", type: "Normal", category: "physical", power: 40, accuracy: 100, pp: 10, priority: 3, flinchFirstTurnOnly: true, effect: { kind: "flinch" } },
   { id: "uproar", name: "Uproar", type: "Normal", category: "special", power: 90, accuracy: 100, pp: 10 },
   { id: "stockpile", name: "Stockpile", type: "Normal", category: "status", power: 0, accuracy: 101, pp: 20 },
   { id: "spit-up", name: "Spit Up", type: "Normal", category: "special", power: 0, accuracy: 100, pp: 10 },

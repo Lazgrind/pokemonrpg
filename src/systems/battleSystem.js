@@ -293,9 +293,13 @@ function spawnEnemy(area) {
  * @param {string} msg
  * @param {"player"|"enemy"|"neutral"} [side]
  */
+/** Kolik řádků logu držíme/zobrazujeme – jen posledních pár (poslední kolo–dvě).
+ * Krátký log zároveň brání tomu, aby v úzkém/auto/stacked schématu box logu narostl
+ * a roztahoval celou Battle area (log tam nemá pevnou výšku – řeší i CSS max-height). */
+const BATTLE_LOG_MAX = 6;
 function pushLog(msg, side = "neutral") {
   battle.log.push({ text: msg, side });
-  if (battle.log.length > 30) battle.log.shift();
+  if (battle.log.length > BATTLE_LOG_MAX) battle.log.shift();
 }
 
 /** Uloží aktuální souboj do herního stavu (aby přežil refresh). */
@@ -326,7 +330,7 @@ export function serialize() {
     background: battle.background,
     forceManual: battle.forceManual ?? false, // legendární static souboj musí zůstat manuál i po refreshi
     interlude: battle.interlude ?? null, // výherní/chytací okno (manuální mód) přežije refresh
-    log: battle.log.slice(-30),
+    log: battle.log.slice(-BATTLE_LOG_MAX),
     playerUid: battle.player.ref.uid,
     playerHp: battle.player.hp,
     playerStatus: battle.player.status ?? null, // status hráče (redundantní se save collection, ale robustní)
@@ -874,6 +878,14 @@ function useMove(attacker, defender, action) {
     }
   }
 
+  // Počítadlo kol, ve kterých bojovník SKUTEČNĚ jednal (past všech „can't act"
+  // bran). Resetuje se při každém switchi/spawnu (makeCombatant → volatile = {}),
+  // takže po nasazení začíná od 0 (po inkrementu = 1 v prvním jednání). Používá
+  // Fake Out: jeho FLINCH platí jen v prvním kole po nasazení – samotný útok ale
+  // funguje pořád (žádný soft-lock u Pokémona s jediným tahem). Viz applyMoveEffects.
+  if (attacker.volatile)
+    attacker.volatile.turnsActive = (attacker.volatile.turnsActive ?? 0) + 1;
+
   // Rage: pokud útočník tentokrát nepoužil Rage, jeho „vztek" opadne.
   if (attacker.volatile && move.id !== "rage") attacker.volatile.rageActive = false;
 
@@ -1162,6 +1174,9 @@ function applyMoveEffects(attacker, defender, action, side, dmgDealt) {
       break;
     }
     case "flinch": {
+      // Fake Out: útok funguje každé kolo, ale flinch platí jen v PRVNÍM kole po
+      // nasazení (turnsActive už je v useMove inkrementované → první jednání = 1).
+      if (move.flinchFirstTurnOnly && (attacker.volatile?.turnsActive ?? 0) > 1) break;
       if (defender.hp > 0) defender.volatile.flinch = true;
       break;
     }
@@ -2435,8 +2450,9 @@ export function startTrainerBattle(trainerId, { gymId = null, forceManual = fals
     player: makeCombatant(team[firstAlive]),
     enemy: null,
     trainer: makeTrainerState(trainer, { gymId, returnToWild: false }),
-    // Gym i Rocket gauntlet souboje jsou POVINNĚ manuální – auto battle je v nich zakázané.
-    forceManual: !!gymId || forceManual,
+    // Gym, Liga i souboje s RIVALEM jsou POVINNĚ manuální – auto battle je v nich
+    // zakázané. Rival gejtujeme přímo přes kind (volá se bez gymId/forceManual).
+    forceManual: !!gymId || forceManual || trainer.kind === "rival",
     // Kontext hudby (wild/trainer/rival/gym/champion) – viz mainPanel.syncBattleBgm.
     bgm: battleMusicFor(trainer, gymId),
   };

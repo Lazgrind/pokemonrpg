@@ -39,8 +39,6 @@ export function renderLeagueTab(root, onStatus = () => {}) {
   const _savedScroll = saveScroll(root);
   const rows = members
     .map((t, i) => {
-      const maxLv = Math.max(...t.team.map((m) => m.level ?? 1));
-      const teamInfo = `${t.team.length} Pokémon · up to Lv ${maxLv}`;
       const isChampion = t.kind === "champion";
       const roleLabel = isChampion ? "Champion" : `Elite Four`;
 
@@ -68,7 +66,6 @@ export function renderLeagueTab(root, onStatus = () => {}) {
           <img class="gym-trainer-sprite" src="${trainerSpriteUrl({ id: t.id, class: t.class, kind: t.kind })}" alt="${t.name}" onerror="this.style.visibility='hidden'">
           <span class="gym-trainer-info">
             <span class="gym-trainer-name">${t.name} <span class="placeholder">· ${roleLabel}</span></span>
-            <span class="placeholder gym-trainer-team">${teamInfo}</span>
           </span>
           ${statusHtml}
         </li>`;
