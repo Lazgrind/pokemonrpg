@@ -211,8 +211,12 @@ function init() {
   let offlineDaycare = null;
   let offlineEgg = null;
   let offlineBred = null;
+  // Čas dokončení bootu = konec „offline" období počítaného hned níže. Doba od
+  // teď do proklikání title screenu (6d) se u vajec/breedingu dopočte navíc,
+  // ať title screen „nezmrazí" reálný čas (2 h = 2 h IRL i s otevřenou úvodní obrazovkou).
+  const bootTs = Date.now();
   if (loaded) {
-    const elapsedMs = Date.now() - getState().meta.lastSaved;
+    const elapsedMs = bootTs - getState().meta.lastSaved;
     elapsedSec = Math.floor(elapsedMs / 1000);
     offlineBattle = applyOfflineProgress(getState().battle, elapsedMs);
     offlineDaycare = applyDaycareOffline(elapsedMs);
@@ -346,11 +350,34 @@ function init() {
     // odemkly už při načtení / z offline pauzy) a rozjeď idle smyčky. Vše
     // viditelné se tak ukáže až tady, po Continue – nikdy pod title screenem.
     flushAchievementToasts();
+
+    // Dopočítej dobu strávenou na TITLE SCREENU (boot → Continue). Idle smyčky
+    // ještě neběží, takže hráč je pořád „mimo hru" – u vajec (a breedingu, který
+    // vejce plodí) to musí běžet na reálný čas. Děláme to JEŠTĚ před startem
+    // živých smyček, aby se stejný úsek nezapočítal dvakrát. Souboje/day care
+    // jsou beztak stropnuté odhady, dwell u nich neřešíme.
+    if (loaded) {
+      const dwellMs = Date.now() - bootTs;
+      if (dwellMs >= 1000) {
+        const dwellBred = applyBreedingOffline(dwellMs); // bred před egg (jako při bootu)
+        const dwellEgg = applyEggOffline(dwellMs);
+        if (dwellBred) offlineBred = offlineBred ? offlineBred.concat(dwellBred) : dwellBred;
+        if (dwellEgg) offlineEgg = offlineEgg ? offlineEgg.concat(dwellEgg) : dwellEgg;
+        if (dwellBred || dwellEgg) {
+          elapsedSec += Math.floor(dwellMs / 1000); // souhrn ukáže i čas na title screenu
+          saveGame(); // ať se dwell přírůstek neztratí při okamžitém pádu
+        }
+      }
+    }
+
     startDaycareLoop();
     startEggLoop();
     startBreedingLoop();
 
-    if (hasOffline) {
+    // Souhrn počítáme až tady – dwell výše mohl vejce vylíhnout, i když při bootu
+    // nebylo co hlásit (hasOffline z bootu už nestačí).
+    const showSummary = !!(offlineBattle || offlineDaycare || offlineEgg || offlineBred);
+    if (showSummary) {
       showOfflineSummary(
         {
           elapsedSec,

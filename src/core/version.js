@@ -3,4 +3,4 @@
  * a snadno provázat s CHANGELOG.md.
  * @type {string}
  */
-export const VERSION = "1.12.2";
+export const VERSION = "1.12.3";
