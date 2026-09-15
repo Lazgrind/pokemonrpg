@@ -14,6 +14,7 @@ import { getState, commit } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
 import {
   devAddEgg,
+  devHatchAllEggs,
   devAddPokemon,
   devAddMoney,
   devApplyCheckpoint,
@@ -76,6 +77,7 @@ export function devSectionHtml() {
       <div class="dev-row">
         <span class="dev-sublabel">Spawn</span>
         <button class="btn btn-sm" data-dev="egg">🥚 Add egg</button>
+        <button class="btn btn-sm" data-dev="hatch-all">🐣 Hatch an egg</button>
         <button class="btn btn-sm" data-dev="ditto">Add Ditto</button>
         <button class="btn btn-sm" data-dev="complete-dex">Complete Dex (all 151)</button>
       </div>
@@ -138,6 +140,13 @@ export function wireDevSection(bodyEl, rerender) {
       if (b.dataset.dev === "egg") {
         const r = devAddEgg(); // náhodný druh; commit uvnitř
         showDevMsg(`Added a ${r.name} egg → incubate it in the Day Care.`);
+      } else if (b.dataset.dev === "hatch-all") {
+        const r = devHatchAllEggs(); // vylíhne vše v inkubaci; commit + EGG_HATCHED uvnitř
+        showDevMsg(
+          r.count > 0
+            ? `Hatched ${r.count} egg${r.count === 1 ? "" : "s"} from the hatchery.`
+            : "No eggs are incubating in the Day Care."
+        );
       } else if (b.dataset.dev === "ditto") {
         const r = devAddPokemon("ditto"); // commit uvnitř
         showDevMsg(r.ok ? `Added ${r.name} to your collection.` : "Failed to add Ditto.");

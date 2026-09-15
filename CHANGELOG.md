@@ -6,6 +6,17 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [1.12.0] – 2026-09-15 · Egg hatch reveal popup — see what hatched, with its stats
+### Added
+- **Hatching an egg now shows an animated reveal popup** (`src/ui/hatchPopup.js`, `css/main.css`, wired in `src/main.js`), just like the evolution popup: the egg **wobbles**, then a **flash** reveals the Pokémon that hatched — its **sprite, name, level, shiny star**, and a compact **stats table** (each stat's value plus its IV out of 31). Previously an egg just hatched silently and you had no idea what came out. When several eggs hatch at the same moment, the popups **queue up** so you can click through them one by one (the button reads "Next egg →" while more are waiting, "Great!" for the last). If the hatchling is a duplicate species, the popup also explains it was **merged and released** (and lists any better IV/EV/shiny values it passed on to the one you keep). Click (or Esc) during the animation skips straight to the reveal.
+### Changed
+- **The hatched Pokémon's cry now plays at the reveal moment** in the popup (`src/main.js`, `src/ui/hatchPopup.js`) rather than instantly at hatch, so the audio lands with the visual reveal (and plays per-egg when multiple hatch at once). The hatch sound effect still plays as the egg hatches.
+- **Hatched Pokémon now always come out at level 1** (`data/eggs.js`): the hatch level range was Lv 1–5, now it's fixed at Lv 1 (`HATCH_LEVEL_MIN == HATCH_LEVEL_MAX == 1`). Applies to every hatch path (live ticking, offline catch-up, and the dev button).
+### Added (dev)
+- **Dev tool "🐣 Hatch an egg"** (`src/dev/devPanel.js`, `src/dev/devTools.js`, `src/systems/eggSystem.js`): instantly hatches every egg currently incubating in the Day Care hatchery and fires the reveal popups (queued), for quick testing. Dev tools only appear on localhost.
+### Note
+- Only **live** hatches (while the game is open) show the popup. Eggs that hatch **offline** still go into the offline summary as before, so the popup never floods you on return.
+
 ## [1.11.0] – 2026-09-15 · Battle polish — rival is manual, trainer ball count, HP-bar colours
 ### Added
 - **A Poké Ball indicator for trainer opponents in the battle area** (`src/ui/battleView.js`, `css/main.css`), like the mainline games: a row of up to 6 balls next to the enemy shows how many Pokémon the trainer has — **coloured balls are still in play** (including the one currently out), **greyed-out balls have fainted**. It only appears in trainer battles (wild Pokémon have no indicator) and is hidden in Full Auto (which hides the HP/EXP gauges too). This is the in-battle counterpart to hiding the roster before battle in 1.10.0 — you learn how many Pokémon the trainer has, but not which ones, until you face them.

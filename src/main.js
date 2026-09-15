@@ -31,6 +31,7 @@ import { startIntro } from "./ui/introScene.js";
 import { maybeStartTutorial } from "./ui/tutorial.js";
 import { showPopup } from "./ui/popup.js";
 import { showEvolutionPopup } from "./ui/evolutionPopup.js";
+import { showHatchPopup } from "./ui/hatchPopup.js";
 import { ballIconHtml } from "./ui/ballIcon.js";
 import { scrollAware, preserveWindowScroll } from "./ui/scrollPreserve.js";
 import { POKEBALLS } from "../data/pokeballs.js";
@@ -283,14 +284,17 @@ function init() {
   });
   bus.on(EVENTS.POKEMON_CAUGHT, () => playSfx("catch"));
   bus.on(EVENTS.LEVEL_UP, () => playSfx("levelup"));
-  bus.on(EVENTS.EGG_HATCHED, (r) => {
-    playSfx("hatch");
-    if (r?.speciesId) playCry(r.speciesId); // cry vylíhnutého Pokémona (vždy)
+  bus.on(EVENTS.EGG_HATCHED, () => {
+    playSfx("hatch"); // cry vylíhnutého Pokémona zazní až při odhalení v popupu
   });
 
-  // Vejce vylíhnuté při běžící hře: krátká hláška v liště.
+  // Vejce vylíhnuté při běžící hře: krátká hláška v liště + animované vyskakovací
+  // okno „co se vylíhlo" se statistikami (jako u evoluce). Víc vajec naráz se ve
+  // hatchPopup.js frontuje, takže si je hráč odklikává jedno po druhém. Offline
+  // vylíhnutá vejce sem nechodí (jdou do offline souhrnu), takže popup nespamuje.
   bus.on(EVENTS.EGG_HATCHED, (r) => {
     setStatus(`🥚 Egg hatched: ${r.name}${r.shiny ? " ✨" : ""} (Lv ${r.level})`);
+    showHatchPopup(r);
   });
 
   // Vejce vyprodukované breedingem při běžící hře: krátká hláška (druh skrytý).

@@ -13,7 +13,7 @@ import { getState, commit } from "../core/state.js";
 import { createPokemon, computeStats, defaultMovesFor } from "../systems/pokemonSystem.js";
 import { acquirePokemon, getStarterSpeciesId } from "../systems/team.js";
 import { ensureStartersSeen } from "../systems/pokedex.js";
-import { addEgg } from "../systems/eggSystem.js";
+import { addEgg, devHatchAllIncubating } from "../systems/eggSystem.js";
 import { MAX_LEVEL } from "../systems/progression.js";
 
 /** Náhodný druh z celého Dexu (pro „přidej něco na zkoušku"). */
@@ -32,6 +32,15 @@ export function devAddEgg(speciesId) {
   const id = speciesId ?? randomSpeciesId();
   const egg = addEgg(id);
   return { ...egg, name: getSpecies(id)?.name ?? id };
+}
+
+/**
+ * DEV: okamžitě vylíhne všechna vejce, která jsou právě v inkubaci ve Školce.
+ * Emituje EGG_HATCHED za každé → naskočí i reveal popup (fronta).
+ * @returns {{ count: number }}
+ */
+export function devHatchAllEggs() {
+  return { count: devHatchAllIncubating() };
 }
 
 /**
