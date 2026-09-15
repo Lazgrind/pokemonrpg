@@ -6,6 +6,11 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [1.12.2] – 2026-09-15 · Eggs incubate on real (wall-clock) time
+### Changed
+- **Eggs now hatch on real elapsed time, not just time spent playing** (`src/systems/eggSystem.js`, `data/eggs.js`): incubation is meant to run on the wall clock — a 2-hour egg should take 2 real hours whether the game is open or not. Two things were tying it to "in-game" time and are fixed: (1) offline incubation was **capped** at the idle offline cap, so long absences didn't fully count — the cap is **removed for eggs** (you're away 10 hours, all 10 count); (2) the live incubation loop added a **fixed 1-second tick**, which under-counted when the tab was in the background (browsers throttle timers there) — it now adds the **actual elapsed time** since the previous tick.
+- **Hatch times lengthened** to suit real-time incubation (`data/eggs.js`): common 10→**30 min**, uncommon 20→**60 min (1 h)**, rare 45→**120 min (2 h)**, epic 90→**240 min (4 h)**, legendary 180→**480 min (8 h)**. The Day Care hatch-speed upgrade still applies on top.
+
 ## [1.12.1] – 2026-09-15 · Everything shows after the title screen — offline hatches revealed too
 ### Changed
 - **Eggs that hatch while you're away now also show the reveal popup** (`src/main.js`, `src/ui/offlineView.js`), consistent with the game's AFK/idle nature: everything visible is deferred behind the title screen anyway, so after you click Continue and dismiss the "Welcome back" offline summary, each offline-hatched Pokémon gets the same animated reveal (with stats) as a live hatch — queued, so you click through them one by one. Previously the reveal popup only appeared for hatches that happened while the game was open; offline hatches were listed in the offline summary but never revealed. (New eggs don't start incubating on their own while you're offline, so this can't flood you.)

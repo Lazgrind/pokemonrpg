@@ -8,16 +8,17 @@
  */
 
 /**
- * Doba líhnutí v minutách podle rarity druhu (inkubace ve Školce – počítá se
- * i offline). Hodnoty jsou laditelné.
+ * Doba líhnutí v REÁLNÝCH (wall-clock) minutách podle rarity druhu. Inkubace
+ * běží na skutečném čase – tiká při běžící hře i offline (plný dopočet po
+ * návratu, BEZ stropu), takže 2 h = 2 h IRL. Hodnoty jsou laditelné.
  * @type {Record<string, { hatchMinutes: number }>}
  */
 export const EGG_RARITY = {
-  common: { hatchMinutes: 10 },
-  uncommon: { hatchMinutes: 20 },
-  rare: { hatchMinutes: 45 },
-  epic: { hatchMinutes: 90 },
-  legendary: { hatchMinutes: 180 },
+  common: { hatchMinutes: 30 }, // 30 min
+  uncommon: { hatchMinutes: 60 }, // 1 h
+  rare: { hatchMinutes: 120 }, // 2 h
+  epic: { hatchMinutes: 240 }, // 4 h
+  legendary: { hatchMinutes: 480 }, // 8 h (přes noc)
 };
 
 /** Šance, že po vítězství v souboji najdeš vejce (0–1). Laditelné. */

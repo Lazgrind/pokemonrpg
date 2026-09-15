@@ -3,10 +3,11 @@
  *
  * Vejce se s malou šancí najde po výhře v souboji (druh se losuje z oblasti).
  * Nese jen druh – genetika (IV/EV/shiny) se vylosuje až při vylíhnutí. Vejce
- * se líhne ve Školce (Day Care) ve druhém slotu vedle výcviku: inkubace tiká
- * při běžící hře i offline (dopočet po návratu), stejně jako pasivní výcvik a
- * bez nerfu OFFLINE_EFFICIENCY (strop OFFLINE_CAP_HOURS). Doba líhnutí závisí
- * na raritě druhu (data/eggs.js). Po vylíhnutí projde jedinec pravidlem R-018
+ * se líhne ve Školce (Day Care) ve druhém slotu vedle výcviku: inkubace běží na
+ * REÁLNÉM (wall-clock) čase – tiká při běžící hře (podle skutečně uplynulého
+ * času, ne fixního tiku) i offline (PLNÝ dopočet po návratu, BEZ stropu). Takže
+ * doba líhnutí z data/eggs.js je v reálných minutách (2 h = 2 h IRL). Po
+ * vylíhnutí projde jedinec pravidlem R-018
  * přes acquirePokemon() (nový druh se přidá, jinak se slijí lepší hodnoty).
  *
  * Zlomkové sekundy inkubace držíme v `city.daycare.egg.elapsedSec`.
@@ -20,7 +21,6 @@ import { learnableMovesAtLevel } from "../../data/learnsets.js";
 import { createPokemon, inheritIvs, setActiveMoves } from "./pokemonSystem.js";
 import { acquirePokemon } from "./team.js";
 import { getDaycareSlot, eggSlotCount, hatchSpeedPercent } from "./buildingSystem.js";
-import { OFFLINE_CAP_HOURS } from "./idle.js";
 import { INHERIT_IV_COUNT } from "../../data/breeding.js";
 import {
   EGG_DROP_CHANCE,
@@ -35,6 +35,9 @@ const EGG_TICK_SEC = 1;
 
 let timer = null;
 let eggCounter = 0;
+/** Časová značka posledního tiku smyčky (ms) – pro přičítání REÁLNÉ uplynulé
+ *  doby místo fixního EGG_TICK_SEC (background taby throttlují setInterval). */
+let lastTickTs = 0;
 
 /**
  * Aplikuje egg moves na vylíhnutého jedince. Přenastaví jeho tahy tak, aby měly
@@ -264,8 +267,14 @@ export function accrueIncubation(seconds) {
 /** Spustí aktivní smyčku líhnutí (idempotentní). */
 export function startEggLoop() {
   stopEggLoop();
+  lastTickTs = Date.now();
   timer = setInterval(() => {
-    const hatched = accrueIncubation(EGG_TICK_SEC);
+    // Přičti SKUTEČNĚ uplynulý čas od minulého tiku (wall-clock), ne fixní tik –
+    // ať se v backgroundu (throttlovaný setInterval) čas nepodpočítá.
+    const now = Date.now();
+    const deltaSec = Math.max(0, (now - lastTickTs) / 1000);
+    lastTickTs = now;
+    const hatched = accrueIncubation(deltaSec);
     // Commit každý tik, pokud se něco líhne – ať progress bary v otevřeném okně
     // žijí i bez jiných zdrojů commitu (soubojů). `incubators()` po vylíhnutí
     // vrací zbývající sloty, takže commitujeme, dokud se něco inkubuje.
@@ -291,7 +300,8 @@ export function stopEggLoop() {
  */
 export function applyEggOffline(elapsedMs) {
   if (incubators().length === 0) return null;
-  const usableSec = Math.min(Math.floor(elapsedMs / 1000), OFFLINE_CAP_HOURS * 3600);
+  // BEZ stropu – vejce se líhnou na reálný (wall-clock) čas, ať jsi pryč jakkoli dlouho.
+  const usableSec = Math.floor(elapsedMs / 1000);
   if (usableSec <= 0) return null;
   const hatched = accrueIncubation(usableSec);
   if (hatched.length === 0) return null;
