@@ -77,7 +77,7 @@
 import { bus, EVENTS } from "./events.js";
 
 /** Aktuální verze datového modelu save. Zvyšovat při změně struktury. */
-export const CURRENT_SAVE_VERSION = 47;
+export const CURRENT_SAVE_VERSION = 48;
 
 /** Maximální velikost aktivního týmu (zadání, sekce 9). */
 export const MAX_TEAM_SIZE = 6;
@@ -122,7 +122,7 @@ export function createNewGame() {
       layout: "auto", // rozvržení panelů: auto (responzivní) | wide (2 sloupce) | stacked (1 sloupec) | mobile (1 sloupec + svislé rozdělení souboje)
       stackOrder: ["battle", "map", "tabs"], // pořadí panelů ve skládaném režimu (shora dolů)
       autocatch: { enabled: false, catchAll: false, catchNew: false, catchShiny: false, catchBetterIv: false, ball: "poke" }, // nezávislé filtry (All/New/Shiny/Better IVs, sčítají se NEBO); ball = vyhrazený typ míčku
-      audio: { master: 70, music: 50, sfx: 80, mute: false }, // hlasitost (0–100) a mute přepínač
+      audio: { master: 35, music: 50, sfx: 80, mute: false }, // hlasitost (0–100) a mute přepínač; DRŽ V SYNC s AUDIO_DEFAULTS (audioSystem.js) – master 35 = ~o půlku tišší default
       // Herní pravidla / režimy (viz settingsView, battleSystem):
       //  - noItems: zakáže léčivé předměty (žádné lektvary ani jiné itemy) v souboji
       //  - noPotions: zakáže jen lektvary (Potion apod.), ostatní předměty ok
@@ -144,7 +144,16 @@ export function createNewGame() {
     // active=false → mimo výpravu; jinak steps/balls docházejí, depth = hloubka.
     safari: { active: false, steps: 0, balls: 0, depth: 1, bestDepth: 0, encounter: null },
     // Achievements: odemčené (id → timestamp) + sledované statistiky.
-    achievements: { unlocked: {}, stats: { catches: 0, hatches: 0, evolves: 0 } },
+    achievements: {
+      unlocked: {},
+      stats: {
+        catches: 0, hatches: 0, evolves: 0,
+        playerFaints: 0, enemyFaints: 0, releases: 0, trades: 0,
+        fishingCatches: 0, autocatchCatches: 0, misses: 0,
+        fullAutoIdle: false, maxAfkSec: 0, playSeconds: 0,
+        speciesCatchCounts: {}, gc: { plays: 0, jackpots: 0, losses: 0 },
+      },
+    },
     // Hall of Fame: historie týmů, které pokořily Ligu. Každý clear = 1 záznam
     // { timestamp, team: [{ speciesId, level, nickname, shiny }] } (viz battleSystem).
     hallOfFame: [],

@@ -18,7 +18,8 @@ import { applyDaycareOffline, startDaycareLoop } from "./systems/daycare.js";
 import { applyEggOffline, startEggLoop } from "./systems/eggSystem.js";
 import { applyBreedingOffline, startBreedingLoop } from "./systems/breedingSystem.js";
 import { ensureStartersSeen } from "./systems/pokedex.js";
-import { initAchievements } from "./systems/achievementSystem.js";
+import { initAchievements, recordAfk, recordPlaytime } from "./systems/achievementSystem.js";
+import { ACHIEVEMENTS } from "../data/achievements.js";
 import { showOfflineSummary } from "./ui/offlineView.js";
 import { renderMap } from "./ui/mapView.js";
 import { renderSaveControls } from "./ui/saveControls.js";
@@ -129,6 +130,13 @@ function renderResourceBar(root) {
       // Klik otevře záložku Pokédex v levém panelu.
       action: "pokedex",
     },
+    {
+      icon: "🏆",
+      label: "Achievements",
+      value: `${Object.keys(s.achievements?.unlocked ?? {}).length}/${ACHIEVEMENTS.length}`,
+      // Klik otevře záložku Achievements v hlavním panelu.
+      action: "achievements",
+    },
     { icon: "🥚", label: "Eggs", value: (s.eggs ?? []).length },
   ];
   // Shiny Charm přepínač – ukáže se JEN když ho hráč vlastní (odměna od Oaka za
@@ -158,6 +166,7 @@ function renderResourceBar(root) {
     const open = () => {
       if (node.dataset.action === "pokedex") openMainTab("pokedex");
       else if (node.dataset.action === "profile") openMainTab("profile");
+      else if (node.dataset.action === "achievements") openMainTab("achievements");
       else if (node.dataset.action === "shiny-charm") {
         // Přepni aktivitu Shiny Charmu (vlastnictví řeší story.shinyCharm, tady
         // jen zap/vyp). commit() překreslí lištu a projeví se ve spawnu/breedingu.
@@ -252,6 +261,11 @@ function init() {
   startEggLoop();
   startBreedingLoop();
   initAchievements();
+
+  // Achievementy: délka právě proběhlé offline pauzy (He Went To Get Milk…).
+  if (loaded && elapsedSec > 0) recordAfk(elapsedSec);
+  // Achievementy: kumulativní odehraný čas – tik po minutě (commit uvnitř).
+  setInterval(() => recordPlaytime(60), 60_000);
 
   // Zvuky a BGM: napojení na event sběrnici.
   bus.on(EVENTS.BATTLE_HIT, () => {

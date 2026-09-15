@@ -668,13 +668,111 @@ function migrate(data) {
     data.saveVersion = 47;
   }
 
+  // v47 → v48: přepracované achievementy (v1.6.0) – nové countery pro 60 metičů.
+  // Starým savům doplníme chybějící klíče stats (výchozí 0/false/{}), ať check()
+  // funkce nikdy nesáhnou na undefined. Už odemčené achievementy zůstávají.
+  if (data.saveVersion < 48) {
+    if (!data.achievements || typeof data.achievements !== "object") {
+      data.achievements = { unlocked: {}, stats: {} };
+    }
+    if (!data.achievements.unlocked) data.achievements.unlocked = {};
+    const s =
+      data.achievements.stats && typeof data.achievements.stats === "object"
+        ? data.achievements.stats
+        : {};
+    const defaults = {
+      catches: 0, hatches: 0, evolves: 0,
+      playerFaints: 0, enemyFaints: 0, releases: 0, trades: 0,
+      fishingCatches: 0, autocatchCatches: 0, misses: 0,
+      fullAutoIdle: false, maxAfkSec: 0, playSeconds: 0,
+    };
+    for (const [k, v] of Object.entries(defaults)) {
+      if (s[k] == null) s[k] = v;
+    }
+    if (!s.speciesCatchCounts || typeof s.speciesCatchCounts !== "object") s.speciesCatchCounts = {};
+    if (!s.gc || typeof s.gc !== "object") s.gc = { plays: 0, jackpots: 0, losses: 0 };
+    data.achievements.stats = s;
+    data.saveVersion = 48;
+  }
+
   return data;
 }
 
-/** Stáhne aktuální save jako .txt soubor. */
-export function exportSave() {
-  const json = JSON.stringify(getState(), null, 2);
-  const blob = new Blob([json], { type: "text/plain" });
+// ---------------------------------------------------------------------------
+// Export / import save – podepsaný, neprůhledný formát (anti-cheat, casual).
+//
+// POZOR – realistická úroveň ochrany: hra běží celá v prohlížeči, takže tenhle
+// podpis NENÍ skutečné zabezpečení. Kdo si otevře náš JS (F12 → Sources), najde
+// SAVE_SECRET a umí si save sám podepsat; přes devtools/localStorage jde stejně
+// cheatovat cokoli. Cíl je JEN zavřít casual cestu „otevřu .txt v Notepadu,
+// přepíšu gold a naimportuju" – payload je base64 (nečitelný) + HMAC podpis, a
+// import odmítne cokoli, co nesedí (upravený soubor i starý čistý JSON export).
+// ---------------------------------------------------------------------------
+
+/** Prefix (magic) podepsaného exportu + verze formátu. */
+const SAVE_MAGIC = "PIRPG1";
+/**
+ * Klíč pro HMAC podpis exportu. Není to tajemství v kryptografickém smyslu
+ * (viz komentář výše) – jen „sůl", aby přepočítání podpisu nebylo triviální.
+ */
+const SAVE_SECRET = "pkmn-idle-rpg::save-integrity::v1::do-not-cheat-your-own-game";
+
+/** UTF-8 string → Uint8Array (kvůli přezdívkám/emoji, `btoa` samo Unicode neumí). */
+function utf8ToBytes(str) {
+  return new TextEncoder().encode(str);
+}
+
+/** Uint8Array → base64. */
+function bytesToBase64(bytes) {
+  let bin = "";
+  for (const b of bytes) bin += String.fromCharCode(b);
+  return btoa(bin);
+}
+
+/** base64 → Uint8Array. */
+function base64ToBytes(b64) {
+  const bin = atob(b64);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+
+/** base64 (UTF-8 payload) → původní string. */
+function base64ToUtf8(b64) {
+  return new TextDecoder().decode(base64ToBytes(b64));
+}
+
+/** HMAC-SHA256(message, SAVE_SECRET) → hex řetězec (přes Web Crypto). */
+async function hmacHex(message) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    utf8ToBytes(SAVE_SECRET),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, utf8ToBytes(message));
+  return [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/** Porovnání řetězců v konstantním čase (proti časovacím trikům). */
+function safeEqual(a, b) {
+  if (typeof a !== "string" || typeof b !== "string" || a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+/**
+ * Stáhne aktuální save jako podepsaný .txt: `PIRPG1|<base64(json)>|<hmac hex>`.
+ * @returns {Promise<void>}
+ */
+export async function exportSave() {
+  const json = JSON.stringify(getState());
+  const payload = bytesToBase64(utf8ToBytes(json));
+  const sig = await hmacHex(payload);
+  const content = `${SAVE_MAGIC}|${payload}|${sig}`;
+  const blob = new Blob([content], { type: "text/plain" });
   const url = URL.createObjectURL(blob);
   const stamp = new Date().toISOString().slice(0, 10);
   const a = document.createElement("a");
@@ -685,18 +783,32 @@ export function exportSave() {
 }
 
 /**
- * Načte save z nahraného .txt souboru. Vrací true při úspěchu.
+ * Načte save z nahraného .txt souboru. Bere JEN podepsaný formát (PIRPG1);
+ * upravený soubor i starý čistý JSON export se odmítnou.
  * @param {File} file
- * @returns {Promise<boolean>}
+ * @returns {Promise<{ ok: boolean, reason?: "format"|"tampered"|"error" }>}
  */
 export async function importSave(file) {
   try {
-    const text = await file.text();
-    setState(migrate(JSON.parse(text)));
+    const text = (await file.text()).trim();
+    const parts = text.split("|");
+    if (parts.length !== 3 || parts[0] !== SAVE_MAGIC) {
+      // Neznámý formát – typicky starý čistý-JSON export nebo cizí soubor.
+      console.error("Import: nepodporovaný formát save (očekávám podepsaný export).");
+      return { ok: false, reason: "format" };
+    }
+    const [, payload, sig] = parts;
+    const expected = await hmacHex(payload);
+    if (!safeEqual(sig, expected)) {
+      console.error("Import: podpis nesedí – save je poškozený nebo upravený.");
+      return { ok: false, reason: "tampered" };
+    }
+    const json = base64ToUtf8(payload);
+    setState(migrate(JSON.parse(json)));
     saveGame();
-    return true;
+    return { ok: true };
   } catch (err) {
     console.error("Import save selhal:", err);
-    return false;
+    return { ok: false, reason: "error" };
   }
 }

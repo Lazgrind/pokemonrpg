@@ -3343,8 +3343,9 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   background: linear-gradient(135deg, #1a1a2e, #16213e);
   border: 2px solid #ffd700;
   border-radius: 12px;
-  padding: 16px 20px;
-  min-width: 320px;
+  padding: 15px 18px;
+  min-width: 315px;
+  max-width: 390px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
   opacity: 0;
   transform: translateX(400px);
@@ -3390,7 +3391,7 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 }
 
 .achv-toast-label {
-  font-size: 12px;
+  font-size: 16px;
   color: #ffd700;
   font-weight: bold;
   text-transform: uppercase;
@@ -3398,20 +3399,26 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 }
 
 .achv-toast-name {
-  font-size: 16px;
+  font-size: 21px;
   font-weight: bold;
   color: #fff;
   margin-top: 4px;
 }
 
 .achv-toast-desc {
-  font-size: 13px;
+  font-size: 17px;
   color: #aaa;
   margin-top: 2px;
 }
 
+.achv-toast-condition {
+  font-size: 17px;
+  color: #cfcfcf;
+  margin-top: 6px;
+}
+
 .achv-toast-reward {
-  font-size: 12px;
+  font-size: 21px;
   color: #4caf50;
   margin-top: 4px;
   font-weight: 600;
@@ -3505,6 +3512,119 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   font-size: 10px;
   color: #888;
   margin-top: 2px;
+}
+
+/* ── Achievements tab (Steam styl: mřížka karet, filtr, tier proužek) ── */
+.achv-filters {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0 14px;
+  flex-wrap: wrap;
+}
+
+.achv-filter-btn {
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: #ccc;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.achv-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: #fff;
+}
+
+.achv-filter-btn.active {
+  background: #ffd700;
+  border-color: #ffd700;
+  color: #1a1a1a;
+  font-weight: 700;
+}
+
+.achv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.achv-card {
+  position: relative;
+  padding: 10px 12px 10px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-left-width: 4px;
+  border-left-color: #666;
+}
+
+.achv-card.locked {
+  opacity: 0.62;
+}
+
+.achv-card.unlocked {
+  background: rgba(76, 175, 80, 0.08);
+}
+
+/* Barva levého proužku dle tieru (společný vizuál s legendou). */
+.achv-card.tier-common { border-left-color: #7bc86c; }
+.achv-card.tier-secret { border-left-color: #e6c34a; }
+.achv-card.tier-rare   { border-left-color: #e05b5b; }
+.achv-card.tier-insane { border-left-color: #b26be0; }
+
+.achv-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.achv-card-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #fff;
+}
+
+.achv-card-tier {
+  flex-shrink: 0;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #999;
+}
+
+.achv-card-hint {
+  font-size: 12px;
+  color: #aaa;
+  font-style: italic;
+  margin-top: 4px;
+}
+
+.achv-card-condition {
+  font-size: 12px;
+  color: #cfcfcf;
+  margin-top: 6px;
+}
+
+.achv-card-reward {
+  font-size: 12px;
+  color: #4caf50;
+  font-weight: 600;
+  margin-top: 4px;
+}
+
+.achv-card-status {
+  font-size: 11px;
+  margin-top: 6px;
+  color: #888;
+}
+
+.achv-card.unlocked .achv-card-status {
+  color: #4caf50;
+  font-weight: 600;
 }
 
 /* Audio nastavení – slidery a mute checkbox. */

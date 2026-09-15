@@ -1,8 +1,8 @@
 /**
  * achievementToast.js – NEblokující toast oznámení odemčených achievementů.
  *
- * Toast se zobrazí v rohu s ikonou, jménem, popisem a odměnou.
- * Automaticky zmizí po ~4 sekundách nebo kliknutím.
+ * Toast se zobrazí v rohu se jménem, kryptickou hláškou, reálnou podmínkou a odměnou.
+ * Nezavírá se sám – jen křížkem (reveal moment, hráč si čte v klidu).
  */
 
 /**
@@ -29,7 +29,7 @@ function formatReward(reward) {
 
 /**
  * Zobrazí toast s odemčeným achievementem.
- * @param {{ id, name, desc, icon, reward }} achievement
+ * @param {{ id, name, hint, condition, reward }} achievement
  */
 export function showAchievementToast(achievement) {
   // Vytvoř container pro toasty, pokud neexistuje
@@ -48,11 +48,11 @@ export function showAchievementToast(achievement) {
 
   toast.innerHTML = `
     <div class="achv-toast-content">
-      <div class="achv-toast-icon">${achievement.icon}</div>
       <div class="achv-toast-text">
         <div class="achv-toast-label">Achievement unlocked!</div>
         <div class="achv-toast-name">${achievement.name}</div>
-        <div class="achv-toast-desc">${achievement.desc}</div>
+        <div class="achv-toast-desc">${achievement.hint ?? ""}</div>
+        ${achievement.condition ? `<div class="achv-toast-condition">Unlocked for: ${achievement.condition}</div>` : ""}
         ${rewardText ? `<div class="achv-toast-reward">${rewardText}</div>` : ""}
       </div>
       <div class="achv-toast-close">&times;</div>
@@ -75,14 +75,6 @@ export function showAchievementToast(achievement) {
     });
   }
 
-  // Automatické zmizení po 4 sekundách
-  const timeout = setTimeout(() => {
-    toast.classList.remove("show");
-    setTimeout(() => toast.remove(), 300);
-  }, 4000);
-
-  // Pokud uživatel zavře dřív, zrušíme timeout
-  toast.addEventListener("click", () => {
-    clearTimeout(timeout);
-  });
+  // Žádné automatické zmizení – toast je „reveal moment", zavírá se jen křížkem,
+  // aby si hráč mohl v klidu přečíst název i reálnou podmínku.
 }

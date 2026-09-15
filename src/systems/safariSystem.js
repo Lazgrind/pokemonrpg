@@ -54,6 +54,14 @@ const SAFARI_AREAS = [
   ["chansey", "scyther", "pinsir", "tauros", "kangaskhan", "dragonair"], // oblast 4 (Secret House + Surf)
 ];
 
+// Zbylé startéry (ty, co sis nevybral u Oaka) se v základní hře nikde nedají
+// získat – přitom pravidlo projektu je „celý dex jde na 1 save". Po dokončení
+// Ligy (isChampion) proto v Safari začnou vzácně spawnovat všichni tři base
+// startéři (dokompletování dexu + achievementy three-starters/completionist).
+// Chytáš je normálně Safari mechanikou; evoluce pak dořeší level/kámen.
+const POST_LEAGUE_STARTERS = ["bulbasaur", "charmander", "squirtle"];
+const STARTER_SPAWN_CHANCE = 0.08; // vzácný „bonus" spawn místo běžného poolu
+
 /* -------------------------------- Helpery -------------------------------- */
 
 const randInt = (min, max) => min + Math.floor(Math.random() * (max - min + 1));
@@ -109,9 +117,16 @@ function safariTick() {
 }
 
 function spawnEncounter(safari) {
+  const level = 20 + safari.depth * 2 + randInt(0, 2);
+  // Po Lize: malá šance, že místo běžného poolu narazíš na cizího startéra
+  // (tím se zpřístupní zbylé dva startéry a dá dokompletovat Pokédex).
+  if (getState().story?.isChampion && Math.random() < STARTER_SPAWN_CHANCE) {
+    const speciesId = POST_LEAGUE_STARTERS[Math.floor(Math.random() * POST_LEAGUE_STARTERS.length)];
+    safari.encounter = { speciesId, level, catchMod: 1, fleeMod: 1 };
+    return;
+  }
   const pool = SAFARI_AREAS[Math.min(safari.depth, MAX_DEPTH) - 1] ?? SAFARI_AREAS[0];
   const speciesId = pool[Math.floor(Math.random() * pool.length)];
-  const level = 20 + safari.depth * 2 + randInt(0, 2);
   safari.encounter = { speciesId, level, catchMod: 1, fleeMod: 1 };
 }
 

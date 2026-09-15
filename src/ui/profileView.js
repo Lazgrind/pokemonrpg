@@ -14,7 +14,6 @@
 import { getState, commit } from "../core/state.js";
 import { dexCounts, getPokedex } from "../systems/pokedex.js";
 import { BADGES } from "../../data/badges.js";
-import { ACHIEVEMENTS } from "../../data/achievements.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 import { showDiplomaModal } from "./diploma.js";
 import { getSpecies } from "../../data/pokemon.js";
@@ -44,37 +43,6 @@ function badgeSlotHtml(badge, earned) {
 /** Řádek statistiky (label + hodnota). */
 function statRow(label, value) {
   return `<div class="profile-stat"><span class="ps-label">${label}</span><span class="ps-value">${value}</span></div>`;
-}
-
-/** Sekce achievementů. */
-function renderAchievementsSection(state) {
-  const unlocked = state.achievements?.unlocked ?? {};
-  const unlockedCount = Object.keys(unlocked).length;
-
-  const achRows = ACHIEVEMENTS.map((ach) => {
-    const isUnlocked = !!unlocked[ach.id];
-    const timestamp = unlocked[ach.id];
-    const status = isUnlocked ? `<span class="achv-check">✓</span>` : `<span class="achv-locked">◇</span>`;
-    const dateStr = isUnlocked ? new Date(timestamp).toLocaleDateString() : "";
-    return `<div class="achv-row ${isUnlocked ? "unlocked" : "locked"}">
-      <div class="achv-icon">${ach.icon}</div>
-      <div class="achv-info">
-        <div class="achv-name">${ach.name}</div>
-        <div class="achv-desc">${ach.desc}</div>
-      </div>
-      <div class="achv-status">
-        <div>${status}</div>
-        ${dateStr ? `<div class="achv-date">${dateStr}</div>` : ""}
-      </div>
-    </div>`;
-  }).join("");
-
-  return `
-    <h3 class="profile-subtitle">Achievements <span class="dex-count">${unlockedCount} / ${ACHIEVEMENTS.length}</span></h3>
-    <div class="achv-list">
-      ${achRows}
-    </div>
-  `;
 }
 
 /** Sekce Hall of Fame — historie týmů, které pokořily Ligu (nejnovější nahoře). */
@@ -163,7 +131,6 @@ export function renderProfileTab(root, onStatus = () => {}) {
       ${BADGES.map((b) => badgeSlotHtml(b, badges.includes(b.id))).join("")}
     </div>
 
-    ${renderAchievementsSection(s)}
     ${renderHallOfFame(s)}
   `;
   restoreScroll(root, _savedScroll);

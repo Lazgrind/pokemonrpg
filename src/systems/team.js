@@ -10,6 +10,7 @@ import { createPokemon, STAT_KEYS, emptyEvs } from "./pokemonSystem.js";
 import { pokemonEngagement } from "./buildingSystem.js";
 import { ensureStartersSeen, dexCounts } from "./pokedex.js";
 import { STARTER_IDS } from "../../data/pokemon.js";
+import { recordRelease } from "./achievementSystem.js";
 
 /**
  * Výběr startovního Pokémona – jen dokud je kolekce prázdná.
@@ -242,7 +243,10 @@ export function releasePokemon(uid) {
       }
     }
   }
-  if (removed) commit();
+  if (removed) {
+    recordRelease(); // achievement: puštění Pokémona (self-commit uvnitř)
+    commit();
+  }
   return removed;
 }
 

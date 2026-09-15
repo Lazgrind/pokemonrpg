@@ -6,6 +6,65 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [1.6.0] – 2026-09-15 · Achievements rework — many more achievements, Steam-style reveal, own tab
+### Added
+- **Achievements fully rewritten and greatly expanded** (`data/achievements.js`) across four tiers — 🟢 Common, 🟡 Secret, 🔴 Rare, 🟣 Insane. New data model per achievement: `{ id, name, hint, condition, tier, check, reward }`. Humour is deliberately absurd/deadpan ("tired developer who publicly mocks you"). (Deliberately no spoilers here — go find them in-game.)
+- **Steam-style locked/unlocked reveal**: while locked, an achievement shows its name as **`???`** plus a permanent **cryptic hint** (you guess from it). On unlock, the real **name** appears and a **`Unlocked for: …`** line reveals the plain-text condition — the payoff moment.
+- **Dedicated Achievements tab** (`src/ui/achievementsView.js`, opened from the new 🏆 counter in the top resource bar): a card grid with a progress counter, an All / Unlocked / Locked filter, a coloured tier stripe per card, and unlock dates. **No icons/emoji anywhere** in the achievement UI (by design).
+- **Non-blocking unlock toast, closed only by ✕** (`src/ui/achievementToast.js`): shows name, hint, the revealed condition and the reward. It **never auto-dismisses** — you close it yourself so you can read the reveal.
+- **New tracked stats** backing the achievement conditions (`src/systems/achievementSystem.js`, `src/core/state.js`), hooked into the existing systems (battles, catching, trading, releasing, the Game Corner, offline time, a play-time tick). (Exact conditions intentionally left undocumented — they're meant to be discovered.)
+### Changed
+- **Achievements moved out of the Profile tab into their own tab** (`src/ui/profileView.js`): the old in-Profile list (which used the retired `icon`/`desc` model) is gone; Profile keeps the trainer card, badge case and Hall of Fame.
+- **Species achievements now require physically owning that exact species** (`data/achievements.js`): an achievement for a given Pokémon unlocks only while you actually hold **that** species in your team/PC — owning its evolution no longer counts.
+### Notes
+- **Achievements are never granted during the tutorial**: evaluation and all counters are skipped whenever the tutorial demo/sandbox is running (`state.tutorialDemoActive`). This intentionally does **not** gate on `story.tutorialDone`, which existing/old saves never set (the tutorial is only offered to brand-new empty saves) — gating on it would have frozen achievements for every in-progress player.
+- Save bumped **v47 → v48** (`src/core/state.js`, `src/systems/save.js`): migration backfills the new achievement stat counters on old saves (already-unlocked achievements are preserved). All achievements are verified obtainable (starters via the v1.5.0 Safari post-League fix).
+
+## [1.5.0] – 2026-09-15 · The other two starters are catchable in the Safari (post-League)
+### Fixed
+- **The two starters you didn't pick are finally obtainable** (`src/systems/safariSystem.js`): at Oak's Lab you choose exactly one of Bulbasaur/Charmander/Squirtle, and the other two appeared nowhere else in the game — no wild spawn, no gift, no trade. That made a full Pokédex (all 151) impossible on a single save, contradicting the project rule that everything is obtainable without an irreversible choice (the way both Hitmons and both fossils already are). Now, **once you've become Champion** (`story.isChampion`), every Safari Zone encounter has a small chance (~8 %) to be one of the three base starters instead of the normal pool, at the usual Safari levels. Catch them with normal Safari mechanics; evolutions then follow via level/stone as usual.
+### Notes
+- **Post-League only** by design: the starter choice at the start still matters during the main game; the alternates only show up in the Safari after you've cleared the Elite Four, purely to let completionists finish the Dex.
+- No save-version bump (still v47): this is pure Safari-encounter logic — no data or schema change. Existing Champion saves get the new spawns immediately.
+- Unblocks the upcoming achievements rework: the completion-related achievements are all reachable now.
+
+## [1.4.0] – 2026-09-15 · Signed save export/import (anti-cheat)
+### Changed
+- **Save export is now a signed, opaque file** (`src/systems/save.js`): export used to write your whole save as pretty-printed JSON, so anyone could open the `.txt`, bump `gold`/levels and re-import. Export now writes `PIRPG1|<base64(save)>|<HMAC-SHA256>` — the payload is base64 (not human-readable) and carries an integrity signature (Web Crypto). Import recomputes the signature and **rejects any file that was edited** (the payload no longer matches the signature) as well as anything that isn't in this format.
+- **Import only accepts the new signed format** (`src/systems/save.js`, `src/ui/saveControls.js`): plain-JSON files (including old exports from ≤ v1.3.0) are refused with a clear message. `importSave` now returns `{ ok, reason }` so the UI can distinguish "not a valid save file", "corrupted or edited", and generic errors. Export/import are async (`exportSave` awaits the signature).
+### Notes
+- No save-version bump (still v47): the localStorage save format is unchanged — only the export/import wrapper changed.
+- **Honest scope:** this is a client-side game, so this stops *casual* cheating (editing the exported file) but is not true security — the signing key lives in the shipped JS, and anyone using browser devtools can still alter the in-memory/localStorage state. Hardening localStorage was deliberately left out (adds corruption risk for no real gain against a devtools user).
+- **Old backups won't import anymore.** Re-export from v1.4.0 to get a file you can import again.
+
+## [1.3.0] – 2026-09-15 · Default master volume actually starts at 35
+### Fixed
+- **New games now really start at master volume 35** (`src/core/state.js`): v1.0.1 lowered the default master volume 70 → 35, but only in `AUDIO_DEFAULTS` (`src/systems/audioSystem.js`) — the fresh-save seed in `state.js` still hard-coded `audio.master: 70`, and since the live settings read `settings.master ?? AUDIO_DEFAULTS.master`, that seeded 70 always won. So every new game was still loud. The seed is now `35`, matching `AUDIO_DEFAULTS` (with a "keep in sync" comment on both). `music: 50` / `sfx: 80` already matched and are unchanged.
+### Notes
+- No save-version bump (still v47): only the default for *new* saves changes. Existing saves keep whatever master volume they already stored (by design — your own audio setting always takes precedence); to hear the new default, start a fresh save or set master to 35 yourself.
+
+## [1.2.0] – 2026-09-15 · Auto catch throws each ball at its best moment
+### Fixed
+- **Auto catch no longer wastes balls (and no longer kills its target on turn 1)** (`src/systems/battleSystem.js`): auto catch used to throw *every* round starting at full HP, and the auto-battler then usually KO'd the wild Pokémon after that single low-odds throw (≈13 % for an uncommon like Metapod) — which is why a whole belt of Poké Balls caught almost nothing. Auto catch now throws each ball **when that ball is most effective**, and the auto-battler **weakens the target instead of finishing it** so you actually get repeat throws at a rising success chance (`byHp` climbs `CATCH_MIN`→`CATCH_MAX` as HP drops).
+### Changed
+- **Throw timing now depends on the ball's effect** (`src/systems/battleSystem.js`, new `autocatchThrowNow` / `autocatchWantsCurrent` / `maxPlayerHit` helpers):
+  - **Quick Ball** (`firstTurn` ×5) is thrown **only on turn 1** — that's its whole point; if it misses, the battler finishes the enemy and moves on (no wasted later throws).
+  - **Every other ball** (Timer, Net, Repeat, Ultra, Poké…) is thrown at the **lowest safe HP**: the auto-battler attacks to weaken but holds fire once even its strongest possible hit — max damage roll × critical (`CRIT_MULT`) — could KO an *already-damaged* target (`HP < maxHP`), then throws every round until caught. Timer Ball benefits automatically (more elapsed rounds = bigger bonus).
+- **A target you can only one-shot is your own fault** (`src/systems/battleSystem.js`): if your lead would KO a *full-HP* wild Pokémon in one hit, auto catch still gets one throw that round, but the battler then kills it and moves on (it is not kept alive forever). Use a weaker lead if you want to catch it. A lead that can't damage the enemy at all (e.g. Metapod with only Harden) just throws every round at full HP.
+### Notes
+- No save-version bump (still v47): pure battle-loop logic, no data or schema change.
+- Only affects wild encounters with auto catch on and a matching target; trainer battles and manual play are unchanged.
+
+## [1.1.0] – 2026-09-15 · Auto-battle keeps your lead Pokémon in front
+### Fixed
+- **Auto / Full Auto now always fight with your first (living) team member** (`src/systems/battleSystem.js`): previously the active Pokémon persisted between encounters, so reordering your team while auto-grinding — or moving to a different map area mid-battle — meant the *old* active Pokémon kept fighting, your new lead never gained XP, and you could soft-lock (e.g. a Metapod/Kakuna with no attacking move stuck in front). A new `syncAutoActive()` runs at the start of every new encounter (`spawnNext`) **and when you move to a new wild area** (`setActiveArea`) and, in Auto/Full Auto only, re-seats the first living team member as the active battler (it no-ops when the correct Pokémon is already out, so it never resets an ongoing battler's HP/stat-stages needlessly). Manual mode is unchanged: your first Pokémon leads and you switch by hand with the Switch button.
+### Removed
+- **Automatic type-advantage switching in Auto / Full Auto** (`src/systems/battleSystem.js`): the auto-battler used to switch on its own to a more type-effective Pokémon whenever the enemy had a ≥2× move — surprising the player and pulling XP away from the intended lead. That behavior (the whole "Priority 2: Auto-switch" branch in `chooseAutoPlayerTurn`, plus the `_lastAutoSwitchTurn` guard) is gone; the auto-battler now just attacks. Switching by type is a manual decision again.
+### Changed
+- **Full Auto continues seamlessly on its own** (`src/systems/battleSystem.js`): the post-win continuation guard now checks `autoLoopActive()` instead of just `getAutoBattle()`, so Full Auto with the plain Auto battle toggle *off* keeps chaining encounters (matching its documented purpose of endless safe idling) rather than stopping at the win screen.
+### Notes
+- No save-version bump (still v47): pure battle-loop logic, no data or schema change.
+
 ## [1.0.1] – 2026-09-14 · First post-release fixes
 ### Fixed
 - **Tutorial Pokémon can no longer faint** (`src/systems/battleSystem.js`): during the tutorial the player's active Pokémon is now protected from HP loss in the demo battle, covering the auto-battle and full-auto steps. A newcomer hasn't learned where/how to heal yet, so fainting there would leave them stuck and confused looking for a Poké Center. Implemented by extending the existing HP-setter guard with `battle.demo` (the tutorial demo flag set in `startDemoBattle`); only HP *decreases* are blocked (healing still applies), and it covers every damage source (attack, recoil, confusion, poison/burn) since all HP changes go through that one setter. Real post-tutorial battles are unchanged — you can still faint normally.
