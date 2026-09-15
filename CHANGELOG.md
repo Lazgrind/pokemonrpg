@@ -6,6 +6,10 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [1.12.3] – 2026-09-15 · Time on the title screen now counts toward eggs
+### Fixed
+- **Time spent sitting on the title screen now counts toward egg incubation** (`src/main.js`): offline progress is computed at page load, and the live incubation loop only starts *after* you click Continue — so any time the game sat on the title screen (loaded but not entered) was silently lost for eggs, breaking "2 h = 2 h IRL" if you left the title screen open. The gap between load and Continue is now applied as an extra real-time catch-up for **eggs** (and **breeding**, which produces the eggs), right before the live loops start, so the same stretch is never double-counted. Any eggs that finish during that window are folded into the "Welcome back" offline summary and get their reveal popups. Battle and Day Care offline stay as-is (they're capped estimates, so title-screen dwell doesn't matter there).
+
 ## [1.12.2] – 2026-09-15 · Eggs incubate on real (wall-clock) time
 ### Changed
 - **Eggs now hatch on real elapsed time, not just time spent playing** (`src/systems/eggSystem.js`, `data/eggs.js`): incubation is meant to run on the wall clock — a 2-hour egg should take 2 real hours whether the game is open or not. Two things were tying it to "in-game" time and are fixed: (1) offline incubation was **capped** at the idle offline cap, so long absences didn't fully count — the cap is **removed for eggs** (you're away 10 hours, all 10 count); (2) the live incubation loop added a **fixed 1-second tick**, which under-counted when the tab was in the background (browsers throttle timers there) — it now adds the **actual elapsed time** since the previous tick.
