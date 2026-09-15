@@ -251,7 +251,10 @@ export function accrueIncubation(seconds) {
     if (idx !== -1) eggs.splice(idx, 1);
     const outcome = acquirePokemon(poke); // volá commit()
     // speciesId nese payload pro cry zvuk při vylíhnutí (viz main.js EGG_HATCHED).
-    hatched.push({ name, outcome, shiny, level, speciesId: egg.speciesId });
+    // `pokemon` = SKUTEČNĚ vylíhnutý jedinec (poke) – i když se při duplikátu
+    // sloučí a „pustí", popup z něj umí ukázat staty (outcome.pokemon by v tom
+    // případě byl STÁVAJÍCÍ jedinec, ne ten vylíhnutý).
+    hatched.push({ name, outcome, shiny, level, speciesId: egg.speciesId, pokemon: poke });
   }
 
   getDaycareSlot().eggs = remaining; // ponech jen nevylíhnuté sloty
@@ -294,4 +297,18 @@ export function applyEggOffline(elapsedMs) {
   if (hatched.length === 0) return null;
   commit();
   return hatched;
+}
+
+/**
+ * DEV/TEST: okamžitě vylíhne VŠECHNA vejce, která jsou právě v inkubaci ve Školce
+ * (dorazí čas naráz obřím přírůstkem). Emituje EGG_HATCHED za každé vylíhnuté vejce
+ * – stejně jako živá smyčka – takže naskočí i reveal popup (fronta). Commituje.
+ * @returns {number} počet vylíhnutých vajec
+ */
+export function devHatchAllIncubating() {
+  if (incubators().length === 0) return 0;
+  const hatched = accrueIncubation(Number.MAX_SAFE_INTEGER); // dorovná čas všem slotům
+  commit();
+  for (const h of hatched) bus.emit(EVENTS.EGG_HATCHED, h);
+  return hatched.length;
 }

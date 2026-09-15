@@ -23,9 +23,10 @@ export const EGG_RARITY = {
 /** Šance, že po vítězství v souboji najdeš vejce (0–1). Laditelné. */
 export const EGG_DROP_CHANCE = 0.03;
 
-/** Rozsah levelu vylíhnutého Pokémona (včetně). */
+/** Rozsah levelu vylíhnutého Pokémona (včetně). Klasická podmínka: vždy Lv 1
+ *  (min == max == 1), takže se každý vylíhnutý Pokémon líhne na levelu 1. */
 export const HATCH_LEVEL_MIN = 1;
-export const HATCH_LEVEL_MAX = 5;
+export const HATCH_LEVEL_MAX = 1;
 
 /**
  * Doba líhnutí (minuty) pro daný druh podle jeho rarity (fallback common).
