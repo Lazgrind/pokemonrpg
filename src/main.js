@@ -18,7 +18,7 @@ import { applyDaycareOffline, startDaycareLoop } from "./systems/daycare.js";
 import { applyEggOffline, startEggLoop } from "./systems/eggSystem.js";
 import { applyBreedingOffline, startBreedingLoop } from "./systems/breedingSystem.js";
 import { ensureStartersSeen } from "./systems/pokedex.js";
-import { initAchievements, recordAfk, recordPlaytime } from "./systems/achievementSystem.js";
+import { initAchievements, recordAfk, recordPlaytime, flushAchievementToasts } from "./systems/achievementSystem.js";
 import { ACHIEVEMENTS } from "../data/achievements.js";
 import { showOfflineSummary } from "./ui/offlineView.js";
 import { renderMap } from "./ui/mapView.js";
@@ -255,12 +255,12 @@ function init() {
     renderPanel();
   });
 
-  // 5) Automatické ukládání a uložení při zavření karty + pasivní výcvik ve školce.
+  // 5) Automatické ukládání a uložení při zavření karty.
   setInterval(saveGame, AUTOSAVE_MS);
   window.addEventListener("beforeunload", saveGame);
-  startDaycareLoop();
-  startEggLoop();
-  startBreedingLoop();
+  // Idle smyčky (pasivní výcvik / inkubace vajec / breeding) spouštíme až PO
+  // proklikání title screenu (viz 6d) – jinak by živě vylíhnuté vejce (nebo jiná
+  // událost) vyskočilo POD úvodní obrazovkou. Do té doby je vše dopočtené offline.
   initAchievements();
 
   // Achievementy: délka právě proběhlé offline pauzy (He Went To Get Milk…).
@@ -291,7 +291,8 @@ function init() {
   // Vejce vylíhnuté při běžící hře: krátká hláška v liště + animované vyskakovací
   // okno „co se vylíhlo" se statistikami (jako u evoluce). Víc vajec naráz se ve
   // hatchPopup.js frontuje, takže si je hráč odklikává jedno po druhém. Offline
-  // vylíhnutá vejce sem nechodí (jdou do offline souhrnu), takže popup nespamuje.
+  // vylíhnutá vejce sem nechodí (applyEggOffline neemituje EGG_HATCHED) – jejich
+  // reveal popupy spouští title-screen callback po zavření offline souhrnu (6d).
   bus.on(EVENTS.EGG_HATCHED, (r) => {
     setStatus(`🥚 Egg hatched: ${r.name}${r.shiny ? " ✨" : ""} (Lv ${r.level})`);
     showHatchPopup(r);
@@ -341,14 +342,30 @@ function init() {
     // Spusť BGM po vstupu do hry (respektuj autoplay policy: až po akci uživatele).
     playBgm("main");
 
+    // Teď je hráč „ve hře": otevři bránu achievement toastů (vyprázdní ty, co se
+    // odemkly už při načtení / z offline pauzy) a rozjeď idle smyčky. Vše
+    // viditelné se tak ukáže až tady, po Continue – nikdy pod title screenem.
+    flushAchievementToasts();
+    startDaycareLoop();
+    startEggLoop();
+    startBreedingLoop();
+
     if (hasOffline) {
-      showOfflineSummary({
-        elapsedSec,
-        battle: offlineBattle,
-        daycare: offlineDaycare,
-        egg: offlineEgg,
-        bred: offlineBred,
-      });
+      showOfflineSummary(
+        {
+          elapsedSec,
+          battle: offlineBattle,
+          daycare: offlineDaycare,
+          egg: offlineEgg,
+          bred: offlineBred,
+        },
+        // Po zavření přehledu ukaž reveal popup za KAŽDÉ offline vylíhnuté vejce
+        // (fronta v hatchPopup je odklikáváš jedno po druhém) – stejný zážitek
+        // jako u živého líhnutí, jen odložený za title screen / offline souhrn.
+        () => {
+          if (offlineEgg) for (const h of offlineEgg) showHatchPopup(h);
+        }
+      );
     }
     // Nabídky naučení tahu (plné sloty) – sleduje frontu i položky z offline.
     initMoveLearnPrompts();
