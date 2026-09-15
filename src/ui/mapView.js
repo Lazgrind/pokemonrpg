@@ -70,6 +70,26 @@ function posOf(area) {
   return o && typeof o.x === "number" ? o : { x: area.x, y: area.y };
 }
 
+/** Level pásmo oblasti jako suffix (" · Lv x–y"), prázdné pro oblasti bez soubojů. */
+function areaLevelSuffix(area) {
+  if (!area.species?.length) return "";
+  const [lmin, lmax] = areaLevelRange(area);
+  return ` · Lv ${lmin === lmax ? lmin : `${lmin}–${lmax}`}`;
+}
+
+/** Text jednoho <option> cestovního dropdownu: název + level pásmo oblasti. */
+function travelOptionHtml(area, activeId) {
+  const sel = area.id === activeId ? " selected" : "";
+  return `<option value="${area.id}"${sel}>${area.name}${areaLevelSuffix(area)}</option>`;
+}
+
+/** Popisek aktuální lokace do info řádku pod mapou (název + typ + level pásmo). */
+function locationText(area) {
+  if (!area) return "";
+  const kind = area.type === "city" ? "City" : "Route";
+  return `Current location: ${area.name} · ${kind}${areaLevelSuffix(area)}`;
+}
+
 /**
  * Vykreslí klikací mapu do zadaného elementu.
  * @param {HTMLElement} root
@@ -85,8 +105,7 @@ export function renderMap(root) {
     const unlocked = isAreaUnlocked(area, visited, badges, beaten, story);
     const p = posOf(area);
     // Popisek levelu = per-oblast pásmo (Lv min–max), u jednobodového jen jedno číslo.
-    const [lmin, lmax] = areaLevelRange(area);
-    const lvl = area.species?.length ? ` · Lv ${lmin === lmax ? lmin : `${lmin}–${lmax}`}` : "";
+    const lvl = areaLevelSuffix(area);
     // Pozn.: počet objevených druhů (R-023) ZÁMĚRNĚ NENÍ na uzlu mapy (zabíral moc
     // místa). Ukazuje se u aktivní oblasti v hlavičce Battle Area (viz battleView.js).
     return `
@@ -102,6 +121,14 @@ export function renderMap(root) {
       </button>`;
   }).join("");
 
+  // Cestovní dropdown nad mapou: nabízí JEN odemčené (dosažitelné) oblasti a drží
+  // se v sync s aktivní oblastí. Cestovat lze výběrem tady NEBO klikem na uzel –
+  // obojí projde stejnou cestou (změna dropdownu „kliká" za tebe na daný uzel).
+  const activeId = getActiveAreaId();
+  const optionsHtml = AREAS.filter((area) => isAreaUnlocked(area, visited, badges, beaten, story))
+    .map((area) => travelOptionHtml(area, activeId))
+    .join("");
+
   root.innerHTML = `
     <div class="map-head">
       <h2 class="panel-title">Map</h2>
@@ -110,6 +137,10 @@ export function renderMap(root) {
       </div>
     </div>
     <div class="kanto-map ${mapPlacementActive() ? "is-editing" : ""}">
+      <div class="map-travel">
+        <label class="map-travel-label" for="map-travel-select">Travel to</label>
+        <select id="map-travel-select" class="map-travel-select" data-sig="">${optionsHtml}</select>
+      </div>
       <div class="map-stage ${mapPlacementActive() ? "is-editing" : ""} ${mapPlacementHideLabels() ? "hide-labels" : ""}">
         <img class="map-img" src="${MAP_IMG}" alt="Map of Kanto" draggable="false" />
         ${nodesHtml}
@@ -415,6 +446,17 @@ export function renderMap(root) {
     );
   });
 
+  // Cestovní dropdown: změna = „klikni" za uživatele na odpovídající uzel, ať se
+  // projde přesně stejná cesta (safari-leave, story eventy, flash) jako u kliku.
+  const travelSel = root.querySelector(".map-travel-select");
+  if (travelSel) {
+    travelSel.addEventListener("change", () => {
+      const btn = root.querySelector(`.map-node[data-area="${CSS.escape(travelSel.value)}"]`);
+      if (btn && !btn.disabled) btn.click();
+      else updateStates(root); // neodemčené/neznámé → jen vrátíme výběr na aktivní
+    });
+  }
+
   // Živá aktualizace stavu (aktivní/odemčeno + pozice) bez přepisu obrázku.
   updateStates(root);
   if (unsub) unsub();
@@ -462,10 +504,24 @@ function updateStates(root) {
     btn.classList.toggle("type-city", area.type === "city");
     btn.classList.toggle("type-route", area.type !== "city");
   }
+  // Cestovní dropdown: options přestavíme JEN když se změní množina odemčených
+  // oblastí (levný podpis), jinak jen dorovnáme vybranou hodnotu na aktivní uzel.
+  const sel = root.querySelector(".map-travel-select");
+  if (sel) {
+    const unlockedAreas = AREAS.filter((area) =>
+      isAreaUnlocked(area, visited, badges, beaten, story)
+    );
+    const sig = unlockedAreas.map((a) => a.id).join(",");
+    if (sel.dataset.sig !== sig) {
+      sel.innerHTML = unlockedAreas.map((a) => travelOptionHtml(a, activeId)).join("");
+      sel.dataset.sig = sig;
+    }
+    if (sel.value !== activeId) sel.value = activeId;
+  }
   const info = root.querySelector(".map-info");
   if (info && !info.dataset.flashing) {
     const active = getArea(activeId);
-    if (active) info.textContent = `Current location: ${active.name}`;
+    if (active) info.textContent = locationText(active);
   }
 }
 
@@ -478,6 +534,6 @@ function flash(info, msg) {
   flash._t = setTimeout(() => {
     delete info.dataset.flashing;
     const active = getArea(getActiveAreaId());
-    if (active) info.textContent = `Current location: ${active.name}`;
+    if (active) info.textContent = locationText(active);
   }, 2500);
 }

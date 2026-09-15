@@ -238,9 +238,13 @@ function spawnDamage(root, hit) {
  * @param showXp přidá EXP bar (jen náš Pokémon – divoký nepřítel XP nesbírá)
  * @param animated animovaný gif sprite (jen manuální souboj; auto/idle = statické png)
  */
-function combatantHtml(c, side, view, showXp = false, animated = false) {
+function combatantHtml(c, side, view, showXp = false, animated = false, ballsHtml = "") {
   const pct = Math.max(0, Math.round((c.hp / c.stats.maxHp) * 100));
-  const low = pct <= 25 ? " low" : "";
+  // Barva HP baru podle % (jako v mainline hrách): >50 % zelená, 20–50 % žlutá,
+  // ≤20 % červená. Třída se přidává na .hpfill (barvy definuje CSS).
+  let hpClass = "";
+  if (pct <= 20) hpClass = " low";
+  else if (pct <= 50) hpClass = " mid";
   const types = c.types.map(typeBadge).join("");
   const name = `${c.ref.shiny ? "✨ " : ""}${c.name}`;
   const status = statusBadge(c.status);
@@ -277,18 +281,42 @@ function combatantHtml(c, side, view, showXp = false, animated = false) {
 
   const hpBar = hideStats
     ? ""
-    : `<div class="hpbar"><div class="hpfill${low}" style="width:${pct}%"></div></div>`;
+    : `<div class="hpbar"><div class="hpfill${hpClass}" style="width:${pct}%"></div></div>`;
 
   return `
     <div class="combatant ${side}">
       ${sprite}
       <div class="c-info">
         <div class="c-head"><strong>${name}</strong> · Lv ${c.ref.level} ${types}${status}</div>
+        ${ballsHtml}
         ${hpBar}
         ${hpText}
         ${xpHtml}
       </div>
     </div>`;
+}
+
+/**
+ * Řádek Poké Ballů soupeře-trenéra (jako v mainline hrách): tolik balíčků, kolik
+ * má trenér Pokémonů (max 6); barevné = ještě naživu (včetně aktuálního),
+ * šedivé = už poražení. Jen pro trenérské souboje (u divokých b.trainer chybí).
+ * V full-auto módu se skryje (stejně jako HP/EXP měřáky).
+ */
+function trainerBallsHtml(b) {
+  const t = b?.trainer;
+  if (!t || !Array.isArray(t.team) || t.team.length === 0) return "";
+  if (getFullAuto()) return "";
+  const total = t.team.length;
+  const fainted = Math.max(0, Math.min(total, t.cursor ?? 0));
+  const alive = total - fainted;
+  let balls = "";
+  for (let i = 0; i < total; i++) {
+    // Živé balíčky vlevo, poražené (šedivé) vpravo → jak Pokémoni padají,
+    // šedivé přibývají zprava (identitu druhu to neprozrazuje, jen počet).
+    const dead = i >= alive;
+    balls += `<span class="ball ${dead ? "is-fainted" : "is-alive"}"></span>`;
+  }
+  return `<div class="trainer-balls" title="${alive}/${total} Pokémon left" aria-label="${alive} of ${total} Pokémon left">${balls}</div>`;
 }
 
 /**
@@ -732,7 +760,7 @@ function drawInner(root) {
     <div class="battle-body">
       <div class="battle-field${defeated ? " is-over" : ""}${interlude ? " is-result" : ""}${showCmd ? " has-cmd" : ""}">
         <div class="bg"${b.background ? ` style="background-image:url('${b.background}')"` : ""}></div>
-        ${combatantHtml(b.enemy, "enemy", "front", false, anim)}
+        ${combatantHtml(b.enemy, "enemy", "front", false, anim, trainerBallsHtml(b))}
         <div class="vs">VS</div>
         ${combatantHtml(b.player, "player", "back", true, anim)}
         ${showCmd ? battleCmdHtml(b) : ""}

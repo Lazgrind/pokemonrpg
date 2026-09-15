@@ -133,8 +133,6 @@ export function renderGymTab(root, onStatus = () => {}) {
       const isDefeated = defeated.includes(t.id);
       const isNext = i === nextIdx;
       const isLeader = t.kind === "gym-leader";
-      const maxLv = Math.max(...t.team.map((m) => m.level ?? 1));
-      const teamInfo = `${t.team.length} Pokémon · up to Lv ${maxLv}`;
 
       let statusHtml;
       if (isDefeated) {
@@ -157,7 +155,6 @@ export function renderGymTab(root, onStatus = () => {}) {
           <img class="gym-trainer-sprite" src="${trainerSpriteUrl({ id: t.id, class: t.class, kind: t.kind })}" alt="${t.name}" onerror="this.style.visibility='hidden'">
           <span class="gym-trainer-info">
             <span class="gym-trainer-name">${isLeader ? "👑 " : ""}${t.name}</span>
-            <span class="placeholder gym-trainer-team">${teamInfo}</span>
           </span>
           ${statusHtml}
         </li>`;

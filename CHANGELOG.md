@@ -6,6 +6,32 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [1.11.0] – 2026-09-15 · Battle polish — rival is manual, trainer ball count, HP-bar colours
+### Added
+- **A Poké Ball indicator for trainer opponents in the battle area** (`src/ui/battleView.js`, `css/main.css`), like the mainline games: a row of up to 6 balls next to the enemy shows how many Pokémon the trainer has — **coloured balls are still in play** (including the one currently out), **greyed-out balls have fainted**. It only appears in trainer battles (wild Pokémon have no indicator) and is hidden in Full Auto (which hides the HP/EXP gauges too). This is the in-battle counterpart to hiding the roster before battle in 1.10.0 — you learn how many Pokémon the trainer has, but not which ones, until you face them.
+### Changed
+- **The battle HP bar now changes colour by remaining HP** (`src/ui/battleView.js`, `css/main.css`), like the mainline games: **green** above 50%, **yellow** between 20% and 50%, **red** at 20% or below (previously it only turned red under 25%). Applies to both the player's and the opponent's HP bar in the battle area.
+### Fixed
+- **Rival battles are now forced-manual** (`src/systems/battleSystem.js`), like Gym Leader and Pokémon League fights: Auto/Full Auto are disabled for them. Rival trainers are gated directly on their kind, since the Rival tab starts the battle without the gym/force-manual flags the other important fights use — so it was previously auto-battleable by mistake.
+
+## [1.10.0] – 2026-09-15 · Opponent teams are hidden until you fight them
+### Changed
+- **Trainer rosters are no longer previewed before battle** (`src/ui/gymView.js`, `src/ui/leagueView.js`, `src/ui/rocketView.js`, `src/ui/rivalView.js`): the trainer lists (Gym, Pokémon League, Team Rocket gauntlet, Rival) used to show how many Pokémon each trainer had (and up to what level) — the Rival card even listed every species by name and level. All of that is gone. A trainer's cards now show only their sprite, name/role and the Fight button; **which Pokémon they use, how many, and at what level is revealed only as you actually face them in the battle area.** (The dropped unused `getSpecies` import was removed from the Rival view.)
+
+## [1.9.0] – 2026-09-15 · Travel dropdown above the map
+### Added
+- **Travel dropdown above the Kanto map** (`src/ui/mapView.js`, `css/main.css`): a "Travel to" `<select>` lists every **reachable (unlocked)** area with its level range, so you can move by picking from the menu **or** by clicking a node — both go through the exact same path (Safari-leave check, story popups, info flash). This mainly helps on mobile/narrow layouts where two horizontally close nodes (e.g. Pewter City and Route 3) overlap and are hard to tap. The dropdown always **stays in sync with the current area** (its value follows whichever node is active), and its options rebuild only when the set of unlocked areas actually changes. The location line under the map now also shows the area's type and level range.
+### Changed
+- **Map nodes no longer show a permanent name pill on the active area** (`css/main.css`): now that the dropdown carries the area info, the active node's always-on opaque label pill (`z-index: 3`) — which physically covered horizontally close neighbours — is gone. The active area is just a highlighted, pulsing dot; area names still appear on **hover/focus** (desktop) and for the placement target in the dev edit mode.
+
+## [1.8.0] – 2026-09-15 · Battle log stays short — battle area no longer keeps growing
+### Fixed
+- **The battle area no longer keeps enlarging on narrow/auto/stacked layouts** (`src/systems/battleSystem.js`, `css/main.css`): the battle log kept the last 30 lines, and the log box (`.battle-info`) has an internal scroll — but only when it has a bounded height. In the desktop and mobile layouts it does; in the narrow **auto** (< 1000px) and **stacked** layouts it had no height cap, so instead of scrolling it grew to fit its content, pushing the whole battle area taller as the log filled up. This showed up dramatically with a Fake Out lock (a battle that never ends, so the log always fills to the cap). Fixed two ways: the log now keeps only the **last few lines** (6) instead of 30, and `.battle-info` gets a **`max-height` + scroll** in the auto and stacked layouts too (mirroring mobile). The battle scene container (`.battle-field`) is deliberately left untouched.
+
+## [1.7.0] – 2026-09-15 · Fake Out's flinch is limited to its first turn
+### Fixed
+- **Fake Out no longer flinch-locks the whole battle** (`data/moves.js`, `src/systems/battleSystem.js`): the move had no restriction and its flinch has no chance roll, so it flinched the target on every single hit — permanently locking the opponent out of acting (unplayable when the AI spammed it). Fake Out is still a normal attack you can use **every turn** (so a Pokémon whose only move is Fake Out isn't soft-locked), but its **flinch effect now only applies on the first turn** the user acts after being sent out (tracked per combatant via `volatile.turnsActive`, which resets on every switch-in). Later uses just deal damage with no flinch.
+
 ## [1.6.0] – 2026-09-15 · Achievements rework — many more achievements, Steam-style reveal, own tab
 ### Added
 - **Achievements fully rewritten and greatly expanded** (`data/achievements.js`) across four tiers — 🟢 Common, 🟡 Secret, 🔴 Rare, 🟣 Insane. New data model per achievement: `{ id, name, hint, condition, tier, check, reward }`. Humour is deliberately absurd/deadpan ("tired developer who publicly mocks you"). (Deliberately no spoilers here — go find them in-game.)

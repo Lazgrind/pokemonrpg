@@ -443,6 +443,10 @@ body[data-layout="mobile"] #team-panel { overflow: visible; }
 body[data-layout="stacked"] #tab-rest,
 body[data-layout="mobile"] #tab-rest { overflow: visible; }
 body[data-layout="stacked"] #main-panel { min-height: 60vh; }
+/* Log dostane strop výšky + vlastní scroll (jako mobile), ať se nenaplní a
+   neroztahuje celou Battle area. .battle-field ZÁMĚRNĚ nesaháme (pevná výška na něm
+   rozbila auto layout – okno scény mizelo). */
+body[data-layout="stacked"] .battle-side .battle-info { max-height: 24vh; overflow: auto; }
 
 /* Mobilní režim (preset "mobile"): battle area se rozdělí SVISLE – scéna souboje
    nahoře (pevná výška), log + ovládání pod ní (ne vedle). Jinak by se scéna na
@@ -467,6 +471,8 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   body[data-layout="auto"] #team-panel { overflow: visible; }
   body[data-layout="auto"] #tab-rest { overflow: visible; }
   body[data-layout="auto"] #main-panel { min-height: 60vh; }
+  /* Strop výšky logu i v úzkém auto-režimu (< 1000px) – stejný důvod jako stacked/mobile. */
+  body[data-layout="auto"] .battle-side .battle-info { max-height: 24vh; overflow: auto; }
 }
 
 /* Úzké displeje (telefon): stáhnout mezery, zalomit horní lištu, menší logo. */
@@ -1068,9 +1074,33 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   background: linear-gradient(90deg, #3ad07a, #2fae65);
   transition: width 0.25s ease;
 }
-.hpfill.low { background: linear-gradient(90deg, #e5533c, #c53a26); }
+.hpfill.mid { background: linear-gradient(90deg, #f2c94c, #e0b028); } /* 20–50 % žlutá */
+.hpfill.low { background: linear-gradient(90deg, #e5533c, #c53a26); } /* ≤20 % červená */
 .hpfill.fainted { background: linear-gradient(90deg, #555c6b, #444a57); }
 .hptext { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+
+/* Řádek Poké Ballů soupeře-trenéra (živí vs. poražení) – jako v mainline hrách. */
+.trainer-balls { display: flex; gap: 4px; margin-bottom: 5px; }
+.trainer-balls .ball {
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.55);
+  background: linear-gradient(#ee5544 0 50%, #f2f2f2 50% 100%);
+  position: relative;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+.trainer-balls .ball::after {
+  content: "";
+  position: absolute;
+  left: -1px;
+  right: -1px;
+  top: 50%;
+  height: 2px;
+  transform: translateY(-50%);
+  background: rgba(0, 0, 0, 0.6);
+}
+.trainer-balls .ball.is-fainted { filter: grayscale(1) brightness(0.7); opacity: 0.4; }
 
 /* EXP bar (souboj i tým) – sdílí track .hpbar, jen jiná výplň. */
 .xpbar {
@@ -2719,11 +2749,14 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 .map-node.is-hidden { display: none; }
 
 /* Název uzlu je defaultně skrytý → na mapě jsou jen malé tečky (nepřekrývají se).
-   Ukáže se jen u aktivní/cílové oblasti a na hover/focus. */
+   Ukáže se jen na hover/focus (desktop) a u placement cíle v edit režimu.
+   Aktivní oblast ZÁMĚRNĚ už NEmá stálou pilulku – ta (neprůhledná, z-index 3)
+   fyzicky překrývala vodorovně blízké sousedy (Pewter City vs. Route 3). Info
+   o aktivní oblasti teď nese cestovní dropdown + řádek pod mapou; aktivní uzel
+   je jen zvýrazněná pulzující tečka. */
 .map-node-label { display: none; }
 .map-node:hover .map-node-label,
 .map-node:focus-visible .map-node-label,
-.map-node.is-active .map-node-label,
 .map-node.is-target .map-node-label { display: inline; }
 
 .map-info {
@@ -2731,6 +2764,37 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   color: var(--text-dim);
   min-height: 16px;
   padding: 0 2px;
+}
+
+/* Cestovní dropdown nad mapou: alternativa ke klikání na uzly (hlavně mobil,
+   kde se překrývají horizontálně blízké popisky). Drží se v sync s aktivní
+   oblastí. Na plnou šířku scény, ať se dobře trefuje prstem. */
+.map-travel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  max-width: 100%;
+}
+.map-travel-label {
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.map-travel-select {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 6px 8px;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg-panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+}
+.map-travel-select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
 }
 
 /* Hlavička mapy: titulek + přepínač režimu umístění. */
