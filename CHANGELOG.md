@@ -6,6 +6,10 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [1.12.4] – 2026-09-15 · Hatched eggs no longer listed twice on return
+### Fixed
+- **Eggs that hatched offline are no longer duplicated in the "Welcome back" summary** (`src/ui/offlineView.js`, `src/main.js`): they were listed in the offline summary *and* then shown one by one as animated reveal popups — the same information twice. The hatched-eggs section is removed from the summary; each hatchling is now revealed only through its popup (as intended). The summary still shows battle, Day Care training and newly *bred* eggs (those have no reveal popup). If nothing but eggs happened while you were away, the summary is skipped entirely and the reveal popups play right after Continue.
+
 ## [1.12.3] – 2026-09-15 · Time on the title screen now counts toward eggs
 ### Fixed
 - **Time spent sitting on the title screen now counts toward egg incubation** (`src/main.js`): offline progress is computed at page load, and the live incubation loop only starts *after* you click Continue — so any time the game sat on the title screen (loaded but not entered) was silently lost for eggs, breaking "2 h = 2 h IRL" if you left the title screen open. The gap between load and Continue is now applied as an extra real-time catch-up for **eggs** (and **breeding**, which produces the eggs), right before the live loops start, so the same stretch is never double-counted. Any eggs that finish during that window are folded into the "Welcome back" offline summary and get their reveal popups. Battle and Day Care offline stay as-is (they're capped estimates, so title-screen dwell doesn't matter there).
