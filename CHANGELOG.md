@@ -6,9 +6,11 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
-## [1.12.1] – 2026-09-15 · Offline hatches show the reveal popup too
+## [1.12.1] – 2026-09-15 · Everything shows after the title screen — offline hatches revealed too
 ### Changed
 - **Eggs that hatch while you're away now also show the reveal popup** (`src/main.js`, `src/ui/offlineView.js`), consistent with the game's AFK/idle nature: everything visible is deferred behind the title screen anyway, so after you click Continue and dismiss the "Welcome back" offline summary, each offline-hatched Pokémon gets the same animated reveal (with stats) as a live hatch — queued, so you click through them one by one. Previously the reveal popup only appeared for hatches that happened while the game was open; offline hatches were listed in the offline summary but never revealed. (New eggs don't start incubating on their own while you're offline, so this can't flood you.)
+### Fixed
+- **Nothing pops up behind the title screen anymore** (`src/systems/achievementSystem.js`, `src/main.js`): achievement unlock toasts that trigger during load (the first evaluation of a loaded save, and the AFK-duration achievement recorded right after returning) used to appear *underneath* the title screen, before you clicked Continue. They're now **queued and flushed only after Continue**, so they reveal properly. The unlock, its reward and the save write still happen immediately — only the toast is deferred. In the same spirit, the idle loops (Day Care training, egg incubation, breeding) now **start after Continue** instead of during the title screen, so a live hatch/evolution can't fire behind it either.
 
 ## [1.12.0] – 2026-09-15 · Egg hatch reveal popup — see what hatched, with its stats
 ### Added

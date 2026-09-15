@@ -21,6 +21,31 @@ import { ACHIEVEMENTS } from "../../data/achievements.js";
 import { dexCounts } from "./pokedex.js";
 import { showAchievementToast } from "../ui/achievementToast.js";
 
+/* ---- Brána zobrazování toastů (title screen) ----------------------------
+ * Achievement se může odemknout ještě než hráč proklikne title screen (první
+ * evaluate po načtení + recordAfk běží hned při init). Toast by pak vyskočil
+ * POD úvodní obrazovkou. Vzhledem k AFK povaze hry se všechno VIDITELNÉ ukáže
+ * až po Continue – proto toasty do té doby FRONTUJEME a vyprázdníme je až
+ * `flushAchievementToasts()` (volá main.js z title-screen callbacku). Odemčení,
+ * odměny i zápis do save probíhají normálně hned; odkládá se jen toast. */
+let toastsGateOpen = false;
+const pendingToasts = [];
+
+/** Ukáže toast hned (brána otevřená), jinak ho zařadí do fronty. */
+function emitAchievementToast(a) {
+  if (toastsGateOpen) showAchievementToast(a);
+  else pendingToasts.push(a);
+}
+
+/**
+ * Otevře bránu toastů a vyprázdní frontu odložených (volá se po Continue na
+ * title screenu). Idempotentní.
+ */
+export function flushAchievementToasts() {
+  toastsGateOpen = true;
+  while (pendingToasts.length) showAchievementToast(pendingToasts.shift());
+}
+
 /* ------------------------------ Staty / stav ----------------------------- */
 
 /** Výchozí hodnoty všech counterů (zdroj pravdy pro seed i migraci). */
@@ -174,7 +199,7 @@ export function evaluateAchievements() {
       }
     }
 
-    showAchievementToast(a);
+    emitAchievementToast(a); // hned, nebo do fronty dokud není proklikán title screen
   }
 
   if (changed) commit();
