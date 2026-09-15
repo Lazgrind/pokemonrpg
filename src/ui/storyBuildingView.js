@@ -20,6 +20,7 @@ import { healTeam, teamNeedsHeal, startTrainerBattle, giftLevel, tradePokemon, s
 import { createPokemon } from "../systems/pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { TMS, getTm, tmDisplayName } from "../../data/tms.js";
+import { recordGameCorner } from "../systems/achievementSystem.js";
 import { grantTm } from "../systems/tmSystem.js";
 import { grantHmToPlayer } from "../systems/hmSystem.js";
 import { showPopup } from "./popup.js";
@@ -292,6 +293,7 @@ function bjSettle(game) {
   game.result = result;
   game.msg = msg;
   commit();
+  if (result === "lose") recordGameCorner("loss"); // achievement: prohraná sázka
   return msg;
 }
 
@@ -306,6 +308,7 @@ function bjDeal(onStatus) {
     player: [bjDraw(), bjDraw()], dealer: [bjDraw(), bjDraw()],
   };
   commit();
+  recordGameCorner("play"); // achievement: zahraná partie v herně
   if (bjValue(bjGame.player) === 21 || bjValue(bjGame.dealer) === 21) {
     onStatus("🃏 " + bjSettle(bjGame));
   } else {
@@ -1227,6 +1230,10 @@ function wire(storyKey, overlay, onStatus, render, close) {
     s.resources.coins += payout;
     lastSpin = { reels, payout };
     commit();
+    // Achievementy: každé roztočení = hra; tři sedmičky = jackpot; nula = prohra.
+    recordGameCorner("play");
+    if (reels[0] === reels[1] && reels[1] === reels[2] && reels[0] === "7️⃣") recordGameCorner("jackpot");
+    else if (payout === 0) recordGameCorner("loss");
     onStatus(payout > 0 ? `🎰 ${reels.join(" ")} — you won ${payout} coins!` : `🎰 ${reels.join(" ")} — no luck.`);
     render();
   });

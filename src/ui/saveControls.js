@@ -28,8 +28,8 @@ export function renderSaveControls(root, onStatus = () => {}) {
     onStatus("Saved ✓");
   });
 
-  root.querySelector('[data-act="export"]').addEventListener("click", () => {
-    exportSave();
+  root.querySelector('[data-act="export"]').addEventListener("click", async () => {
+    await exportSave();
     onStatus("Save exported to .txt");
   });
 
@@ -47,9 +47,14 @@ export function renderSaveControls(root, onStatus = () => {}) {
     const file = fileInput.files?.[0];
     if (!file) return;
     stopBattle();
-    const ok = await importSave(file);
-    if (ok) restoreBattle(getState().battle);
-    onStatus(ok ? "Import successful ✓" : "Import failed — invalid file");
+    const res = await importSave(file);
+    if (res.ok) restoreBattle(getState().battle);
+    const failMsg = {
+      format: "Import failed — not a valid save file (use a file exported by this game).",
+      tampered: "Import failed — save is corrupted or was edited.",
+      error: "Import failed — invalid file.",
+    };
+    onStatus(res.ok ? "Import successful ✓" : (failMsg[res.reason] ?? failMsg.error));
     fileInput.value = "";
   });
 }

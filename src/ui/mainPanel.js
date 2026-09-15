@@ -20,6 +20,7 @@ import { renderMoveTutorTab } from "./moveTutorView.js";
 import { renderPokedexTab } from "./pokedexView.js";
 import { renderPcTab } from "./pcView.js";
 import { renderProfileTab } from "./profileView.js";
+import { renderAchievementsTab } from "./achievementsView.js";
 import { renderBattle } from "./battleView.js";
 import { renderGymTab } from "./gymView.js";
 import { renderRivalTab } from "./rivalView.js";
@@ -53,6 +54,7 @@ const ALL_TABS = [
   { id: "pc", label: "PC" },
   { id: "pokedex", label: "Pokédex" },
   { id: "profile", label: "Profile" },
+  { id: "achievements", label: "Achievements" },
 ];
 
 /** Aktivní záložka přežívá překreslení (modulová proměnná). */
@@ -101,6 +103,7 @@ function visibleTabs() {
   const atMoveTutor = area?.id === "route-08";
   return ALL_TABS.filter((t) => {
     if (t.id === "profile") return false; // skrytá – jen z horní lišty
+    if (t.id === "achievements") return false; // skrytá – otevírá se z horní lišty (🏆)
     if (t.id === "battle") return !inSafari; // v Safari se nebojuje – Battle mizí
     if (t.id === "safari") return inSafari; // Safari tab jen v oblasti safari-zone
     if (t.id === "fishing") return canFish; // jen u vody a s prutem
@@ -224,6 +227,7 @@ export function renderMainPanel(root, onStatus = () => {}) {
     else if (activeTab === "safari") renderSafariTab(restPane, onStatus);
     else if (activeTab === "fishing") renderFishingTab(restPane, onStatus);
     else if (activeTab === "profile") renderProfileTab(restPane, onStatus);
+    else if (activeTab === "achievements") renderAchievementsTab(restPane, onStatus);
   }
 
   // Sladit bojovou hudbu se stavem (na Battle tabu hraje, jinde ticho).

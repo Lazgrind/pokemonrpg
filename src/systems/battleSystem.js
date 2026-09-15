@@ -12,6 +12,7 @@
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { getTeamPokemon, ownsSpecies, ivWouldImprove, acquirePokemon, releasePokemon, getStarterSpeciesId } from "./team.js";
+import { recordMiss, recordAutocatch, recordTrade } from "./achievementSystem.js";
 import { getPokeball, POKEBALLS } from "../../data/pokeballs.js";
 import { ballMultiplier } from "./pokeballSystem.js";
 import { createPokemon, computeStats, grantEvYield, STAT_KEYS, SHINY_CHANCE, SHINY_CHARM_MULT } from "./pokemonSystem.js";
@@ -584,50 +585,10 @@ function chooseAutoPlayerTurn() {
     }
   }
 
-  // Priorita 2: Auto-switch
-  // Kontrola: již jsme switchli v poslední řadě? (guard proti zacyklení)
-  if (!battle._lastAutoSwitchTurn) battle._lastAutoSwitchTurn = -2;
-  const turnsSinceLastSwitch = (battle.turn ?? 0) - battle._lastAutoSwitchTurn;
-
-  if (turnsSinceLastSwitch > 1) {
-    // Najdi nejlepší útok nepřítele proti aktivnímu hráči
-    const enemyBestAction = chooseAction(battle.enemy, battle.player);
-    const enemyBestMove = enemyBestAction.move;
-    const enemyEffectiveness = moveTypeMult(enemyBestMove, battle.player);
-
-    if (enemyEffectiveness >= 2) {
-      // Nepřítel má výraznou výhodu – zkus switch na někoho s lepší efektivitou
-      const team = getTeamPokemon();
-      let bestSwitch = null;
-      let bestSwitchUid = null;
-      let bestScore = -1; // nižší je lepší (menší efektivita = lepší)
-
-      for (const member of team) {
-        const uid = member.uid;
-        if (uid === battle.player.ref.uid) continue; // aktivní, přeskočit
-        if (hpOf(member) <= 0) continue; // vyřazený, přeskočit
-
-        const candidate = makeCombatant(member);
-        const candidateEff = moveTypeMult(enemyBestMove, candidate);
-        if (candidateEff < enemyEffectiveness && candidateEff < 2) {
-          // Kandidát má lepší efektivitu než aktivní a není si roven nebezpečí
-          if (bestScore < 0 || candidateEff < bestScore) {
-            bestScore = candidateEff;
-            bestSwitch = candidate;
-            bestSwitchUid = uid;
-          }
-        }
-      }
-
-      if (bestSwitchUid) {
-        battle._lastAutoSwitchTurn = battle.turn ?? 0;
-        pushLog(`${battle.player.name} switches out! ${bestSwitch.name}, go!`, "player");
-        return { kind: "switch", uid: bestSwitchUid };
-      }
-    }
-  }
-
-  // Priorita 3: Normální útok
+  // Auto-switch podle typové výhody byl ODEBRÁN (přání hráče): v Auto i Full
+  // Auto bojuje vždy první živý Pokémon a mění se jen při nástupu dalšího
+  // soupeře (viz syncAutoActive) nebo po vyřazení. Přepínání podle typu si hráč
+  // řídí sám v manuálním módu tlačítkem Switch.
   return { kind: "move" };
 }
 
@@ -983,6 +944,7 @@ function useMove(attacker, defender, action) {
   const accMult = accStageMult((attacker.stages?.accuracy ?? 0) - (defender.stages?.evasion ?? 0));
   if (move.accuracy != null && Math.random() * 100 >= move.accuracy * accMult) {
     pushLog(`${attacker.name} used ${move.name} — but it missed!`, side);
+    if (side === "player") recordMiss(); // achievement: minutí hráčova útoku
     return { dmg: 0, crit: false };
   }
 
@@ -1545,16 +1507,62 @@ function schedule() {
   timer = setTimeout(tick, 1000 / getSpeed());
 }
 
+/**
+ * Chce autocatch chytit PRÁVĚ tohoto divokého nepřítele a má čím házet?
+ * (Bez ohledu na načasování hodu – to řeší `autocatchThrowNow`.) Sdílené mezi
+ * hodem ballu a rozhodnutím „nedorážej cíl" v autobojovém tahu.
+ */
+function autocatchWantsCurrent() {
+  const ac = getAutocatch();
+  const ballId = resolveAutocatchBall();
+  return !!(
+    ac.enabled &&
+    !battle.trainer && // trenérovy Pokémony nelze chytat
+    ballId &&
+    battle.enemy &&
+    battle.enemy.hp > 0 &&
+    ballCount(ballId) > 0 &&
+    !nuzlockeCatchBlock() &&
+    shouldAutocatch(battle.enemy.ref, ac)
+  );
+}
+
+/**
+ * Horní odhad hráčova zásahu na aktuálního nepřítele: max damage roll (avg dělí
+ * 0.925) × kritický zásah (CRIT_MULT). Když je `>= HP` nepřítele, DALŠÍ útok by
+ * ho už mohl složit – dál se bezpečně oslabovat nedá.
+ */
+function maxPlayerHit() {
+  if (!battle?.player || !battle?.enemy) return 0;
+  return (avgDamage(battle.player, battle.enemy) / 0.925) * CRIT_MULT;
+}
+
+/**
+ * Má autocatch v TOMTO kole hodit ball? Řídí se efektem vybraného ballu:
+ *  - Quick Ball (`firstTurn`): jen v 1. kole – chceme čistě ten ×5 efekt; když
+ *    se nechytí, dál se nehází a battler nepřítele normálně zabije.
+ *  - ostatní bally: až na DNĚ HP (`maxHit >= HP`) – nejnižší bezpečné HP =
+ *    nejvyšší `byHp` šance (u Timer ballu i naběhaná kola). Sem spadá i one-shot
+ *    cíl na plném HP (dostane jednu šanci, než ho útok složí) i případ, kdy lead
+ *    nedá žádný damage (`maxHit == 0`, např. Metapod jen s Harden) – dál se
+ *    oslabit nedá, takže se hází každé kolo (nejlepší možné za dané situace).
+ */
+function autocatchThrowNow(ballId) {
+  const ball = getPokeball(ballId);
+  if (ball?.bonus?.type === "firstTurn") return (battle.turn ?? 0) <= 1;
+  const maxHit = maxPlayerHit();
+  return maxHit === 0 || maxHit >= battle.enemy.hp;
+}
+
 /** Jedno kolo souboje. */
 function tick() {
   if (!battle || !battle.running) return;
 
   battle.turn = (battle.turn ?? 0) + 1; // číslo kola proti aktuálnímu nepříteli
 
-  // Autocatch: na začátku kola zkus chytit nepřítele (má-li smysl a jsou balls).
-  // Používá vybraný typ ballu. Při úspěchu je nepřítel nahrazen novým a kolo
-  // (výměna úderů) se přeskočí; při neúspěchu se normálně bojuje – hráč ho může
-  // zabít dřív, než ho chytí.
+  // Autocatch: hází se ve chvíli, kdy je vybraný ball NEJÚČINNĚJŠÍ (viz
+  // autocatchThrowNow) – Quick Ball v 1. kole, ostatní na dně HP – ne slepě
+  // každé kolo. Při úspěchu je nepřítel nahrazen novým a kolo se přeskočí.
   const ac = getAutocatch();
   // Autocatch drží jeden vybraný typ ballu; když ten dojde, NESAHÁ po jiném –
   // rovnou se sám vypne (viditelně v UI), ať nespotřebuje prémiové míčky.
@@ -1564,18 +1572,10 @@ function tick() {
   }
   // Vybraný autocatch ball (null = došel → nechytáme, žádný fallback).
   const ballId = resolveAutocatchBall();
-  if (
-    getAutocatch().enabled &&
-    !battle.trainer && // trenérovy Pokémony nelze chytat
-    ballId &&
-    battle.enemy &&
-    battle.enemy.hp > 0 &&
-    ballCount(ballId) > 0 &&
-    !nuzlockeCatchBlock() &&
-    shouldAutocatch(battle.enemy.ref, ac)
-  ) {
+  if (autocatchWantsCurrent() && autocatchThrowNow(ballId)) {
     const r = doCatch(ballId);
     if (r.caught) {
+      recordAutocatch(); // achievement: úlovek přes Auto catch
       emit();
       schedule();
       return;
@@ -1594,6 +1594,22 @@ function tick() {
   if (playerAutoDecision.kind === "move") {
     // Normální útok
     playerAction = chooseAction(battle.player, battle.enemy);
+    // Autocatch – „nedorážej cíl": chceme-li tohoto nepřítele chytit ostatním
+    // ballem (ne Quick Ballem) a UŽ jsme ho načali (HP < maxHP), nedovolíme
+    // battlerovi ho složit – necháme ho na dně HP a házíme každé kolo se
+    // stoupající šancí. Výjimky (útok proběhne / cíl může umřít):
+    //  - Quick Ball: chce jen 1. kolo, pak se má zabít a jít dál,
+    //  - čerstvý one-shot na plném HP (HP == maxHP): dostal jednu šanci v tomto
+    //    kole, teď ho útok složí – to je chyba usera (má dát slabšího Pokémona).
+    if (
+      playerAction &&
+      autocatchWantsCurrent() &&
+      getPokeball(resolveAutocatchBall())?.bonus?.type !== "firstTurn" &&
+      battle.enemy.hp < battle.enemy.stats.maxHp &&
+      maxPlayerHit() >= battle.enemy.hp
+    ) {
+      playerAction = null; // nedorážej cíl autocatche
+    }
   } else if (playerAutoDecision.kind === "item") {
     // Auto-heal: hráč neútočí, enemy zaútočí
     const { itemId, targetUid } = playerAutoDecision;
@@ -2042,8 +2058,28 @@ function replaceEnemyBlownAway() {
 }
 
 /** Nasadí dalšího divokého nepřítele (nové setkání) a zaloguje ho. */
+/**
+ * Auto/Full Auto: aktivním bojovníkem je VŽDY první živý člen týmu (dle pořadí
+ * v týmu). Voláno na začátku každého nového setkání, aby po přeskládání týmu
+ * (nebo po nasazení náhradníka v předchozím souboji) zase nastoupil první
+ * Pokémon a sbíral zkušenosti. V manuálním módu se aktivní jedinec NEmění –
+ * řídí ho hráč tlačítkem Switch.
+ */
+function syncAutoActive() {
+  if (!battle || !autoLoopActive()) return;
+  const team = getTeamPokemon();
+  const firstAlive = team.findIndex((p) => hpOf(p) > 0);
+  if (firstAlive < 0) return; // celý tým vyřazen – řeší handleFaint
+  if (battle.teamCursor === firstAlive && battle.player?.ref?.uid === team[firstAlive].uid) {
+    return; // už je nasazený správný jedinec – neresetuj zbytečně stav bojovníka
+  }
+  battle.teamCursor = firstAlive;
+  battle.player = makeCombatant(team[firstAlive]);
+}
+
 function spawnNext() {
   battle.log = []; // log drží jen aktuální souboj – nové setkání začíná načisto
+  syncAutoActive(); // Auto/Full Auto: první živý Pokémon nastoupí i po přeskládání týmu
   // ~15 % šance, že místo divokého naskočí route trenér (jen na routách,
   // jen neporažený). battle.trainer už tu není (finish ho vynuloval).
   const routeTrainer = pickRouteTrainer(battle.area);
@@ -2078,7 +2114,7 @@ function pauseForInterlude(interlude) {
   // Rybaření = jednorázové setkání: NIKDY nespouštěj další divoký souboj (ani
   // v auto módu). Vždy ukaž výherní/chytací okno, ať se dá přes tlačítko vrátit
   // na záložku Fishing (viz battleView #next-encounter).
-  if (getAutoBattle() && !battle.fishing) {
+  if (autoLoopActive() && !battle.fishing) {
     spawnNext();
     return false;
   }
@@ -3105,7 +3141,7 @@ function doCatch(ballId) {
     pushLog(`Caught ${enemy.name}, but your own was better — released`, "player");
   }
   // Emit event pro achievement systém
-  bus.emit(EVENTS.POKEMON_CAUGHT, { speciesId: enemy.ref.speciesId, shiny: enemy.ref.shiny, pokemon: enemy.ref });
+  bus.emit(EVENTS.POKEMON_CAUGHT, { speciesId: enemy.ref.speciesId, shiny: enemy.ref.shiny, pokemon: enemy.ref, fishing: !!battle.fishing });
   // Auto: rovnou další soupeř. Manuál: pauza a „chytací okno" s hozeným ballem.
   pauseForInterlude({
     kind: "catch",
@@ -3334,6 +3370,7 @@ export function setActiveArea(areaId) {
       stopBattle();
     } else if (area.species?.length) {
       battle.area = area;
+      syncAutoActive(); // Auto/Full Auto: po přechodu na jinou oblast nasadit prvního živého Pokémona
       battle.enemy = spawnEnemy(area);
       battle.background = pickBackground(area);
       pushLog(`Moved to ${area.name}.`);
@@ -3411,6 +3448,7 @@ export function tradePokemon(wantId, giveId, flag) {
     s.story[flag] = true;
     commit();
   }
+  recordTrade(); // achievement: dokončená výměna
   return { ok: true, level };
 }
 
