@@ -342,13 +342,21 @@ function init() {
     playBgm("main");
 
     if (hasOffline) {
-      showOfflineSummary({
-        elapsedSec,
-        battle: offlineBattle,
-        daycare: offlineDaycare,
-        egg: offlineEgg,
-        bred: offlineBred,
-      });
+      showOfflineSummary(
+        {
+          elapsedSec,
+          battle: offlineBattle,
+          daycare: offlineDaycare,
+          egg: offlineEgg,
+          bred: offlineBred,
+        },
+        // Po zavření přehledu ukaž reveal popup za KAŽDÉ offline vylíhnuté vejce
+        // (fronta v hatchPopup je odklikáváš jedno po druhém) – stejný zážitek
+        // jako u živého líhnutí, jen odložený za title screen / offline souhrn.
+        () => {
+          if (offlineEgg) for (const h of offlineEgg) showHatchPopup(h);
+        }
+      );
     }
     // Nabídky naučení tahu (plné sloty) – sleduje frontu i položky z offline.
     initMoveLearnPrompts();

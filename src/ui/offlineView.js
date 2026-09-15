@@ -16,8 +16,10 @@ import { lootLabel } from "../systems/battleSystem.js";
  *   egg?: null | Array<{ name: string, shiny: boolean, level: number, outcome: any }>,
  *   bred?: null | Array<{ id: string, speciesId: string }>
  * }} summary
+ * @param {() => void} [onClose]  zavolá se po zavření přehledu (Continue / klik mimo).
+ *   Sem řetězíme reveal popupy vylíhnutých vajec, ať se neukážou pod tímto oknem.
  */
-export function showOfflineSummary(summary) {
+export function showOfflineSummary(summary, onClose) {
   const capped = summary.elapsedSec > OFFLINE_CAP_HOURS * 3600;
 
   let sections = "";
@@ -98,7 +100,13 @@ export function showOfflineSummary(summary) {
   `;
   document.body.appendChild(overlay);
 
-  const close = () => overlay.remove();
+  let closed = false;
+  const close = () => {
+    if (closed) return; // ať onClose (reveal popupy) neběží dvakrát
+    closed = true;
+    overlay.remove();
+    onClose?.();
+  };
   overlay.querySelector("#offline-ok").addEventListener("click", close);
   overlay.addEventListener("click", (e) => {
     if (e.target === overlay) close();
