@@ -15,6 +15,7 @@
 import { AREAS, getArea, isAreaUnlocked, areaLevelRange } from "../../data/areas.js";
 import { setActiveArea, getActiveAreaId, applyFossilChoice, startTrainerBattle } from "../systems/battleSystem.js";
 import { endSafari, isSafariActive } from "../systems/safariSystem.js";
+import { areaCompletion } from "../systems/pokedex.js";
 import { getState } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { showPopup } from "./popup.js";
@@ -503,6 +504,11 @@ function updateStates(root) {
     btn.classList.toggle("is-target", editing && area.id === mapPlacementTarget());
     btn.classList.toggle("type-city", area.type === "city");
     btn.classList.toggle("type-route", area.type !== "city");
+    // Obarvení route uzlu podle sběru: všechny druhy chyceny → červený,
+    // navíc všechny i jako shiny → zlatý. Města/prázdné oblasti nikdy.
+    const comp = areaCompletion(area);
+    btn.classList.toggle("is-complete", comp.allCaught);
+    btn.classList.toggle("is-shiny-complete", comp.allCaught && comp.allShiny);
   }
   // Cestovní dropdown: options přestavíme JEN když se změní množina odemčených
   // oblastí (levný podpis), jinak jen dorovnáme vybranou hodnotu na aktivní uzel.

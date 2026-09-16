@@ -106,3 +106,35 @@ export function areaCatchProgress(area) {
   }
   return { caught, total: ids.length };
 }
+
+/** Máš daný druh chycený jako SHINY? (aspoň jeden shiny jedinec v kolekci) */
+export function isCaughtShiny(speciesId) {
+  return getState().collection.some((p) => p.speciesId === speciesId && p.shiny);
+}
+
+/**
+ * Kompletnost oblasti pro obarvení uzlu mapy + detail „co jsem tu chytil".
+ * `allCaught` = mám všechny druhy oblasti (uzel červený), `allShiny` = navíc
+ * mám i všechny jako shiny (uzel zlatý). Prázdné oblasti (města) → vše false.
+ * @param {import("../../data/areas.js").Area|string} area
+ * @returns {{ caught:number, total:number, shiny:number, allCaught:boolean, allShiny:boolean }}
+ */
+export function areaCompletion(area) {
+  const a = typeof area === "string" ? getArea(area) : area;
+  const ids = areaSpeciesIds(a);
+  const total = ids.length;
+  if (!total) return { caught: 0, total: 0, shiny: 0, allCaught: false, allShiny: false };
+  let caught = 0;
+  let shiny = 0;
+  for (const id of ids) {
+    if (isCaught(id)) caught++;
+    if (isCaughtShiny(id)) shiny++;
+  }
+  return {
+    caught,
+    total,
+    shiny,
+    allCaught: caught === total,
+    allShiny: shiny === total,
+  };
+}

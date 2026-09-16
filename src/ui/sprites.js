@@ -40,9 +40,12 @@ export function spriteUrl(speciesId, view = "front", ext = "png") {
  * @param {string} [opts.extraClass]
  * @param {number} [opts.scale]  poměrová velikost (CSS proměnná --mon-scale);
  *                               výchozí 1 = jednotná velikost pro všechny druhy
+ * @param {string} [opts.dataKey]  stabilní klíč (data-skey) pro znovupoužití uzlu
+ *                                  napříč překresleními – brání reloadu <img>/restartu
+ *                                  GIFu (a tím problikávání) v živě tikajícím souboji
  * @returns {string}
  */
-export function spriteImg(speciesId, { view = "front", shiny = false, gender = null, animated = false, alt = "", extraClass = "", scale = 1 } = {}) {
+export function spriteImg(speciesId, { view = "front", shiny = false, gender = null, animated = false, alt = "", extraClass = "", scale = 1, dataKey = "" } = {}) {
   const base = shiny ? `shiny-${view}` : view;
   // Seřazené kandidátní jména: u samice nejdřív `-f`, pak výchozí.
   const names = gender === "f" ? [`${base}-f`, base] : [base];
@@ -56,7 +59,8 @@ export function spriteImg(speciesId, { view = "front", shiny = false, gender = n
   const fbAttr = rest.length ? ` data-fb='${JSON.stringify(rest)}'` : "";
   // --mon-scale nastavíme jen když se liší od 1 (jinak dědí výchozí z CSS).
   const scaleStyle = scale && scale !== 1 ? ` style="--mon-scale:${scale}"` : "";
-  return `<span class="mon-sprite ${extraClass}"${scaleStyle}>
+  const keyAttr = dataKey ? ` data-skey="${dataKey}"` : "";
+  return `<span class="mon-sprite ${extraClass}"${keyAttr}${scaleStyle}>
     <span class="ph">?</span>
     <img src="${primary}" alt="${alt}" loading="lazy"${fbAttr}
       onload="this.previousElementSibling.style.display='none'"

@@ -42,13 +42,15 @@ import { spriteImg } from "./sprites.js";
 import { getTeamPokemon } from "../systems/team.js";
 import { computeStats } from "../systems/pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
+import { areaSpeciesIds } from "../../data/areas.js";
 import { getMove } from "../../data/moves.js";
 import { trainerSpriteUrl } from "../../data/trainers.js";
 import { getBadge } from "../../data/badges.js";
-import { isCaught, areaCatchProgress } from "../systems/pokedex.js";
+import { isCaught, isCaughtShiny, areaCatchProgress } from "../systems/pokedex.js";
 import { typeColor, typeBadge } from "./typeColors.js";
 import { statusBadge } from "./statusBadge.js";
 import { preserveWindowScroll } from "./scrollPreserve.js";
+import { setHtmlReuseSprites } from "./domReuse.js";
 import { openMainTab } from "./mainPanel.js";
 
 /** Podmenu manuálního souboje (jen manuál mód): root | fight | bag | switch | item-target. */
@@ -95,7 +97,7 @@ function applySpriteScale(root) {
 export function renderBattle(root) {
   draw(root);
   if (!subscribed) {
-    bus.on(EVENTS.BATTLE_UPDATE, () => draw(root));
+    bus.on(EVENTS.BATTLE_UPDATE, () => drawTick(root));
     bus.on(EVENTS.BATTLE_HIT, (hit) => playHit(root, hit));
     bus.on(EVENTS.BATTLE_FAINT, (info) => playFaint(root, info));
     subscribed = true;
@@ -251,6 +253,9 @@ function combatantHtml(c, side, view, showXp = false, animated = false, ballsHtm
 
   // Všichni Pokémoni mají JEDNOTNOU velikost (plné --sprite) – škálování podle
   // výšky dělalo malé druhy v manuálním souboji nečitelné.
+  // Stabilní klíč pro znovupoužití sprite-uzlu napříč překresleními (anti-flicker).
+  // Zahrnuje vše, co určuje obrázek; při změně druhu/varianty se klíč změní → nový sprite.
+  const skey = `mon:${side}:${c.ref.speciesId}:${view}:${c.ref.shiny ? 1 : 0}:${c.ref.gender ?? ""}:${animated ? 1 : 0}`;
   const sprite = spriteImg(c.ref.speciesId, {
     view,
     shiny: !!c.ref.shiny,
@@ -258,6 +263,7 @@ function combatantHtml(c, side, view, showXp = false, animated = false, ballsHtm
     animated,
     alt: c.name,
     extraClass: "battle-sprite",
+    dataKey: skey,
   });
 
   // Full Auto = bezobslužný idling: souboj i soupeř se ukazují (vidíš, s čím
@@ -371,17 +377,19 @@ function headHtml(b) {
       ).join("")}
     </select>`;
   // Postup CHYCENÍ druhů v aktuální divoké oblasti (R-023): jen u divokých
-  // oblastí s druhy (ne u trenérských/gym soubojů). Malý odznak vedle názvu.
-  let dexBadge = "";
+  // oblastí s druhy (ne u trenérských/gym soubojů). Vlastní klikací tlačítko
+  // vedle Pause/Catch – po kliknutí ukáže, které druhy tu hráč už chytil.
+  let dexBtn = "";
   if (b && !b.trainer && b.area?.species?.length) {
     const { caught, total } = areaCatchProgress(b.area);
-    dexBadge = `<span class="area-dex-count" title="Species caught in this area">🔴 ${caught}/${total}</span>`;
+    dexBtn = `<button class="btn head-btn area-dex-btn" id="area-dex-btn" title="Species caught in this area — click to see them">🔴 ${caught}/${total}</button>`;
   }
   return `<div class="battle-head">
-    <h2 class="panel-title">Battle Area${b ? ` — ${b.area.name}` : ""}${dexBadge}</h2>
+    <h2 class="panel-title">Battle Area${b ? ` — ${b.area.name}` : ""}</h2>
     <div class="battle-toggles">
       ${pauseBtn}
       ${catchBtn}
+      ${dexBtn}
       <label class="tg ${b?.forceManual ? "tg-disabled" : ""}" title="${b?.forceManual ? "Gym battles are manual only." : ""}"><input type="checkbox" id="tg-autobattle" ${getAutoBattle() ? "checked" : ""} ${b?.forceManual ? "disabled" : ""}/> Auto battle</label>
       <label class="tg ${b?.forceManual ? "tg-disabled" : ""}" title="${b?.forceManual ? "Gym battles are manual only." : "Idle safely — your Pokémon lose no HP or PP, but rewards are cut to ~1/7."}"><input type="checkbox" id="tg-fullauto" ${getFullAuto() ? "checked" : ""} ${b?.forceManual ? "disabled" : ""}/> Full Auto</label>
       <label class="tg"><input type="checkbox" id="tg-autocatch" ${ac.enabled ? "checked" : ""}/> Auto catch</label>
@@ -389,6 +397,67 @@ function headHtml(b) {
       ${acBall}
     </div>
   </div>`;
+}
+
+/**
+ * Okno „co jsem v této oblasti chytil": mřížka druhů dané route. Chycený druh =
+ * sprite + jméno (+✨ když ho mám i jako shiny), nechycený = silueta „???".
+ * Reaguje na STATE_CHANGED (chytnu-li něco s otevřeným oknem, hned se dorovná).
+ * @param {import("../../data/areas.js").Area} area
+ */
+function openAreaDex(area) {
+  const overlay = document.createElement("div");
+  overlay.className = "modal-overlay";
+  document.body.appendChild(overlay);
+
+  let unsub = null;
+  const close = () => {
+    if (unsub) unsub();
+    overlay.remove();
+    document.removeEventListener("keydown", onKey);
+  };
+  const onKey = (e) => {
+    if (e.key === "Escape") close();
+  };
+  document.addEventListener("keydown", onKey);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) close();
+  });
+
+  const render = () => {
+    const ids = areaSpeciesIds(area);
+    const { caught, total } = areaCatchProgress(area);
+    const shinyCount = ids.filter((id) => isCaughtShiny(id)).length;
+    const cells = ids
+      .map((id) => {
+        const sp = getSpecies(id);
+        const name = sp?.name ?? id;
+        const got = isCaught(id);
+        const shiny = isCaughtShiny(id);
+        if (!got) {
+          return `<div class="area-dex-cell is-uncaught" title="Not caught yet">
+            <div class="area-dex-sprite"><span class="area-dex-q">?</span></div>
+            <div class="area-dex-name">???</div>
+          </div>`;
+        }
+        const sprite = spriteImg(id, { view: "front", shiny, alt: name, extraClass: "area-dex-img", dataKey: `dex:${id}:${shiny ? 1 : 0}` });
+        return `<div class="area-dex-cell is-caught" title="${name}${shiny ? " (shiny)" : ""}">
+          <div class="area-dex-sprite">${sprite}</div>
+          <div class="area-dex-name">${shiny ? "✨ " : ""}${name}</div>
+        </div>`;
+      })
+      .join("");
+    setHtmlReuseSprites(overlay, `<div class="modal building-modal area-dex-modal">
+      <button class="btn btn-close" data-act="close">✕</button>
+      <h3 class="modal-title">${area.name} — caught species</h3>
+      <p class="area-dex-summary">Caught ${caught}/${total} · Shiny ${shinyCount}/${total}</p>
+      <div class="area-dex-grid">${cells}</div>
+    </div>`);
+    overlay.querySelector('[data-act="close"]').addEventListener("click", close);
+  };
+
+  render();
+  unsub = bus.on(EVENTS.STATE_CHANGED, render);
 }
 
 /** Běží některý automatický režim? Auto battle i Full Auto = souboj jede sám (skryj manuál). */
@@ -443,6 +512,7 @@ function enemyInfoHtml(b) {
     gender: e.ref.gender,
     alt: e.name,
     extraClass: "cmd-enemy-sprite",
+    dataKey: `cmd:${e.ref.speciesId}:${e.ref.shiny ? 1 : 0}:${e.ref.gender ?? ""}`,
   });
   const head = `<div class="cmd-enemy-head"><strong>${name}</strong> · Lv ${e.ref.level}</div>`;
 
@@ -649,6 +719,7 @@ function interludeHtml(b) {
       gender: e.gender,
       alt: e.name,
       extraClass: "catch-mon-sprite",
+      dataKey: `il-catch:${e.speciesId}:${e.shiny ? 1 : 0}`,
     });
     const oc = il.outcome ?? {};
     let sub;
@@ -687,7 +758,7 @@ function interludeHtml(b) {
     return `<div class="battle-result is-win is-trainer-win">
       <div class="result-title">${t.kind === "gym-leader" ? "Gym cleared!" : "Trainer defeated!"}</div>
       <div class="result-enemy">
-        <span class="result-mon"><img class="result-trainer-sprite" src="${tSprite}" alt="${t.name ?? "Trainer"}" onerror="this.style.visibility='hidden'"></span>
+        <span class="result-mon"><img class="result-trainer-sprite" data-skey="il-trainer:${t.id ?? t.name ?? ""}" src="${tSprite}" alt="${t.name ?? "Trainer"}" onerror="this.style.visibility='hidden'"></span>
         <span class="result-name">${t.name ?? "Trainer"} defeated</span>
       </div>
       <ul class="result-rewards">${rows.join("")}</ul>
@@ -703,6 +774,7 @@ function interludeHtml(b) {
     gender: e.gender,
     alt: e.name,
     extraClass: "result-mon-sprite",
+    dataKey: `il-win:${e.speciesId}:${e.shiny ? 1 : 0}`,
   });
   const rows = [];
   rows.push(`<li>✨ <b>+${r.xp ?? 0}</b> XP</li>`);
@@ -732,6 +804,22 @@ function draw(root) {
   preserveWindowScroll(() => drawInner(root));
 }
 
+/**
+ * Překreslení vyvolané TIKEM (BATTLE_UPDATE – v auto módu tiká rychle). Odloží se,
+ * dokud hráč interaguje s ovládáním, které má „otevřený" stav: auto-catch menu
+ * (acMenuOpen) nebo rozbalený nativní <select> (výběr Poké Ballu). Jinak by tik
+ * hráči seznam pod rukama zavřel → „flicker". Ruční překreslení (klik na položku
+ * menu, jeho zavření) jdou přes draw() napřímo a tento guard je nezajímá; scéna
+ * se dorovná hned, jak interakci dokončí (u <select> po výběru voláme blur()).
+ * @param {HTMLElement} root
+ */
+function drawTick(root) {
+  if (acMenuOpen) return; // otevřené vlastní auto-catch menu
+  const a = document.activeElement;
+  if (a && a.tagName === "SELECT" && root.contains(a)) return; // otevřený <select>
+  draw(root);
+}
+
 function drawInner(root) {
   lastRoot = root;
   const b = getBattle();
@@ -755,11 +843,11 @@ function drawInner(root) {
   // kola, kde by animace nebyla vidět → statické png.
   const anim = !autoModeOn();
 
-  root.innerHTML = `
+  setHtmlReuseSprites(root, `
     ${headHtml(b)}
     <div class="battle-body">
       <div class="battle-field${defeated ? " is-over" : ""}${interlude ? " is-result" : ""}${showCmd ? " has-cmd" : ""}">
-        <div class="bg"${b.background ? ` style="background-image:url('${b.background}')"` : ""}></div>
+        <div class="bg" data-skey="bg:${b.background ?? ""}"${b.background ? ` style="background-image:url('${b.background}')"` : ""}></div>
         ${combatantHtml(b.enemy, "enemy", "front", false, anim, trainerBallsHtml(b))}
         <div class="vs">VS</div>
         ${combatantHtml(b.player, "player", "back", true, anim)}
@@ -790,7 +878,7 @@ function drawInner(root) {
         ${defeated ? "" : bottomControlsHtml(b)}
       </aside>
     </div>
-  `;
+  `);
   // „Textbox" se posune na nejnovější hlášku (jako v klasické hře).
   const info = root.querySelector(".battle-info");
   if (info) info.scrollTop = info.scrollHeight;
@@ -882,10 +970,20 @@ function wire(root) {
     });
   }
   const acBall = root.querySelector("#ac-ball");
-  if (acBall) acBall.addEventListener("change", (e) => setAutocatch({ ball: e.target.value }));
+  if (acBall) acBall.addEventListener("change", (e) => {
+    setAutocatch({ ball: e.target.value });
+    e.target.blur(); // uvolni fokus, ať se scéna zase začne překreslovat na tik
+  });
 
   const catchBtn = root.querySelector("#catch-btn");
   if (catchBtn) catchBtn.addEventListener("click", () => attemptCatch());
+
+  // „Chyceno X/Y" tlačítko → okno s druhy dané oblasti (co už tu mám chyceno / shiny).
+  const dexBtn = root.querySelector("#area-dex-btn");
+  if (dexBtn) {
+    const b = getBattle();
+    if (b?.area) dexBtn.addEventListener("click", () => openAreaDex(b.area));
+  }
 
   root.querySelectorAll("[data-ball]").forEach((chip) =>
     chip.addEventListener("click", () => setSelectedBall(chip.dataset.ball))

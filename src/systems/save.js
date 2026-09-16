@@ -69,6 +69,12 @@ function migrate(data) {
     throw new Error("Neplatná struktura save.");
   }
   if (!data.saveVersion) data.saveVersion = 1;
+  // v48 → v49: FORCED NEW GAME. Zásadně se změnil early-game gating – Pokédex
+  // i EXP Share teď hráč dostane až za odevzdání Oakova Parcelu. Hru zatím nikdo
+  // nehraje, takže staré savy (< v49) NEmigrujeme, ale zahodíme a začneme čistě.
+  // createNewGame() má saveVersion = CURRENT; prázdná kolekce → naskočí intro +
+  // výběr startéra (starterModal.maybeOpen), stejně jako u úplně nové hry.
+  if (data.saveVersion < 49) return createNewGame();
   // v1 → v2: přidán uložený stav souboje.
   if (data.saveVersion < 2) {
     if (data.battle === undefined) data.battle = null;

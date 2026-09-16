@@ -115,6 +115,8 @@ function visibleTabs() {
     if (t.id === "league") return hasLeague; // jen na Indigo Plateau (Pokémon League)
     if (t.id === "daycare") return atDaycare; // jen na Route 5 (kanonická Day Care)
     if (t.id === "move-tutor") return atMoveTutor; // jen na Route 8 (Move Tutor's House)
+    // Pokédex dá Oak až při odevzdání Parcelu (spolu s EXP Share) – do té doby skrytý.
+    if (t.id === "pokedex") return !!getState().story?.oakParcelDelivered;
     return true;
   });
 }

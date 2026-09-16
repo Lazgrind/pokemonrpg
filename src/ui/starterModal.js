@@ -15,6 +15,7 @@ import { getState } from "../core/state.js";
 import { STARTER_IDS, getSpecies } from "../../data/pokemon.js";
 import { chooseStarter } from "../systems/team.js";
 import { spriteImg } from "./sprites.js";
+import { setHtmlReuseSprites } from "./domReuse.js";
 import { typeBadge } from "./typeColors.js";
 
 /** Skrytý čtvrtý startér, odhalený po odmítnutí všech tří nabízených. */
@@ -26,7 +27,7 @@ let modalOpen = false;
 /** Karta jednoho startéra: sprite, jméno, barevné typy. */
 function starterCardHtml(id, secret = false) {
   const sp = getSpecies(id);
-  const sprite = spriteImg(id, { view: "front", alt: sp.name, extraClass: "starter-sprite", animated: true });
+  const sprite = spriteImg(id, { view: "front", alt: sp.name, extraClass: "starter-sprite", animated: true, dataKey: `starter:${id}` });
   const types = sp.types.map(typeBadge).join("");
   return `<button class="starter-card${secret ? " secret" : ""}" data-starter="${id}">
       ${sprite}
@@ -51,7 +52,7 @@ function open(onDone = () => {}) {
     // Fáze potvrzení volby (Ano/Ne).
     if (pending) {
       const sp = getSpecies(pending);
-      overlay.innerHTML = `
+      setHtmlReuseSprites(overlay, `
         <div class="modal starter-modal">
           <h2 class="panel-title">Choose ${sp.name}?</h2>
           <div class="starter-grid">${starterCardHtml(pending)}</div>
@@ -61,7 +62,7 @@ function open(onDone = () => {}) {
             <button class="btn" data-confirm-yes>Yes, I'll take it!</button>
           </div>
         </div>
-      `;
+      `);
       overlay.querySelector("[data-confirm-yes]")?.addEventListener("click", () => {
         chooseStarter(pending);
         overlay.remove();
@@ -83,7 +84,7 @@ function open(onDone = () => {}) {
       ? `<p class="story-text">Professor Oak smiles: "Looks like none of them suited you... I've got one more little rascal here!"</p>`
       : "";
 
-    overlay.innerHTML = `
+    setHtmlReuseSprites(overlay, `
       <div class="modal starter-modal">
         <h2 class="panel-title">Choose your starter!</h2>
         <p class="placeholder">Pick your first Pokémon and set off on your journey.</p>
@@ -93,7 +94,7 @@ function open(onDone = () => {}) {
         </div>
         ${secretHint}
       </div>
-    `;
+    `);
     overlay.querySelectorAll("[data-starter]").forEach((card) =>
       card.addEventListener("click", () => {
         pending = card.dataset.starter;

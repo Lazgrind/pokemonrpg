@@ -15,6 +15,7 @@ import { bus, EVENTS } from "../core/events.js";
 import { getState } from "../core/state.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { spriteImg } from "./sprites.js";
+import { setHtmlReuseSprites } from "./domReuse.js";
 import { scrollAware, saveScroll, restoreScroll } from "./scrollPreserve.js";
 import {
   getSafari,
@@ -64,7 +65,7 @@ function draw() {
   const root = rootRef;
   if (!root) return;
   const _savedScroll = saveScroll(root);
-  root.innerHTML = isSafariActive() ? activeHtml() : lobbyHtml();
+  setHtmlReuseSprites(root, isSafariActive() ? activeHtml() : lobbyHtml());
   restoreScroll(root, _savedScroll);
   wire();
 }
@@ -118,7 +119,7 @@ function activeHtml() {
         ${hud}
         <div class="safari-encounter">
           <div class="safari-scene">
-            ${spriteImg(s.encounter.speciesId, { animated: true, alt: name, extraClass: "safari-mon" })}
+            ${spriteImg(s.encounter.speciesId, { animated: true, alt: name, extraClass: "safari-mon", dataKey: `safari:${s.encounter.speciesId}` })}
             <div class="safari-enc-info">
               <div class="safari-enc-name">${name}</div>
               <div class="safari-enc-lv">Lv ${s.encounter.level}</div>

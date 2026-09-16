@@ -16,6 +16,7 @@ import { dexStatus, dexCounts } from "../systems/pokedex.js";
 import { addToTeam, isInTeam, chooseStarter } from "../systems/team.js";
 import { pokemonEngagement } from "../systems/buildingSystem.js";
 import { spriteImg, silhouetteHtml } from "./sprites.js";
+import { setHtmlReuseSprites } from "./domReuse.js";
 import { openPokemonCard } from "./pokemonCard.js";
 import { genderSymbolHtml } from "./gender.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
@@ -100,7 +101,7 @@ function cardHtml(sp) {
   const name = `${owned?.shiny ? "✨ " : ""}${sp.name}`;
   return `<div class="dex-card" data-id="${sp.id}" data-status="caught">
     <span class="dex-no">${no}</span>
-    ${spriteImg(sp.id, { shiny: !!owned?.shiny, gender: owned?.gender, alt: sp.name })}
+    ${spriteImg(sp.id, { shiny: !!owned?.shiny, gender: owned?.gender, alt: sp.name, dataKey: `dex:${sp.id}:${owned?.shiny ? 1 : 0}:${owned?.gender ?? ""}` })}
     <span class="dex-name">${name} ${genderSymbolHtml(owned?.gender)}</span>
     <div class="dex-foot">${caughtAction(sp.id)}</div>
   </div>`;
@@ -157,7 +158,7 @@ export function renderPokedexTab(root, onStatus = () => {}) {
     `<button class="filter-chip ${statusFilter === val ? "active" : ""}" data-fstatus="${val}">${label}</button>`;
 
   const _savedScroll = saveScroll(root);
-  root.innerHTML = `
+  setHtmlReuseSprites(root, `
     <h2 class="panel-title">Pokédex <span class="dex-count">${caught} / ${total}</span></h2>
     <button class="btn filter-toggle ${filtersOpen ? "active" : ""}" id="dex-filter-toggle">🔎 Filters</button>
     <div class="filter-bar" id="dex-filter-bar" ${filtersOpen ? "" : "hidden"}>
@@ -179,7 +180,7 @@ export function renderPokedexTab(root, onStatus = () => {}) {
     <div class="dex-grid">
       ${cards.length ? cards.join("") : `<p class="placeholder">No Pokémon match the filters.</p>`}
     </div>
-  `;
+  `);
   restoreScroll(root, _savedScroll);
 
   root.querySelector("#dex-filter-toggle").addEventListener("click", () => {
