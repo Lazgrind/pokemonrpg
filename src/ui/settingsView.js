@@ -161,6 +161,15 @@ export function openSettingsModal() {
 
   const bodyEl = overlay.querySelector(".settings-modal-body");
   const rerender = () => {
+    // Nepřekresluj, když hráč zrovna používá nějaký ovládací prvek – otevřený
+    // <select> (Skip to / Pokémon target), rozepsaný input nebo tažený slider.
+    // Tikové překreslení (STATE_CHANGED) by jinak zahodilo DOM a nativní dropdown
+    // by se hned zavřel. Po opuštění prvku (blur) se stav dožene příští tik.
+    // Tlačítka (BUTTON) fokus neblokují → dev akce (±level, shiny…) překreslují dál.
+    const active = document.activeElement;
+    if (active && bodyEl.contains(active) && /^(SELECT|INPUT|TEXTAREA)$/.test(active.tagName)) {
+      return;
+    }
     const _s = saveScroll(bodyEl);
     bodyEl.innerHTML = settingsBodyHtml();
     restoreScroll(bodyEl, _s);

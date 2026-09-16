@@ -103,6 +103,15 @@ function ballsTooltipHtml(balls) {
     </div>`;
 }
 
+/**
+ * Ikonka itemu z `assets/items/<file>.png`. Když sprite ještě není nahraný,
+ * `onerror` ho nahradí emoji fallbackem (hra funguje i bez spritů). Jakmile
+ * uživatel soubor přidá se správným názvem, ikonka se použije automaticky.
+ */
+function itemIconHtml(file, emoji) {
+  return `<img class="icon res-item-img" src="assets/items/${file}.png" alt="" onerror="this.outerHTML='<span class=&quot;icon&quot;>${emoji}</span>'">`;
+}
+
 /** Vykreslí zdrojovou lištu z reálného herního stavu. */
 function renderResourceBar(root) {
   const s = getState();
@@ -125,13 +134,6 @@ function renderResourceBar(root) {
       tooltipHtml: ballsTooltipHtml(balls),
     },
     {
-      icon: "📕",
-      label: "Pokédex",
-      value: s.collection.length,
-      // Klik otevře záložku Pokédex v levém panelu.
-      action: "pokedex",
-    },
-    {
       icon: "🏆",
       label: "Achievements",
       value: `${Object.keys(s.achievements?.unlocked ?? {}).length}/${ACHIEVEMENTS.length}`,
@@ -140,12 +142,40 @@ function renderResourceBar(root) {
     },
     { icon: "🥚", label: "Eggs", value: (s.eggs ?? []).length },
   ];
+  // Pokédex se v liště ukáže až když ho hráč od Oaka dostal (odevzdání Parcelu).
+  // Do té doby je skrytý – vloží se hned za Poké Bally (index 3), ať drží pořadí.
+  if (s.story?.oakParcelDelivered) {
+    items.splice(3, 0, {
+      icon: "📕",
+      iconHtml: itemIconHtml("pokedex", "📕"),
+      label: "Pokédex",
+      value: s.collection.length,
+      // Klik otevře záložku Pokédex v levém panelu.
+      action: "pokedex",
+    });
+  }
+  // EXP Share přepínač – ukáže se JEN po odevzdání Parcelu Oakovi (dárek spolu
+  // s Pokédexem). Klik přepíná settings.expShareActive (ON = 20 % XP i lavičce).
+  // Vloží se hned ZA Pokédex (index 4), ať jsou oba Oakovy dárky pohromadě.
+  if (s.story?.oakParcelDelivered) {
+    const on = s.settings?.expShareActive !== false; // default ON
+    items.splice(4, 0, {
+      icon: "🔗",
+      iconHtml: itemIconHtml("exp-share", "🔗"),
+      label: `EXP Share — ${on ? "ON (+20% to bench)" : "OFF"} · click to toggle`,
+      value: on ? "ON" : "OFF",
+      action: "exp-share",
+      extraClass: `exp-share-toggle ${on ? "on" : "off"}`,
+    });
+  }
   // Shiny Charm přepínač – ukáže se JEN když ho hráč vlastní (odměna od Oaka za
   // kompletní dex). Klik přepíná settings.shinyCharmActive (ON = ×3 shiny, OFF = vypnuto).
+  // Vloží se hned ZA EXP Share (index 5), ať jsou přepínače pohromadě.
   if (s.story?.shinyCharm) {
     const active = s.settings?.shinyCharmActive !== false;
-    items.push({
+    items.splice(5, 0, {
       icon: "✨",
+      iconHtml: itemIconHtml("shiny-charm", "✨"),
       label: `Shiny Charm — ${active ? "ON (×3 shiny)" : "OFF"} · click to toggle`,
       value: active ? "ON" : "OFF",
       action: "shiny-charm",
@@ -174,6 +204,12 @@ function renderResourceBar(root) {
         const st = getState();
         if (!st.settings || typeof st.settings !== "object") st.settings = {};
         st.settings.shinyCharmActive = st.settings.shinyCharmActive === false;
+        commit();
+      } else if (node.dataset.action === "exp-share") {
+        // Přepni EXP Share (ON = lavička dostává 20 % XP z výher aktivního mona).
+        const st = getState();
+        if (!st.settings || typeof st.settings !== "object") st.settings = {};
+        st.settings.expShareActive = st.settings.expShareActive === false;
         commit();
       }
     };

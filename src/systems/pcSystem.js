@@ -19,6 +19,7 @@
  */
 
 import { getState, commit, PC_BOX_SIZE, PC_BOX_COUNT } from "../core/state.js";
+import { getSpecies } from "../../data/pokemon.js";
 
 /** Prázdný box s daným jménem. */
 function emptyBox(name) {
@@ -103,6 +104,47 @@ export function getBoxes() {
 /** Počet uložených jedinců napříč všemi boxy. */
 export function storedCount() {
   return getBoxes().reduce((n, b) => n + b.slots.filter(Boolean).length, 0);
+}
+
+/**
+ * Přeuspořádá VŠECHNY uložené jedince napříč boxy podle klíče a poskládá je
+ * sekvenčně od Boxu 1, slotu 1 (living-dex styl). PŘEPÍŠE ruční uspořádání hráče.
+ *  - "dex":   podle dexNo vzestupně (shoda → vyšší level dřív),
+ *  - "level": podle levelu sestupně (shoda → nižší dexNo dřív),
+ *  - "name":  podle jména druhu abecedně.
+ * @param {"dex"|"level"|"name"} key
+ * @returns {boolean}
+ */
+export function sortAllBoxes(key = "dex") {
+  const s = getState();
+  reconcile(s);
+  const byUid = new Map(s.collection.map((p) => [p.uid, p]));
+  const dexNo = (uid) => getSpecies(byUid.get(uid)?.speciesId)?.dexNo ?? 9999;
+  const nameOf = (uid) => getSpecies(byUid.get(uid)?.speciesId)?.name ?? "";
+  const levelOf = (uid) => byUid.get(uid)?.level ?? 0;
+
+  // Posbírej všechny uložené uid (v aktuálním pořadí boxů/slotů).
+  const uids = [];
+  for (const box of s.pcBoxes) {
+    for (const uid of box.slots) if (uid != null) uids.push(uid);
+  }
+
+  const comparators = {
+    dex: (a, b) => dexNo(a) - dexNo(b) || levelOf(b) - levelOf(a),
+    level: (a, b) => levelOf(b) - levelOf(a) || dexNo(a) - dexNo(b),
+    name: (a, b) => nameOf(a).localeCompare(nameOf(b)) || dexNo(a) - dexNo(b),
+  };
+  uids.sort(comparators[key] ?? comparators.dex);
+
+  // Poskládej sekvenčně; zbylé sloty vynuluj.
+  let idx = 0;
+  for (const box of s.pcBoxes) {
+    for (let i = 0; i < box.slots.length; i++) {
+      box.slots[i] = idx < uids.length ? uids[idx++] : null;
+    }
+  }
+  commit();
+  return true;
 }
 
 /**

@@ -36,6 +36,7 @@ import { areasForSpecies } from "../systems/pokedex.js";
 import { areaLevelRange } from "../../data/areas.js";
 import { evolutionInfo, canEvolveNow, evolvePokemon } from "../systems/evolutionSystem.js";
 import { spriteImg, silhouetteHtml } from "./sprites.js";
+import { setHtmlReuseSprites } from "./domReuse.js";
 import { ballIconHtml } from "./ballIcon.js";
 import { genderSymbolHtml } from "./gender.js";
 import { statusBadge } from "./statusBadge.js";
@@ -321,7 +322,7 @@ function ownedBody(owned) {
   const xpPctW = Math.max(0, Math.min(100, (owned.xp / need) * 100));
   return `
     <div class="mc-head">
-      ${spriteImg(species.id, { shiny: !!owned.shiny, gender: owned.gender, alt: species.name, extraClass: "mc-sprite" })}
+      ${spriteImg(species.id, { shiny: !!owned.shiny, gender: owned.gender, alt: species.name, extraClass: "mc-sprite", dataKey: `card:${owned.uid}:${species.id}:${owned.shiny ? 1 : 0}:${owned.gender ?? ""}` })}
       <div class="mc-title">
         <div class="mc-name">${esc(name)} ${genderSymbolHtml(owned.gender, { size: 18 })}${statusBadge(owned.status)} <span class="mc-dex">${dexNo}</span></div>
         <div class="mc-types">${typeBadges(species)}<span class="mc-rarity">${esc(species.rarity)}</span></div>
@@ -447,7 +448,7 @@ export function openPokemonCard(arg = {}) {
       const body = overlay.querySelector(".mon-card-body");
       if (body) {
         const _savedScroll = saveScroll(body);
-        body.innerHTML = ownedBody(fresh);
+        setHtmlReuseSprites(body, ownedBody(fresh));
         restoreScroll(body, _savedScroll);
       }
     }
@@ -460,7 +461,7 @@ export function openPokemonCard(arg = {}) {
     const body = overlay.querySelector(".mon-card-body");
     if (fresh && body) {
       const _s = saveScroll(body);
-      body.innerHTML = ownedBody(fresh);
+      setHtmlReuseSprites(body, ownedBody(fresh));
       restoreScroll(body, _s);
     }
   }

@@ -163,6 +163,31 @@ export function addToTeamAt(uid, index) {
 }
 
 /**
+ * Přetáhne jedince z PC na KONKRÉTNÍ slot týmu s VÝMĚNOU. Když je cílový slot
+ * obsazený, nový jedinec ten slot zabere a původní jedinec se z týmu vyhodí
+ * (spadne zpět do PC boxu přes reconcile) – takže jde prohodit i do plného týmu.
+ * Když je slot prázdný (za koncem týmu), jen se přidá (pokud je v týmu místo).
+ * @param {string} uid jedinec z PC
+ * @param {number} index cílový slot týmu
+ * @returns {boolean}
+ */
+export function swapIntoTeam(uid, index) {
+  const s = getState();
+  if (s.team.includes(uid)) return false;
+  if (!s.collection.some((p) => p.uid === uid)) return false;
+  if (pokemonEngagement(uid)) return false; // ve Školce/breedingu – nejdřív vyzvednout
+  const i = Math.max(0, Math.min(Number(index) || 0, s.team.length));
+  if (i < s.team.length) {
+    s.team[i] = uid; // výměna: starý jedinec vypadne z týmu → reconcile ho uklidí do PC
+  } else {
+    if (s.team.length >= MAX_TEAM_SIZE) return false; // prázdný slot, ale tým je plný
+    s.team.splice(i, 0, uid);
+  }
+  commit();
+  return true;
+}
+
+/**
  * Přeuspořádá tým – přesune jedince na cílový index (drag & drop v rámci týmu).
  * Cíl se ořízne do platného rozsahu. Vrací false, když jedinec není v týmu nebo
  * by se nic nezměnilo.

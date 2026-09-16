@@ -378,8 +378,9 @@ function oakLabView() {
       title: "🔬 Oak's Lab",
       body: `
         <p class="story-text">Professor Oak: "Ah, that's my Parcel from the Poké Mart! You brought it all the way from Viridian? Thank you!"</p>
-        <p class="story-text">"Here — take these to help you catch more Pokémon. The road north through Viridian is open to you now."</p>
-        <button class="btn" data-deliver-parcel>📦 Hand over Oak's Parcel (get ${PARCEL_BALLS}× Poké Ball)</button>
+        <p class="story-text">"As promised, here is your very own <strong>Pokédex</strong> — record every Pokémon you meet! And take this <strong>EXP Share</strong> too: it lets your whole team grow, even the ones resting on the bench. Some Poké Balls, as well."</p>
+        <p class="story-text">"The road north through Viridian is open to you now."</p>
+        <button class="btn" data-deliver-parcel>📦 Hand over Oak's Parcel (get Pokédex, EXP Share &amp; ${PARCEL_BALLS}× Poké Ball)</button>
       `,
     };
   }
@@ -1085,7 +1086,7 @@ function wire(storyKey, overlay, onStatus, render, close) {
     s.resources.balls.poke = (s.resources.balls.poke ?? 0) + PARCEL_BALLS;
     setStoryFlag("oakParcelDelivered");
     commit();
-    onStatus(`Delivered Oak's Parcel! +${PARCEL_BALLS}× Poké Ball. The road north is now open.`);
+    onStatus(`Oak gave you the Pokédex and EXP Share! +${PARCEL_BALLS}× Poké Ball. The road north is now open.`);
     render();
   });
 

@@ -13,6 +13,7 @@ import { legendaryForArea } from "../../data/legendaries.js";
 import { getActiveArea, startStaticEncounter } from "../systems/battleSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { spriteImg } from "./sprites.js";
+import { setHtmlReuseSprites } from "./domReuse.js";
 import { openMainTab } from "./mainPanel.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 
@@ -30,10 +31,10 @@ export function renderLegendaryTab(root, onStatus = () => {}) {
   const sp = getSpecies(leg.speciesId);
   const name = sp?.name ?? leg.speciesId;
   const types = (sp?.types ?? []).join(" / ");
-  const sprite = spriteImg(leg.speciesId, { view: "front", alt: name, extraClass: "legendary-mon" });
+  const sprite = spriteImg(leg.speciesId, { view: "front", alt: name, extraClass: "legendary-mon", dataKey: `legendary:${leg.speciesId}` });
 
   const _savedScroll = saveScroll(root);
-  root.innerHTML = `
+  setHtmlReuseSprites(root, `
     <section class="legendary-section">
       <h2 class="panel-title">${leg.tabIcon} ${leg.title}</h2>
       <p class="placeholder">A one-of-a-kind Pokémon waits here. You can still battle wild Pokémon on this area anytime from the Battle tab.</p>
@@ -46,7 +47,7 @@ export function renderLegendaryTab(root, onStatus = () => {}) {
         </div>
       </div>
       <button class="btn legendary-fight" data-face-legendary>${leg.tabIcon} ${leg.button}</button>
-    </section>`;
+    </section>`);
   restoreScroll(root, _savedScroll);
 
   root.querySelector("[data-face-legendary]")?.addEventListener("click", () => {

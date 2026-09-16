@@ -52,6 +52,7 @@
  */
 
 import { getHm } from "./hms.js";
+import { getState } from "../src/core/state.js";
 
 /**
  * @type {Area[]}
@@ -955,9 +956,15 @@ export function isAreaUnlocked(area, visited = [], badges = [], defeatedTrainers
   // HM field-gating (Cut/Surf/Strength/Flash) – centralizované přes tabulku HMS:
   // `unlock.hm = <číslo HM>` se přeloží na příslušný story flag (getHm(n).flag),
   // takže v datech oblastí nejsou magické stringy „hasSurf" apod.
+  // ROBUSTNOST: gate splní i pouhé VLASTNICTVÍ HM itemu, ne jen story flag –
+  // staré savy mohly dostat HM item, aniž se nastavil flag (dřívější grant nebyl
+  // atomický), takže hráč se stal držitelem HM, ale cesta zůstala zamčená. HM item
+  // je pravdivý doklad „mám tenhle HM", proto stačí kterékoli z obou.
   if (u.hm != null) {
-    const flag = getHm(u.hm)?.flag;
-    if (flag && !(story ?? {})[flag]) return false;
+    const hm = getHm(u.hm);
+    const flag = hm?.flag;
+    const ownsHmItem = hm && (getState().resources?.items?.[hm.itemId] ?? 0) > 0;
+    if (flag && !(story ?? {})[flag] && !ownsHmItem) return false;
   }
   if (u.start) return true;
   // `visited` může být string (1 podmínka) NEBO pole (OR – stačí jedna navštívená).

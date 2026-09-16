@@ -663,9 +663,26 @@ function calcMoveDamage(attacker, defender, move, avg = false) {
  * Fallback Struggle, když NEexistuje žádný tah s PP.
  * @returns {{ slot: import("../core/state.js").MoveSlot | null, move: object }}
  */
+/** Umí tah reálně ublížit (a tedy přispět k výhře)? Damage nebo pevné/level poškození. */
+function moveCanDealDamage(mv) {
+  if (!mv) return false;
+  if (mv.power > 0) return true;
+  const k = mv.effect?.kind;
+  return k === "fixedDamage" || k === "levelDamage" || k === "fixedDamageHalf" || k === "ohko";
+}
+
 function chooseAction(attacker, defender) {
+  // Hráč v AUTO režimu: chooseAction pro hráče běží JEN v auto (v manuálu volí sám).
+  const isPlayerAuto = !!battle && attacker === battle.player;
   const disabledId = attacker.volatile?.disabled?.moveId;
-  const slots = activeMoves(attacker).filter((m) => (m.pp ?? 0) > 0 && m.id !== disabledId);
+  let slots = activeMoves(attacker).filter((m) => (m.pp ?? 0) > 0 && m.id !== disabledId);
+  // Hráč v AUTO nikdy sám neutíká Teleportem (effect "escape") – zrušilo by to grind
+  // a vyhodilo z divokého souboje. Escape tahy proto z auto-výběru vyřadíme; když
+  // pak nezbude čím útočit, hráč sáhne po Struggle (viz níže). U NEPŘÍTELE necháváme
+  // Teleport být (kanonický útěk divokého → nové setkání).
+  if (isPlayerAuto) {
+    slots = slots.filter((m) => getMove(m.id)?.effect?.kind !== "escape");
+  }
   let best = null;
   let bestScore = -1;
   // Sebe-poškozující (recoil) tahy drží stranou jako KRAJNÍ fallback – auto je
@@ -725,6 +742,14 @@ function chooseAction(attacker, defender) {
       bestScore = score;
       best = { slot, move: mv };
     }
+  }
+
+  // Hráč v AUTO: když žádný použitelný tah neumí ublížit (jen no-op status jako
+  // Splash / vyřazený Teleport), radši Struggle – jinak by slabý mon (Magikarp,
+  // Abra) nikdy nevyhrál a nešel by vylevelovat. Recoil fallback je "útok", ten
+  // necháváme být.
+  if (isPlayerAuto && !fallback && !slots.some((m) => moveCanDealDamage(getMove(m.id)))) {
+    return { slot: null, move: STRUGGLE };
   }
 
   return best ?? fallback ?? { slot: null, move: STRUGGLE };
@@ -2138,6 +2163,30 @@ function pauseForInterlude(interlude) {
   return true;
 }
 
+/** Podíl XP, který EXP Share rozdá každému nezraněnému členu lavičky. */
+const EXP_SHARE_RATE = 0.2;
+
+/**
+ * EXP Share: po výhře rozdá {@link EXP_SHARE_RATE} (20 %) základního XP KAŽDÉMU
+ * dalšímu nezraněnému členu týmu kromě aktivního (ten už dostal plných 100 %).
+ * Odemčené až po odevzdání Oakova Parcelu (`story.oakParcelDelivered`) a jen když
+ * je přepínač zapnutý (`settings.expShareActive`, default ON). Jen XP, NE EV.
+ * @param {import("../core/state.js").OwnedPokemon} activeRef  aktivní jedinec (přeskočí se)
+ * @param {number} baseXp  XP, které dostal aktivní jedinec (v Full Auto už zkrácené)
+ */
+function grantExpShare(activeRef, baseXp) {
+  const s = getState();
+  if (!s.story?.oakParcelDelivered) return; // ještě neodemčeno (dárek od Oaka)
+  if (s.settings?.expShareActive === false) return; // vypnuto přepínačem v liště
+  const share = Math.max(1, Math.floor(baseXp * EXP_SHARE_RATE));
+  for (const uid of s.team ?? []) {
+    if (uid === activeRef.uid) continue; // aktivní už má plné XP
+    const member = s.collection.find((p) => p.uid === uid);
+    if (!member || member.hp <= 0) continue; // omdlelí nesdílejí (kanonické)
+    grantXp(member, share, { auto: true }); // lavička → auto learn (nelze se ptát)
+  }
+}
+
 /** Zpracuje vyřazení – „winner“ je ten, kdo zasadil poslední ránu. */
 function handleFaint(winner) {
   if (winner === "player") {
@@ -2158,6 +2207,7 @@ function handleFaint(winner) {
     gold = Math.max(1, Math.floor(gold * goldBoostMult()));
     // Auto battle → tahy se při plných slotech přepíšou samy; manuál → dozeptá se.
     const leveled = grantXp(battle.player.ref, xp, { auto: autoLoopActive() });
+    grantExpShare(battle.player.ref, xp); // EXP Share: 20 % XP nezraněné lavičce
     // EV: aktivní jedinec dostane kanonický EV yield poraženého druhu (jako v hrách).
     // Platí i pro Auto/Full Auto (v plné výši – yieldy jsou malé a strop 252/510 je konečný).
     grantEvYield(battle.player.ref, enemy.ref.speciesId);
@@ -2549,6 +2599,7 @@ function handleTrainerEnemyDown() {
   const enemy = battle.enemy;
   const { xp } = battleRewards(enemy.ref.level);
   const leveled = grantXp(battle.player.ref, xp, { auto: getAutoBattle() });
+  grantExpShare(battle.player.ref, xp); // EXP Share: 20 % XP nezraněné lavičce
   // EV yield i z trenérových Pokémonů (kanonicky se počítají stejně jako divocí).
   grantEvYield(battle.player.ref, enemy.ref.speciesId);
   commit();

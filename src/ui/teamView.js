@@ -5,7 +5,7 @@
 
 import { getSpecies } from "../../data/pokemon.js";
 import { MAX_TEAM_SIZE } from "../core/state.js";
-import { getTeamPokemon, removeFromTeam, moveInTeam, addToTeamAt, reorderTeam } from "../systems/team.js";
+import { getTeamPokemon, swapIntoTeam, reorderTeam } from "../systems/team.js";
 import { dragState, beginDrag, endDrag } from "./dragState.js";
 import { healStatus } from "../systems/battleSystem.js";
 import { ivPercent, evTotal, computeStats } from "../systems/pokemonSystem.js";
@@ -95,13 +95,10 @@ export function renderTeamTab(root, onStatus) {
           <div><strong>${displayName(p)}</strong> ${genderSymbolHtml(p.gender)} · Lv ${p.level} ${p.owned?.caughtBall ? ballIconHtml(p.owned.caughtBall, { size: 16 }) : ""} ${typeBadges(p)}${statusBadge(p.status)}</div>
           <div>${ivEvLine(p)}</div>
           ${statBars(p)}
-          <div class="row-actions">
-            <button class="btn" data-move="-1" data-uid="${p.uid}" title="Move left">◀</button>
-            <button class="btn" data-move="1" data-uid="${p.uid}" title="Move right">▶</button>
+          ${p.status || canEvolveNow(p) ? `<div class="row-actions">
             ${p.status ? `<button class="btn" data-cure="${p.uid}" title="Cure status effect (no HP/PP restore)">💊 Cure</button>` : ""}
             ${canEvolveNow(p) ? `<button class="btn btn-evolve" data-evolve="${p.uid}" title="Evolve this Pokémon">✨ Evolve</button>` : ""}
-            <button class="btn btn-danger" data-remove="${p.uid}">Remove</button>
-          </div>
+          </div>` : ""}
         </div>`);
     } else {
       slots.push(`<div class="card team-slot empty" data-slot="${i}"><span class="slot-num">${i + 1}</span>Empty</div>`);
@@ -124,17 +121,6 @@ export function renderTeamTab(root, onStatus) {
   const bagBtn = root.querySelector("[data-bag]");
   if (bagBtn) bagBtn.addEventListener("click", () => openBag(onStatus));
 
-  root.querySelectorAll("[data-remove]").forEach((b) =>
-    b.addEventListener("click", () => {
-      removeFromTeam(b.dataset.remove);
-      onStatus("Removed from team");
-    })
-  );
-  root.querySelectorAll("[data-move]").forEach((b) =>
-    b.addEventListener("click", () => {
-      moveInTeam(b.dataset.uid, Number(b.dataset.move));
-    })
-  );
   root.querySelectorAll("[data-cure]").forEach((b) =>
     b.addEventListener("click", () => {
       if (healStatus(b.dataset.cure)) onStatus("Status cured");
@@ -192,8 +178,10 @@ export function renderTeamTab(root, onStatus) {
       if (source === "team") {
         reorderTeam(uid, toIndex); // commit → překreslení
       } else if (source === "pc") {
-        const ok = addToTeamAt(uid, toIndex);
-        onStatus(ok ? "Added to team" : "Team is full (max 6)");
+        // Obsazený cíl = výměna (nový do slotu, starý zpět do PC); prázdný = přidání.
+        const wasFilled = !slot.classList.contains("empty");
+        const ok = swapIntoTeam(uid, toIndex);
+        onStatus(ok ? (wasFilled ? "Swapped into team" : "Added to team") : "Team is full (max 6)");
       }
     });
   });
