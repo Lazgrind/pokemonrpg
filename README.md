@@ -34,24 +34,24 @@ python -m http.server 8000
 
 ## Rozsah projektu
 <!-- LOC:START -->
-**Celkem 43 937 řádků** v 119 souborech (k 2026-09-15, bez `assets/`).
+**Celkem 44 570 řádků** v 120 souborech (k 2026-09-16, bez `assets/`).
 
 | Kategorie | Soubory | Řádky |
 | --- | ---: | ---: |
-| Kód | 101 | 37 567 |
+| Kód | 102 | 38 155 |
 | Nástroje | 12 | 1 691 |
-| Dokumentace | 6 | 4 679 |
-| **Celkem** | **119** | **43 937** |
+| Dokumentace | 6 | 4 724 |
+| **Celkem** | **120** | **44 570** |
 
-**Obrázků celkem: 1 396** (30.9 MB, vč. `assets/`).
+**Obrázků celkem: 1 398** (31.0 MB, vč. `assets/`).
 
 | Typ | Počet |
 | --- | ---: |
-| `.png` | 789 |
+| `.png` | 791 |
 | `.gif` | 604 |
 | `.jpg` | 1 |
 | `.webp` | 2 |
-| **Celkem** | **1 396** |
+| **Celkem** | **1 398** |
 <!-- LOC:END -->
 
 Přegenerování: `python tools/count_lines.py`
