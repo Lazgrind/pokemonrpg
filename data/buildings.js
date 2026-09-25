@@ -167,6 +167,17 @@ export const STORY_BUILDINGS = [
     story: "ss-anne",
   },
   {
+    // Gen 2 (Johto): laboratoř Prof. Elma v New Bark Townu – tady si hráč vybere
+    // Johto startéra (Chikorita / Cyndaquil / Totodile). Viz storyBuildingView „elm-lab".
+    id: "elm-lab",
+    sprite: "assets/buildings/elm-lab.png",
+    name: "Prof. Elm's Lab",
+    icon: "🔬",
+    color: "#6aa84f",
+    description: "Professor Elm's research lab in New Bark Town — where Johto trainers receive their first partner.",
+    story: "elm-lab",
+  },
+  {
     id: "pokemon-tower",
     sprite: "assets/buildings/pokemon-tower.png",
     name: "Pokémon Tower",
@@ -366,6 +377,10 @@ export const CITY_BUILDINGS = {
   // storyBuildingView.js, klíčováno na id "training-grounds"). Indigo Plateau má
   // teď jen kanonickou dvojici Poké Center + Poké Mart.
   "indigo-plateau": ["poke-center", "poke-mart"],
+  // --- Gen 2 (Johto) ---
+  // New Bark Town: placeholder start Johta. Prof. Elm's Lab (výběr startéra) +
+  // základní služby, ať se dá tým doléčit a nakoupit. Další Johto města přibudou.
+  "new-bark-town": ["elm-lab", "poke-center", "poke-mart"],
 };
 
 /** Všechny známé budovy (idle + story) pro vyhledávání podle id. */

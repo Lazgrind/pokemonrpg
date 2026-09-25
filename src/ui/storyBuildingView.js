@@ -13,10 +13,12 @@
 import { getState, commit } from "../core/state.js";
 import { openMainTab } from "./mainPanel.js";
 import { openStarterModal } from "./starterModal.js";
-import { getStarterSpeciesId, acquirePokemon, ownsSpecies } from "../systems/team.js";
+import { getStarterSpeciesId, acquirePokemon, ownsSpecies, addToTeam } from "../systems/team.js";
 import { dexCounts } from "../systems/pokedex.js";
 import { startDiplomaCeremony } from "./diploma.js";
-import { healTeam, teamNeedsHeal, startTrainerBattle, giftLevel, tradePokemon, startStaticEncounter } from "../systems/battleSystem.js";
+import { healTeam, teamNeedsHeal, startTrainerBattle, giftLevel, tradePokemon, startStaticEncounter, travelToRegion } from "../systems/battleSystem.js";
+import { GEN2_ENABLED } from "../../data/gameConfig.js";
+import { generationByRegion } from "../../data/generations.js";
 import { createPokemon } from "../systems/pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { TMS, getTm, tmDisplayName } from "../../data/tms.js";
@@ -36,6 +38,10 @@ import {
 
 /** Kolik Potionů dá máma (jednorázově). Poké Bally už hráč má ve startu. */
 const MOM_POTIONS = 5;
+
+/** Johto startéři (Prof. Elm), pořadí = pořadí na stole. Level jako Kanto start. */
+const JOHTO_STARTER_IDS = ["chikorita", "cyndaquil", "totodile"];
+const JOHTO_STARTER_LEVEL = 5;
 
 /** Je otevřené story okno? (jen jedno naráz) */
 let open = false;
@@ -113,6 +119,7 @@ const VIEWS = {
   "rival-home": rivalHomeView,
   "pewter-museum": pewterMuseumView,
   "ss-anne": ssAnneView,
+  "elm-lab": elmLabView,
   "pokemon-tower": pokemonTowerView,
   "mr-fuji-house": mrFujiHouseView,
   "dept-store": deptStoreView,
@@ -462,6 +469,25 @@ function pewterMuseumView() {
   };
 }
 
+/**
+ * Sekce „Vyplout do Johto" na S.S. Anne. Nabídne se JEN když:
+ *  - je gen 2 aktivní (GEN2_ENABLED – na produkci skryté do vydání),
+ *  - hráč je Champion (state.story.isChampion),
+ *  - hráč je právě v Kantu (nemá smysl plout do Johto z Johta).
+ * Klik obslouží wire() → travelToRegion("johto"). Prázdné Johto = mapa-plátno.
+ */
+function johtoVoyageHtml() {
+  if (!GEN2_ENABLED) return "";
+  if (!getState().story?.isChampion) return "";
+  if ((getState().progress?.region ?? "kanto") !== "kanto") return "";
+  const johto = generationByRegion("johto");
+  const name = johto?.regionName ?? "Johto";
+  return `
+    <hr class="story-sep">
+    <p class="story-text">A weathered captain leans on the railing. "Champion, eh? There's a whole other region across the sea — <strong>${name}</strong>. Not many trainers ever make the crossing. Care to set sail?"</p>
+    <button class="btn" data-sail-johto>⛴️ Set sail for ${name}</button>`;
+}
+
 function ssAnneView() {
   if (storyFlag("ssAnneCleared")) {
     // Tajemství „Mew pod náklaďákem" (kanonická Gen 1 legenda). Až loď odpluje,
@@ -482,7 +508,8 @@ function ssAnneView() {
       title: "🚢 S.S. Anne",
       body: `<p class="story-text">The great liner's horn has long since faded — the S.S. Anne has sailed on.</p>
         <p class="placeholder">✓ You've already explored the S.S. Anne and earned HM01 Cut.</p>
-        ${secret}`,
+        ${secret}
+        ${johtoVoyageHtml()}`,
     };
   }
   const items = getState().resources?.items ?? {};
@@ -499,6 +526,42 @@ function ssAnneView() {
     body: `<p class="story-text">You show your ticket and step aboard the luxurious S.S. Anne. Wandering the decks, you run straight into <strong>${rivalName()}</strong>!</p>
       <p class="story-text">"Hey! You're too weak to be here. Let's battle!"</p>
       <button class="btn" data-ss-anne-battle>⚔️ Battle ${rivalName()}</button>`,
+  };
+}
+
+/**
+ * Prof. Elm's Lab (New Bark Town) – vstupní budova Johta. Jednorázový výběr
+ * Johto startéra (Chikorita / Cyndaquil / Totodile). Kanto tým + Pokédex se
+ * přenášejí, ale v Johtu smí bojovat jen Pokémoni gen 2 (viz region-lock),
+ * proto hráč tu dostane nového parťáka. Flag `johtoStarter` = už vybráno;
+ * `johtoStarterId` = který. Klik obslouží wire() → data-choose-johto-starter.
+ */
+function elmLabView() {
+  if (storyFlag("johtoStarter")) {
+    const chosenId = getState().story?.johtoStarterId;
+    const chosen = chosenId ? getSpecies(chosenId) : null;
+    const name = chosen?.name ?? "your Johto partner";
+    return {
+      title: "🔬 Prof. Elm's Lab",
+      body: `<p class="story-text">Prof. Elm looks up from his microscope. "How's your <strong>${name}</strong> settling in? Johto's a big place — take good care of it!"</p>
+        <p class="placeholder">✓ You've already chosen your Johto starter here.</p>`,
+    };
+  }
+  const cards = JOHTO_STARTER_IDS.map((id) => {
+    const sp = getSpecies(id);
+    const name = sp?.name ?? id;
+    const types = (sp?.types ?? []).join(" / ");
+    return `<button class="btn starter-choice" data-choose-johto-starter="${id}">
+        <strong>${name}</strong>${types ? ` <span class="placeholder">(${types})</span>` : ""}
+      </button>`;
+  }).join("\n      ");
+  return {
+    title: "🔬 Prof. Elm's Lab",
+    body: `<p class="story-text">"Ah — a Champion all the way from Kanto! Welcome to Johto." Prof. Elm gestures to three Poké Balls on the table.</p>
+      <p class="story-text">"Out here only Pokémon from the Johto region can battle — your Kanto team will rest safely in the PC. So pick a partner and let your new journey begin!"</p>
+      <div class="starter-choices">
+      ${cards}
+      </div>`,
   };
 }
 
@@ -1158,6 +1221,54 @@ function wire(storyKey, overlay, onStatus, render, close) {
     close();
     startStaticEncounter("mew", Math.max(50, giftLevel()));
     openMainTab("battle");
+  });
+
+  // S.S. Anne – plavba do Johto (gen 2). Přepne region → mapView se překreslí na
+  // Johto (zatím prázdné plátno). Zpět do Kanto vede tlačítko na mapě.
+  overlay.querySelector("[data-sail-johto]")?.addEventListener("click", () => {
+    const res = travelToRegion("johto");
+    close();
+    if (!res.ok) {
+      onStatus(res.reason ?? "Can't sail there right now.");
+      return;
+    }
+    // Mapa je samostatný stálý panel – překreslí se sama přes STATE_CHANGED.
+    showPopup({
+      title: "⛴️ Welcome to Johto",
+      body: `<p class="story-text">The S.S. Anne carries you across the sea to the shores of <strong>Johto</strong>. Your Kanto team stays behind in the <strong>PC</strong> — here only Johto Pokémon can battle.</p>
+        <p class="story-text">Head to <strong>Prof. Elm's Lab</strong> in New Bark Town to choose your first Johto partner!</p>
+        <p class="placeholder">🚧 Johto je zatím ve výstavbě – mapa je placeholder plátno s uzly. (Dev: zpět do Kanta přes dočasné tlačítko <strong>🛠️ Zpět do Kanto</strong> nad mapou; hráč se bude vracet až po odemčení lodi v gen 2.)</p>`,
+      okLabel: "Step ashore",
+    });
+  });
+
+  // Prof. Elm's Lab – jednorázový výběr Johto startéra. Kanto starter (player
+  // .starterId) se NEPŘEPISUJE; ukládáme story.johtoStarterId zvlášť. Nový mon
+  // gen 2 → jako jediný smí hned bojovat v Johtu (region-lock).
+  overlay.querySelectorAll("[data-choose-johto-starter]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      if (storyFlag("johtoStarter")) return; // pojistka proti dvojkliku
+      const id = btn.getAttribute("data-choose-johto-starter");
+      if (!JOHTO_STARTER_IDS.includes(id)) return;
+      const mon = createPokemon(id, JOHTO_STARTER_LEVEL);
+      acquirePokemon(mon); // uloží do kolekce (commit uvnitř)
+      // Přidej rovnou do týmu, ať je startér hned použitelný (region-lock: v Johtu
+      // smí bojovat jen gen 2). Když je tým plný gen-1 monů, addToTeam vrátí false
+      // – pak zůstane v PC a hráč si ho přehodí ručně (upozorníme ho zprávou).
+      const inTeam = addToTeam(mon.uid);
+      setStoryFlag("johtoStarter");
+      const s = getState();
+      if (!s.story) s.story = {};
+      s.story.johtoStarterId = id;
+      commit();
+      const name = getSpecies(id)?.name ?? id;
+      onStatus(
+        inTeam
+          ? `Prof. Elm gave you a ${name}! It joined your team.`
+          : `Prof. Elm gave you a ${name}! Your team was full — add it from the PC to battle in Johto.`
+      );
+      render();
+    });
   });
 
   // Pokémon Tower – souboj s duchem Marowak (povinně manuál). Po výhře nastaví

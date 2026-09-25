@@ -27,4 +27,4 @@ ikonou, cenou, šancí na chycení a případnými mechanikami. Rozšíření se
    `catchRate`, `price`, …) + `getPokeball(id)`.
 3. Systém chytání/nákupu se rozšíří o typ míčku; UI ukáže ikonu z této složky.
 
-Souvisí s postupem u budov/Pokémonů (viz `assets/buildings/`).
+Souvisí s postupem u budov (gen-aware `assets/gen<N>/buildings/`) a Pokémonů (`assets/gen<N>/pokemon/` – gen-specifické). Míčky (`assets/pokeballs/`) zůstávají globální.

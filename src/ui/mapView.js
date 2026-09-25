@@ -1,7 +1,7 @@
 /**
  * UI: panel Mapy (pravá dolní část) – KLIKACÍ mapa (à la PokeClicker / nintendo).
  *
- * Nad artem regionu (assets/map/kanto.webp) jsou umístěné klikací markery uzlů
+ * Nad artem regionu (assets/gen<N>/map/<region>.webp) jsou umístěné klikací markery uzlů
  * z datové vrstvy (data/areas.js) na pozicích x/y v %. Klik na uzel = „přesun":
  * nastaví aktivní oblast (battleSystem.setActiveArea) → souboje pak spawnují
  * odsud. Odemčení řídí navštívené oblasti (isAreaUnlocked nad progress.visited);
@@ -13,6 +13,9 @@
  */
 
 import { AREAS, getArea, isAreaUnlocked, areaLevelRange } from "../../data/areas.js";
+import { generationByRegion } from "../../data/generations.js";
+import { IS_DEV } from "../../data/gameConfig.js";
+import { travelToRegion } from "../systems/battleSystem.js";
 import { setActiveArea, getActiveAreaId, applyFossilChoice, startTrainerBattle } from "../systems/battleSystem.js";
 import { endSafari, isSafariActive } from "../systems/safariSystem.js";
 import { areaCompletion } from "../systems/pokedex.js";
@@ -30,7 +33,24 @@ import {
   handlePlacementClick,
 } from "../dev/devMapPlacement.js";
 
-const MAP_IMG = "assets/map/kanto.webp";
+/** Slug aktivního regionu (Kanto default; přepíná ho S.S. Anne → travelToRegion). */
+function currentRegion() {
+  return getState().progress?.region ?? "kanto";
+}
+
+/**
+ * Descriptor aktivní generace (podle regionu). Z něj bereme mapImage i seznam
+ * oblastí regionu – tím se mapa filtruje na uzly té generace, nezávisle na
+ * (různě velkém) textovém poli area.region. Fallback = Kanto (gen 1).
+ */
+function currentGen() {
+  return generationByRegion(currentRegion()) ?? generationByRegion("kanto");
+}
+
+/** Oblasti aktivního regionu (jen uzly dané generace; prázdné = mapa-plátno). */
+function regionAreas() {
+  return currentGen()?.areas ?? AREAS;
+}
 
 /* DEV nástroj pro naklikání pozic uzlů na mapě (tlačítko Place nodes + výpis
  * pozic) žije ve `src/dev/devMapPlacement.js` – zapojuje se sem jen přes malé
@@ -102,7 +122,12 @@ export function renderMap(root) {
   const badges = earnedBadges();
   const beaten = defeatedTrainers();
   const story = storyFlags();
-  const nodesHtml = AREAS.map((area) => {
+  // Region-aware: mapa i uzly patří aktivní generaci (Kanto/Johto…).
+  const gen = currentGen();
+  const region = currentRegion();
+  root.dataset.region = region; // detekce přepnutí regionu v STATE_CHANGED
+  const areasOfRegion = regionAreas();
+  const nodesHtml = areasOfRegion.map((area) => {
     const unlocked = isAreaUnlocked(area, visited, badges, beaten, story);
     const p = posOf(area);
     // Popisek levelu = per-oblast pásmo (Lv min–max), u jednobodového jen jedno číslo.
@@ -126,14 +151,47 @@ export function renderMap(root) {
   // se v sync s aktivní oblastí. Cestovat lze výběrem tady NEBO klikem na uzel –
   // obojí projde stejnou cestou (změna dropdownu „kliká" za tebe na daný uzel).
   const activeId = getActiveAreaId();
-  const optionsHtml = AREAS.filter((area) => isAreaUnlocked(area, visited, badges, beaten, story))
+  const optionsHtml = areasOfRegion.filter((area) => isAreaUnlocked(area, visited, badges, beaten, story))
     .map((area) => travelOptionHtml(area, activeId))
     .join("");
 
+  // Tři stavy plátna:
+  //  1) region bez oblastí (úplná kostra) → jen cedule „ve výstavbě", bez uzlů.
+  //  2) region má oblasti, ale nemá mapImage (Johto placeholder) → barevné plátno
+  //     s uzly nad ním – uzly jdou klikat, aktivní oblast = daný region (battle
+  //     area už tedy neukazuje Kanto), jen pod nimi není art mapy.
+  //  3) region má oblasti i mapImage → normální obrázek + uzly.
+  const emptyRegion = areasOfRegion.length === 0;
+  const hasMapImg = !!gen?.mapImage;
+  let stageInner;
+  if (emptyRegion) {
+    stageInner = `<div class="map-empty-region">
+         <p class="map-empty-title">🚧 ${gen?.regionName ?? region} — mapa ve výstavbě</p>
+         <p class="placeholder">Tento region zatím nemá žádné oblasti. Přibudou později.</p>
+       </div>`;
+  } else if (!hasMapImg) {
+    stageInner = `<div class="map-placeholder-bg" aria-hidden="true">
+         <span class="map-placeholder-tag">🚧 ${gen?.regionName ?? region} — mapa ve výstavbě</span>
+       </div>
+       ${nodesHtml}`;
+  } else {
+    stageInner = `<img class="map-img" src="${gen.mapImage}" alt="Map of ${gen?.regionName ?? region}" draggable="false" />
+       ${nodesHtml}`;
+  }
+
+  // Návrat z jiného regionu zpět do Kanto: PROZATÍM jen dev-only tlačítko
+  // (IS_DEV), aby šlo testovat obě strany plavby. Hráč se bude moci vrátit až
+  // po odemčení lodi v gen 2 – řádnou přístavní budovou (viz TODO gen2), tohle
+  // tlačítko je dočasná náhrada, na produkci se nikdy neukáže.
+  const backBtn = (region !== "kanto" && IS_DEV)
+    ? `<button class="btn btn-sm" data-region-back title="Dev: dočasný návrat, než vznikne loď v gen 2">🛠️ Zpět do Kanto (dev)</button>`
+    : "";
+
   root.innerHTML = `
     <div class="map-head">
-      <h2 class="panel-title">Map</h2>
+      <h2 class="panel-title">Map${region !== "kanto" ? ` · ${gen?.regionName ?? region}` : ""}</h2>
       <div class="map-head-actions">
+        ${backBtn}
         ${renderPlacementButtons()}
       </div>
     </div>
@@ -143,12 +201,16 @@ export function renderMap(root) {
         <select id="map-travel-select" class="map-travel-select" data-sig="">${optionsHtml}</select>
       </div>
       <div class="map-stage ${mapPlacementActive() ? "is-editing" : ""} ${mapPlacementHideLabels() ? "hide-labels" : ""}">
-        <img class="map-img" src="${MAP_IMG}" alt="Map of Kanto" draggable="false" />
-        ${nodesHtml}
+        ${stageInner}
       </div>
       ${mapPlacementActive() ? renderPlacementBar() : `<div class="map-info" aria-live="polite"></div>`}
     </div>
   `;
+
+  // Návrat do Kanto (přepne region → plná re-render přes STATE_CHANGED).
+  root.querySelector("[data-region-back]")?.addEventListener("click", () => {
+    travelToRegion("kanto");
+  });
 
   const stage = root.querySelector(".map-stage");
   const info = root.querySelector(".map-info");
@@ -461,7 +523,15 @@ export function renderMap(root) {
   // Živá aktualizace stavu (aktivní/odemčeno + pozice) bez přepisu obrázku.
   updateStates(root);
   if (unsub) unsub();
-  unsub = bus.on(EVENTS.STATE_CHANGED, () => updateStates(root));
+  unsub = bus.on(EVENTS.STATE_CHANGED, () => {
+    // Přepnutí regionu (S.S. Anne → Johto / zpět) = jiná mapa i sada uzlů →
+    // plná re-render. Jinak jen levná aktualizace stavů markerů.
+    if (root.isConnected && root.dataset.region !== currentRegion()) {
+      renderMap(root);
+    } else {
+      updateStates(root);
+    }
+  });
 }
 
 /**
@@ -514,7 +584,7 @@ function updateStates(root) {
   // oblastí (levný podpis), jinak jen dorovnáme vybranou hodnotu na aktivní uzel.
   const sel = root.querySelector(".map-travel-select");
   if (sel) {
-    const unlockedAreas = AREAS.filter((area) =>
+    const unlockedAreas = regionAreas().filter((area) =>
       isAreaUnlocked(area, visited, badges, beaten, story)
     );
     const sig = unlockedAreas.map((a) => a.id).join(",");
@@ -526,8 +596,15 @@ function updateStates(root) {
   }
   const info = root.querySelector(".map-info");
   if (info && !info.dataset.flashing) {
+    const gen = currentGen();
+    const inRegion = regionAreas().some((a) => a.id === activeId);
     const active = getArea(activeId);
-    if (active) info.textContent = locationText(active);
+    if (!inRegion) {
+      // Aktivní oblast není v tomto regionu (typicky prázdné Johto) → jen název regionu.
+      info.textContent = `Region: ${gen?.regionName ?? currentRegion()}`;
+    } else if (active) {
+      info.textContent = locationText(active);
+    }
   }
 }
 

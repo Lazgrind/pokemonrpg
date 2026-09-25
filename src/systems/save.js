@@ -700,6 +700,14 @@ function migrate(data) {
     data.achievements.stats = s;
     data.saveVersion = 48;
   }
+  // v49 → v50: přidán progress.region (aktivní generační region). Staré savy byly
+  // celé v Kantu, takže default "kanto". Umožní přechod do Johto přes S.S. Anne.
+  if (data.saveVersion < 50) {
+    if (data.progress && typeof data.progress === "object") {
+      if (typeof data.progress.region !== "string") data.progress.region = "kanto";
+    }
+    data.saveVersion = 50;
+  }
 
   return data;
 }

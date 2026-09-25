@@ -1,6 +1,6 @@
 /**
  * UI: panel Města – scéna s vlastním pozadím per město a budovami daného města.
- * Pozadí je obrázek `assets/city/<cityId>.png` (fallback = travnatý gradient v CSS).
+ * Pozadí je obrázek `assets/gen<N>/city/<cityId>.png` (fallback = travnatý gradient v CSS; N = generace).
  * Zobrazují se JEN budovy daného města (viz buildingsForCity) – žádné prázdné
  * parcely. Budovy jsou obrázkové sprity, nebo CSS domeček (fallback); klik otevře
  * detail budovy / příběhovou interakci.
@@ -14,11 +14,12 @@ import { getActiveArea } from "../systems/battleSystem.js";
 import { getState, commit } from "../core/state.js";
 import { showPopup } from "./popup.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
+import { cityBgUrl, buildingSpriteUrl } from "../core/assets.js";
 
 /**
  * Vykreslí panel města do zadaného elementu. Roster budov závisí na aktivním
  * městě (viz buildingsForCity) – Pallet má laboratoř + domy, ostatní služby dle města.
- * Pozadí města je obrázek `assets/city/<cityId>.png`; chybí-li, CSS vyloží
+ * Pozadí města je obrázek `assets/gen<N>/city/<cityId>.png` (N = generace); chybí-li, CSS vyloží
  * fallback (travnatý gradient) přes vrstvené pozadí (žádný „broken image").
  * @param {HTMLElement} root
  * @param {(msg: string) => void} [onStatus]
@@ -27,7 +28,7 @@ export function renderCity(root, onStatus = () => {}) {
   const area = getActiveArea();
   const cityId = area?.id;
   const buildings = buildingsForCity(cityId);
-  const bgStyle = cityId ? ` style="--city-bg:url('assets/city/${cityId}.png')"` : "";
+  const bgStyle = cityId ? ` style="--city-bg:url('${cityBgUrl(cityId)}')"` : "";
 
   const _savedScroll = saveScroll(root);
   root.innerHTML = `
@@ -49,7 +50,7 @@ function buildingCell(def) {
   const storyAttr = isStory ? ` data-story="${def.story}"` : "";
   const visual = def.sprite
     ? `<button class="iso-building has-sprite" data-id="${def.id}"${storyAttr} title="${def.name}">
-         <img class="b-sprite" src="${def.sprite}" alt="${def.name}" draggable="false">
+         <img class="b-sprite" src="${buildingSpriteUrl(def)}" alt="${def.name}" draggable="false">
        </button>`
     : `<button class="iso-building iso-b-${def.id}" data-id="${def.id}"${storyAttr} title="${def.name}" style="--roof:${def.color}">
          <span class="face top"></span>

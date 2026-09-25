@@ -36,9 +36,40 @@ Po nahrání dopsat do příslušného pole v `BACKGROUND_BIOMES` (`data/backgro
 
 ---
 
+### 2. Mapa regionu Johto (gen 2)
+Descriptor `data/gen2/index.js` má `mapImage: null` (schválně). Johto už má první
+oblast (New Bark Town), ale dokud je `mapImage` null, mapView vykresluje uzly nad
+barevným plátnem „ve výstavbě" (`.map-placeholder-bg`) – takže **nic nechybí
+funkčně**, uzly jdou klikat. Jakmile vznikne art mapy, nahraj soubor a v
+`gen2/index.js` nastav `mapImage: "assets/gen2/map/johto.webp"`; placeholder se pak
+sám přestane používat.
+
+- [ ] `assets/gen2/map/johto.webp` — art mapy Johto (stejný formát jako `gen1/map/kanto.webp`).
+
+---
+
+### 3. Johto startéři (gen 2) – sprity Pokémonů
+Prof. Elm dává v New Bark Town na výběr 3 startéry. Cesta se odvozuje z ID
+(`assets/gen2/pokemon/<id>/<view>.png`), složky už existují, dokud sprity chybí jede
+glyf fallback. Formát jako gen 1 (front/back + shiny, `.png`; `.gif` volitelně).
+
+- [ ] `assets/gen2/pokemon/chikorita/front.png`, `back.png`, `shiny-front.png`, `shiny-back.png`
+- [ ] `assets/gen2/pokemon/cyndaquil/front.png`, `back.png`, `shiny-front.png`, `shiny-back.png`
+- [ ] `assets/gen2/pokemon/totodile/front.png`, `back.png`, `shiny-front.png`, `shiny-back.png`
+
+---
+
+### 4. Prof. Elm's Lab (budova New Bark Town)
+Story-budova `elm-lab` (`data/buildings.js`) míří na `assets/gen2/buildings/elm-lab.png`.
+Dokud chybí, jede fallback (ikona 🔬 / barva). Formát jako ostatní budovy.
+
+- [ ] `assets/gen2/buildings/elm-lab.png` — pixel-art laboratoře prof. Elma.
+
+---
+
 ## 🔮 Odloženo (fíčura, ne chybějící soubor)
 
-- **Náhodné varianty spritů trenérů v souboji** — složky `assets/trainers/<class>/`
+- **Náhodné varianty spritů trenérů v souboji** — složky `assets/gen<N>/trainers/<class>/`
   už drží víc číslovaných variant, ale hra zatím losuje/nelosuje dle
   `data/spriteVariants.js`; plná náhodná volba per-souboj je odložená (viz paměť
   „sprite-workflow"). Není to chybějící grafika, jen nevyužitý potenciál.

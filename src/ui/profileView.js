@@ -7,8 +7,8 @@
  *
  * Data: `state.player.name`, `state.resources.gold`, `state.progress.badges`,
  * `state.collection` (shiny), `dexCounts()` (chyceno/celkem), `state.meta.createdAt`
- * (odehraný čas). Odznaky definuje data/badges.js; ikona = assets/badges/<id>.png
- * (chybí-li, ukáže se glyf-fallback). Scroll přežije překreslení (scrollPreserve).
+ * (odehraný čas). Odznaky definuje data/badges.js; ikona = assets/gen<N>/badges/<id>.png
+ * (chybí-li, ukáže se glyf-fallback; N = generace). Scroll přežije překreslení (scrollPreserve).
  */
 
 import { getState, commit } from "../core/state.js";
@@ -17,6 +17,7 @@ import { BADGES } from "../../data/badges.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
 import { showDiplomaModal } from "./diploma.js";
 import { getSpecies } from "../../data/pokemon.js";
+import { badgeUrl } from "../core/assets.js";
 
 /** ms → „Xd Yh" / „Yh Zm" / „Zm" (odehraný čas). */
 function formatPlaytime(ms) {
@@ -33,7 +34,7 @@ function formatPlaytime(ms) {
 function badgeSlotHtml(badge, earned) {
   return `<div class="badge-slot ${earned ? "earned" : "locked"}" title="${badge.name} · ${badge.leader}">
     <span class="badge-icon-wrap">
-      <img src="assets/badges/${badge.id}.png" alt="${badge.name}" class="badge-icon" onerror="this.remove()">
+      <img src="${badgeUrl(badge.id)}" alt="${badge.name}" class="badge-icon" onerror="this.remove()">
       <span class="badge-fallback">${earned ? "◆" : "◇"}</span>
     </span>
     <span class="badge-label">${earned ? badge.name : "???"}</span>

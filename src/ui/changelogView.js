@@ -4,7 +4,13 @@
  * Zdroj pravdy je jeden: soubor CHANGELOG.md v kořeni projektu. Načteme ho za
  * běhu (fetch) a vykreslíme lehkým převodem Markdownu, ať se seznam změn nemusí
  * udržovat na dvou místech. Funguje lokálně i na GitHub Pages (relativní cesta).
+ *
+ * Gen 2: zápisy o generaci 2 žijí v odděleném CHANGELOG-GEN2.md, který se
+ * fetchuje a zobrazuje POUZE když je gen 2 aktivní (GEN2_ENABLED) – na produkci
+ * tak o gen 2 nejsou žádné informace, dokud ji nevydáme.
  */
+
+import { GEN2_ENABLED } from "../../data/gameConfig.js";
 
 /** Escapuje HTML speciální znaky (bezpečnost při vkládání textu). */
 function esc(s) {
@@ -137,15 +143,28 @@ export function openChangelog() {
   overlay.querySelector('[data-act="close"]').addEventListener("click", close);
 
   const body = overlay.querySelector(".changelog-body");
-  // no-store: CHANGELOG.md se mění každou verzí; bez toho browser servíruje
+  // no-store: changelog se mění každou verzí; bez toho browser servíruje
   // starou cache (viděli jsme rozpor „verze 0.55 vs. changelog 0.45").
-  fetch("CHANGELOG.md", { cache: "no-store" })
-    .then((r) => {
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      return r.text();
-    })
-    .then((md) => {
-      body.innerHTML = renderMarkdown(md);
+  const loadPublic = fetch("CHANGELOG.md", { cache: "no-store" }).then((r) => {
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.text();
+  });
+  // Gen 2 changelog jen když je gen 2 aktivní. Selhání (např. chybějící soubor)
+  // tolerujeme – veřejný changelog se ukáže i tak.
+  const loadGen2 = GEN2_ENABLED
+    ? fetch("CHANGELOG-GEN2.md", { cache: "no-store" })
+        .then((r) => (r.ok ? r.text() : ""))
+        .catch(() => "")
+    : Promise.resolve("");
+
+  Promise.all([loadPublic, loadGen2])
+    .then(([mdPublic, mdGen2]) => {
+      let html = "";
+      if (mdGen2 && mdGen2.trim()) {
+        html += `<div class="changelog-gen2"><p class="cl-gen2-flag">🚧 Gen 2 (Johto) – ve vývoji, jen na dev buildu</p>${renderMarkdown(mdGen2)}</div>`;
+      }
+      html += renderMarkdown(mdPublic);
+      body.innerHTML = html;
     })
     .catch((err) => {
       body.innerHTML = `<p class="placeholder">Failed to load the changelog (${esc(String(err.message))}).</p>`;

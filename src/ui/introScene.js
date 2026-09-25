@@ -13,6 +13,7 @@
 
 import { getState, commit } from "../core/state.js";
 import { spriteImg } from "./sprites.js";
+import { npcUrl } from "../core/assets.js";
 
 /** Kroky vyprávění (poslední „krok" je formulář se jménem rivala). */
 const STEPS = [
@@ -27,7 +28,7 @@ const MEW_STEP = STEPS.length - 1;
 /** Portrét profesora Oaka (asset zatím nemusí existovat → onerror ho skryje). */
 function oakPortrait() {
   return `<div class="intro-visual">
-      <img class="intro-portrait" src="assets/npc/oak.png" alt="Professor Oak"
+      <img class="intro-portrait" src="${npcUrl("oak", 1)}" alt="Professor Oak"
            onerror="this.style.display='none'">
     </div>`;
 }

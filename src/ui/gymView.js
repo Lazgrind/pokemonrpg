@@ -12,6 +12,7 @@
 import { getGymForCity, gymTrainers, isGymOpen } from "../../data/gyms.js";
 import { trainerSpriteUrl } from "../../data/trainers.js";
 import { getBadge } from "../../data/badges.js";
+import { badgeUrl } from "../core/assets.js";
 import { getState, commit } from "../core/state.js";
 import { startTrainerBattle, getActiveArea } from "../systems/battleSystem.js";
 import { openMainTab } from "./mainPanel.js";
@@ -163,7 +164,7 @@ export function renderGymTab(root, onStatus = () => {}) {
 
   const badgeName = badge?.name ?? gym.badge;
   const badgeState = cleared
-    ? `<span class="gym-badge-won"><img class="badge-icon" src="assets/badges/${gym.badge}.png" alt="${badgeName}" onerror="this.style.display='none'"> ${badgeName} earned!</span>`
+    ? `<span class="gym-badge-won"><img class="badge-icon" src="${badgeUrl(gym.badge)}" alt="${badgeName}" onerror="this.style.display='none'"> ${badgeName} earned!</span>`
     : `<span class="placeholder">Beat the Leader to earn the ${badgeName}.</span>`;
 
   // Karta gym challenge (jen dokud není hádanka splněná) – tlačítko spustí minihru.

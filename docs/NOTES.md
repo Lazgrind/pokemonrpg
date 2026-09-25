@@ -245,9 +245,9 @@ Změněné soubory: `src/systems/battleSystem.js`, `src/core/state.js`, `src/ui/
   - **Vermilion Trade House (🏠):** Spearow → Farfetch'd, flag `farfetchdGift`. Story: Létavý Pokémon za ptáka (věrné kánonu).
   - Všechny tři jednorázové – po prvním uskutečnění výměny flag zamezí zopakování.
 
-- **Celadon Mansion (🏨) – nová story budova:** `data/buildings.js` id `celadon-mansion`, přidána do `CITY_BUILDINGS["celadon-city"]`. Payoff: **Eevee s automatickým levelem** (určen exportem `giftLevel()` = max level hráčova týmu, min 5; kanonický dar z domu v Celadonu), flag `eeveeGift`. Ikona 🏨 (CSS fallback); sprite lze dodělat později do `assets/buildings/celadon-mansion.png`.
+- **Celadon Mansion (🏨) – nová story budova:** `data/buildings.js` id `celadon-mansion`, přidána do `CITY_BUILDINGS["celadon-city"]`. Payoff: **Eevee s automatickým levelem** (určen exportem `giftLevel()` = max level hráčova týmu, min 5; kanonický dar z domu v Celadonu), flag `eeveeGift`. Ikona 🏨 (CSS fallback); sprite lze dodělat později do `assets/gen<N>/buildings/celadon-mansion.png` (N = generace).
 
-- **Fighting Dojo (🥋) – nová story budova:** `data/buildings.js` id `fighting-dojo`, přidána do `CITY_BUILDINGS["saffron-city"]`. **Klíčové designové rozhodnutí:** hráč dostane **OBA Hitmony najednou** (Hitmonlee + Hitmonchan, s automatickým levelem `giftLevel()`, flag `hitmonsGift`) – věrné cíli „**všech 151 na 1 save bez volby**". V originálu se volí jeden; my volbu zamítáme, aby neexistoval scénář, kdy hráč vybere špatně a potom si nemůže vzít druhého. Ikona 🥋; sprite lze dodělat později do `assets/buildings/fighting-dojo.png`.
+- **Fighting Dojo (🥋) – nová story budova:** `data/buildings.js` id `fighting-dojo`, přidána do `CITY_BUILDINGS["saffron-city"]`. **Klíčové designové rozhodnutí:** hráč dostane **OBA Hitmony najednou** (Hitmonlee + Hitmonchan, s automatickým levelem `giftLevel()`, flag `hitmonsGift`) – věrné cíli „**všech 151 na 1 save bez volby**". V originálu se volí jeden; my volbu zamítáme, aby neexistoval scénář, kdy hráč vybere špatně a potom si nemůže vzít druhého. Ikona 🥋; sprite lze dodělat později do `assets/gen<N>/buildings/fighting-dojo.png` (N = generace).
 
 - **Silph Co. – dar po osvobození:** Nový NPC v `silphCoView` (po flagu `silphCleared`), děkavý zaměstnanec → **Lapras s automatickým levelem** (`giftLevel()`, kanonický dar z Silph Co), flag `laprasGift`.
 
@@ -281,7 +281,7 @@ Změněné soubory: `src/systems/battleSystem.js`, `src/core/state.js`, `src/ui/
 - **Fresh Water (🥤) – nový key item:** kategorie `special` (read-only). Kupuje se v **Celadon Dept. Store** za 200 gold (`deptStore.js` / `storyBuildingView.js`, nový node v seznamu koupi). Po nákupu má hráč položku `fresh-water` v batohu.
 - **Silph Co strážce – jednorázová gate:** v oblasti `saffron-city` je příchodový event `silph-co-thirsty-guard` → popup „Guard je žíznilivý, chceš mu dát Fresh Water?" (yes/no). Pokud **yes** → Fresh Water se spotřebuje, nastaví se `story.saffronGuardsCleared` (flag), strážce se stane prostupným, Silph Co se odemkne do tab. Pokud **no** → nic se nestane, hráč si může vzít Fresh Water později. **Design:** strážce blokuje jen budovu Silph Co (vstup do tabu), **ne průchod městem** – žádný softlock. Mapa Saffron zůstává projezdná, hráč nemusí jít do Silph TEĎKA (ale po Celadonu logicky ano).
 - **Silph Co gauntlet = Rocket Gauntlets engine znovupoužitý:** `ROCKET_GAUNTLETS["saffron-city"]` (nový záznam v mapě) s tab id `silph-co` a trenéry `["silph-rocket-1", "silph-rocket-2", "silph-rocket-3", "rival-silph", "giovanni-silph"]` (5 nepřátel: 3 Rocket grunti + rival + Giovanni). Fronta se renderuje jako Gym/Rocket v tabu **Silph Co** (`rocketView` s dynam. popiskem `gaunt.tabLabel`). Payoff **master-ball**: po vyčištění všech trenérů (flag `silphCleared`), **nový výstup v `finishTrainerBattle`** (když `trainerId.includes("giovanni-silph")`): dá **Master Ball** (resources.balls.master = item, ne storage-pokémon, ale speciální příprava: master-ball NENÍ možné koupit, pouze dostanout tímhle způsobem). Master Ball se přidá do `owned.balls.master` (++). Payoff popup: dárek od presidents Silph Co + reference na Sabrinin gym.
-- **Sabrina + Saffron Gym:** gym leader id `"sabrina"` (již existuje z v0.67.0 s týmem `sabrina` a kanonickými Pokémony). Gym `saffron-gym` má **`requiresStory: "silphCleared"`** (gate na vyčistění Silph Co). Sprite Sabriny (`assets/gym-leaders/sabrina/front.png`) je na disku (8/8 gym leaderů hotovo). Payoff v `finishTrainerBattle` (když `trainerId === "sabrina"`): flag `sabrinaCleared`, badge **marsh-badge** (7/8 odznaků, ne 8. – 8. je Giovanni), +1800 gold.
+- **Sabrina + Saffron Gym:** gym leader id `"sabrina"` (již existuje z v0.67.0 s týmem `sabrina` a kanonickými Pokémony). Gym `saffron-gym` má **`requiresStory: "silphCleared"`** (gate na vyčistění Silph Co). Sprite Sabriny (`assets/gen1/gym-leaders/sabrina/front.png`) je na disku (8/8 gym leaderů hotovo). Payoff v `finishTrainerBattle` (když `trainerId === "sabrina"`): flag `sabrinaCleared`, badge **marsh-badge** (7/8 odznaků, ne 8. – 8. je Giovanni), +1800 gold.
 - **Arrival popupy:** `saffron-arrival` (setActiveArea event v `mapView.js`, flavor, návod do Silph), `cerulean-cave-arrival` (lore o Mewtwovi, připraveno pro v0.79.0 legendární feature). Oba příchodem do oblasti.
 - **Save v36 → v37:** `CURRENT_SAVE_VERSION=37` v `state.js`. Migrace v37 v `save.js`: nový field `items.fresh-water=0` (default); kdo už je za Saffronem (visited saffron-city/dál) dostane `story.saffronGuardsCleared` automaticky (žádná regrese, fresh-water se nekupuje retroaktivně). `silphCleared` se nenastavuje automaticky (jen gauntlet payoff). Master Ball se iniciuje jako `owned.balls.master=0`.
 - **Dev checkpointy (rozmělněno na dílčí milníky – přání uživatele, ne 1 obří skok):** ㉑ „saffron" (příchod, Rocketi drží město) · ㉒ „silphopen" (Fresh Water podána strážci, Silph Co otevřeno) · ㉓ „silphcleared" (gauntlet vyčištěn, Master Ball) · ㉔ „sabrina" (Marsh Badge, Krok 11 hotov). Kumulativní; earth/champion posunuty na ㉕/㉖.
@@ -313,7 +313,7 @@ Změněné soubory: `src/systems/battleSystem.js`, `src/core/state.js`, `src/ui/
 - **Dev checkpointy:** ㉑ „earth" (Giovanni poražen, všech 8 odznaků, Victory Road+Indigo otevřeny) a ㉒ „champion" (Elite Four + Champion poraženi, Krok 10 hotov, Cerulean Cave odemčen, Mewtwo přístupný).
 - **Save v35 → v36:** `CURRENT_SAVE_VERSION=36` v `state.js`. Migrace v36 v `save.js`: doplní `progress.leagueActive=false`, `progress.leagueStep=0` (default); kdo už má `giovanniCleared` dostane všechny Elite Four/Champion trenéry označené za poražené (žádná regrese). `isChampion` v `story` se nenastavuje automaticky (jen payoff v `finishTrainerBattle`).
 - Změněné soubory: `data/trainers.js` (5 nových trenérů + LEAGUE export), **nové** `src/ui/leagueView.js`, `src/systems/battleSystem.js` (startLeagueRun/continueLeagueRun/forfeitLeagueRun/leagueState, healTeam guard, payoff branches), `src/ui/mainPanel.js` (league tab), `src/ui/buildingView.js` (healTeam guard), `src/ui/storyBuildingView.js` (máma heal guard), `src/ui/gymView.js` (viridian Giovanni popup), `src/ui/mapView.js` (arrival popupy), `src/systems/devTools.js` (checkpointy ㉑㉒), `src/systems/save.js` (migrace v36), `src/core/state.js` (leagueActive/leagueStep), `src/core/version.js` (0.80.0), `CHANGELOG.md`, `docs/SPRITES-TODO.md`, `docs/NOTES.md`.
-- **SPRITY K DODÁNÍ:** elite-four-lorelei/bruno/agatha/lance/champion-blue (5× front.png portrét v `assets/gym-leaders/<id>/`); pozadí victory-road + indigo-plateau (v `assets/backgrounds/`); pokud nějaké Pokémony z jejich týmů (Dewgong/Cloyster/Slowbro/Jynx/Lapras atd.) ještě nemají sprite, mají se do SPRITES-TODO.
+- **SPRITY K DODÁNÍ:** elite-four-lorelei/bruno/agatha/lance/champion-blue (5× front.png portrét v `assets/gen1/gym-leaders/<id>/`); pozadí victory-road + indigo-plateau (v `assets/backgrounds/`); pokud nějaké Pokémony z jejich týmů (Dewgong/Cloyster/Slowbro/Jynx/Lapras atd.) ještě nemají sprite, mají se do SPRITES-TODO.
 - ⏳ **DALŠÍ:** ověřit ve hře (node není), pak obsah endgame (Cerulean Cave/Mewtwo, zbývající legendární, po-ligový obsah) nebo starší regiony.
 
 ---
@@ -486,7 +486,7 @@ Hezky naaranžované.
 **Implementace (`src/ui/cityView.js` + `css/main.css`):**
 - **Volné parcely pryč:** zrušen `CITY_PLOTS`/`emptyCell` – renderují se jen budovy
   z `buildingsForCity(cityId)`.
-- **Pozadí per město:** `renderCity` nastaví CSS proměnnou `--city-bg:url('assets/city/<areaId>.png')`.
+- **Pozadí per město:** `renderCity` nastaví CSS proměnnou `--city-bg:url('assets/gen<N>/city/<areaId>.png')` (N = generace).
   `.iso-city` má vrstvené `background`: scrim (čitelnost popisků) → `var(--city-bg)`
   → fallback travnatý gradient. Chybí-li obrázek (404 / nenastaveno), prosvítá
   gradient – **žádný broken image**, nic nespadne (cesta se odvozuje z ID).
@@ -496,7 +496,7 @@ Hezky naaranžované.
 - Titulek panelu = jméno města (`area.name`) místo generického „City".
 - Odstraněn mrtvý CSS (`.iso-plot`, `.plot-hint`, `.iso-tag.muted`).
 
-**Assety:** konvence `assets/city/<areaId>.png` (nová složka + README). Všech **11
+**Assety:** konvence `assets/gen<N>/city/<areaId>.png` (N = generace; nová složka + README). Všech **11
 měst** (`type:"city"`) zapsáno do `docs/SPRITES-TODO.md` jako chybějící pozadí.
 
 **Další plán (dohodnuto):** priorita = **dodělat celou příběhovou mapu Kanto krok
@@ -569,7 +569,7 @@ Dev: „Skip to" checkpoint ⑤ Pewter City (u Brocka, bez odznaku) → testovat
 Rozhodnutí: stavíme **věrnou příběhovou návaznost PRO Kanta město po městě**, vždy **jeden krok**, probíráme bod po bodu. „Kam jít/nejít" NEŘEŠÍME chozením – zůstává na **unlock systému oblastí**.
 
 ### Krok 1 – Intro + Pallet Town (🟢 HOTOVO, v0.68.0)
-- 🟢 **Intro = krátká přeskočitelná textová scéna** (`src/ui/introScene.js`); na konci hráč **pojmenuje rivala** → `state.player.rivalName` (drží se celý playthrough). Přidán sprite **Oaka** (`assets/npc/oak.png`) a **Mew z Master Ballu**.
+- 🟢 **Intro = krátká přeskočitelná textová scéna** (`src/ui/introScene.js`); na konci hráč **pojmenuje rivala** → `state.player.rivalName` (drží se celý playthrough). Přidán sprite **Oaka** (`assets/gen1/npc/oak.png`) a **Mew z Master Ballu**.
 - 🟢 **Pikachu = skrytá 4. volba** startéra (po odmítnutí všech tří; volba se potvrzuje Ano/Ne).
 - 🟢 **Budovy per město** (`CITY_BUILDINGS`, `buildingsForCity`) + **story/interakční budovy** (pole `story`, `storyBuildingView.js`); **upgrade levely zůstávají globální**. Pallet = Oak's Lab + Tvůj domov (5 Potionů + **heal** proti soft-locku) + Rivalův dům; **bez Center/Mart**.
 - 🟢 **První rival nepovinný na výsledek:** flag `gateOnFight` (jen `rival-pallet`) → Route 1 odemkne **výhra i prohra** (věrné – v kánonu první rival nejde „muset vyhrát"). Souboj **záměrně snadný** (per-trenér `difficulty` 0 IV/0 EV, Lv 4, slabé tahy). Prohra ukáže korektní hlášku (rival se vysměje a odejde).

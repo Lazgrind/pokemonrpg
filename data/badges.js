@@ -5,8 +5,9 @@
  * Používá to Profile tab (badge case) a později gym systém (výhra nad leaderem
  * přidá `id` do `state.progress.badges`; `unlock.badge` gatuje oblasti).
  *
- * `id` = zároveň jméno souboru ikony → `assets/badges/<id>.png`.
- * `cityId` odkazuje na uzel města v data/areas.js.
+ * `id` = zároveň jméno souboru ikony → `assets/gen<gen>/badges/<id>.png`.
+ * `cityId` odkazuje na uzel města v data/areas.js. `gen` = generace odznaku
+ * (odznaky se ukládají per region; ikona žije v gen složce dané generace).
  */
 
 /**
@@ -16,18 +17,19 @@
  * @property {string} leader  jméno gym leadera
  * @property {string} cityId  id města (uzel v data/areas.js), kde se odznak získá
  * @property {string} type    typ gymu (téma týmu leadera)
+ * @property {number} gen     generace odznaku (1 = Kanto, 2 = Johto) → gen složka ikony
  */
 
 /** @type {Badge[]} Kanonické pořadí odznaků Kanta. */
 export const BADGES = [
-  { id: "boulder-badge", name: "Boulder Badge", leader: "Brock", cityId: "pewter-city", type: "rock" },
-  { id: "cascade-badge", name: "Cascade Badge", leader: "Misty", cityId: "cerulean-city", type: "water" },
-  { id: "thunder-badge", name: "Thunder Badge", leader: "Lt. Surge", cityId: "vermilion-city", type: "electric" },
-  { id: "rainbow-badge", name: "Rainbow Badge", leader: "Erika", cityId: "celadon-city", type: "grass" },
-  { id: "soul-badge", name: "Soul Badge", leader: "Koga", cityId: "fuchsia-city", type: "poison" },
-  { id: "marsh-badge", name: "Marsh Badge", leader: "Sabrina", cityId: "saffron-city", type: "psychic" },
-  { id: "volcano-badge", name: "Volcano Badge", leader: "Blaine", cityId: "cinnabar-island", type: "fire" },
-  { id: "earth-badge", name: "Earth Badge", leader: "Giovanni", cityId: "viridian-city", type: "ground" },
+  { id: "boulder-badge", name: "Boulder Badge", leader: "Brock", cityId: "pewter-city", type: "rock", gen: 1 },
+  { id: "cascade-badge", name: "Cascade Badge", leader: "Misty", cityId: "cerulean-city", type: "water", gen: 1 },
+  { id: "thunder-badge", name: "Thunder Badge", leader: "Lt. Surge", cityId: "vermilion-city", type: "electric", gen: 1 },
+  { id: "rainbow-badge", name: "Rainbow Badge", leader: "Erika", cityId: "celadon-city", type: "grass", gen: 1 },
+  { id: "soul-badge", name: "Soul Badge", leader: "Koga", cityId: "fuchsia-city", type: "poison", gen: 1 },
+  { id: "marsh-badge", name: "Marsh Badge", leader: "Sabrina", cityId: "saffron-city", type: "psychic", gen: 1 },
+  { id: "volcano-badge", name: "Volcano Badge", leader: "Blaine", cityId: "cinnabar-island", type: "fire", gen: 1 },
+  { id: "earth-badge", name: "Earth Badge", leader: "Giovanni", cityId: "viridian-city", type: "ground", gen: 1 },
 ];
 
 /** Badge podle id, nebo null. */
