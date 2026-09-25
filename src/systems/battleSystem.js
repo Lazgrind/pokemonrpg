@@ -11,7 +11,7 @@
 
 import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
-import { getTeamPokemon, ownsSpecies, ivWouldImprove, acquirePokemon, releasePokemon, getStarterSpeciesId } from "./team.js";
+import { getTeamPokemon, ownsSpecies, ivWouldImprove, acquirePokemon, releasePokemon, getStarterSpeciesId, canBattleInRegion } from "./team.js";
 import { recordMiss, recordAutocatch, recordTrade } from "./achievementSystem.js";
 import { getPokeball, POKEBALLS } from "../../data/pokeballs.js";
 import { ballMultiplier } from "./pokeballSystem.js";
@@ -30,6 +30,7 @@ import { useItem, canUseItem, itemCount, heldItemOf } from "./itemSystem.js";
 import { getItem, ITEMS } from "../../data/items.js";
 import { markSeen, dexCounts } from "./pokedex.js";
 import { AREAS, getArea, isAreaUnlocked, areaEncounters, rollAreaLevel } from "../../data/areas.js";
+import { generationByRegion } from "../../data/generations.js";
 import { biomeBackgrounds } from "../../data/backgrounds.js";
 import {
   getTrainer,
@@ -1385,7 +1386,7 @@ function applyMoveEffects(attacker, defender, action, side, dmgDealt) {
         const team = getTeamPokemon();
         const bench = [];
         for (let i = 0; i < team.length; i++) {
-          if (i !== battle.teamCursor && hpOf(team[i]) > 0) bench.push(i);
+          if (i !== battle.teamCursor && hpOf(team[i]) > 0 && canBattleInRegion(team[i])) bench.push(i);
         }
         if (bench.length) {
           const pick = bench[Math.floor(Math.random() * bench.length)];
@@ -2108,7 +2109,7 @@ function replaceEnemyBlownAway() {
 function syncAutoActive() {
   if (!battle || !autoLoopActive()) return;
   const team = getTeamPokemon();
-  const firstAlive = team.findIndex((p) => hpOf(p) > 0);
+  const firstAlive = firstReadyIndex(team); // živý + způsobilý pro region
   if (firstAlive < 0) return; // celý tým vyřazen – řeší handleFaint
   if (battle.teamCursor === firstAlive && battle.player?.ref?.uid === team[firstAlive].uid) {
     return; // už je nasazený správný jedinec – neresetuj zbytečně stav bojovníka
@@ -2285,7 +2286,8 @@ function handleFaint(winner) {
     let next = -1;
     for (let i = 0; i < team.length; i++) {
       if (team[i].uid === faintedUid) continue; // pro jistotu (non-nuzlocke)
-      if (hpOf(team[i]) > 0) { next = i; break; }
+      // Region-lock: nastoupit smí jen živý Pokémon způsobilý pro tento region.
+      if (hpOf(team[i]) > 0 && canBattleInRegion(team[i])) { next = i; break; }
     }
     if (next >= 0) {
       battle.teamCursor = next;
@@ -2475,14 +2477,37 @@ export function battleBgm() {
   return battle && battle.running ? (battle.bgm ?? "wild") : null;
 }
 
+/**
+ * První člen týmu připravený k boji v AKTUÁLNÍM regionu: musí být živý a jeho
+ * druh musí patřit do generace regionu (region-lock, viz team.canBattleInRegion).
+ * @param {import("../core/state.js").OwnedPokemon[]} team
+ */
+function firstReadyIndex(team) {
+  return team.findIndex((p) => canBattleInRegion(p) && hpOf(p) > 0);
+}
+
+/**
+ * Důvod, proč hráč nemůže nastoupit do souboje. Rozlišuje region-lock (žádný
+ * způsobilý Pokémon) od „všichni KO" (jsou způsobilí, ale vyřazení).
+ */
+function noReadyPokemonReason() {
+  const eligible = getTeamPokemon().filter((p) => canBattleInRegion(p));
+  if (eligible.length === 0) {
+    const gen = generationByRegion(getState().progress?.region ?? "kanto");
+    const name = gen?.regionName ?? "this region";
+    return `Only ${name} Pokémon can battle here — add one to your team.`;
+  }
+  return "Your whole team has fainted — heal at the Poké Center.";
+}
+
 export function startTrainerBattle(trainerId, { gymId = null, forceManual = false } = {}) {
   const trainer = getTrainer(trainerId);
   if (!trainer) return { ok: false, reason: "Unknown trainer." };
   const team = getTeamPokemon();
   if (team.length === 0) return { ok: false, reason: "You have no Pokémon in your team." };
-  const firstAlive = team.findIndex((p) => hpOf(p) > 0);
+  const firstAlive = firstReadyIndex(team);
   if (firstAlive < 0) {
-    return { ok: false, reason: "Your whole team has fainted — heal at the Poké Center." };
+    return { ok: false, reason: noReadyPokemonReason() };
   }
   const area = getActiveArea();
   battle = {
@@ -2542,8 +2567,8 @@ export function startLeagueRun() {
   const st = leagueState();
   if (!st) return { ok: false, reason: "There is no League here." };
   const team = getTeamPokemon();
-  if (!team.some((p) => hpOf(p) > 0)) {
-    return { ok: false, reason: "Your whole team has fainted — heal before the League." };
+  if (firstReadyIndex(team) < 0) {
+    return { ok: false, reason: noReadyPokemonReason() };
   }
   const p = getState().progress;
   p.leagueActive = true;
@@ -3452,6 +3477,74 @@ export function setActiveArea(areaId) {
 }
 
 /**
+ * Přechod mezi GENERAČNÍMI REGIONY (Kanto ↔ Johto…) – jádro cesty přes S.S. Anne.
+ *
+ * Nastaví `progress.region` na cílový region a přepne aktivní oblast na jeho
+ * vstupní uzel (`startAreaId` z descriptoru generace), pokud existuje. Když je
+ * region zatím KOSTRA (Johto: prázdné AREAS, startAreaId = null), jen se přepne
+ * region a aktivní oblast zůstane – mapa se vykreslí prázdná (plátno pro budoucí
+ * obsah). Návrat zpět probíhá stejnou funkcí (viz mapView tlačítko „Zpět do Kanto").
+ *
+ * Běžící souboj se ukončí – v novém regionu (zvlášť prázdném) by neměl kde běžet.
+ *
+ * @param {string} region  slug regionu ("kanto" | "johto")
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function travelToRegion(region) {
+  const gen = generationByRegion(region);
+  if (!gen) return { ok: false, reason: "Neznámý region." };
+  const s = getState();
+  if (!s.progress) s.progress = { tier: 1, activeAreaId: AREAS[0].id, visited: [], badges: [] };
+  if (!Array.isArray(s.progress.visited)) s.progress.visited = [];
+  if (!s.progress.lastAreaByRegion || typeof s.progress.lastAreaByRegion !== "object") {
+    s.progress.lastAreaByRegion = {};
+  }
+  if (!s.progress.teamByRegion || typeof s.progress.teamByRegion !== "object") {
+    s.progress.teamByRegion = {};
+  }
+  if (!Array.isArray(s.team)) s.team = [];
+  const fromRegion = s.progress.region ?? "kanto";
+  if (fromRegion === region) return { ok: true }; // už jsme tam – nic neděláme
+
+  // Zapamatuj si, kde hráč v ODCHÁZEJÍCÍM regionu skončil, ať se sem návratem
+  // vrátí na stejné místo (obousměrná plavba). Ukládáme jen když aktivní oblast
+  // do odcházejícího regionu opravdu patří.
+  const fromGen = generationByRegion(fromRegion);
+  const curInFrom = (fromGen?.areas ?? []).some((a) => a.id === s.progress.activeAreaId);
+  if (curInFrom) s.progress.lastAreaByRegion[fromRegion] = s.progress.activeAreaId;
+
+  // Tým je per-region: při odchodu ho celý ULOŽÍME a UKLIDÍME DO PC (vyprázdníme
+  // s.team – co není v týmu, je automaticky v PC). Kolekce/Pokédex se nemažou.
+  // Při návratu do regionu se jeho tým obnoví (viz níže). Poprvé v novém regionu
+  // je tým prázdný → naplní ho až tamní startér (Johto: Prof. Elm).
+  s.progress.teamByRegion[fromRegion] = [...s.team];
+  const inCollection = (uid) => s.collection.some((p) => p.uid === uid);
+  const restored = Array.isArray(s.progress.teamByRegion[region])
+    ? s.progress.teamByRegion[region].filter(inCollection)
+    : [];
+  s.team = restored;
+
+  s.progress.region = region;
+
+  // Kam v cílovém regionu nastoupit: 1) poslední zapamatovaná oblast (pokud v
+  // regionu existuje), jinak 2) vstupní uzel (startAreaId), jinak 3) beze změny.
+  const remembered = s.progress.lastAreaByRegion[region];
+  const rememberedValid = remembered
+    && (gen.areas ?? []).some((a) => a.id === remembered)
+    && getArea(remembered);
+  const target = rememberedValid ? remembered : (getArea(gen.startAreaId) ? gen.startAreaId : null);
+  if (target) {
+    s.progress.activeAreaId = target;
+    if (!s.progress.visited.includes(target)) s.progress.visited.push(target);
+  }
+  // Souboj v předchozím regionu ukončit (v novém/prázdném regionu nemá kde běžet).
+  if (battle && battle.running) stopBattle();
+  commit(); // → STATE_CHANGED (mapView přepne mapu na nový region)
+  bus.emit(EVENTS.BATTLE_UPDATE);
+  return { ok: true };
+}
+
+/**
  * Věrný Kanto (upraveno pro cíl „celý dex na 1 průchod"): v Mt. Moon hráč získá
  * VŠECHNY TŘI fosílie najednou (Helix→Omanyte, Dome→Kabuto, Old Amber→Aerodactyl).
  * Žádná nevratná volba – jinak by se zamkl druh (viz pravidlo single-playthrough dex).
@@ -3545,10 +3638,10 @@ export function grantGiftPokemon(speciesId, level, flag) {
 export function startBattle() {
   const team = getTeamPokemon();
   if (team.length === 0) return { ok: false, reason: "You have no Pokémon in your team." };
-  // Do boje jde první ŽIVÝ člen; když jsou všichni vyřazení, je třeba léčit.
-  const firstAlive = team.findIndex((p) => hpOf(p) > 0);
+  // Do boje jde první ŽIVÝ a REGIONU-způsobilý člen (region-lock); jinak léčit.
+  const firstAlive = firstReadyIndex(team);
   if (firstAlive < 0) {
-    return { ok: false, reason: "Your whole team has fainted — heal at the Poké Center." };
+    return { ok: false, reason: noReadyPokemonReason() };
   }
 
   const activeArea = getActiveArea();
@@ -3594,9 +3687,9 @@ export function startBattle() {
 export function startStaticEncounter(speciesId, level, opts = {}) {
   const team = getTeamPokemon();
   if (team.length === 0) return { ok: false, reason: "You have no Pokémon in your team." };
-  const firstAlive = team.findIndex((p) => hpOf(p) > 0);
+  const firstAlive = firstReadyIndex(team);
   if (firstAlive < 0) {
-    return { ok: false, reason: "Your whole team has fainted — heal at the Poké Center." };
+    return { ok: false, reason: noReadyPokemonReason() };
   }
   const sp = getSpecies(speciesId);
   if (!sp) return { ok: false, reason: `Unknown species: ${speciesId}` };
@@ -3759,6 +3852,9 @@ export function playerSwitch(uid) {
   if (idx < 0) return { ok: false, reason: "That Pokémon isn't in your team." };
   if (idx === battle.teamCursor) return { ok: false, reason: "That Pokémon is already battling." };
   if (hpOf(team[idx]) <= 0) return { ok: false, reason: "That Pokémon has fainted." };
+  if (!canBattleInRegion(team[idx])) {
+    return { ok: false, reason: "That Pokémon can't battle in this region." };
+  }
 
   battle.teamCursor = idx;
   battle.player = makeCombatant(team[idx]);
@@ -3988,9 +4084,15 @@ export function teamNeedsHeal() {
   });
 }
 
-/** Má tým aspoň jednoho bojeschopného (HP > 0) Pokémona? (celý wipe = false) */
+/**
+ * Má tým aspoň jednoho bojeschopného Pokémona pro AKTUÁLNÍ region? (HP > 0 a
+ * druh patří do generace regionu – region-lock). Celý wipe / jen cizí generace
+ * = false.
+ */
 export function teamHasFighter() {
-  return getTeamPokemon().some((p) => (p.hp ?? computeStats(p).maxHp) > 0);
+  return getTeamPokemon().some(
+    (p) => canBattleInRegion(p) && (p.hp ?? computeStats(p).maxHp) > 0
+  );
 }
 
 /**

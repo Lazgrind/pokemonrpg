@@ -13,6 +13,7 @@ import { dexCounts } from "../systems/pokedex.js";
 import { BADGES } from "../../data/badges.js";
 import { grantDexDiploma } from "../systems/team.js";
 import { showPopup } from "./popup.js";
+import { npcUrl } from "../core/assets.js";
 
 /** Rozměry certifikátu (landscape, dost velké na tisk i sdílení). */
 const W = 1000;
@@ -181,7 +182,7 @@ export function showDiplomaModal(state = getState(), { onClose } = {}) {
 
 /** HTML spritu Oaka (fallback: obrázek se skryje, zůstane jen text scény). */
 function oakSpriteHtml() {
-  return `<img class="ceremony-oak" src="assets/npc/oak.png" alt="Prof. Oak" onerror="this.style.display='none'">`;
+  return `<img class="ceremony-oak" src="${npcUrl("oak", 1)}" alt="Prof. Oak" onerror="this.style.display='none'">`;
 }
 
 /** HTML spritu Shiny Charmu (asset zatím nemusí existovat → fallback ✨ glyf). */

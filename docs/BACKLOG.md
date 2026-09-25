@@ -122,7 +122,7 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
   - ✅ **Evoluce kamenem + trade-item (v0.59.0) – HOTOVO:** kamenné evoluce (Fire/Water/Thunder/Leaf/Moon-stone) + `linking-cord` (výměna); větvené evoluce (Eevee) řeší volba kamene. UI: použití z batohu → výběr cíle. Data: pole `evolutions` u 18 druhů + vynulované levelové `evolvesTo`.
   - ✅ **Item systém rozšíření (v0.59.0) – HOTOVO:** evoluční kameny + `linking-cord` v `data/items.js` (kategorie „evolution"), kupitelné v obchodě Items.
   - ✅ **Spawny/oblasti pro Kanto routes + rarita (v0.89.0) – HOTOVO:** všechny routy/jeskyně mají v `data/areas.js` seznam druhů; nově **raritní tiery** – položka `species` je buď string (`common`), nebo `{ id, rarity }` (`uncommon`/`rare`/`veryrare`). `RARITY_WEIGHTS` + `areaEncounters()` + vážený `spawnEnemy` (`pickWeighted`). Kánon: Pikachu/Clefairy/Abra… `rare`, Safari/Cerulean Cave speciály (Chansey, Scyther, Dratini…) `veryrare`. ✅ **Per-oblast level ranges – HOTOVO (v0.91.0):** `AREA_LEVELS` v `data/areas.js` (tabulka `id → [min,max]`) + helpery `areaLevelRange`/`rollAreaLevel`; `spawnEnemy` losuje level z pásma (fallback = staré `recommendedLevel`..+1); popisky na mapě i v „kde chytit" ukazují `Lv min–max`. **Zbývá do budoucna:** jemné doladění, které druhy jsou kde přesně / per-druh level (data existují, tiery i pásma odhadnuté dle kánonu).
-  - ✅ **Sprity všech druhů – HOTOVO:** všech **151/151** má reálné sprity ve `assets/pokemon/<id>/`
+  - ✅ **Sprity všech druhů – HOTOVO:** všech **151/151** má reálné sprity ve `assets/gen1/pokemon/<id>/`
     (front/back/shiny + gif varianty), žádný „?" fallback.
   - ✅ **Multi-stat boost tahy (v0.59.0) – HOTOVO:** engine efektů umí `effect.changes[]` (víc statů jedním tahem). Dragon Dance / Calm Mind / Bulk Up / Shell Smash napojeny.
   - ✅ **Dokončení soubojů (v0.61.0) – HOTOVO:** deferované **transform / copyMove (Mimic) / forceSwitch (Whirlwind/Roar)** už fungují (dočasný `volatile.moveOverride` přes `activeMoves` helper; blow-away nového soupeře / vytažení hráče). Přidány i **Substitute, Counter, Rest, Reflect/Light Screen** a **Sleep + Freeze jako trvalé non-volatile statusy** (spánek 1–3 kola, freeze 20 %/kolo + Fire thaw, Ice imunní). ✅ **Zbytek dokončen (Haze/Metronome/Dig dříve, Bide + Fly/Dive v0.95.0):** Bide (sbírá 2 kola, vrátí ×2, `volatile.biding`), Fly přidán do `data/moves.js` (twoTurn), Dive opraven na twoTurn. **Engine efektů tahů je feature-complete pro Gen 1.**
@@ -146,7 +146,7 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
   `buildingView.openTrainingStats`): za gold přidá EV do zvoleného statu přes
   `addEv` (stropy 252/stat, 510 celkem); upgrade budovy zvyšuje EV/lekci. EV se
   dál NEzískávají ze soubojů (R-017). **Zbývá:** pasivní/idle EV track; sprite
-  budovy (`assets/buildings/training-grounds.png` – teď CSS fallback domeček).
+  budovy (`assets/gen1/buildings/training-grounds.png` – teď CSS fallback domeček).
 - ✅ **Povahy (natures) (v0.44.0).** 25 povah v `data/natures.js`; `computeStats`
   aplikuje ±10 % na jeden non-HP stat (`natureMultiplier`), losuje se ve
   `createPokemon` (`randomNature`), save v16 dorovná staré jedince. Zobrazení na
@@ -352,7 +352,7 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
 
 - 🔵 **Sprity Pokémonů – konvence složek (R-024).** ✅ Zapojeno a živé ve hře
   (v0.27.0): Pokédex i Karta Pokémona kreslí reálný sprite z
-  `assets/pokemon/<id>/<view>.png`, shiny přes `shiny-<view>`, samice přes
+  `assets/gen<N>/pokemon/<id>/<view>.png`, shiny přes `shiny-<view>`, samice přes
   volitelnou příponu `-f` s fallbackem na výchozí. Standard 256×256 / postava
   232 px (nástroj `tools/prep_sprite.py`; Python+PIL JSOU v shellu). **✅ VŠECH 15
   druhů má teď reálné sprity** (v0.52.0 doplněno 9 evolucí z pokemondb.net vč.
@@ -450,7 +450,7 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
 
 ## Mapa světa
 
-- 🔵 **Klikací mapa Kanto (MVP) – HOTOVO v0.64.0.** Obrázek `assets/map/kanto.webp`
+- 🔵 **Klikací mapa Kanto (MVP) – HOTOVO v0.64.0.** Obrázek `assets/gen1/map/kanto.webp` (gen-specifické)
   + absolutně (%) pozicované klikací markery (`src/ui/mapView.js`), model odemykání
   přes **visited-graf** (`unlock:{start}|{visited}|{badge}`, `progress.visited[]`),
   volba oblasti klikem → `setActiveArea`. Save v21→v24. Nový **tabový layout**
@@ -468,7 +468,7 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
    výhra, odznaky), gym UI (`src/ui/gymView.js`), vícevrstvý gating (`area.unlock`).
    **Všechny 8 gymů Kanta funční s leaderama i odznaky.**
 3. ✅ **Trenéři + Gymy — FÁZE 4: sprity — v0.67.0–v0.80.0, částečně dodáno.**
-   Trenérské třídy v `assets/trainers/`, 8 gym leaderů (assets/gym-leaders/), odznak ikony.
+   Trenérské třídy v `assets/gen1/trainers/`, 8 gym leaderů (`assets/gen1/gym-leaders/`), odznak ikony.
    Zbývá: doplnit chybějící sprity (SPRITES-TODO.md).
 4. ✅ **Trenéři + Gymy — FÁZE 5: badge-gaty — HOTOVO (v0.80.0, v0.81.0).**
    Victory Road / Route 23 = 8 odznaků (Earth Badge od Giovanniho), Indigo Plateau
@@ -487,7 +487,7 @@ zdroj pravdy o tom, co reálně zbývá do 1.0.0.
   části) reálný obrázek oblasti s vyznačením, **kde postava je**. Cíl přesunu
   zatím jako bar/výběr (kam jít). Držet klasická progress pravidla per mapa
   (postup odemyká další lokace). Nová `data/map.js` (uzly lokací + souřadnice pro
-  obrázek + vazby postupu); obrázky map dodá uživatel do `assets/maps/`.
+  obrázek + vazby postupu); obrázky map dodá uživatel do `assets/gen<N>/map/` (gen-specifické).
   Napojit na `data/areas.js` (uzel mapy ↔ oblast). Provázat s R-023/Pokédex
   (odemykání) a odemykáním ballů dle `progress.tier`.
 - ⚪ **Mapy per generace (návrh, R-032).** Cíl: **mapa pro každou generaci**
@@ -622,7 +622,7 @@ nový bojový mód. Auto AI odbojuje frontu; autocatch se u trenéra vypne.
 - (historie) **Tab „Profile" (trainer card)** – nápad uživatele 2026-09-07. Samostatný tab
   v layoutu (`src/ui/mainPanel.js`) s přehledem hráče:
   - **Badge case** – 8 slotů odznaků, získané barevné (`progress.badges`), chybějící
-    ztmavené; ikony z `assets/badges/<id>.png`. (Přirozený domov pro odznaky z gymů.)
+    ztmavené; ikony z `assets/gen1/badges/<id>.png` (N = generace). (Přirozený domov pro odznaky z gymů.)
   - **Pokédex souhrn** – chyceno / viděno / z 151 (`collection`, `pokedex.seen`).
   - **Peníze** (`resources`), **jméno hráče**, **odehraný čas**.
   - Volitelně později: portrét hráče, statistiky (nachyceno shiny, počet evolucí,

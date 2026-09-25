@@ -10,6 +10,7 @@
  */
 
 import { getState } from "../core/state.js";
+import { cryUrl } from "../core/assets.js";
 
 /** Výchozí hodnoty hlasitosti (0–100). */
 export const AUDIO_DEFAULTS = {
@@ -83,8 +84,9 @@ export function playSfx(name) {
 
 /**
  * Přehraje cry (hlas) konkrétního Pokémona.
- * Soubory: assets/audio/cries/<speciesId>.mp3 (stáhne tools/fetch_cries.ps1 z
- * Pokémon Showdown). Cry se řídí hlasitostí SFX; tichý fallback jako u playSfx.
+ * Soubory: assets/gen<N>/cries/<speciesId>.mp3 (per generace druhu; cestu skládá
+ * gen-aware helper cryUrl z src/core/assets.js). Stahuje tools/fetch_cries.ps1 z
+ * Pokémon Showdown. Cry se řídí hlasitostí SFX; tichý fallback jako u playSfx.
  * @param {string} speciesId id druhu (data/pokemon.js), např. "pikachu", "mr-mime"
  */
 export function playCry(speciesId) {
@@ -98,7 +100,7 @@ export function playCry(speciesId) {
   if (lastPlayed[key] && now - lastPlayed[key] < 120) return;
   lastPlayed[key] = now;
 
-  const url = `assets/audio/cries/${speciesId}.mp3`;
+  const url = cryUrl(speciesId);
   try {
     const audio = new Audio(url);
     audio.volume = (settings.master / 100) * (settings.sfx / 100);

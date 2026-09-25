@@ -1,11 +1,14 @@
 /**
  * sprites.js – cesty a vykreslení spritů Pokémonů.
  *
- * Sprity žijí naplocho v `assets/pokemon/<id>/<view>.png` (viz
- * assets/pokemon/README.md). Cesta se odvozuje z `id` druhu (= slug jména),
- * nic se neregistruje per druh. Když sprite ještě není nahraný, zobrazí se
- * zástupný glyph „?" (fallback), takže hra funguje i bez obrázků.
+ * Sprity žijí per generace v `assets/gen<N>/pokemon/<id>/<view>.png` (viz
+ * assets/gen1/pokemon/README.md), kde `<N>` je generace druhu. Cesta se
+ * odvozuje z `id` druhu (= slug jména) přes gen-aware helper `pokemonAssetDir`
+ * (src/core/assets.js), nic se neregistruje per druh. Když sprite ještě není
+ * nahraný, zobrazí se zástupný glyph „?" (fallback), takže hra funguje i bez obrázků.
  */
+
+import { pokemonAssetDir } from "../core/assets.js";
 
 /**
  * URL spritu daného druhu a pohledu.
@@ -15,7 +18,7 @@
  * @returns {string}
  */
 export function spriteUrl(speciesId, view = "front", ext = "png") {
-  return `assets/pokemon/${speciesId}/${view}.${ext}`;
+  return `${pokemonAssetDir(speciesId)}/${view}.${ext}`;
 }
 
 /**

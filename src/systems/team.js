@@ -9,7 +9,8 @@ import { getState, commit, MAX_TEAM_SIZE } from "../core/state.js";
 import { createPokemon, STAT_KEYS, emptyEvs } from "./pokemonSystem.js";
 import { pokemonEngagement } from "./buildingSystem.js";
 import { ensureStartersSeen, dexCounts } from "./pokedex.js";
-import { STARTER_IDS } from "../../data/pokemon.js";
+import { STARTER_IDS, getSpecies } from "../../data/pokemon.js";
+import { generationByRegion } from "../../data/generations.js";
 import { recordRelease } from "./achievementSystem.js";
 
 /**
@@ -289,4 +290,35 @@ export function getTeamPokemon() {
 /** Je daný jedinec v týmu? */
 export function isInTeam(uid) {
   return getState().team.includes(uid);
+}
+
+/* --------------------------- Region-lock týmu ---------------------------- *
+ * Pokédex i kolekce se mezi regiony přenášejí, ALE bojovat v daném regionu
+ * smí jen Pokémoni jeho generace (gen 1 v Kantu, gen 2 v Johtu…). Tým se
+ * nefiltruje (indexy/teamCursor zůstávají stabilní) – jen se přidá predikát
+ * „smí tu bojovat", který používají alive-checky v battleSystem a switch UI.
+ */
+
+/** Číslo generace aktivního regionu (fallback 1 = Kanto). */
+export function currentRegionGen() {
+  const region = getState().progress?.region ?? "kanto";
+  return generationByRegion(region)?.gen ?? 1;
+}
+
+/**
+ * Smí tenhle jedinec bojovat v aktuálním regionu? True, když jeho druh patří
+ * do generace aktivního regionu. (Neřeší HP – to je zvlášť.)
+ * @param {import("../core/state.js").OwnedPokemon} p
+ */
+export function canBattleInRegion(p) {
+  if (!p) return false;
+  const g = getSpecies(p.speciesId)?.gen ?? 1;
+  return g === currentRegionGen();
+}
+
+/** Má hráč v týmu aspoň jednoho živého Pokémona způsobilého pro tento region? */
+export function hasBattleEligiblePokemon() {
+  return getTeamPokemon().some(
+    (p) => canBattleInRegion(p) && (p.hp ?? Infinity) > 0
+  );
 }

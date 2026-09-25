@@ -1,6 +1,6 @@
 /**
  * spriteVariants.js – AUTO-GENEROVÁNO tools/gen_sprite_manifest.py.
- * Počet spritů (`<n>.png`) na trenérskou třídu v assets/trainers/.
+ * Počet spritů (`<n>.png`) na trenérskou třídu v assets/gen<N>/trainers/ (N = generace).
  * NEUPRAVUJ ručně – přidej soubor a spusť: python tools/gen_sprite_manifest.py
  */
 export const TRAINER_SPRITE_COUNTS = {

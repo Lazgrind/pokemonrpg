@@ -39,13 +39,14 @@ import { canUseItem } from "../systems/itemSystem.js";
 import { xpForNextLevel } from "../systems/progression.js";
 import { ballIconHtml } from "./ballIcon.js";
 import { spriteImg } from "./sprites.js";
-import { getTeamPokemon } from "../systems/team.js";
+import { getTeamPokemon, canBattleInRegion } from "../systems/team.js";
 import { computeStats } from "../systems/pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { areaSpeciesIds } from "../../data/areas.js";
 import { getMove } from "../../data/moves.js";
 import { trainerSpriteUrl } from "../../data/trainers.js";
 import { getBadge } from "../../data/badges.js";
+import { badgeUrl } from "../core/assets.js";
 import { isCaught, isCaughtShiny, areaCatchProgress } from "../systems/pokedex.js";
 import { typeColor, typeBadge } from "./typeColors.js";
 import { statusBadge } from "./statusBadge.js";
@@ -688,10 +689,18 @@ function switchMenuHtml(b) {
       const hp = Math.max(0, Math.min(max, hpOf(p)));
       const active = i === b.teamCursor;
       const fainted = hp <= 0;
+      // Region-lock: Pokémon z jiné generace, než je aktuální region, nesmí do boje.
+      const wrongRegion = !canBattleInRegion(p);
       const pct = Math.round((hp / max) * 100);
       const low = fainted ? " fainted" : pct <= 25 ? " low" : "";
-      const tail = active ? " · in battle" : fainted ? " · fainted" : "";
-      return `<button class="btn switch-tile${active ? " active" : ""}" data-switch="${p.uid}" ${active || fainted ? "disabled" : ""}>
+      const tail = active
+        ? " · in battle"
+        : wrongRegion
+        ? " · other region"
+        : fainted
+        ? " · fainted"
+        : "";
+      return `<button class="btn switch-tile${active ? " active" : ""}${wrongRegion ? " disabled" : ""}" data-switch="${p.uid}" ${active || fainted || wrongRegion ? "disabled" : ""}>
         <span class="sw-name">${p.shiny ? "✨ " : ""}${sp?.name ?? p.speciesId} <span class="placeholder">Lv ${p.level}</span></span>
         <span class="hpbar"><span class="hpfill${low}" style="width:${pct}%"></span></span>
         <span class="sw-hp">${hp}/${max} HP${tail}</span>
@@ -749,7 +758,7 @@ function interludeHtml(b) {
     if (rw.badge) {
       const bname = getBadge(rw.badge)?.name ?? rw.badge;
       rows.push(
-        `<li class="badge-won"><img class="badge-icon" src="assets/badges/${rw.badge}.png" alt="${bname}" onerror="this.style.display='none'"> Earned the <b>${bname}</b>!</li>`
+        `<li class="badge-won"><img class="badge-icon" src="${badgeUrl(rw.badge)}" alt="${bname}" onerror="this.style.display='none'"> Earned the <b>${bname}</b>!</li>`
       );
     }
     if (rw.alreadyBeaten) rows.push(`<li class="placeholder">Already defeated — no reward this time.</li>`);

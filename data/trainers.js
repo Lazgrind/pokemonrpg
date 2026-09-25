@@ -19,8 +19,8 @@
  *     `id` route trenéra je STABILNÍ (kvůli defeatedTrainers) – rolí se jen tým.
  *
  * Sprity: odvozují se z `class` / `id`, viz `trainerSpriteUrl()`.
- * `kind === "gym-leader"` → assets/gym-leaders/<id>/front.png (1 sprite),
- * ostatní → assets/trainers/<class>/<n>.png (1+ variant, náhodně při souboji;
+ * `kind === "gym-leader"` → assets/gen<N>/gym-leaders/<id>/front.png (1 sprite; N = generace),
+ * ostatní → assets/gen<N>/trainers/<class>/<n>.png (1+ variant, náhodně při souboji;
  * počty drží AUTO-GENEROVANÝ data/spriteVariants.js). Konvence viz docs/SPRITES-TODO.md.
  *
  * ⚠️ ROZSAH: celé Kanto (BASIC). Gymy = 8 leaderů + pár gym trenérů (kánon FRLG,
@@ -31,6 +31,7 @@
 import { AREAS, getArea, areaSpeciesIds } from "./areas.js";
 import { getSpecies } from "./pokemon.js";
 import { TRAINER_SPRITE_COUNTS } from "./spriteVariants.js";
+import { gymLeaderSpriteUrl, trainerClassSpriteUrl } from "../src/core/assets.js";
 
 /**
  * @typedef {Object} TrainerMon
@@ -481,7 +482,7 @@ const FIXED_TRAINERS = [
   //  TEAM ROCKET GRUNTS (kind "rocket") – POVINNÝ gauntlet (viz ROCKET_GAUNTLETS).
   //  Vlastní klikací tab „Rockets" (rocketView), stejná fronta jako gym, ale bez
   //  odznaku. Poražení VŠECH v gauntletu odemkne další cestu (story flag).
-  //  Sprity: class "rocket-grunt" (assets/trainers/rocket-grunt/<n>.png; dodá uživatel).
+  //  Sprity: class "rocket-grunt" (assets/gen<N>/trainers/rocket-grunt/<n>.png; N = generace).
   // ═══════════════════════════════════════════════════════════════════════════
   {
     id: "mt-moon-rocket-1",
@@ -741,7 +742,7 @@ const FIXED_TRAINERS = [
   //  v Poké Centru (jen bag itemy), HP se přenáší. Prohra kdekoli = restart od
   //  Lorelei. Řídí to LEAGUE + progress.leagueActive/leagueStep (viz battleSystem).
   //  Obtížnost: kind "elite-four"/"champion" = jako gym-leader (IV30/EV252).
-  //  Sprity: single sprite dle id (assets/gym-leaders/<id>/front.png).
+  //  Sprity: single sprite dle id (assets/gen<N>/gym-leaders/<id>/front.png; N = generace).
   // ═══════════════════════════════════════════════════════════════════════════
   {
     id: "elite-four-lorelei",
@@ -868,7 +869,7 @@ export const ROUTE_TRAINER_PLAN = {
 };
 
 /** Trenérské třídy podle biomu routy (folder spritu, viz trainerSpriteUrl).
- * Názvy MUSÍ odpovídat složkám v assets/trainers/ (vč. genderových -m/-f variant). */
+ * Názvy MUSÍ odpovídat složkám v assets/gen<N>/trainers/ (vč. genderových -m/-f variant; N = generace). */
 const BIOME_CLASSES = {
   grassland: ["youngster", "lass", "bug-catcher", "camper", "picnicker", "cooltrainer-m", "cooltrainer-f", "bird-keeper"],
   forest: ["bug-catcher", "camper", "lass", "picnicker"],
@@ -1279,18 +1280,21 @@ export function randomTrainerVariant(cls) {
 }
 
 /**
- * Cesta ke spritu trenéra (fallback řeší UI přes onerror).
- * Leader → assets/gym-leaders/<id>/front.png (1 sprite).
- * Ostatní → assets/trainers/<class>/<n>.png, kde n = `trainer.spriteVariant`
+ * Cesta ke spritu trenéra (fallback řeší UI přes onerror). Cesty jsou per
+ * generace (assets/gen<N>/…) – generaci bere z aktuálního regionu (default),
+ * lze ji přebít parametrem `gen`.
+ * Leader → assets/gen<N>/gym-leaders/<id>/front.png (1 sprite).
+ * Ostatní → assets/gen<N>/trainers/<class>/<n>.png, kde n = `trainer.spriteVariant`
  * (náhodně zvolená při souboji); bez ní se použije varianta 1 (stálý náhled
  * v gym rosteru / rival panelu).
+ * @param {number} [gen] override generace (default = aktuální region)
  */
-export function trainerSpriteUrl(trainer) {
+export function trainerSpriteUrl(trainer, gen) {
   if (!trainer) return "";
   // Leader + Liga (Elite Four / Champion) = 1 stálý sprite dle id.
   if (trainer.kind === "gym-leader" || trainer.kind === "elite-four" || trainer.kind === "champion") {
-    return `assets/gym-leaders/${trainer.id}/front.png`;
+    return gen == null ? gymLeaderSpriteUrl(trainer.id) : gymLeaderSpriteUrl(trainer.id, gen);
   }
   const n = trainer.spriteVariant > 0 ? trainer.spriteVariant : 1;
-  return `assets/trainers/${trainer.class}/${n}.png`;
+  return gen == null ? trainerClassSpriteUrl(trainer.class, n) : trainerClassSpriteUrl(trainer.class, n, gen);
 }
