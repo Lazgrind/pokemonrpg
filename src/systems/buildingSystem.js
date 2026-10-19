@@ -1,0 +1,453 @@
+/**
+ * buildingSystem.js – logika budov ve městě (zadání – City → Building).
+ *
+ * Úroveň budov žije v `state.city.buildings[id].level`. Ceny a efekty se
+ * počítají z datové definice (`data/buildings.js`). První budova je Poké Mart:
+ * prodává Poké Bally, upgrade budovy jejich cenu snižuje.
+ */
+
+import { getState, commit } from "../core/state.js";
+import { getBuilding } from "../../data/buildings.js";
+import { getPokeball } from "../../data/pokeballs.js";
+import { addEv, evTotal, resetAllEvs, resetEvStat } from "./pokemonSystem.js";
+
+/** Aktuální úroveň budovy (výchozí = startLevel z definice). */
+export function getLevel(id) {
+  const def = getBuilding(id);
+  if (!def) return 0;
+  return getState().city?.buildings?.[id]?.level ?? def.startLevel;
+}
+
+/** Cena vylepšení budovy na další úroveň (gold). */
+export function upgradeCost(id) {
+  const def = getBuilding(id);
+  if (!def) return Infinity;
+  const level = getLevel(id);
+  return Math.floor(def.upgrade.baseCost * Math.pow(def.upgrade.growth, level - 1));
+}
+
+/** Je budova na maximu? */
+export function isMaxed(id) {
+  const def = getBuilding(id);
+  return !!def && getLevel(id) >= def.maxLevel;
+}
+
+/**
+ * Vylepší budovu, pokud je dost goldu a není na maximu.
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function upgradeBuilding(id) {
+  const def = getBuilding(id);
+  if (!def) return { ok: false, reason: "Unknown building." };
+  if (isMaxed(id)) return { ok: false, reason: "Building is at max level." };
+
+  const cost = upgradeCost(id);
+  const res = getState().resources;
+  if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
+
+  res.gold -= cost;
+  ensureBuilding(id).level = getLevel(id) + 1;
+  commit();
+  return { ok: true };
+}
+
+/**
+ * Cena daného typu ballu se slevou dle úrovně Poké Martu. Neprodejné (bez ceny,
+ * např. Master Ball) vrací Infinity.
+ * @param {string} ballId
+ * @param {string} [id]  budova (Poké Mart)
+ */
+export function ballPrice(ballId, id = "poke-mart") {
+  const ball = getPokeball(ballId);
+  if (!ball || ball.price == null) return Infinity;
+  const def = getBuilding(id);
+  // Fallback na 1: story budovy (např. Celadon Dept Store) nemají startLevel →
+  // getLevel vrátí undefined a bez tohoto by (level-1) dalo NaN → NaN cena.
+  const level = getLevel(id) ?? 1;
+  const discount = Math.min(
+    def?.ball?.maxDiscount ?? 0,
+    (level - 1) * (def?.ball?.discountPerLevel ?? 0)
+  );
+  return Math.max(1, Math.ceil(ball.price * (1 - discount / 100)));
+}
+
+/**
+ * Kolik % max HP doléčí Pokémon Centrum po každém vítězství (0 = žádné léčení).
+ * @param {string} id
+ * @returns {number}
+ */
+export function healPercent(id = "poke-center") {
+  const def = getBuilding(id);
+  if (!def || !def.heal) return 0;
+  const level = getLevel(id);
+  const pct = def.heal.basePercent + (level - 1) * def.heal.perLevel;
+  const cap = def.heal.maxPercent ?? Infinity;
+  return Math.min(cap, pct);
+}
+
+/**
+ * Kolik EV přidá jedna placená lekce v Training Grounds na aktuální úrovni.
+ * @param {string} id
+ * @returns {number}
+ */
+export function trainingEvPerSession(id = "training-grounds") {
+  const def = getBuilding(id);
+  if (!def || !def.training) return 0;
+  const level = getLevel(id);
+  return def.training.baseEv + (level - 1) * def.training.perLevel;
+}
+
+/** Cena jedné tréninkové lekce v goldu (0 = budova neexistuje / netrénuje). */
+export function trainingCost(id = "training-grounds") {
+  const def = getBuilding(id);
+  return def?.training?.goldCost ?? 0;
+}
+
+/**
+ * Provede jednu tréninkovou lekci: zaplatí gold a přidá EV do zvoleného statu
+ * (s respektem ke stropům 252/stat a 510 celkem). Když už není kam přidat
+ * (strop), gold se NEstrhne. Mutuje jedince + commituje.
+ * @param {string} uid  jedinec z kolekce
+ * @param {string} statKey  klíč statu (viz STAT_KEYS)
+ * @param {string} [id]  budova (Training Grounds)
+ * @returns {{ ok: boolean, added?: number, reason?: string }}
+ */
+export function trainEv(uid, statKey, id = "training-grounds") {
+  const def = getBuilding(id);
+  if (!def || !def.training) return { ok: false, reason: "No Training Grounds." };
+  const pokemon = getState().collection.find((p) => p.uid === uid);
+  if (!pokemon) return { ok: false, reason: "Unknown Pokémon." };
+  const cost = trainingCost(id);
+  const res = getState().resources;
+  if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
+
+  const added = addEv(pokemon, statKey, trainingEvPerSession(id));
+  if (added <= 0) return { ok: false, reason: "That stat's EV is already maxed out." };
+
+  res.gold -= cost;
+  commit();
+  return { ok: true, added };
+}
+
+/** Cena resetu VŠECH EV jedince (0 = budova reset neumí). */
+export function evResetAllCost(id = "training-grounds") {
+  return getBuilding(id)?.reset?.costAll ?? 0;
+}
+
+/** Cena resetu EV JEDNOHO statu. */
+export function evResetStatCost(id = "training-grounds") {
+  return getBuilding(id)?.reset?.costStat ?? 0;
+}
+
+/**
+ * Reset všech EV jedince za gold. Když nemá co resetovat, gold se NEstrhne.
+ * @param {string} uid  jedinec z kolekce
+ * @param {string} [id]  budova (Training Grounds)
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function resetEvsAll(uid, id = "training-grounds") {
+  const def = getBuilding(id);
+  if (!def || !def.reset) return { ok: false, reason: "No Training Grounds." };
+  const pokemon = getState().collection.find((p) => p.uid === uid);
+  if (!pokemon) return { ok: false, reason: "Unknown Pokémon." };
+  if (evTotal(pokemon) <= 0) return { ok: false, reason: "No EVs to reset." };
+  const cost = evResetAllCost(id);
+  const res = getState().resources;
+  if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
+  resetAllEvs(pokemon);
+  res.gold -= cost;
+  commit();
+  return { ok: true };
+}
+
+/**
+ * Reset EV jednoho statu za gold. Když stat nemá EV, gold se NEstrhne.
+ * @param {string} uid  jedinec z kolekce
+ * @param {string} statKey  klíč statu (viz STAT_KEYS)
+ * @param {string} [id]  budova (Training Grounds)
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function resetEvStatGold(uid, statKey, id = "training-grounds") {
+  const def = getBuilding(id);
+  if (!def || !def.reset) return { ok: false, reason: "No Training Grounds." };
+  const pokemon = getState().collection.find((p) => p.uid === uid);
+  if (!pokemon) return { ok: false, reason: "Unknown Pokémon." };
+  if ((pokemon.evs?.[statKey] ?? 0) <= 0) return { ok: false, reason: "That stat has no EVs." };
+  const cost = evResetStatCost(id);
+  const res = getState().resources;
+  if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
+  resetEvStat(pokemon, statKey);
+  res.gold -= cost;
+  commit();
+  return { ok: true };
+}
+
+/** Kolik XP za minutu dává Školka na aktuální úrovni (0 = není školka). */
+export function daycareXpPerMinute(id = "day-care") {
+  const def = getBuilding(id);
+  if (!def || !def.daycare) return 0;
+  const level = getLevel(id);
+  return def.daycare.xpPerMinute + (level - 1) * def.daycare.perLevel;
+}
+
+/* ---------- Samostatné upgrade linie budovy (tracks) ---------- */
+
+/** Definice upgrade linie (nebo undefined). */
+function getTrackDef(id, key) {
+  return getBuilding(id)?.tracks?.[key];
+}
+
+/** Aktuální úroveň dané linie (výchozí = startLevel z definice). */
+export function getTrackLevel(id, key) {
+  const def = getTrackDef(id, key);
+  if (!def) return 0;
+  return getState().city?.buildings?.[id]?.tracks?.[key] ?? def.startLevel;
+}
+
+/** Je daná linie na maximu? */
+export function isTrackMaxed(id, key) {
+  const def = getTrackDef(id, key);
+  return !!def && getTrackLevel(id, key) >= def.maxLevel;
+}
+
+/** Cena vylepšení linie na další úroveň (gold); Infinity když maxed/neexistuje. */
+export function trackUpgradeCost(id, key) {
+  const def = getTrackDef(id, key);
+  if (!def || isTrackMaxed(id, key)) return Infinity;
+  const level = getTrackLevel(id, key);
+  return Math.floor(def.baseCost * Math.pow(def.growth, level - def.startLevel));
+}
+
+/**
+ * Vylepší danou linii budovy, pokud je dost goldu a není na maximu.
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function upgradeTrack(id, key) {
+  const def = getTrackDef(id, key);
+  if (!def) return { ok: false, reason: "Unknown upgrade." };
+  if (isTrackMaxed(id, key)) return { ok: false, reason: "Already at max." };
+  const cost = trackUpgradeCost(id, key);
+  const res = getState().resources;
+  if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
+  res.gold -= cost;
+  const b = ensureBuilding(id);
+  if (!b.tracks) b.tracks = {};
+  b.tracks[key] = getTrackLevel(id, key) + 1;
+  commit();
+  return { ok: true };
+}
+
+/**
+ * Kolik % PP tahů doplní Pokémon Centrum po výhře (linie „ppRegen"). 0 = linie
+ * nekoupená / neexistuje. Cap 100 %. Aplikuje se jen v auto battle módu.
+ * @param {string} id
+ * @returns {number}
+ */
+export function ppRegenPercent(id = "poke-center") {
+  const def = getTrackDef(id, "ppRegen");
+  if (!def) return 0;
+  const level = getTrackLevel(id, "ppRegen");
+  return Math.min(100, level * (def.perLevel ?? 0));
+}
+
+/* ---------- Idle-boost budova (Celadon) – 3 linie multiplikátorů ---------- */
+
+/** Id boost budovy (3 linie: xp / yield / fortune). */
+export const BOOST_CENTER_ID = "boost-center";
+
+/**
+ * Multiplikátor dané boost linie = 1 + level × perLevel (z datové definice).
+ * Vrací 1, když linie/budova neexistuje nebo je na levelu 0 → bezpečné všude.
+ * @param {"xp"|"yield"|"fortune"} key
+ * @returns {number}
+ */
+export function boostMult(key) {
+  const def = getTrackDef(BOOST_CENTER_ID, key);
+  if (!def) return 1;
+  const level = getTrackLevel(BOOST_CENTER_ID, key);
+  return 1 + level * (def.perLevel ?? 0);
+}
+
+/** ⭐ Multiplikátor získaného XP (souboj i idle). */
+export function xpBoostMult() {
+  return boostMult("xp");
+}
+
+/** 💰 Multiplikátor získaného goldu z opakovatelných soubojů (i idle). */
+export function goldBoostMult() {
+  return boostMult("yield");
+}
+
+/** ✨ Multiplikátor shiny šance u divokých setkání. */
+export function shinyBoostMult() {
+  return boostMult("fortune");
+}
+
+/** Bonus rychlosti líhnutí v % (0–50) podle linie „hatchSpeed" Školky. */
+export function hatchSpeedPercent(id = "day-care") {
+  const def = getTrackDef(id, "hatchSpeed");
+  if (!def) return 0;
+  return Math.min(def.maxLevel, getTrackLevel(id, "hatchSpeed"));
+}
+
+/** Počet slotů na inkubaci vajec podle linie „eggSlots" Školky. */
+export function eggSlotCount(id = "day-care") {
+  const def = getTrackDef(id, "eggSlots");
+  if (!def) return 1;
+  return getTrackLevel(id, "eggSlots");
+}
+
+/** Slot Školky ve stavu (uid svěřence + zbytkový XP buffer) – lazy default. */
+export function getDaycareSlot() {
+  const state = getState();
+  if (!state.city) state.city = { buildings: {} };
+  if (!state.city.daycare) state.city.daycare = { uid: null, buffer: 0 };
+  return state.city.daycare;
+}
+
+/** Pokémon aktuálně ve Školce (nebo null). */
+export function getDaycareOccupant() {
+  const uid = getDaycareSlot().uid;
+  if (!uid) return null;
+  return getState().collection.find((p) => p.uid === uid) ?? null;
+}
+
+/**
+ * Je jedinec chycený v regionu, kde se právě hraje? Školka (výcvik i chov) je
+ * per-region – cizoregionální jedinec do ní nesmí (region-lock, viz travelToRegion).
+ * Staré save bez `caughtRegion` = „kanto" (stejně jako team.canBattleInRegion).
+ */
+export function isFromCurrentRegion(p) {
+  return !!p && (p.caughtRegion ?? "kanto") === (getState().progress?.region ?? "kanto");
+}
+
+const WRONG_REGION = "That Pokémon was caught in another region — it can't use this Day Care.";
+
+/** Dá Pokémona do Školky (podle uid). */
+export function setDaycareOccupant(uid) {
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false, reason: "Unknown Pokémon." };
+  if (!isFromCurrentRegion(owned)) return { ok: false, reason: WRONG_REGION };
+  const br = getBreedingSlot();
+  if (uid === br.a || uid === br.b) {
+    return { ok: false, reason: "That Pokémon is set up for breeding." };
+  }
+  const slot = getDaycareSlot();
+  slot.uid = uid;
+  slot.buffer = 0;
+  commit();
+  return { ok: true };
+}
+
+/** Vyzvedne Pokémona ze Školky. */
+export function clearDaycareOccupant() {
+  const slot = getDaycareSlot();
+  slot.uid = null;
+  slot.buffer = 0;
+  commit();
+  return { ok: true };
+}
+
+/* ---------- Breeding sloty ve Školce (rodiče A/B) ---------- */
+
+/**
+ * Breeding slot ve stavu: dva rodiče (uid) + `buffer` = nasbírané sekundy směrem
+ * k dalšímu vejci. Lazy default (žije uvnitř city.daycare vedle výcviku a
+ * inkubace vajec). Logika kompatibility a produkce viz breedingSystem.js.
+ */
+export function getBreedingSlot() {
+  const dc = getDaycareSlot();
+  if (!dc.breeding) dc.breeding = { a: null, b: null, buffer: 0 };
+  return dc.breeding;
+}
+
+/** Rodiče v breeding slotech jako jedinci (nebo null). */
+export function getBreedingParents() {
+  const slot = getBreedingSlot();
+  const col = getState().collection;
+  return {
+    a: slot.a ? col.find((p) => p.uid === slot.a) ?? null : null,
+    b: slot.b ? col.find((p) => p.uid === slot.b) ?? null : null,
+  };
+}
+
+/**
+ * Vloží rodiče do breeding slotu „a"/„b". Odmítne duplicitu (druhý slot),
+ * svěřence ve výcviku i neznámé uid. Změna složení resetuje průběh.
+ * @param {"a"|"b"} which
+ * @param {string} uid
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function setBreedingParent(which, uid) {
+  if (which !== "a" && which !== "b") return { ok: false, reason: "Unknown slot." };
+  const owned = getState().collection.find((p) => p.uid === uid);
+  if (!owned) return { ok: false, reason: "Unknown Pokémon." };
+  if (!isFromCurrentRegion(owned)) return { ok: false, reason: WRONG_REGION };
+  const slot = getBreedingSlot();
+  const other = which === "a" ? slot.b : slot.a;
+  if (uid === other) return { ok: false, reason: "That Pokémon is already the other parent." };
+  if (uid === getDaycareSlot().uid) {
+    return { ok: false, reason: "That Pokémon is training in the Day Care." };
+  }
+  slot[which] = uid;
+  slot.buffer = 0; // změna páru = nový odpočet
+  commit();
+  return { ok: true };
+}
+
+/**
+ * Kde je jedinec „zaměstnaný" mimo tým: výcvik ve Školce nebo breeding. Slouží
+ * pravidlu „jedinec může být jen na jednom místě" (viz addToTeam / pickery).
+ * @param {string} uid
+ * @returns {null | "day-care" | "breeding"} null = volný
+ */
+export function pokemonEngagement(uid) {
+  if (!uid) return null;
+  if (getDaycareSlot().uid === uid) return "day-care";
+  const br = getBreedingSlot();
+  if (br.a === uid || br.b === uid) return "breeding";
+  return null;
+}
+
+/** Vyndá rodiče z breeding slotu a resetuje průběh. */
+export function clearBreedingParent(which) {
+  const slot = getBreedingSlot();
+  if (which !== "a" && which !== "b") return { ok: false, reason: "Unknown slot." };
+  slot[which] = null;
+  slot.buffer = 0;
+  commit();
+  return { ok: true };
+}
+
+/**
+ * Koupí daný typ ballu za gold (přičte do resources.balls).
+ * @param {string} ballId
+ * @param {number} qty
+ * @param {string} id  budova (Poké Mart)
+ * @returns {{ ok: boolean, reason?: string }}
+ */
+export function buyBall(ballId, qty = 1, id = "poke-mart") {
+  const ball = getPokeball(ballId);
+  if (!ball || ball.price == null) return { ok: false, reason: "This ball is not for sale." };
+  const price = ballPrice(ballId, id);
+  const cost = price * qty;
+  const res = getState().resources;
+  if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
+
+  res.gold -= cost;
+  if (!res.balls) res.balls = {};
+  res.balls[ballId] = (res.balls[ballId] ?? 0) + qty;
+  commit();
+  return { ok: true };
+}
+
+/** Zajistí existenci záznamu budovy ve stavu a vrátí ho. */
+function ensureBuilding(id) {
+  const state = getState();
+  if (!state.city) state.city = { buildings: {} };
+  if (!state.city.buildings) state.city.buildings = {};
+  if (!state.city.buildings[id]) {
+    state.city.buildings[id] = { level: getBuilding(id)?.startLevel ?? 1 };
+  }
+  return state.city.buildings[id];
+}

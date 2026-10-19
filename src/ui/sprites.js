@@ -1,0 +1,91 @@
+/**
+ * sprites.js – cesty a vykreslení spritů Pokémonů.
+ *
+ * Sprity žijí per generace v `assets/gen<N>/pokemon/<id>/<view>.png` (viz
+ * assets/gen1/pokemon/README.md), kde `<N>` je generace druhu. Cesta se
+ * odvozuje z `id` druhu (= slug jména) přes gen-aware helper `pokemonAssetDir`
+ * (src/core/assets.js), nic se neregistruje per druh. Když sprite ještě není
+ * nahraný, zobrazí se zástupný glyph „?" (fallback), takže hra funguje i bez obrázků.
+ */
+
+import { pokemonAssetDir } from "../core/assets.js";
+
+/**
+ * URL spritu daného druhu a pohledu.
+ * @param {string} speciesId
+ * @param {string} [view]  "front" | "back" | "shiny-front" | "shiny-back"
+ * @param {string} [ext]  přípona souboru (bez tečky), výchozí "png"; "gif" pro animaci
+ * @returns {string}
+ */
+export function spriteUrl(speciesId, view = "front", ext = "png") {
+  return `${pokemonAssetDir(speciesId)}/${view}.${ext}`;
+}
+
+/**
+ * HTML jednoho spritu jako <img> s fallbackem. Dokud se obrázek nenačte, je
+ * vidět zástupný glyph; po načtení se glyph skryje, při chybě se skryje <img>.
+ *
+ * Pohlaví: samice (`gender === "f"`) zkusí nejdřív variantu s příponou `-f`
+ * (`front-f.png`, `shiny-back-f.png`, …). Většina druhů gender rozdíl NEMÁ, takže
+ * `-f` soubor typicky chybí – pak se přes onerror automaticky spadne na výchozí
+ * (samčí/bezpohlavní) sprite a teprve když chybí i ten, ukáže se glyph.
+ *
+ * Animace: `animated: true` zkusí nejdřív `.gif` (animovaný sprite) a při chybějícím
+ * gifu spadne na statické `.png`. Používá se v manuálním souboji; auto/idle jede
+ * statické png. Fallback je řetězený: [gif] → [png] → glyph „?".
+ * @param {string} speciesId
+ * @param {object} [opts]
+ * @param {"front"|"back"} [opts.view]
+ * @param {boolean} [opts.shiny]  zkusí variantu `shiny-<view>`
+ * @param {"m"|"f"|"genderless"|null} [opts.gender]  u samice zkusí `-f` variantu
+ * @param {string} [opts.form]  varianta formy (např. Unown „A") – zkusí nejdřív
+ *                              form-sprite `<base>-<form>` (i shiny: `shiny-front-a`)
+ *                              a přes onerror spadne na základní sprite druhu
+ * @param {boolean} [opts.animated]  zkusí nejdřív `.gif` s fallbackem na `.png`
+ * @param {string} [opts.alt]
+ * @param {string} [opts.extraClass]
+ * @param {number} [opts.scale]  poměrová velikost (CSS proměnná --mon-scale);
+ *                               výchozí 1 = jednotná velikost pro všechny druhy
+ * @param {string} [opts.dataKey]  stabilní klíč (data-skey) pro znovupoužití uzlu
+ *                                  napříč překresleními – brání reloadu <img>/restartu
+ *                                  GIFu (a tím problikávání) v živě tikajícím souboji
+ * @returns {string}
+ */
+export function spriteImg(speciesId, { view = "front", shiny = false, gender = null, form = null, animated = false, alt = "", extraClass = "", scale = 1, dataKey = "" } = {}) {
+  const base = shiny ? `shiny-${view}` : view;
+  // Seřazené kandidátní jména: u samice nejdřív `-f`, pak výchozí.
+  let names = gender === "f" ? [`${base}-f`, base] : [base];
+  // Forma (např. Unown „A"): ke každému kandidátovi přidej form-variantu PŘED něj,
+  // takže se zkusí `shiny-front-a` → `shiny-front` → … → glyph. Chybějící form-sprite
+  // tak spadne na základní sprite druhu (viz onerror řetězec data-fb).
+  if (form) {
+    const f = String(form).toLowerCase();
+    names = names.flatMap((n) => [`${n}-${f}`, n]);
+  }
+  // Seřazené přípony: animovaně nejdřív gif, pak statické png; jinak jen png.
+  const exts = animated ? ["gif", "png"] : ["png"];
+  const urls = [];
+  for (const n of names) for (const e of exts) urls.push(spriteUrl(speciesId, n, e));
+  const primary = urls[0];
+  const rest = urls.slice(1);
+  // Zbylé kandidáty předáme onerror handleru jako JSON frontu (postupné zkoušení).
+  const fbAttr = rest.length ? ` data-fb='${JSON.stringify(rest)}'` : "";
+  // --mon-scale nastavíme jen když se liší od 1 (jinak dědí výchozí z CSS).
+  const scaleStyle = scale && scale !== 1 ? ` style="--mon-scale:${scale}"` : "";
+  const keyAttr = dataKey ? ` data-skey="${dataKey}"` : "";
+  return `<span class="mon-sprite ${extraClass}"${keyAttr}${scaleStyle}>
+    <span class="ph">?</span>
+    <img src="${primary}" alt="${alt}" loading="lazy"${fbAttr}
+      onload="this.previousElementSibling.style.display='none'"
+      onerror="var f=this.getAttribute('data-fb'); if(f){var a=JSON.parse(f);this.src=a.shift();if(a.length){this.setAttribute('data-fb',JSON.stringify(a));}else{this.removeAttribute('data-fb');}} else {this.style.display='none';}">
+  </span>`;
+}
+
+/**
+ * Silueta pro neviditelný/neznámý druh – žádný obrázek, jen tmavý glyph.
+ * @param {string} [extraClass]
+ * @returns {string}
+ */
+export function silhouetteHtml(extraClass = "") {
+  return `<span class="mon-sprite silhouette ${extraClass}"><span class="ph">?</span></span>`;
+}

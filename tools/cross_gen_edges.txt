@@ -1,0 +1,17 @@
+CROSS-GEN evolucni hrany (rodic z nizsi generace) – rucne doplnit do data/gen<rodic>/pokemon.js:
+
+  golbat       -> crobat        {'kind': 'happiness', 'when': None}
+  gloom        -> bellossom     {'kind': 'item', 'item': 'sun-stone'}
+  azurill      -> marill        {'kind': 'happiness', 'when': None}
+  bonsly       -> sudowoodo     None
+  poliwhirl    -> politoed      {'kind': 'trade'}
+  eevee        -> espeon        {'kind': 'happiness', 'when': 'day'}
+  eevee        -> umbreon       {'kind': 'happiness', 'when': 'night'}
+  slowpoke     -> slowking      {'kind': 'trade'}
+  wynaut       -> wobbuffet     {'kind': 'level', 'level': 15}
+  onix         -> steelix       {'kind': 'trade'}
+  scyther      -> scizor        {'kind': 'trade'}
+  mantyke      -> mantine       None
+  seadra       -> kingdra       {'kind': 'trade'}
+  porygon      -> porygon2      {'kind': 'trade'}
+  chansey      -> blissey       {'kind': 'happiness', 'when': None}

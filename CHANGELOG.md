@@ -1,0 +1,2454 @@
+# CHANGELOG
+
+An overview of what we have actually done. The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
+and the project uses [semantic versioning](https://semver.org/).
+
+Change types: **Added**, **Changed**, **Fixed**, **Removed**.
+For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
+
+## [1.62.2] – 2026-10-19 · The Johto customs officer explains the border rules
+### Changed
+- **The customs officer in Johto now explains all the border rules**: your Day Care and Eggs stay in Kanto, HM field use must be earned again, and only Johto Pokémon live in Johto's wild.
+
+## [1.62.1] – 2026-10-19 · Regional Pokédexes count only Pokémon caught in that region
+### Fixed
+- **Regional Pokédexes only count Pokémon caught in that region.** A Zubat, Onix or the gift Dratini caught in Johto no longer fills in your Kanto Pokédex — it's a bonus in your PC.
+
+## [1.62.0] – 2026-10-19 · Day Care and Eggs belong to a region
+### Changed
+- **The Day Care and your Eggs now belong to a region.** When you sail between Kanto and Johto, the Day Care (training, breeding and incubating eggs) and your egg bag stay behind and pick up again when you return. Only Pokémon caught in the region you're in can train or breed there, so a Kanto Pokémon can no longer hatch Johto babies.
+
+## [1.61.0] – 2026-10-19 · Johto only has Johto Pokémon
+### Changed
+- **Johto now only has Johto Pokémon, placed where they really lived in HeartGold/SoulSilver.** Every route, cave, the fishing spots and the Bug-Catching Contest were rebuilt from the real HeartGold/SoulSilver encounter data, keeping only Gen 2 Pokémon plus the few Kanto Pokémon Johto needs for its new evolutions (Zubat → Crobat, Onix → Steelix, Slowpoke → Slowking, Horsea → Kingdra…). Rattata, Pidgey, Geodude and the other Kanto Pokémon are gone from Johto. Sprout Tower and Dragon's Den have no wild Pokémon any more (their trainers and the Dragon's Den gift stay), and Lake of Rage no longer has fishing.
+- **Fishing in Johto** now pulls Johto Pokémon: Qwilfish on Route 32, Corsola on Routes 34 and 40, Chinchou and Lanturn on the eastern and western coasts, Remoraid on Route 44, Horsea at the Whirl Islands, Poliwag in ponds.
+- **Every Johto Pokémon can be caught in Johto.** Johto Pokémon that never lived in the wild there (the baby Pokémon, Sneasel, Slugma, Tyrogue) can now be found in the Safari Zone.
+
+## [1.60.0] – 2026-10-19 · Routes 47–48 and Johto's Safari Zone
+### Added
+- **Routes 47 and 48** on the island west of Cianwood (from HeartGold/SoulSilver): the cliff path with its cave and the sunny road up to the Safari Zone, with trainers and the Johto Pokémon found there in HeartGold/SoulSilver (Miltank, Heracross, Steelix, Girafarig…).
+- **Johto's Safari Zone** — a completely different game from Kanto's. Ten areas as in HeartGold/SoulSilver (Plains, Meadow, Forest, Swamp, Marshland, Mountain, Peak, Rocky Beach, Savannah, Wetland), and you decide what each one looks like: place **grass, trees, rocks and water**. Some Pokémon only move in when an area suits them, and some only after a few days (Houndoom, Jumpluff, Shuckle, Mareep, Houndour…). Only the Johto Pokémon that really live in the HeartGold/SoulSilver Safari Zone appear — including Larvitar on the Mountain and Wobbuffet on the Peak. No battling and no step limit: 30 Safari Balls, Bait and Rocks. Every two visits give you room for one more block per area.
+### Changed
+- **The two Johto starters you didn't choose now appear in the Safari Zone** after you become Johto Champion — just like the Kanto starters in Kanto's Safari Zone. They no longer appear on Routes 26–27.
+
+## [1.59.0] – 2026-10-19 · Johto Pokémon get their sprites and cries
+### Added
+- **All 100 Johto Pokémon have their own sprites** — front, back and shiny, both still and animated (Black/White style), and **their own cries**. No more placeholder glyphs for Chikorita through Celebi.
+- **Every Unown form A–Z has its own sprite**, normal and shiny, so the Unown you catch in the Ruins of Alph shows its letter.
+### Fixed
+- **Koga, Bruno and Lance in the Johto League now show their portraits** (the sprite folders didn't match the trainers' ids).
+
+## [1.58.0] – 2026-10-19 · Johto gets its real map
+### Added
+- **The Johto map is now a real illustrated map of the region** (`assets/gen2/map/johto.webp`) instead of the "under construction" canvas. Every Johto town, route, cave and landmark sits where it is on the map: New Bark Town on the eastern coast, Goldenrod on its peninsula, Cianwood across the sea, Lake of Rage in the north, Victory Road and the Indigo Plateau in the far east.
+
+## [1.57.0] – 2026-10-19 · Kanto cities as pixel-art town maps, save backups, a fresh start
+### Added
+- **Every Kanto city is now a top-down town map in pixel art** (`src/ui/cityMap.js`, `data/gen1/cityMaps.js`): the City tab shows the town the way the original games do, with buildings where they belong (your house and your rival's at the top of Pallet Town, Oak's Lab by the sea, the river and bridge in Cerulean, S.S. Anne at the Vermilion dock, the fountain in Celadon, the Safari pens in Fuchsia, the volcano on Cinnabar…). Each map has the town's name board, trees, paths, water and small animations. Hover a building to see its name and level; click (or tap, or use the keyboard) to open it.
+- **Gyms stand on the map** in every city that has one. Clicking the gym opens the Gym tab.
+- **The Pokémon League towers over Indigo Plateau**, with its statue-lined plaza and the stairs up from Victory Road. Clicking it opens the League tab once you hold every badge; before that, a guard tells you what you still need.
+- **Save backups** (🗂️ Backups next to Save/Export/Import): your save is backed up automatically before a game update, an import, a restore or a new game, and whenever it can't be loaded. You can restore or download any backup; a restore can be undone.
+### Changed
+- **All building sprites are now crisp pixel art in true relative scale**: a house is smaller than a Poké Center, the Dept. Store and Silph Co. tower over the street.
+- **Quieter by default:** master volume starts at 10 %.
+- **Story pop-ups and dialogue no longer use emoji.** Buttons, tabs and icons keep theirs.
+- **Fresh start:** the game was rebuilt, so progress from the previous version can't be continued. An old save is kept as a backup.
+### Removed
+- The old picture backgrounds behind city buildings.
+
+
+## [1.56.0] – 2026-10-02 · Goldenrod Game Corner gives Johto prizes, not Kanto ones
+
+### Fixed
+- **The Goldenrod (Johto) Game Corner was handing out Kanto prize Pokémon** (`src/ui/storyBuildingView.js`): it reused Celadon's prize list (Abra, Clefairy, Vulpix, Pinsir, Dratini, Scyther, Porygon) — all Gen 1 species, which breaks region fidelity (the collection is unique per species+region). Johto now has its own prize list: **Mareep, Aipom, Snubbull, Dunsparce, Girafarig** (all also available in the wild in Johto, so the casino is a bonus, not a dex gap) plus **Porygon**, which stays as the one Game-Corner exclusive (→ Porygon2 #233). Celadon's list is unchanged. The prize-buy handler now resolves the prize from whichever arcade is open.
+
+### Notes
+- Slots, the coin exchange and TM prizes are region-agnostic and stay shared between the two Game Corners (coins are deliberately shared too). Only the Pokémon prize list is now region-specific.
+
+
+## [1.55.0] – 2026-10-02 · Johto quality-of-life services spread across the region (parity with Kanto)
+
+### Changed
+- **The custom QoL services (Day Care, Move Tutor, EV Training) are now spread across Johto instead of all sitting in Goldenrod** (`data/buildings.js`, `src/ui/mainPanel.js`), mirroring how Kanto distributes them. All four were present and working, just concentrated in one city — now:
+  - **Day Care** → its own tab on **Route 34**, the canonical GSC Day-Care location just south of Goldenrod (mirrors Kanto's Route 5 Day-Care tab). Full breeding + egg hatching, as before.
+  - **Move Tutor** → its own tab on **Route 38**, a central Johto route (mirrors Kanto's Route 8 tab).
+  - **EV Training (Training Grounds)** → a building in **Cianwood City**, home of Fighting-type leader Chuck — the Johto counterpart to Kanto's Fighting Dojo, where EV training lives.
+  - **Boost Center** stays in **Goldenrod** (the Celadon↔Goldenrod parallel — both big cities with a Dept. Store and Game Corner).
+- **Bill's House hint updated** (`src/ui/storyBuildingView.js`): the second-Eevee breeding tip now points to the Day-Care on Route 34 instead of "the Goldenrod Day-Care".
+
+### Notes
+- No new systems — the Day-Care/Move-Tutor tab views and the EV-training building view were already region-agnostic; this just moves where you access them. Per-region building progress (Boost Center, Day-Care levels) is unchanged. Dev Johto checkpoints already mark Route 34 / Route 38 as visited, so the new tabs are reachable via Skip-to-Johto.
+
+
+## [1.54.0] – 2026-10-02 · Johto flavour buildings: Haircut Brothers, Bell/Burned Tower, Bug-Catching Contest
+
+### Added
+- **Underground Barbers in Goldenrod** (`data/buildings.js`, `src/ui/storyBuildingView.js`): the canon GSC Haircut Brothers. Two barbers (younger / older) each give your whole team a friendship boost (+5 / +12), usable once per real day each. This closes a real gap — friendship previously only grew on level-up — so happiness evolutions (Espeon/Umbreon/Crobat/Blissey) are now much more reachable. The window also shows each team member's current friendship with a 💞 marker once they're ready to evolve.
+- **Bell Tower in Ecruteak** (`data/buildings.js`, `src/ui/storyBuildingView.js`): Ho-Oh's canonical home. Sealed until you're Johto Champion; once you are, climbing to the summit opens the Legendary tab for the Ho-Oh encounter. Previously Ho-Oh was just an area encounter with no in-world entrance.
+- **Burned Tower in Ecruteak** (`data/buildings.js`, `src/ui/storyBuildingView.js`): Eusine (the Suicune researcher) and Ecruteak's sages tell the legend of the three awakened beasts, and Eusine gives you a one-time bundle of 10 Ultra Balls to help you catch them. (The beasts' chamber and Suicune itself remain the separate `burned-tower` map area.)
+- **Bug-Catching Contest in the National Park** (`src/systems/contestSystem.js`, `src/ui/contestView.js`, `src/ui/mainPanel.js`): a new daily minigame on its own "🦗 Contest" tab (shown only in the National Park, modelled on the Safari tab). You get 20 Park Balls and meet up to 12 bugs; only your single best catch is judged (rarer species + higher level score more). Placement prizes follow canon — 1st → Sun Stone, 2nd → Everstone, 3rd → gold — and you keep your best-caught bug. One contest per real day.
+
+### Notes
+- Part of the Gen 2 "flavour buildings" audit. Purely cosmetic canon locations with no mechanic (Bike Shop, Name Rater, Magnet Train, Move Deleter, a duplicate Cianwood Shuckle gift) were deliberately skipped — Shuckle is already a wild `rare` spawn, so it was never a dex gap. No save migration: the contest's runtime state lazy-inits in `state.contest`, and the haircut/Eusine flags read with fallbacks.
+
+
+## [1.53.0] – 2026-10-02 · Johto achievement pass: 18 new achievements (story beats, species gags, milestones)
+
+### Added
+- **Full Johto achievement pass — 18 new achievements** (`data/achievements.js`, gated on Gen 2 being active). Brings the Johto set from 13 to 31, matching Kanto's breadth. All checks reuse existing derived stats (`story` flags, `owned`, `dexCountByGen`) — no new tracking or save migration.
+  - **Story beats (8):** *Who Let You In? (Reprise)* (become Johto Champion — previously missing entirely), *It's Not Supposed To Be That Color* (Red Gyarados), *Dead Air* (Radio Tower retaken), *Tail Insurance* (Slowpoke Well), *Lighthouse Keeper's Little Helper* (Amphy healed), *Certified Dragon Person* (Dragon's Den), *Five Dancers, Zero Mercy* (Kimono Girls), *Punched Up The Mountain* (Karate King).
+  - **Species gags (7):** Wobbuffet, Dunsparce, Shuckle, Wooper, Miltank, Smeargle, Girafarig — in the same deadpan style as the Kanto Magikarp/Zubat gags.
+  - **Milestones & mechanics (3):** *Johto: No Takebacks* (90 Johto species), *Johto's Entire Rolodex* (own all 6 Johto legendaries at once), *Artisanal Poké Balls* (Apricorn Balls from Kurt).
+
+### Notes
+- The glaring gap closed here was that there was **no "become the Johto Champion" achievement** at all, even though Kanto had `champion`. Everything is gated on Gen 2 so none of it spoils Johto in production.
+
+
+## [1.52.0] – 2026-10-01 · Kanto flavour: the robbed house in Cerulean & the Old Amber in Pewter Museum (canon RBY)
+
+### Added
+- **The Team Rocket thief in Cerulean City's robbed house is now a real (optional) battle** (`data/gen1/trainers.js`): canon RBY has a house in Cerulean that gets ransacked by a Rocket who digs his way in. A new optional "Rocket Thief" encounter appears in Cerulean (one grunt, Ekans + Zubat) — it blocks nothing and gates nothing, it's just flavour content with a small gold reward for cornering him. After you beat him it shows as cleared, like the other Rocket encounters.
+
+### Changed
+- **The Pewter Museum of Science now shows off the Old Amber** (`src/ui/storyBuildingView.js`): added a flavour display + plaque for the Old Amber (the fossil that revives into Aerodactyl), nodding to its canon home in the museum. Purely cosmetic — the Old Amber itself is still obtained (with the other two fossils) on Route 4, and revived at the Cinnabar Pokémon Lab.
+
+### Notes
+- Part of the GEN1/Kanto canon-fidelity audit pass. The Cerulean encounter is modelled as an optional single-trainer Rocket "gauntlet" (reusing existing machinery); being optional and non-gating, it needs no dev checkpoint and no save migration (the tab simply appears on your next Cerulean visit).
+
+
+## [1.51.0] – 2026-10-01 · Kanto trainer canon-accuracy: Silph Co rival & Elite Four levels (canon RBY)
+
+### Changed
+- **Your rival at Silph Co now leads with his fully-evolved starter, like in the originals** (`data/gen1/trainers.js`): the Silph Co rival (`rival-silph`) was fielding his *middle*-stage starter (e.g. Charmeleon) even though the rest of his team is fully evolved. Corrected to the final stage (Charizard/Blastoise/Venusaur, via `counterStarterFinal`), matching RBY.
+- **The Elite Four are back at their canon levels** (`data/gen1/trainers.js`): every Elite Four Pokémon was about 2 levels under the real games. All four members bumped +2 to exact RBY levels — Lorelei (54/53/54/56/56), Bruno (53/55/55/56/58), Agatha (56/56/55/58/60), Lance (58/56/56/60/62). Champion Blue was already canon and is unchanged.
+
+### Notes
+- Part of the GEN1/Kanto canon-fidelity audit pass. No new content — just correcting trainer teams to match RBY. The dex-completion audit also confirmed all 151 Kanto species are obtainable in one playthrough (the unchosen starters already spawn in the Safari Zone post-Champion via `safariSystem` `POST_LEAGUE_STARTERS`), so no change was needed there.
+
+
+## [1.50.0] – 2026-10-01 · Fixed four misleading source-code comments (no gameplay change)
+
+### Fixed
+- **Corrected four stale/wrong developer comments so they match what the code actually does** (`data/items.js`, `src/systems/battleSystem.js`, `data/gen2/unown.js`): purely internal documentation hygiene from the A-Z audit, with **no gameplay or behaviour change**.
+  - *Fishing rods* (`data/items.js`): the comment claimed rods are sold in the Celadon Dept. Store. They aren't — the Old Rod is a one-time gift at the Vermilion Fishing Hut and the Good/Super Rods at the Fuchsia Fishing House (canon RBY).
+  - *Fossils* (`data/items.js`, `src/systems/battleSystem.js`): comments said the player "chooses one" fossil and that reviving was "to be done later" at the "Museum of Science". In fact you receive all three fossils (Helix, Dome, Old Amber) at once on Route 4, and reviving is already implemented at the **Pokémon Lab on Cinnabar Island** (the Pewter Museum only points you there).
+  - *Unown forms* (`data/gen2/unown.js`): the comment claimed forms are caught in a deterministic A→Z order. They're actually random-but-visible — each wild Unown rolls a random form (`rollUnownForm`), which you can see and catch exactly, so completing the alphabet depends on spawn RNG.
+
+
+## [1.49.0] – 2026-10-01 · The Route 22 rival no longer offers an unwinnable fight at the start of the game (canon RBY)
+
+### Fixed
+- **The endgame Route 22 rival battle is no longer offered the moment you can reach Route 22** (`data/gen1/trainers.js`, `src/systems/battleSystem.js`, `src/ui/mapView.js`): Route 22 is an early grassy spur west of Viridian City (reachable right after the first town), but the rival waiting there is the **pre-League** showdown (his full Level 45–50 team), exactly as in the originals — it belongs just before Victory Road, after all eight badges. Until now his **Rival** tab appeared on Route 22 from the very start, letting you walk into a hopeless fight. The tab is now gated behind `giovanniCleared` (the 8th / **Earth Badge**), so it only shows up once you're actually League-bound.
+
+### Added
+- **A one-time popup explains the locked Route 22 rival** (`src/systems/battleSystem.js`, `src/ui/mapView.js`): the first time you arrive on Route 22 before earning all eight badges, your rival appears in the distance, smirks, and tells you to come back once you've earned every Gym Badge — so you know the fight exists and when to return, instead of just finding an empty route. Shown once (`route22RivalLockedSeen`), it never nags on repeat visits while you train there.
+
+### Notes
+- This keeps Route 22 as the **only** place for that endgame rival fight (his team is unchanged) and deliberately does **not** add an early Route 22 rival — canon RBY has no such battle, and the generations/progression structure stays linear.
+- No save migration is needed: existing late-game saves already have `giovanniCleared` set (earned in play, or back-filled by an earlier migration), so the tab shows for them immediately; early saves simply get the new popup on their next Route 22 visit. The `⑩ Earth` dev checkpoint already sets `giovanniCleared`, and `champion` now also marks `rival-route-22` beaten, keeping skips soft-lock-free.
+
+
+## [1.48.0] – 2026-10-01 · Your rival now ambushes you at Cerulean City and in Pokémon Tower (canon RBY/Yellow)
+
+### Added
+- **Your rival now challenges you in Cerulean City after Nugget Bridge, exactly like Pokémon Yellow** (`data/gen1/trainers.js`): until now the Kanto rival only fought you five times (Pallet, Route 22, S.S. Anne, Silph Co., the League), skipping two canon clashes. The first is restored: once you've crossed **Nugget Bridge** (the `nuggetBridge` story flag set when you reach Route 24), a **Rival** tab appears in **Cerulean City** for a battle against his Pidgeotto, Raticate, Kadabra and starter. It doesn't block the road south, but since Route 24/25 are already on the way to Bill's S.S. Ticket you'll pass right by him.
+- **Your rival also ambushes you on the 2nd floor of Pokémon Tower, before the ghost, exactly like the originals** (`data/gen1/trainers.js`, `src/ui/storyBuildingView.js`, `src/systems/battleSystem.js`): the moment you start up the Lavender Town tower, your rival blocks the stairs for a tougher battle (Pidgeotto, Gyarados, Growlithe, Kadabra and starter) — no Silph Scope needed, just like the games. Only after beating him (`towerRivalBeaten`) do you climb on to the restless Marowak ghost higher up.
+
+### Notes
+- Both rivals' starters still counter yours via `counterStarterMid` (your starter's middle evolution), consistent with the other Kanto rival fights.
+- The dev Kanto checkpoints grant these battles at the matching milestones — `⑧ Vermilion` marks the Cerulean rival beaten, `⑫ Poke Flute` marks the Pokémon Tower rival beaten — so skipping ahead stays soft-lock-free. A save migration (v56) marks the Tower rival as beaten for anyone who had already cleared the tower, so the new step can't reappear for existing saves.
+
+
+## [1.47.0] – 2026-10-01 · Evolving a Pokémon leaves a living-dex gap you can still study (living dex)
+
+### Changed
+- **Evolving (or releasing/selling) a Pokémon now leaves a visible Pokédex gap, but the species keeps all of its info so you know how to get it again** (`src/systems/team.js`, `src/systems/evolutionSystem.js`, `src/systems/pokedex.js`): the game is a **living dex** — "caught" always reflects what you *currently* own (PC box + team), so when you evolve your only Charmander into Charmeleon, Charmander correctly drops back to a gap, nudging you to catch a fresh one if you want the full line in your boxes. To make that gap useful instead of mysterious, every species you acquire or evolve away from is now permanently marked **"Seen"** (`markSeen` on catch, gift, breed, starter and on *both* sides of an evolution), so its Pokédex card still shows the full dex entry, base stats, evolution data and the **"Where to catch"** location list — even for a pre-evolution you no longer own.
+
+### Notes
+- This deliberately does **not** adopt the real games' "caught forever" Pokédex. That was considered and rejected: the whole collection goal here is to end up with one of every species living in your PC, so a gap after evolving is a feature (it tells you something is missing), not a bug.
+- The "one per species per region" collection rule is unchanged — ownership/merge is still resolved from the live collection, and completion counts (national dex, per-region diplomas, Shiny Charm) stay collection-derived. Full living-dex completion is an optional goal; the game is fully beatable without it.
+
+
+## [1.46.0] – 2026-10-01 · Mahogany Gym & Radio Tower are now mandatory before Blackthorn (canon GSC)
+
+### Fixed
+- **Pryce's Mahogany Gym is now locked until you shut down the Team Rocket hideout, exactly like Gold & Silver** (`data/gen2/gyms.js`, `src/ui/gymView.js`): previously you could waltz in and take the Glacier Badge while the Rockets were still operating their secret base under the souvenir shop. The gym now requires `mahoganyHideoutCleared`, with a proper "the Rockets are here" gate notice, mirroring the real games.
+- **The Goldenrod Radio Tower liberation is now a required story beat before the final gym** (`data/gen2/areas.js`): the road east toward the Ice Path and Blackthorn (Route 44) now requires `radioTowerCleared` in addition to the Glacier Badge, so Team Rocket's last stand can no longer be skipped on the way to Clair and the League — the canon GSC order (Mahogany hideout → Glacier Badge → Radio Tower → Blackthorn → Rising Badge → League) is now enforced. Dev Johto checkpoints already grant these flags at the matching milestones (`j-glacier`, `j-radio`), so skipping ahead stays soft-lock-free.
+
+### Notes
+- The Kanto and Johto Leagues were already effectively 8-badge-gated (Viridian Gym needs the other 7 badges and its Earth Badge gates Route 23 → Victory Road; Route 27 to the Johto League requires the Rising Badge), so no separate League badge-count check was needed — the fixes above close the remaining gaps in the Johto end-game sequence.
+
+
+## [1.45.0] – 2026-10-01 · Route 12 Snorlax is now catchable (canon RBY/Kanto)
+
+### Fixed
+- **The Route 12 Snorlax can finally be caught, exactly like the originals** (`src/ui/mapView.js`, `src/systems/battleSystem.js`, `data/gen1/trainers.js`): until now the blocking Snorlax was a pure boss battle — you defeated it, it lumbered off, and it was never obtainable anywhere in Kanto, leaving a hard hole in the Pokédex. Playing the **Poké Flute** now triggers a proper **catchable static encounter** (level 30) instead of a trainer fight. The road south (`snorlaxCleared`) opens **when you catch it**; if it faints or you flee, re-entering Route 12 offers the encounter again, so you can never soft-lock yourself out of it (same pattern as the Red Gyarados). The obsolete `lavender-snorlax` boss trainer and its post-battle hook were removed; the dev Snorlax checkpoint still opens the southern path.
+
+
+## [1.44.0] – 2026-10-01 · Bill hints how to get both Eeveelutions (canon GSC)
+
+### Changed
+- **Bill now tells you how to raise both Espeon and Umbreon from a single Eevee** (`src/ui/storyBuildingView.js`): the Goldenrod Bill's House gift still hands over exactly one Eevee, just like Gold & Silver — but Bill now explains that you can leave it with a **Ditto** at the **Goldenrod Day-Care** to hatch a second Eevee, so you can evolve one into **Espeon** (by day) and the other into **Umbreon** (by night). Purely a flavour/guidance hint; no mechanics changed (breeding already worked).
+
+
+## [1.43.0] – 2026-10-01 · Canon HM field gates across Johto (canon GSC)
+
+### Changed
+- **Several routes and caves now genuinely require the right HM to pass, exactly like Gold & Silver** (`data/gen2/areas.js`): the field moves were obtainable but no area actually demanded them, so the map opened up regardless. Now **Ilex Forest** needs **HM01 Cut** to clear its overgrown thickets; **Route 40**, **Route 41** and **Cianwood City** need **HM03 Surf** to cross the open sea from Olivine; and the **Ice Path** needs **HM04 Strength** for its boulder puzzle. Each HM's source sits earlier on the path than the gate (Cut at Azalea's Charcoal Kiln, Surf at the Ecruteak house after the Fog Badge, Strength at the Olivine sailor's house), so there is no soft-lock — you always hold the move before you meet the wall.
+
+### Fixed
+- **Dev Johto checkpoints now grant Cut / Surf / Strength at the matching milestone** (`src/dev/devTools.js`): with the new field gates, the cumulative dev skip hands you **HM01 Cut** at the Hive Badge (Azalea), **HM03 Surf** at the Fog Badge (Ecruteak) and **HM04 Strength** at the Mineral Badge (Olivine) — each with its HM item — so jumping to any later checkpoint can't lock you out of the newly gated areas.
+
+
+## [1.42.0] – 2026-10-01 · The Karate King's dojo in Mt. Mortar (canon GSC)
+
+### Added
+- **Mt. Mortar now hides the Karate King and his dojo, with a Tyrogue to earn, exactly like Gold & Silver** (`data/gen2/trainers.js`, `src/systems/battleSystem.js`): deep in the cave, a new optional **"🥋 Karate King"** challenge pits you against two Black Belt students and then the Karate King himself, **Kiyo** (Hitmonlee, Hitmonchan, Hitmontop). Beat the dojo and Kiyo gifts you a **Tyrogue** — finally explaining why the rare baby fighter is found in Mt. Mortar. The challenge is purely optional (no story gate) and mirrors Kanto's Route 9 Hikers.
+
+### Changed
+- **The animated Burned Tower beast cutscene now shows real Pokémon sprites as soon as they exist** (`src/ui/mapView.js`, `css/main.css`): the awakening scene tries to load the Raikou / Entei / Suicune sprites from `assets/gen2/pokemon/<id>/front.png` and only falls back to the ⚡💧🔥 emoji while those art files are missing — so dropping in the sprites later makes them appear automatically, with no code change.
+
+
+## [1.41.0] – 2026-10-01 · Burned Tower awakens the three legendary beasts (canon GSC)
+
+### Added
+- **Descending into the Burned Tower now awakens the three legendary beasts in an animated cutscene, exactly like Gold & Silver** (`src/systems/battleSystem.js`, `src/ui/mapView.js`, `css/main.css`): the first time you reach the tower's basement, a flash lights the dark and **Raikou**, **Entei** and **Suicune** rear up as one. Raikou bolts off in thunder and Entei tears away in fire (both now roam Johto), while Suicune lingers to size you up before vanishing — and **Eusine** rushes in, awestruck. The beasts scatter across the screen in a little CSS animation (which respects "reduced motion" settings).
+
+### Changed
+- **The three beasts are no longer available until you've woken them** (`data/gen2/legendaries.js`): Suicune (Burned Tower), Raikou (Route 42) and Entei (Route 37) now each require the story flag `beastsAwakened`, so their challenge tabs only appear after the Burned Tower cutscene — matching the games, where the trio stays hidden until the tower disturbs them. The dev checkpoint at Fog Badge sets the flag so nothing locks up.
+
+
+## [1.40.0] – 2026-10-01 · Route 36 Sudowoodo is now a real boss you must wake (canon GSC)
+
+### Added
+- **The "strange tree" blocking Route 36 is now a genuine Sudowoodo boss battle, exactly like Gold & Silver** (`data/gen2/trainers.js`, `src/systems/battleSystem.js`, `src/ui/mapView.js`): until now a line of flavour text claimed a giant Sudowoodo blocked the way north out of Goldenrod, but you could walk right past it. Now the way is truly sealed — approach Route 36 and a sleeping "tree" bars the path. Splash it with the **Squirtbottle** and it rears up as a furious **Sudowoodo** you have to defeat. Beat it and the road north to Ecruteak finally opens (`sudowoodoCleared`).
+- **The Squirtbottle key item and Goldenrod Flower Shop that gives it** (`data/items.js`, `data/buildings.js`, `src/ui/storyBuildingView.js`): a new **Flower Shop** story building stands in Goldenrod City. Its florist hands you the **Squirtbottle** — the one tool that can wake the Sudowoodo on Route 36.
+
+### Changed
+- **Route 37 (and the whole path north to Ecruteak) is now gated behind clearing the Sudowoodo** (`data/gen2/areas.js`): Route 37 unlocks only once `sudowoodoCleared` is set, so the Sudowoodo is a true roadblock instead of a decorative one — mirroring Kanto's Snorlax on Route 12. The wild veryrare Sudowoodo spawn on Route 36 is kept for Pokédex completion.
+
+
+## [1.39.0] – 2026-10-01 · Rival Silver's full set of battles (canon GSC)
+
+### Added
+- **Three new mandatory Rival Silver battles across Johto, so Silver now haunts your whole journey like he does in Gold & Silver** (`data/gen2/trainers.js`, `data/gen2/areas.js`): on top of the opening Cherrygrove clash, Silver now ambushes you at **Azalea Town** (right after you drive Team Rocket out of the Slowpoke Well), inside the **Burned Tower** in Ecruteak, and deep in **Goldenrod's Underground** during the Radio Tower takeover. His team grows with yours each time.
+- **Silver's starter now counters yours, exactly like the games** (`data/trainers.js`, `src/systems/battleSystem.js`): the `COUNTER_STARTER` maps gained the Johto starters — pick **Chikorita** and Silver wields **Cyndaquil**'s line, pick **Cyndaquil** and he takes **Totodile**'s, pick **Totodile** and he takes **Chikorita**'s — resolved region-aware from your Johto starter (not your Kanto one). His starter evolves across the five fights (base → mid → final).
+
+### Changed
+- **Silver's battles are now a proper canon progression and block your path, instead of being optional challenge tabs** (`data/gen2/areas.js`): each fight gates the road beyond it (`unlock.trainer`) — you must beat Silver at Cherrygrove to head north, at Azalea to enter Ilex Forest, at the Burned Tower to leave for Olivine, and at Victory Road to reach the Pokémon League. The first Cherrygrove fight is forgiving: like Kanto's opening rival, even a loss lets you pass, so newcomers can't get stuck.
+- **The final pre-League Silver battle moved from Route 26 to Victory Road** (`data/gen2/trainers.js`): matching GSC, where the last mandatory rival fight happens in Victory Road. His team was upgraded to full final evolutions (Crobat, Gengar, Alakazam) for the occasion.
+- **Rival gates can now carry a story condition** (`data/trainers.js`, `src/ui/mainPanel.js`): the Azalea rival tab only appears after the Slowpoke Well is cleared, mirroring how the Rocket/Dragon gauntlets already gate their tabs by story flag.
+
+
+## [1.38.0] – 2026-10-01 · Goldenrod Radio Tower is now a building you storm (Rocket finale)
+
+### Added
+- **The Radio Tower in Goldenrod City is now a proper story building — Johto's answer to Silph Co.** (`data/buildings.js`, `data/gen2/trainers.js`, `src/ui/storyBuildingView.js`): the Radio Tower stands in Goldenrod from the start as an ordinary radio station. Once you shut down **Team Rocket's hideout in Mahogany Town**, the Rockets seize the tower — enter the building and *storm it* to open the gauntlet up through grunts, executive **Ariana**, and the new boss **Archer**. Clear it and the tower is liberated for good; return later and it's just a buzzing radio station again.
+- **Payoff cutscenes for all three Johto Team Rocket raids** (`src/systems/battleSystem.js`): clearing the **Slowpoke Well** now frees the Slowpoke and points you to Kurt; clearing the **Mahogany hideout** shuts down the radio signal tormenting the Magikarp at the Lake of Rage and points you to the Radio Tower; clearing the **Radio Tower** ends Team Rocket in Johto and sends you toward the last gyms and the Pokémon League. (Previously all three raids ended with no closing scene.)
+
+### Changed
+- **The Radio Tower gauntlet is now gated by entering the building, not by a bare flag** (`data/gen2/trainers.js`, `src/systems/save.js`, `src/core/state.js`): the "Radio Tower" tab appears only after you walk into the tower and storm it (flag `radioTowerStormed`), matching how Silph Co. and the Dragon's Den already work. Save migration **v55** marks already-finished Radio Towers as stormed so nothing regresses.
+
+
+## [1.37.0] – 2026-10-01 · Ecruteak Dance Theater (Kimono Girls gauntlet) & Kurt's House
+
+### Added
+- **The Dance Theater in Ecruteak City — a gauntlet against the five Kimono Girls** (`data/gen2/trainers.js`, `data/buildings.js`, `src/ui/storyBuildingView.js`, `src/systems/battleSystem.js`): accept the Kimono Girls' challenge and battle all five in a row, each dancing with a different evolution of Eevee — **Flareon, Jolteon, Vaporeon, Espeon and Umbreon** (lead: Zuki with Umbreon). Clear the gauntlet and the Kimono Girls reward you with prize money and a one-time gift of **5 Luxury Balls**. The challenge tab only appears once you've accepted it inside the theater.
+- **Kurt's House in Azalea Town — a gift of handmade Apricorn Balls** (`data/buildings.js`, `src/ui/storyBuildingView.js`): Azalea's legendary ball-carver Kurt rushes off to deal with Team Rocket at the Slowpoke Well. Once you've **cleared the Slowpoke Well**, return to him for a one-time gift of his handmade Apricorn Poké Balls (**5 each of Fast, Heavy, Lure, Level, Love and Moon Balls**).
+
+
+## [1.36.0] – 2026-10-01 · Every HM can now be re-earned in Johto (Johto HM sources)
+
+### Added
+- **Five new Johto HM sources, so no HM has to be carried over from Kanto** (`data/buildings.js`, `src/ui/storyBuildingView.js`): now that HMs are regional (v1.33.0), each HM you need in Johto can be earned there. New story buildings:
+  - **Charcoal Kiln (Azalea Town) → HM01 Cut** — the kiln apprentice gives it freely for clearing Ilex Forest.
+  - **Chuck's Home (Cianwood City) → HM02 Fly** — Chuck's wife rewards you after you defeat Chuck (**Storm Badge**).
+  - **Ecruteak House (Ecruteak City) → HM03 Surf** — a retired seaman hands it over once you hold the **Fog Badge** (Morty).
+  - **Sailor's House (Olivine City) → HM04 Strength** — a retired dockhand gives it freely.
+  - **Climber's Lodge (Blackthorn City) → HM07 Waterfall** — a veteran climber gives it after you earn the **Rising Badge** (Clair).
+  - (HM05 Flash via Sprout Tower and HM06 Whirlpool via Cianwood House already existed.) Each uses the central `grantHmToPlayer`, so the HM registers against the **Johto** region only — your Kanto HMs are untouched and your Johto ones don't leak back to Kanto.
+
+
+## [1.35.0] – 2026-10-01 · Clock & time-of-day indicator in the top bar
+
+### Added
+- **A clock showing the current time and day/night phase** (`src/main.js`, `css/main.css`): the top resource bar now has a live clock with a ☀️ **Day** / 🌙 **Night** icon. It reads your real system time and updates every half-minute, so the phase flips shortly after each boundary. Hovering it explains the schedule — **Day 06:00–17:59, Night 18:00–05:59** — and notes that the time of day now affects some evolutions (Espeon by day, Umbreon by night) and spawns. Day is shown in warm tones, Night in cool blue.
+
+
+## [1.34.0] – 2026-10-01 · Eevee can now evolve into Umbreon (day/night-aware happiness evolutions)
+
+### Fixed
+- **Happiness evolutions now respect the time of day — so Umbreon is finally obtainable** (`src/systems/evolutionSystem.js`): a high-friendship Eevee evolves into **Espeon by day** and **Umbreon by night**, exactly as in the games. Previously the evolution preview always picked the *first* matching happiness branch (Espeon), so Umbreon could never be triggered. The happiness branch now gathers **all** friendship evolutions for a species and selects the one whose day/night requirement matches the current clock (falling back to the first if none is time-locked), mirroring how the stat-based (Tyrogue) branch already worked. To collect **both** Espeon and Umbreon in a single run, breed a second Eevee (Ditto + Eevee at the Goldenrod Day-Care) and evolve each at the right time of day.
+
+
+## [1.33.0] – 2026-10-01 · HMs are regional — every HM must be re-earned in Johto
+
+### Changed
+- **HMs are now per-region, just like in the games** (`src/systems/battleSystem.js`, `data/areas.js`, `src/systems/hmSystem.js`, `src/systems/save.js`, `src/core/state.js`, `src/dev/devTools.js`): the HMs you earned in Kanto **no longer open areas or teach moves in Johto**. Field access to each HM (Cut, Fly, Surf, Strength, Flash, Whirlpool, Waterfall) is now gated by a **regional** story flag that `travelToRegion` swaps in and out through a new `story.hmFlagsByRegion` map — the same per-region swap pattern already used for your team and town upgrades. Arriving in Johto, you start with **no usable HMs** and must obtain each one again from Johto sources; travelling home restores all your Kanto HMs exactly as they were. The HM **items** themselves stay in your global bag (HMs are reusable and never consumed), but owning the item no longer grants access on its own — a new `hmAvailable(num)` check (regional flag) now gates area unlocks, `canTeachHm`, `learnableHmsFor` and `teachHm`, replacing the old "owns the HM item" fallback.
+- **Save format bumped to v54** (`src/systems/save.js`, `src/core/state.js`): a migration seeds `story.hmFlagsByRegion[currentRegion]` from your existing flat HM flags (and any owned HM items), so **no current progress is lost** — your current region keeps every HM it already had, and the regional split only applies going forward.
+
+
+## [1.32.0] – 2026-10-01 · The Red Gyarados at the Lake of Rage (one-time shiny legendary)
+
+### Added
+- **The Red Gyarados — a one-time, always-shiny legendary encounter at the Lake of Rage** (`data/gen2/legendaries.js`, `src/ui/legendaryView.js`, `src/systems/battleSystem.js`): a Legendary tab now appears at **Lake of Rage** offering the famous crimson Gyarados. It is **always the ✨ shiny variant** and — unlike the other legendaries — it is a **single encounter**: catch it and it's gone for good (the lake grows calm). In the Pokédex it's simply **#130 Gyarados (shiny)**; catching it fills/upgrades your Gyarados slot to shiny. If it faints or flees you can try again — it only vanishes once **caught**, so there's no way to lose the shiny permanently. Because Gyarados is also obtainable wild (and by evolving Magikarp), the "done" state is tracked by a dedicated `story.redGyaradosCaught` flag set on catch, **not** by owning the species.
+- **Legendary encounters now support `shiny`, `oneTime`, `claimFlag` and `displayName`** (`data/legendaries.js`, `src/ui/legendaryView.js`, `src/systems/battleSystem.js`): the legendary data format gained optional fields so special statics like the Red Gyarados can force a shiny look, show a custom name, be a one-time catch, and mark completion via a story flag. `startStaticEncounter` accepts an `opts.claimFlag` that is set on a successful catch (not on faint/flee). Regular repeatable shiny-hunt legendaries are unaffected.
+
+
+## [1.31.0] – 2026-10-01 · Purchased town bonuses are now per-region (Kanto vs. Johto)
+
+### Added
+- **Every town-service upgrade and Boost Center track is now stored per region** (`src/systems/battleSystem.js`, `src/systems/save.js`, `src/core/state.js`, `src/dev/devTools.js`): the building levels you buy and your Boost Center tracks (**XP / Yield / Fortune**) are now tied to the region you bought them in. When you travel Kanto → Johto, your Kanto investments are stashed and Johto starts with a fresh, un-upgraded set of services — you re-invest locally (your **gold carries over**, so you simply re-buy in Johto). Travelling back to Kanto restores everything exactly as you left it. Implemented with a `progress.cityBuildingsByRegion` map that `travelToRegion` swaps in/out of `state.city.buildings`, mirroring the existing per-region team swap. The **Daycare** (occupant, breeding, eggs) stays **global** — it holds actual Pokémon, not purchased bonuses.
+- **Customs tutorial now explains the regional reset** (`src/ui/storyBuildingView.js`): when you clear Johto customs, the briefing calls out that your building upgrades and Boost Center boosts are Kanto-only and must be re-bought in Johto (with your Kanto levels waiting for your return).
+
+### Changed
+- **Save format bumped to v53** (`src/systems/save.js`, `src/core/state.js`): a migration seeds `progress.cityBuildingsByRegion[currentRegion]` from your existing `city.buildings`, so **no existing progress is lost** — your current region (Kanto for everyone currently playing) keeps every upgrade exactly as it was.
+
+
+## [1.30.0] – 2026-10-01 · Shiny-hunt legendaries (repeatable, no rewards) + game-wide shiny/default look toggle
+
+### Added
+- **Legendary (and static) encounters can be refought to hunt for a shiny — with no rewards** (`src/systems/battleSystem.js`, `src/ui/legendaryView.js`, `src/ui/mainPanel.js`): the Legendary tab now stays available after you've caught the Pokémon instead of disappearing. Once you already own the species in that region, the button reads **"Shiny hunt"** and you can face it as many times as you like — but the fight gives **no rewards at all** (no XP, gold, EVs, loot, TM drops or eggs), so it can't be farmed. It's purely a chance at the ✨ shiny variant. Catching a shiny duplicate upgrades your existing one (a species keeps a single collection slot), so the hunt stays repeatable and your caught Pokémon is never lost. Driven by an explicit `opts.noRewards` flag on `startStaticEncounter` → `battle.noRewards` → guarded in the wild-win branch of `handleFaint`.
+- **Shiny Mew hunt under the S.S. Anne truck** (`src/ui/storyBuildingView.js`): because Mew is normally a one-time catch, the abandoned truck by the docks now stays accessible after you've caught it, so you can seek Mew again as a **shiny hunt** (no rewards). This is the only way to get a shiny Mew.
+- **Toggle any shiny Pokémon's look between shiny and default — everywhere in the game** (`src/ui/pokemonCard.js`): every shiny Pokémon's card now has a **"Show default look" / "✨ Show shiny look"** button. It's purely cosmetic — the Pokémon stays shiny; only what's drawn changes (sprite, the ✨ in its name, the Variant line). This applies to **all** shiny Pokémon across the whole game, Gen 1 and Gen 2 and any future ones, via a new per-Pokémon `displayDefault` flag (defaults to showing the shiny look; no save migration needed).
+
+### Fixed
+- **Fishing and the Mew gift still pay out normally** (`src/systems/battleSystem.js`): the "no rewards" behaviour is an explicit flag set only by the Legendary tab's shiny hunt — it is **not** inferred from already owning the species. `startStaticEncounter` is also used by fishing and story gifts, which keep their rewards even for a species you already own.
+
+
+## [1.29.0] – 2026-10-01 · Johto special buildings with a gauntlet (Sprout Tower, Dragon's Den)
+
+### Added
+- **Sprout Tower (Violet City) – sage gauntlet + HM05 Flash** (`data/buildings.js`,
+  `data/gen2/trainers.js`, `src/ui/storyBuildingView.js`): a new story building
+  `sprout-tower` in Violet City. Gauntlet (keyed `violet-city`): Sage Nico → Sage
+  Chow → Elder Li (Bellsprout/Hoothoot, the low levels of the first gym town). After
+  clearing it (`sproutTowerCleared`) the Elder in the building hands you **HM05 Flash**
+  (`grantHmToPlayer(5)` → `hasFlash` + `hm05-flash`). This is the ONLY Johto source of
+  HM05 → it lights up Dark Cave (`unlock {visited route-31, hm:5}`) → unlocking
+  #198 Murkrow / #202 Wobbuffet / #206 Dunsparce / #173 Cleffa. Multi-state view:
+  climb (gauntlet) → Elder offers Flash → done.
+- **Dragon's Den (Blackthorn City) – Dragon Clan gauntlet + gift Dratini**
+  (`data/buildings.js`, `data/gen2/trainers.js`, `src/ui/storyBuildingView.js`): a new
+  story building `dragons-den` in Blackthorn City (gate: Rising Badge from Clair).
+  Starting the trial sets `dragonsDenTestStarted` → unlocks the gauntlet tab (keyed
+  `blackthorn-city`, `requiresStory`): Dragon Tamer Darin → Mina → Dragon Elder
+  (Dratini/Dragonair/Horsea/Seadra, lvl ~38–42). After clearing it (`dragonsDenCleared`)
+  the Elder gives a gift **Dratini with the sacred move Extreme Speed** (GSC canon,
+  distinct from the wild one in the `dragons-den` area). Multi-state view (no badge →
+  start trial → gauntlet → gift → done).
+- **Custom clear popups for both gauntlets** (`src/systems/battleSystem.js`,
+  `finishTrainerBattle`): payoff windows pointing you back to the Elder for your reward.
+
+### Changed
+- **The gauntlet tab (`rocketView.js`) is now generic**: the title uses `gaunt.tabIcon`
+  (fallback 🚫) instead of a hardcoded 🚫, so it fits non-Rocket gauntlets too (🗼 Sprout
+  Tower, 🐉 Dragon's Den). The sidebar `tabLabel` already worked dynamically.
+- **CITY_BUILDINGS** (`data/buildings.js`): Violet City += `sprout-tower`,
+  Blackthorn City += `dragons-den`, Goldenrod City += `boost-center`.
+
+
+## [1.28.0] – 2026-10-01 · Regional Shiny Charm + per-gen Pokédex Diploma (Elm)
+
+### Changed
+- **Shiny Charm is now REGIONAL (per-gen), not a global flag** (`src/systems/team.js`,
+  `battleSystem.js`, `breedingSystem.js`, `src/main.js`): storage moved from
+  `story.shinyCharm` → `story.shinyCharmByRegion[region]`. New helper
+  `hasShinyCharm(region = activeRegion())`. The Charm multiplies shinies (×3 in spawns
+  and breeding) **only in the region where it was earned**. Crossing Kanto→Johto: the
+  Kanto charm disappears from the bar until you finish the Johto dex; returning
+  Johto→Kanto brings the Kanto charm back. The top-bar toggle (`settings.shinyCharmActive`)
+  stays a global on/off, but only shows when `hasShinyCharm()` for the current region.
+- **The Pokédex Diploma is now REGIONAL (per-gen)** (`src/systems/team.js`,
+  `src/ui/diploma.js`): `story.dexDiploma` → `story.dexDiplomaByRegion[region]`,
+  new helper `hasDexDiploma(region)`. `grantDexDiploma(region)` awards the diploma +
+  charm **for that region** and gates on completing THAT generation's dex
+  (`dexCountsByGen()[gen]`), not the global national dex.
+- **Diploma and ceremony are fully region-aware** (`src/ui/diploma.js`): a new config
+  `REGION_DIPLOMA` (Kanto = Prof. Oak / Pallet Town / gen1, Johto = Prof. Elm /
+  New Bark Town / gen2). `renderDiplomaCanvas`, `downloadDiplomaPng`,
+  `showDiplomaModal` and `startDiplomaCeremony` take `region` and show the correct
+  professor, lab, species count and signature. `oakSpriteHtml()` → `professorSpriteHtml(cfg)`
+  (professor sprite from `assets/gen<cfg.gen>/npc/<npc>.png`).
+
+### Added
+- **Johto capstone in Prof. Elm's Lab** (`src/ui/storyBuildingView.js`): after picking
+  a Johto starter and completing the gen2 dex, Elm offers the diploma ceremony
+  (`[data-claim-diploma-johto]` → `startDiplomaCeremony({ region: "johto" })`) and awards
+  the Johto Shiny Charm — mirroring Oak in Kanto. The Oak's Lab capstone was switched to
+  gen1 counts + `hasDexDiploma("kanto")`.
+- **The profile is region-aware** (`src/ui/profileView.js`): the "Shiny Charm" and "Dex
+  Diploma" rows carry a region tag, and their status plus the "View / Download Diploma"
+  button follow the active region (`hasShinyCharm`/`hasDexDiploma`).
+- **A playful "customs" tutorial on your first arrival in Johto** (`src/ui/storyBuildingView.js`,
+  `css/main.css`): a new `showJohtoCustomsTutorial` — a two-step scene with a customs
+  officer who lightheartedly explains the region-specific rules (Kanto Pokémon can't
+  battle → they rest in the PC; the Kanto Shiny Charm doesn't apply here, a new one is
+  earned for the Johto dex) and reassures the player that customs does NOT take your
+  money, eggs, items/TMs/HMs or Pokédex/collection. Gated by the flag `johtoCustomsSeen`
+  (full version only the first time, then a short welcome). New CSS `.story-list`.
+
+### Fixed
+- **Save migration v52** (`src/systems/save.js`, `src/core/state.js`): the old global
+  `story.shinyCharm` / `story.dexDiploma` are mapped onto `*ByRegion.kanto` (all old
+  saves originated in Kanto). `CURRENT_SAVE_VERSION = 52`.
+- **De-hardcoding "151"** (`src/dev/devPanel.js`, `src/dev/devTools.js`,
+  `src/systems/battleSystem.js`): the dev "Complete Dex" button takes the count from
+  `POKEMON_SPECIES.length` (not "all 151"); comments updated to the per-region dex.
+  Verified that achievements (`dex-151`/`dex-251` via `DEX_COMPLETE_ACHIEVEMENTS` from
+  `GENERATIONS` + `dexGenComplete`) and `devCompleteDex` are fully data-driven. The
+  remaining "151" occurrences are legitimate (stable achievement IDs, flavour Mew #151,
+  gen1 docs).
+
+
+## [1.27.0] – 2026-10-01 · Gen1/gen2 audit + fixing 3 holes in the Johto dex (Espeon/Umbreon, Lugia, Porygon)
+
+### Fixed
+- **Espeon #196 / Umbreon #197 – unreachable in Johto** (`src/ui/storyBuildingView.js`,
+  `data/buildings.js`): Bill's House in Goldenrod shared the gift flag `eeveeGift`
+  with Kanto's Celadon Mansion. On a normal playthrough the player already had
+  `eeveeGift` from Kanto → Bill gave no Eevee, and the Kanto Eevee is region-locked
+  (`caughtRegion "kanto"`, doesn't level or gain friendship in Johto), so it couldn't
+  evolve. Bill now gives a **Johto Eevee** via its own flag **`johtoEeveeGift`** + its
+  own handler `[data-take-johto-eevee]`; `createPokemon` stamps `caughtRegion "johto"` →
+  happiness-day→Espeon / happiness-night→Umbreon work in Johto.
+- **Lugia #249 / Whirl Islands – unreachable** (`data/buildings.js`,
+  `src/ui/storyBuildingView.js`): **HM06 Whirlpool** was granted nowhere in production
+  code (only in the dev skip), yet Whirl Islands have `unlock {visited route-41, hm:6}`.
+  Added the single production source — a new story building **Cianwood House** (a sailor):
+  `[data-take-whirlpool]` → `grantHmToPlayer(6)` (flag `hasWhirlpool` + item
+  `hm06-whirlpool`). Registered in `CITY_BUILDINGS["cianwood-city"]` and the VIEWS map.
+- **Porygon / Porygon2 #233 – prize gate wasn't region-aware** (`src/ui/storyBuildingView.js`):
+  the Game Corner prize (shared Celadon/Goldenrod) gated Porygon on the global
+  `ownsSpecies` → with a Kanto Porygon you couldn't take the Johto one, and so couldn't
+  get **porygon2 #233** in a single Johto playthrough. The gate was switched to
+  `ownsSpeciesInRegion` (current region) — consistent with the collection-unique-per-species+region model.
+- **Level cap wasn't region-aware (regression from the per-gen split)** (`src/systems/progression.js`):
+  after the split, `GYMS`/`LEAGUE` are aggregates across generations, so a Kanto player
+  with 4–8 badges and no title fell, by iteration, onto a Johto gym and got a nonsensically
+  low cap. `currentLevelCap()` now scopes gyms/league to the player's region via
+  `generationByRegion`. (Only matters with the optional `settings.rules.levelCap` rule +
+  gen2; production unaffected.)
+
+### Added
+- **Dev skip for Johto** (`src/dev/devTools.js`, `src/dev/devPanel.js`): `DEV_CHECKPOINTS_GEN2`
+  (13 milestones j-start → j-champion) + `devApplyCheckpointGen2`. Each jump first builds a
+  full Kanto champion baseline (prerequisite for being in Johto), then switches region and
+  layers on the Johto progress (visits, badges, defeated trainers, HM/story flags). A "Skip to
+  (Johto)" row in the dev panel, gated on `GEN2_ENABLED`.
+
+
+## [1.26.0] – 2026-10-01 · Unchosen starters as rare wild + gen-specific legendary gate
+
+### Added
+- **Unchosen starters as a `veryrare` wild after clearing the Johto League** (`src/systems/battleSystem.js`,
+  mirroring the gen1 Safari starter spawns): a helper `johtoStarterWildId(area)` + a hook in
+  `spawnEnemy`. On **Route 26 / Route 27** (near Victory Road), after earning the **Johto
+  Champion** title (flag `isJohtoChampion`), one of the **unchosen** starters appears at a small
+  chance (`JOHTO_STARTER_SPAWN_CHANCE = 0.08`) (excluding the chosen `johtoStarterId` and species
+  already owned in the region via `ownsSpeciesInRegion`). No gift or dialog — you catch it
+  normally in battle. Unlocks the other 2 of the three: chikorita/cyndaquil/totodile.
+- **A subtle hint from Prof. Elm** (`src/ui/storyBuildingView.js`, `elmLabView`):
+  after clearing the Johto League and until the player owns both unchosen starters, Elm
+  mentions "wild sightings near Victory Road (Routes 26–27)" → discoverability of the spawn
+  without a gift.
+
+### Fixed
+- **`isChampion` vs. `isJohtoChampion` – the legendary gate wasn't gen-specific**
+  (`data/gen2/legendaries.js`): **Ho-Oh** (ecruteak-city) and **Celebi** (ilex-forest)
+  were gated on `isChampion`, which is however `true` already on arrival in Johto (set after
+  the Kanto League / S.S. Anne), so they could be obtained prematurely. Now gated on
+  `isJohtoChampion` (flag from `LEAGUE_GEN2.clearStoryFlag`) — the peak of the Johto challenge,
+  just like Mewtwo in gen1. Comments in the header and at both encounters updated.
+
+
+## [1.25.0] – 2026-10-01 · Baby Pokémon catchable in the wild + Togepi egg
+
+### Added
+- **Baby Pokémon as a rare wild** (`data/gen2/areas.js`, consistent with the already-existing
+  Tyrogue `veryrare` in Mt. Mortar): **Pichu** (National Park), **Cleffa** (Dark Cave),
+  **Igglybuff** (Route 34), **Smoochum** (Ice Path, near Jynx), **Elekid** (Route 39, near Magnemite).
+  Magby was already wild (Burned Tower). The player now catches them directly, without relying
+  on breeding (whose parents clefairy/electabuzz weren't in Johto).
+- **Togepi Egg** (Prof. Elm's Lab, after picking a starter, flag `togepiGift`): Elm's assistant
+  gives an Egg from Mr. Pokémon → **Togepi** (#175). The only canonical source; also unlocks
+  **Togetic** (#176, happiness).
+
+### Fixed
+- **cleffa, elekid, togepi/togetic were unobtainable** and pichu/igglybuff/smoochum only via
+  breeding with missing parents (see dex audit). Now all are available in 1 playthrough.
+
+
+## [1.24.0] – 2026-10-01 · Goldenrod: Bill's House (Eevee) + Game Corner (Porygon)
+
+### Added
+- **Bill's House** (Goldenrod, story building `bills-house`): Bill gives the player an **Eevee**.
+  It shares the flag `eeveeGift` with Celadon Mansion (one gift Eevee per game; more via
+  breeding) and reuses the handler `[data-take-eevee]`. Unlocks **Espeon** (happiness-day)
+  and **Umbreon** (happiness-night).
+- **Goldenrod Game Corner** (story building `goldenrod-game-corner`): a proper arcade
+  (slots / blackjack / prize corner / exchange). Reuses `gameCornerView(johtoArcade=true)`,
+  shares coins and the **Porygon** prize with Celadon (`ownsSpecies` → one Porygon per game),
+  without the Rocket hideout (that's at Mahogany). Unlocks **Porygon** → porygon2.
+
+### Fixed
+- **Neither Eevee nor Porygon could be obtained in Johto** – both gifts were in Kanto only
+  (Celadon Mansion / Celadon Game Corner). As a result **espeon, umbreon** (from Eevee
+  happiness-day/night) and **porygon2** (from Porygon) were unreachable. Goldenrod now
+  provides them.
+
+
+## [1.23.0] – 2026-10-01 · Goldenrod Dept. Store (evolution items finally buyable in Johto)
+
+### Added
+- **Goldenrod Dept. Store** (`data/buildings.js` – story building `goldenrod-dept-store`,
+  in the `goldenrod-city` roster): Johto's counterpart to the Celadon Dept Store. The floors
+  sell the **full catalog** — balls, healing, boosts, **evolution stones**, held items and TMs
+  (`src/ui/buildingView.js` `SHOP_DEPT_SETS`), with a view + "Shop the floors" handler in
+  `src/ui/storyBuildingView.js`.
+
+### Fixed
+- **Evolution items couldn't be bought in Johto** – `poke-mart` sells only balls+healing and
+  the Celadon Dept Store is in Kanto, so sun-stone and the **Linking Cord** were unreachable.
+  As a result these couldn't be completed: **bellossom, sunflora, politoed, slowking, steelix,
+  scizor, kingdra, porygon2** (8 species). The Goldenrod Dept Store now provides them.
+
+
+## [1.22.0] – 2026-10-01 · Services in every Johto town (Poké Center / Mart / idle)
+
+### Added
+- **Building rosters for every Johto town** (`data/buildings.js` `CITY_BUILDINGS`):
+  Cherrygrove, Violet, Azalea, Goldenrod, Ecruteak, Mahogany, Blackthorn and
+  Indigo Plateau (Johto) got an explicit roster with a **Poké Center + Poké Mart**.
+  **Goldenrod**, as the hub, additionally carries the idle services **Day Care + EV Training +
+  Move Tutor**, so Johto doesn't lose them (previously only the fallback provided them). Johto
+  towns not listed before fell back to a non-canonical "idle five"; now every town has its
+  canonical services.
+
+### Changed
+- The Olivine and Cianwood rosters (from v1.19.0) are now kept in the unified list of Johto towns.
+
+
+## [1.21.0] – 2026-10-01 · Amphy questline (Olivine/Cianwood) + gate the Johto League behind 8 badges
+
+### Added
+- **Amphy questline – Olivine lighthouse + Cianwood pharmacy** (`data/buildings.js`,
+  `src/ui/storyBuildingView.js`, `src/ui/gymView.js`): new story buildings
+  `olivine-lighthouse` (Glitter Lighthouse) and `cianwood-pharmacy`, added to the town
+  rosters `olivine-city` and `cianwood-city` (alongside Poké Center/Mart). The pharmacy
+  gives a SecretPotion (flag `secretpotionObtained`) → at the lighthouse you use it to heal
+  the sick Amphy (flag **`amphyHealed`**). That unlocks the **Olivine Gym / Jasmine** (the gym
+  had `requiresStory: "amphyHealed"`, which was so far set NOWHERE → it was permanently
+  locked). The Olivine gym got its own gate text pointing to the lighthouse/pharmacy.
+
+### Changed
+- **The Johto League requires all 8 regional badges** (`src/ui/mainPanel.js`,
+  `data/trainers.js` new export `regionForArea`): the League tab previously showed just based
+  on reaching the League area, so the Johto League could be run with 7 badges
+  (Jasmine/mineral was skippable). It now requires the region's complete badge set
+  (region-agnostic via the badge's `gen`) — applies to both Kanto and Johto.
+
+### Fixed
+- **Jasmine (Mineral Badge) is now obtainable** – a consequence of the Amphy questline above;
+  without it you couldn't reach 8/8 badges in Johto.
+
+
+## [1.20.0] – 2026-10-01 · Ruins of Alph (Unown tracker), gen 2 achievements, Tyrogue evolution
+
+### Added
+- **Unown form tracker – Ruins of Alph** (`data/gen2/unown.js` *(new)*,
+  `src/systems/unownSystem.js` *(new)*, `data/gen2/areas.js`, `battleSystem.js`,
+  `battleView.js`, `src/ui/sprites.js`, `css/main.css`): a new area `ruins-of-alph`
+  (unlocked after `route-36`). A collection of 26 Unown forms A–Z lives OUTSIDE the national
+  dex (Unown = 1 slot #201) in `state.unownForms`. Which form appears is random
+  (`rollUnownForm`), but in battle it is VISIBLE (name "Unown (A)" + a form-specific
+  sprite) and you catch exactly the one you fought (`recordUnownForm` in `doCatch`).
+  It survives refreshes and interludes (serialize/restore). Auto-catch "New" is form-aware.
+  UI: a "🔤 X/26" button + a modal with an A–Z grid (only in the ruins). `!`/`?` wait for gen 3.
+- **A series of 13 gen 2 (Johto) achievements** (`data/achievements.js`,
+  `src/systems/achievementSystem.js`): the whole series gated by `GENERATIONS.some(g => g.gen === 2)`,
+  so it doesn't appear or spoiler in production. Covers Johto dex milestones
+  (`dexCountByGen[2]`), starters, baby Pokémon, cross-gen evolutions, the legendary
+  trio/duo, Tyranitar, Celebi and `unown-alphabet` (all 26 forms). New derived
+  stat `unownComplete`; helper `ownsAll`.
+
+### Changed
+- **Tyrogue evolution = stat-branch** (`data/gen2/pokemon.js`,
+  `src/systems/evolutionSystem.js`, `src/ui/pokemonCard.js`): instead of a linear
+  `evolvesTo`, a new `stats` method at Lv 20 — Attack > Defense → Hitmonlee,
+  Defense > Attack → Hitmonchan, tie → Hitmontop. The engine (`evolutionInfo`) always
+  offers the branch matching the individual's current stat ratio.
+
+
+## [1.19.0] – 2026-09-25 · Asset split per generation (all content categories)
+
+### Changed
+- **Pokémon sprites and cries live per generation** (`src/core/assets.js` *(new)*,
+  `src/ui/sprites.js`, `src/systems/audioSystem.js`): paths to gen-specific assets are
+  composed by a new gen-aware helper `pokemonAssetDir(id)` / `cryUrl(id)` (generation from
+  `getSpecies(id).gen`). Sprites moved from `assets/pokemon/<id>/` to
+  `assets/gen<N>/pokemon/<id>/` (gen 1 = 151 species, gen 2 = 3 starters) and cries from
+  `assets/audio/cries/<id>.mp3` to `assets/gen<N>/cries/<id>.mp3`.
+- **All asset content categories are now per generation** (`src/core/assets.js`
+  extended, `data/trainers.js`, `data/badges.js`, `src/ui/cityView.js`,
+  `profileView.js`, `battleView.js`, `gymView.js`, `diploma.js`, `introScene.js`,
+  `data/gen1/index.js`, `data/gen2/index.js`): gym-leaders, trainers, badges, city,
+  buildings, npc and map are read from `assets/gen<N>/<cat>/…`. The generation is derived from
+  the species (pokemon/cries), from the entity's data (`getBadge(id).gen` – badges) or from the
+  active region (`currentGen()` – trainers, cities, buildings, npc). New helpers:
+  `gymLeaderSpriteUrl`, `trainerClassSpriteUrl`, `badgeUrl`, `cityBgUrl`,
+  `buildingSpriteUrl`, `npcUrl`, `currentGen`, `regionGen`. Badges got a `gen` field.
+  **Global (outside the gen folders) remain only** assets with no regional visual:
+  `items`, `pokeballs`, `backgrounds` (biomes), `audio/sfx`, `audio/bgm`, `title`.
+- **Physical move + gen 2 skeleton**: all gen 1 assets moved to `assets/gen1/<cat>/`
+  (badges, buildings, city, gym-leaders, npc, trainers, map). A complete tree
+  `assets/gen2/<cat>/` was founded for all of Johto (per `docs/SPRITES-TODO-GEN2.md`):
+  10 Johto gym-leaders/E4, 14 new trainer classes, empty badges/city/npc/map (`.gitkeep`).
+  **Returning entities were duplicated** into gen 2: leaders koga + elite-four-bruno +
+  champion-lance (from gen 1 elite-four-lance), all generic trainer classes (33) and shared
+  buildings (poke-center, poke-mart, day-care, move-tutor, dept-store, game-corner) → the path
+  is always `assets/gen<N>/…` with no fallback logic.
+- **Asset generators are gen-aware** (`tools/fetch_cries.ps1`, `tools/dl_static.py`,
+  `tools/dl_gifs.py`): they read species from the per-gen files `data/gen<N>/pokemon.js`
+  (the root `data/pokemon.js` is now just an aggregator with no literals) and download into
+  `assets/gen<N>/…` by the species' generation. `tools/prep_sprite.py` unchanged (takes the
+  target folder as an argument – run on `assets/gen1/pokemon` and `assets/gen2/pokemon`).
+
+
+## [1.18.0] – 2026-09-24 · New Bark Town, Prof. Elm + team region-lock
+
+### Added
+- **New Bark Town** (`data/gen2/areas.js`): the first Johto town as a placeholder
+  (no wild species) – the entry node on arrival. The battle area therefore no longer shows
+  Vermilion City, but Johto.
+- **Placeholder map canvas with nodes** (`mapView.js` + `.map-placeholder-bg`):
+  a region with areas but no `mapImage` (Johto) renders clickable nodes over a colored
+  "under construction" canvas. The nodes work, only the map art is missing.
+- **Prof. Elm's Lab** (`storyBuildingView.js`, building `elm-lab`): a one-time choice of
+  **Johto starter** – Chikorita / Cyndaquil / Totodile (level 5). The Kanto starter
+  (`player.starterId`) is not overwritten; `story.johtoStarterId` is stored.
+- **Johto starters** (`data/gen2/`): chikorita (#152), cyndaquil (#155),
+  totodile (#158) – species, learnsets, EV yields.
+- **Team region-lock** (`team.js` `canBattleInRegion`): the Pokédex and collection carry over
+  between regions, but in a region you may battle **only with Pokémon of its generation**
+  (gen 1 in Kanto, gen 2 in Johto). Enforced in `battleSystem` (battle start, replacement
+  after KO, auto-deploy, Switch) and in the Switch UI (ineligible ones greyed out).
+
+### Changed
+- **Two-way voyage between regions** (`travelToRegion`): the team and the last active area
+  are remembered **per region** (`progress.teamByRegion`, `progress.lastAreaByRegion`,
+  lazy-init). On leaving a region its team is **moved entirely into the PC** (clears
+  `s.team`; collection/Pokédex stay) and restored on return — so you come back to the same
+  place with the same team. Gen 1 → Gen 2 therefore empties the team into the PC
+  (region-lock: only gen 2 battles in Johto), and the team is filled by Prof. Elm's starter.
+- **The Johto starter is added straight to the team** (`storyBuildingView.js`): after picking
+  it at Elm's the new Pokémon goes into the team (empty after the cleanup); if it's full, it
+  stays in the PC and the player is told to swap it in.
+
+### Added (dev)
+- **Temporary dev return to Kanto** (`mapView.js`, gate `IS_DEV` from `gameConfig.js`):
+  a temporary "🛠️ Back to Kanto (dev)" button above the map, localhost only. The proper
+  player return will come with a **ship unlocked in gen 2** (a future port building). The
+  button never appears in production.
+
+
+## [1.17.0] – 2026-09-24 · Kanto → Johto transition via the S.S. Anne
+### Added
+- **Transition between regions**: a new function `travelToRegion(region)` (`battleSystem.js`)
+  switches `state.progress.region` and the active area to the target generation's entry node.
+- **S.S. Anne → Johto**: in the S.S. Anne window (Vermilion), after earning the **Champion**
+  title a "⛴️ Set sail for Johto" button appears (only when `GEN2_ENABLED`). Clicking it sails
+  to Johto.
+- **Region-aware map** (`mapView.js`): the map and its nodes belong to the active region; Johto
+  is for now an empty **"under construction" canvas**. Return via the "⚓ Back to Kanto" button
+  above the map.
+- **Region state in the save**: `progress.region` (default `"kanto"`) + migration v49 → **v50**.
+
+
+## [1.16.0] – 2026-09-24 · Generation foundation: folder structure + feature flag
+### Added
+- **Per-generation architecture** (`data/gen1/`, `data/gen2/`, `data/generations.js`):
+  each generation has its own folder with the complete content (species, learnsets, EV yields,
+  areas, legendaries). The root aggregators (`data/pokemon.js`, `areas.js`,
+  `learnsets.js`, `evYields.js`, `legendaries.js`) compose the data from the generation
+  registry; systems and UI are unchanged.
+- **Feature flag `GEN2_ENABLED`** (`data/gameConfig.js`): on localhost gen 2 is always on
+  (testing), in production it's driven by `GEN2_RELEASED` (shipping = one line).
+- **A separate gen 2 changelog** (`CHANGELOG-GEN2.md`): hidden in production until release.
+- Johto skeleton: empty map (`data/gen2/areas.js`), no species yet.
+
+
+## [1.15.3] – 2026-09-16 · Team & PC go all-in on drag-and-drop; PC fits its window; battle controls stop flickering
+### Fixed
+- **The auto-catch "Catch:" dropdown and the Poké Ball picker in battle no longer flicker/close under your cursor** (`src/ui/battleView.js`): the battle panel re-renders on every `BATTLE_UPDATE` (very fast in auto mode) by rewriting its HTML, which slammed shut the open auto-catch menu and the native Poké Ball `<select>` the instant you tried to pick something. Tick re-renders are now **deferred while you're interacting with an open control** — while the auto-catch menu is open, or while a `<select>` in the panel has focus — so it stays put long enough to click. Manual re-renders (opening/closing the menu, ticking an option) still go through immediately, and the scene catches up the moment you're done (the ball `<select>` blurs itself after a pick, so battles keep updating). This does not touch the sprite/background flicker already fixed in 1.15.0.
+### Changed
+- **Moving a Pokémon from the PC into your team is now purely drag-and-drop** (`src/ui/pcView.js`, `src/ui/teamView.js`, `src/systems/team.js`): the ＋Team button on PC slots is gone. Drag a stored Pokémon onto a team slot instead — and if that slot is already occupied, the two **swap**: the dragged Pokémon takes the slot and the one that was there drops back into the PC. This works even when your team is full (the whole point of a swap), so you no longer have to remove a Pokémon first. New `swapIntoTeam(uid, index)` backs it; dropping on an empty slot still just adds (respecting the max of 6). The PC keeps its Day Care / Breeding / ✓ Team status tags.
+- **The PC no longer scrolls — it shows as many tiles as fit the window, and pages through the rest** (`src/ui/pcView.js`, `css/main.css`): tiles keep a **fixed, comfortable size** (sprites don't shrink); instead the **number of tiles adapts** to the PC window — however many columns × rows fit the available Battle/PC area is what you see, with no scrollbar. The remaining stored Pokémon live on further pages (◀ ▶ navigation, and you can drop a Pokémon on an arrow to move it to the neighbouring page). Resizing the window recomputes the tile count live (via `ResizeObserver`). The fixed-30-per-box storage is unchanged underneath — the view just reads all boxes as one continuous list and paginates it. As a result the old **named boxes are gone** (box rename, the box picker and the per-box `(n/30)` header from 1.15.1) — navigation is now a simple page counter (`Page X / Y`). Search results keep their own scrollable flat grid, since the number of matches varies.
+### Removed
+- **The Team tab's ◀ ▶ reorder and Remove buttons are gone** (`src/ui/teamView.js`, `src/systems/team.js`): everything is drag-and-drop now — drag a team member to reorder within the team, or drag it onto the PC to take it out. Only context actions remain on a team slot (💊 Cure when statused, ✨ Evolve when ready). Removes the per-slot button clutter.
+
+
+## [1.15.2] – 2026-09-16 · PC: one-click Sort (living dex) + Search
+### Added
+- **Sort the whole PC with one click** (`src/systems/pcSystem.js`, `src/ui/pcView.js`): a new **Sort** row in the PC tab (**Dex #** / **Lv** / **Name**) reorganizes *every* stored Pokémon across all boxes and packs them in sequentially from Box 1, slot 1 — so building a living dex no longer means dragging Pokémon around by hand. `sortAllBoxes(key)` gathers all stored Pokémon, sorts them (Dex # ascending, or level descending, or name A→Z) and refills the boxes in order. It overwrites your manual arrangement (that's the point), and it's easily redone by dragging or sorting again.
+- **Search the PC** (`src/ui/pcView.js`): a search box filters your stored Pokémon by **name or Dex number** across *all* boxes at once and shows the matches as a single flat grid — find any Pokémon instantly instead of paging through 30 boxes. Clicking a result opens its card and the ＋Team button still works; drag-to-rearrange is paused while searching (clear the box to go back to normal box view). The search keeps focus/caret across the once-a-second panel refresh.
+
+
+## [1.15.1] – 2026-09-16 · PC box header shows how many Pokémon are in the box
+### Fixed
+- **The number next to a PC box name now shows how many Pokémon are stored in that box** (`src/ui/pcView.js`): the header read `Box 1 (1/3)`, which was actually the **box position / total box count** — easy to misread as a fill count (it looked like "1 of 3 Pokémon" even when the box held 30). It now reads `Box 1 (30/30)` = Pokémon in this box out of its 30 slots. The box position is still available from the ◀ ▶ arrows and the box picker (drag a Pokémon onto the box name).
+
+
+## [1.15.0] – 2026-09-16 · No more flicker: sprites survive every tick re-render
+### Fixed
+- **Pokémon sprites (and the battle background) no longer flash/reload on every game tick** (`src/ui/domReuse.js` *(new)*, `src/ui/sprites.js`, `src/ui/battleView.js`, `src/ui/pcView.js`, `src/ui/pokedexView.js`, `src/ui/safariView.js`, `src/ui/legendaryView.js`, `src/ui/pokemonCard.js`, `src/ui/starterModal.js`): the game re-renders whole panels on `STATE_CHANGED`/`BATTLE_UPDATE` (once per second, and far faster in auto-battle) by rewriting `innerHTML`. That destroyed and recreated every `<img>`, so on each tick sprites reloaded — a visible flash, a momentary "?" placeholder glyph, and animated GIFs restarting from frame one. This was worst in battle (the mon you're fighting flickered constantly) but happened in the PC, Pokédex, Safari, Legendary tabs and the Pokémon card too. A new helper `setHtmlReuseSprites(root, html)` keeps the already-loaded sprite nodes across a rewrite: every sprite now carries a stable `data-skey` (species + shiny + gender + form), so after the new HTML is set the old, still-decoded nodes are moved back into place instead of the fresh duplicates. Result: **the tick redraws text/bars/buttons as before, but images stay put — no reload, no flash, GIFs keep animating.** The battle background (`.bg`) is keyed the same way. Keys include `speciesId`, so evolutions/switches still swap to the correct sprite.
+### Changed
+- **Top resource bar order** (`src/main.js`): **EXP Share** and **Shiny Charm** now sit **right next to the Pokédex** (Profile · Gold · Balls · Pokédex · EXP Share · Shiny Charm · Achievements · Eggs) instead of trailing at the end, grouping the collection-related toggles together.
+### Added
+- **Real icons for EXP Share, Pokédex and Shiny Charm in the top bar** (`assets/items/exp-share.png`, `assets/items/pokedex.png`, `src/main.js`): the placeholder emoji are replaced by processed sprites (background removed, resized to a 256×256 transparent canvas per the item-icon convention). Shiny Charm now renders its `assets/items/shiny-charm.png` icon too (falling back to ✨ if missing).
+
+
+## [1.14.0] – 2026-09-16 · EXP Share + Pokédex given by Oak for the Parcel (forced new game)
+### Added
+- **EXP Share** (`src/systems/battleSystem.js`, `src/main.js`, `css/main.css`): a toggle in the top resource bar. When **ON** (default), every non-fainted team member other than the active Pokémon gains **20 %** of the XP the active mon earns from each win — so your whole party levels while you battle/idle, without shuffling weak mons (Abra, Magikarp, Lv 1 hatchlings) to the front. Only XP is shared, **not EVs** (EV training stays meaningful). Works in auto and manual, wild and trainer battles. Toggle it off to funnel all XP into one mon (fast single-target evolutions). Fainted bench members don't share (canonical).
+- **The Pokédex and EXP Share are now given by Professor Oak** when you deliver Oak's Parcel (`src/ui/storyBuildingView.js`, `src/ui/mainPanel.js`): both are handed over together in the delivery popup, early in the game. Until then the Pokédex is hidden (tab and top-bar entry), so it arrives as a proper story reward rather than being there from the first second.
+- **Item icon slot** (`assets/items/`, `src/main.js`, `css/main.css`): the top-bar EXP Share and Pokédex now render a sprite from `assets/items/exp-share.png` / `assets/items/pokedex.png` if present, falling back to emoji (🔗 / 📕) until you add the images. See `assets/items/README.md`.
+### Changed
+- **Forced new game (save v48 → v49)** (`src/core/state.js`, `src/systems/save.js`): because the early game changed (Pokédex/EXP Share now gated behind Oak's Parcel), existing saves below v49 are discarded on load and a fresh game begins (intro + starter selection). Nobody is playing in production yet, so this keeps the new gating clean from the start instead of carrying migration edge-cases.
+
+
+## [1.13.0] – 2026-09-16 · Area collection tab + map-node coloring, HM-gate self-heal, weak mons can grind
+### Added
+- **The route caught-counter is now its own clickable tab that shows what you caught there** (`src/ui/battleView.js`, `css/main.css`): the `🔴 X/Y` counter moved out of the battle-panel title into a button next to Pause/Catch (`#area-dex-btn`). Clicking it opens a modal grid of every species that can appear in that area — caught ones show their sprite, name and a ✨ if you have a shiny; uncaught ones show a `?` silhouette and `???`. A summary line reads "Caught X/Y · Shiny Z/Y". The modal live-updates while open (catch one and it fills in) and closes on Esc or overlay click.
+- **Map nodes now change color by how completely you've collected the route** (`src/ui/mapView.js`, `src/systems/pokedex.js`, `css/main.css`): a route node turns **red** once you've caught every species that appears there, and **gold** (with a glow) once you've also caught every one of them as **shiny**. Two new helpers back this — `isCaughtShiny(speciesId)` and `areaCompletion(area)`. Cities/towns (no wild species) are never recolored.
+### Changed
+- **City/Town map nodes are now blue instead of yellow** (`css/main.css`), so they read clearly apart from the collection-colored routes (green → red → gold).
+### Fixed
+- **HM-gated paths now open if you simply own the HM item — not only when a story flag was set** (`data/areas.js`): the Rock Tunnel gate (and every other HM gate — Surf, Strength) checked only the story flag (e.g. `hasFlash`). Older saves could receive an HM *item* without the matching flag (an earlier grant wasn't atomic, and the v30→v31 migration only back-filled `hasFlash` for players who had *already* passed the tunnel). Result: you had Flash in your bag but Rock Tunnel stayed locked. `isAreaUnlocked` now treats **owning the HM item OR having the story flag** as satisfying the gate, so it self-heals on reload with no save bump — and this applies uniformly to all three HM gates.
+- **Weak single-move Pokémon can finally be grinded in auto-battle** (`src/systems/battleSystem.js`): a mon whose only move is Teleport (e.g. a low-level Abra) used to auto-flee the moment battle started, ending it with no XP — so you could never level up the very Pokémon (Abra, Magikarp…) that need it. In **auto** the player now (1) never flees via an escape move, and (2) falls back to **Struggle** when it has no move that can actually deal damage (Teleport filtered out, Splash, etc.), so it fights, can win, and gains XP. The enemy's Teleport still flees as before. Note: XP goes only to the active Pokémon, so the weak mon must be the one in battle.
+- **Dev tools: dropdowns no longer snap shut (localhost only)** (`src/ui/settingsView.js`): the Settings modal re-renders every game tick, which was wiping out any open `<select>` in the Dev section — you couldn't pick a "Skip to" checkpoint (or a Pokémon target) because the dropdown closed itself before you could click Jump. The tick re-render is now skipped while a form control (select/input/slider) inside the modal has focus, and resumes once you click away. Buttons are unaffected, so ±level / shiny actions still refresh live.
+
+
+## [1.12.4] – 2026-09-15 · Hatched eggs no longer listed twice on return
+### Fixed
+- **Eggs that hatched offline are no longer duplicated in the "Welcome back" summary** (`src/ui/offlineView.js`, `src/main.js`): they were listed in the offline summary *and* then shown one by one as animated reveal popups — the same information twice. The hatched-eggs section is removed from the summary; each hatchling is now revealed only through its popup (as intended). The summary still shows battle, Day Care training and newly *bred* eggs (those have no reveal popup). If nothing but eggs happened while you were away, the summary is skipped entirely and the reveal popups play right after Continue.
+
+
+## [1.12.3] – 2026-09-15 · Time on the title screen now counts toward eggs
+### Fixed
+- **Time spent sitting on the title screen now counts toward egg incubation** (`src/main.js`): offline progress is computed at page load, and the live incubation loop only starts *after* you click Continue — so any time the game sat on the title screen (loaded but not entered) was silently lost for eggs, breaking "2 h = 2 h IRL" if you left the title screen open. The gap between load and Continue is now applied as an extra real-time catch-up for **eggs** (and **breeding**, which produces the eggs), right before the live loops start, so the same stretch is never double-counted. Any eggs that finish during that window are folded into the "Welcome back" offline summary and get their reveal popups. Battle and Day Care offline stay as-is (they're capped estimates, so title-screen dwell doesn't matter there).
+
+
+## [1.12.2] – 2026-09-15 · Eggs incubate on real (wall-clock) time
+### Changed
+- **Eggs now hatch on real elapsed time, not just time spent playing** (`src/systems/eggSystem.js`, `data/eggs.js`): incubation is meant to run on the wall clock — a 2-hour egg should take 2 real hours whether the game is open or not. Two things were tying it to "in-game" time and are fixed: (1) offline incubation was **capped** at the idle offline cap, so long absences didn't fully count — the cap is **removed for eggs** (you're away 10 hours, all 10 count); (2) the live incubation loop added a **fixed 1-second tick**, which under-counted when the tab was in the background (browsers throttle timers there) — it now adds the **actual elapsed time** since the previous tick.
+- **Hatch times lengthened** to suit real-time incubation (`data/eggs.js`): common 10→**30 min**, uncommon 20→**60 min (1 h)**, rare 45→**120 min (2 h)**, epic 90→**240 min (4 h)**, legendary 180→**480 min (8 h)**. The Day Care hatch-speed upgrade still applies on top.
+
+
+## [1.12.1] – 2026-09-15 · Everything shows after the title screen — offline hatches revealed too
+### Changed
+- **Eggs that hatch while you're away now also show the reveal popup** (`src/main.js`, `src/ui/offlineView.js`), consistent with the game's AFK/idle nature: everything visible is deferred behind the title screen anyway, so after you click Continue and dismiss the "Welcome back" offline summary, each offline-hatched Pokémon gets the same animated reveal (with stats) as a live hatch — queued, so you click through them one by one. Previously the reveal popup only appeared for hatches that happened while the game was open; offline hatches were listed in the offline summary but never revealed. (New eggs don't start incubating on their own while you're offline, so this can't flood you.)
+### Fixed
+- **Nothing pops up behind the title screen anymore** (`src/systems/achievementSystem.js`, `src/main.js`): achievement unlock toasts that trigger during load (the first evaluation of a loaded save, and the AFK-duration achievement recorded right after returning) used to appear *underneath* the title screen, before you clicked Continue. They're now **queued and flushed only after Continue**, so they reveal properly. The unlock, its reward and the save write still happen immediately — only the toast is deferred. In the same spirit, the idle loops (Day Care training, egg incubation, breeding) now **start after Continue** instead of during the title screen, so a live hatch/evolution can't fire behind it either.
+
+
+## [1.12.0] – 2026-09-15 · Egg hatch reveal popup — see what hatched, with its stats
+### Added
+- **Hatching an egg now shows an animated reveal popup** (`src/ui/hatchPopup.js`, `css/main.css`, wired in `src/main.js`), just like the evolution popup: the egg **wobbles**, then a **flash** reveals the Pokémon that hatched — its **sprite, name, level, shiny star**, and a compact **stats table** (each stat's value plus its IV out of 31). Previously an egg just hatched silently and you had no idea what came out. When several eggs hatch at the same moment, the popups **queue up** so you can click through them one by one (the button reads "Next egg →" while more are waiting, "Great!" for the last). If the hatchling is a duplicate species, the popup also explains it was **merged and released** (and lists any better IV/EV/shiny values it passed on to the one you keep). Click (or Esc) during the animation skips straight to the reveal.
+### Changed
+- **The hatched Pokémon's cry now plays at the reveal moment** in the popup (`src/main.js`, `src/ui/hatchPopup.js`) rather than instantly at hatch, so the audio lands with the visual reveal (and plays per-egg when multiple hatch at once). The hatch sound effect still plays as the egg hatches.
+- **Hatched Pokémon now always come out at level 1** (`data/eggs.js`): the hatch level range was Lv 1–5, now it's fixed at Lv 1 (`HATCH_LEVEL_MIN == HATCH_LEVEL_MAX == 1`). Applies to every hatch path (live ticking, offline catch-up, and the dev button).
+### Added (dev)
+- **Dev tool "🐣 Hatch an egg"** (`src/dev/devPanel.js`, `src/dev/devTools.js`, `src/systems/eggSystem.js`): instantly hatches every egg currently incubating in the Day Care hatchery and fires the reveal popups (queued), for quick testing. Dev tools only appear on localhost.
+### Note
+- Only **live** hatches (while the game is open) show the popup. Eggs that hatch **offline** still go into the offline summary as before, so the popup never floods you on return.
+
+
+## [1.11.0] – 2026-09-15 · Battle polish — rival is manual, trainer ball count, HP-bar colours
+### Added
+- **A Poké Ball indicator for trainer opponents in the battle area** (`src/ui/battleView.js`, `css/main.css`), like the mainline games: a row of up to 6 balls next to the enemy shows how many Pokémon the trainer has — **coloured balls are still in play** (including the one currently out), **greyed-out balls have fainted**. It only appears in trainer battles (wild Pokémon have no indicator) and is hidden in Full Auto (which hides the HP/EXP gauges too). This is the in-battle counterpart to hiding the roster before battle in 1.10.0 — you learn how many Pokémon the trainer has, but not which ones, until you face them.
+### Changed
+- **The battle HP bar now changes colour by remaining HP** (`src/ui/battleView.js`, `css/main.css`), like the mainline games: **green** above 50%, **yellow** between 20% and 50%, **red** at 20% or below (previously it only turned red under 25%). Applies to both the player's and the opponent's HP bar in the battle area.
+### Fixed
+- **Rival battles are now forced-manual** (`src/systems/battleSystem.js`), like Gym Leader and Pokémon League fights: Auto/Full Auto are disabled for them. Rival trainers are gated directly on their kind, since the Rival tab starts the battle without the gym/force-manual flags the other important fights use — so it was previously auto-battleable by mistake.
+
+
+## [1.10.0] – 2026-09-15 · Opponent teams are hidden until you fight them
+### Changed
+- **Trainer rosters are no longer previewed before battle** (`src/ui/gymView.js`, `src/ui/leagueView.js`, `src/ui/rocketView.js`, `src/ui/rivalView.js`): the trainer lists (Gym, Pokémon League, Team Rocket gauntlet, Rival) used to show how many Pokémon each trainer had (and up to what level) — the Rival card even listed every species by name and level. All of that is gone. A trainer's cards now show only their sprite, name/role and the Fight button; **which Pokémon they use, how many, and at what level is revealed only as you actually face them in the battle area.** (The dropped unused `getSpecies` import was removed from the Rival view.)
+
+
+## [1.9.0] – 2026-09-15 · Travel dropdown above the map
+### Added
+- **Travel dropdown above the Kanto map** (`src/ui/mapView.js`, `css/main.css`): a "Travel to" `<select>` lists every **reachable (unlocked)** area with its level range, so you can move by picking from the menu **or** by clicking a node — both go through the exact same path (Safari-leave check, story popups, info flash). This mainly helps on mobile/narrow layouts where two horizontally close nodes (e.g. Pewter City and Route 3) overlap and are hard to tap. The dropdown always **stays in sync with the current area** (its value follows whichever node is active), and its options rebuild only when the set of unlocked areas actually changes. The location line under the map now also shows the area's type and level range.
+### Changed
+- **Map nodes no longer show a permanent name pill on the active area** (`css/main.css`): now that the dropdown carries the area info, the active node's always-on opaque label pill (`z-index: 3`) — which physically covered horizontally close neighbours — is gone. The active area is just a highlighted, pulsing dot; area names still appear on **hover/focus** (desktop) and for the placement target in the dev edit mode.
+
+
+## [1.8.0] – 2026-09-15 · Battle log stays short — battle area no longer keeps growing
+### Fixed
+- **The battle area no longer keeps enlarging on narrow/auto/stacked layouts** (`src/systems/battleSystem.js`, `css/main.css`): the battle log kept the last 30 lines, and the log box (`.battle-info`) has an internal scroll — but only when it has a bounded height. In the desktop and mobile layouts it does; in the narrow **auto** (< 1000px) and **stacked** layouts it had no height cap, so instead of scrolling it grew to fit its content, pushing the whole battle area taller as the log filled up. This showed up dramatically with a Fake Out lock (a battle that never ends, so the log always fills to the cap). Fixed two ways: the log now keeps only the **last few lines** (6) instead of 30, and `.battle-info` gets a **`max-height` + scroll** in the auto and stacked layouts too (mirroring mobile). The battle scene container (`.battle-field`) is deliberately left untouched.
+
+
+## [1.7.0] – 2026-09-15 · Fake Out's flinch is limited to its first turn
+### Fixed
+- **Fake Out no longer flinch-locks the whole battle** (`data/moves.js`, `src/systems/battleSystem.js`): the move had no restriction and its flinch has no chance roll, so it flinched the target on every single hit — permanently locking the opponent out of acting (unplayable when the AI spammed it). Fake Out is still a normal attack you can use **every turn** (so a Pokémon whose only move is Fake Out isn't soft-locked), but its **flinch effect now only applies on the first turn** the user acts after being sent out (tracked per combatant via `volatile.turnsActive`, which resets on every switch-in). Later uses just deal damage with no flinch.
+
+
+## [1.6.0] – 2026-09-15 · Achievements rework — many more achievements, Steam-style reveal, own tab
+### Added
+- **Achievements fully rewritten and greatly expanded** (`data/achievements.js`) across four tiers — 🟢 Common, 🟡 Secret, 🔴 Rare, 🟣 Insane. New data model per achievement: `{ id, name, hint, condition, tier, check, reward }`. Humour is deliberately absurd/deadpan ("tired developer who publicly mocks you"). (Deliberately no spoilers here — go find them in-game.)
+- **Steam-style locked/unlocked reveal**: while locked, an achievement shows its name as **`???`** plus a permanent **cryptic hint** (you guess from it). On unlock, the real **name** appears and a **`Unlocked for: …`** line reveals the plain-text condition — the payoff moment.
+- **Dedicated Achievements tab** (`src/ui/achievementsView.js`, opened from the new 🏆 counter in the top resource bar): a card grid with a progress counter, an All / Unlocked / Locked filter, a coloured tier stripe per card, and unlock dates. **No icons/emoji anywhere** in the achievement UI (by design).
+- **Non-blocking unlock toast, closed only by ✕** (`src/ui/achievementToast.js`): shows name, hint, the revealed condition and the reward. It **never auto-dismisses** — you close it yourself so you can read the reveal.
+- **New tracked stats** backing the achievement conditions (`src/systems/achievementSystem.js`, `src/core/state.js`), hooked into the existing systems (battles, catching, trading, releasing, the Game Corner, offline time, a play-time tick). (Exact conditions intentionally left undocumented — they're meant to be discovered.)
+### Changed
+- **Achievements moved out of the Profile tab into their own tab** (`src/ui/profileView.js`): the old in-Profile list (which used the retired `icon`/`desc` model) is gone; Profile keeps the trainer card, badge case and Hall of Fame.
+- **Species achievements now require physically owning that exact species** (`data/achievements.js`): an achievement for a given Pokémon unlocks only while you actually hold **that** species in your team/PC — owning its evolution no longer counts.
+### Notes
+- **Achievements are never granted during the tutorial**: evaluation and all counters are skipped whenever the tutorial demo/sandbox is running (`state.tutorialDemoActive`). This intentionally does **not** gate on `story.tutorialDone`, which existing/old saves never set (the tutorial is only offered to brand-new empty saves) — gating on it would have frozen achievements for every in-progress player.
+- Save bumped **v47 → v48** (`src/core/state.js`, `src/systems/save.js`): migration backfills the new achievement stat counters on old saves (already-unlocked achievements are preserved). All achievements are verified obtainable (starters via the v1.5.0 Safari post-League fix).
+
+
+## [1.5.0] – 2026-09-15 · The other two starters are catchable in the Safari (post-League)
+### Fixed
+- **The two starters you didn't pick are finally obtainable** (`src/systems/safariSystem.js`): at Oak's Lab you choose exactly one of Bulbasaur/Charmander/Squirtle, and the other two appeared nowhere else in the game — no wild spawn, no gift, no trade. That made a full Pokédex (all 151) impossible on a single save, contradicting the project rule that everything is obtainable without an irreversible choice (the way both Hitmons and both fossils already are). Now, **once you've become Champion** (`story.isChampion`), every Safari Zone encounter has a small chance (~8 %) to be one of the three base starters instead of the normal pool, at the usual Safari levels. Catch them with normal Safari mechanics; evolutions then follow via level/stone as usual.
+### Notes
+- **Post-League only** by design: the starter choice at the start still matters during the main game; the alternates only show up in the Safari after you've cleared the Elite Four, purely to let completionists finish the Dex.
+- No save-version bump (still v47): this is pure Safari-encounter logic — no data or schema change. Existing Champion saves get the new spawns immediately.
+- Unblocks the upcoming achievements rework: the completion-related achievements are all reachable now.
+
+
+## [1.4.0] – 2026-09-15 · Signed save export/import (anti-cheat)
+### Changed
+- **Save export is now a signed, opaque file** (`src/systems/save.js`): export used to write your whole save as pretty-printed JSON, so anyone could open the `.txt`, bump `gold`/levels and re-import. Export now writes `PIRPG1|<base64(save)>|<HMAC-SHA256>` — the payload is base64 (not human-readable) and carries an integrity signature (Web Crypto). Import recomputes the signature and **rejects any file that was edited** (the payload no longer matches the signature) as well as anything that isn't in this format.
+- **Import only accepts the new signed format** (`src/systems/save.js`, `src/ui/saveControls.js`): plain-JSON files (including old exports from ≤ v1.3.0) are refused with a clear message. `importSave` now returns `{ ok, reason }` so the UI can distinguish "not a valid save file", "corrupted or edited", and generic errors. Export/import are async (`exportSave` awaits the signature).
+### Notes
+- No save-version bump (still v47): the localStorage save format is unchanged — only the export/import wrapper changed.
+- **Honest scope:** this is a client-side game, so this stops *casual* cheating (editing the exported file) but is not true security — the signing key lives in the shipped JS, and anyone using browser devtools can still alter the in-memory/localStorage state. Hardening localStorage was deliberately left out (adds corruption risk for no real gain against a devtools user).
+- **Old backups won't import anymore.** Re-export from v1.4.0 to get a file you can import again.
+
+
+## [1.3.0] – 2026-09-15 · Default master volume actually starts at 35
+### Fixed
+- **New games now really start at master volume 35** (`src/core/state.js`): v1.0.1 lowered the default master volume 70 → 35, but only in `AUDIO_DEFAULTS` (`src/systems/audioSystem.js`) — the fresh-save seed in `state.js` still hard-coded `audio.master: 70`, and since the live settings read `settings.master ?? AUDIO_DEFAULTS.master`, that seeded 70 always won. So every new game was still loud. The seed is now `35`, matching `AUDIO_DEFAULTS` (with a "keep in sync" comment on both). `music: 50` / `sfx: 80` already matched and are unchanged.
+### Notes
+- No save-version bump (still v47): only the default for *new* saves changes. Existing saves keep whatever master volume they already stored (by design — your own audio setting always takes precedence); to hear the new default, start a fresh save or set master to 35 yourself.
+
+
+## [1.2.0] – 2026-09-15 · Auto catch throws each ball at its best moment
+### Fixed
+- **Auto catch no longer wastes balls (and no longer kills its target on turn 1)** (`src/systems/battleSystem.js`): auto catch used to throw *every* round starting at full HP, and the auto-battler then usually KO'd the wild Pokémon after that single low-odds throw (≈13 % for an uncommon like Metapod) — which is why a whole belt of Poké Balls caught almost nothing. Auto catch now throws each ball **when that ball is most effective**, and the auto-battler **weakens the target instead of finishing it** so you actually get repeat throws at a rising success chance (`byHp` climbs `CATCH_MIN`→`CATCH_MAX` as HP drops).
+### Changed
+- **Throw timing now depends on the ball's effect** (`src/systems/battleSystem.js`, new `autocatchThrowNow` / `autocatchWantsCurrent` / `maxPlayerHit` helpers):
+  - **Quick Ball** (`firstTurn` ×5) is thrown **only on turn 1** — that's its whole point; if it misses, the battler finishes the enemy and moves on (no wasted later throws).
+  - **Every other ball** (Timer, Net, Repeat, Ultra, Poké…) is thrown at the **lowest safe HP**: the auto-battler attacks to weaken but holds fire once even its strongest possible hit — max damage roll × critical (`CRIT_MULT`) — could KO an *already-damaged* target (`HP < maxHP`), then throws every round until caught. Timer Ball benefits automatically (more elapsed rounds = bigger bonus).
+- **A target you can only one-shot is your own fault** (`src/systems/battleSystem.js`): if your lead would KO a *full-HP* wild Pokémon in one hit, auto catch still gets one throw that round, but the battler then kills it and moves on (it is not kept alive forever). Use a weaker lead if you want to catch it. A lead that can't damage the enemy at all (e.g. Metapod with only Harden) just throws every round at full HP.
+### Notes
+- No save-version bump (still v47): pure battle-loop logic, no data or schema change.
+- Only affects wild encounters with auto catch on and a matching target; trainer battles and manual play are unchanged.
+
+
+## [1.1.0] – 2026-09-15 · Auto-battle keeps your lead Pokémon in front
+### Fixed
+- **Auto / Full Auto now always fight with your first (living) team member** (`src/systems/battleSystem.js`): previously the active Pokémon persisted between encounters, so reordering your team while auto-grinding — or moving to a different map area mid-battle — meant the *old* active Pokémon kept fighting, your new lead never gained XP, and you could soft-lock (e.g. a Metapod/Kakuna with no attacking move stuck in front). A new `syncAutoActive()` runs at the start of every new encounter (`spawnNext`) **and when you move to a new wild area** (`setActiveArea`) and, in Auto/Full Auto only, re-seats the first living team member as the active battler (it no-ops when the correct Pokémon is already out, so it never resets an ongoing battler's HP/stat-stages needlessly). Manual mode is unchanged: your first Pokémon leads and you switch by hand with the Switch button.
+### Removed
+- **Automatic type-advantage switching in Auto / Full Auto** (`src/systems/battleSystem.js`): the auto-battler used to switch on its own to a more type-effective Pokémon whenever the enemy had a ≥2× move — surprising the player and pulling XP away from the intended lead. That behavior (the whole "Priority 2: Auto-switch" branch in `chooseAutoPlayerTurn`, plus the `_lastAutoSwitchTurn` guard) is gone; the auto-battler now just attacks. Switching by type is a manual decision again.
+### Changed
+- **Full Auto continues seamlessly on its own** (`src/systems/battleSystem.js`): the post-win continuation guard now checks `autoLoopActive()` instead of just `getAutoBattle()`, so Full Auto with the plain Auto battle toggle *off* keeps chaining encounters (matching its documented purpose of endless safe idling) rather than stopping at the win screen.
+### Notes
+- No save-version bump (still v47): pure battle-loop logic, no data or schema change.
+
+
+## [1.0.1] – 2026-09-14 · First post-release fixes
+### Fixed
+- **Tutorial Pokémon can no longer faint** (`src/systems/battleSystem.js`): during the tutorial the player's active Pokémon is now protected from HP loss in the demo battle, covering the auto-battle and full-auto steps. A newcomer hasn't learned where/how to heal yet, so fainting there would leave them stuck and confused looking for a Poké Center. Implemented by extending the existing HP-setter guard with `battle.demo` (the tutorial demo flag set in `startDemoBattle`); only HP *decreases* are blocked (healing still applies), and it covers every damage source (attack, recoil, confusion, poison/burn) since all HP changes go through that one setter. Real post-tutorial battles are unchanged — you can still faint normally.
+### Changed
+- **Default volume lowered by ~half** (`src/systems/audioSystem.js`): the default master volume dropped 70 → 35, so a fresh install starts noticeably quieter across BGM, SFX and cries (master scales every channel: `final = master/100 * channel/100`). Only affects new players / anyone who hasn't set their own audio levels — saved settings take precedence.
+### Notes
+- No save-version bump (still v47): pure logic/constant tuning, no data or schema change.
+
+
+## [1.0.0] – 2026-09-14 · 🎉 Gen 1 complete — first stable release
+### Milestone
+- **Kanto is done.** All 151 Pokémon are catchable on a single save (no irreversible choices — both fossils, both Hitmons, all trades and Game Corner mons), the full story runs city-by-city through the whole region, all 8 gyms (with their pre-battle puzzle minigames) + the Elite Four + Champion are beatable, and the endgame capstone (Dex Diploma + Shiny Charm) is in. The battle engine is Gen 1 feature-complete: real move system, manual + auto + Full-Auto idling, status/stat/volatile effects, HMs as reusable field moves, TMs, breeding/eggs, EV/IV, natures, held items, achievements, and both Game Corner games (Slots + Blackjack).
+- **This 1.0.0 folds in everything since the last `main` merge (v0.68 → v1.0.0):** the full move-effect pass, HM field-gating, dev-menu isolation, wild loot drops (Poké Balls), Blackjack, Team↔PC drag & drop, and the final idle-economy rebalance — see the per-version entries below for detail.
+- No save-version bump (still v47). Known non-blocking polish deferred to post-1.0.0 (optional extra battle backgrounds, random trainer sprite variants); fixes continue after release.
+
+
+## [0.119.0] – 2026-09-14 · Final economy rebalance — idle income (light touch)
+### Changed
+- **Idle income raised, active play still best** (`src/systems/battleSystem.js`, `src/systems/idle.js`): the final pre-1.0.0 economy pass. With the Game Corner exchange rate and prices intentionally locked, the dex-critical Porygon (9999 coins ≈ 200k gold via exchange) leaned too hard on grinding for an *idle* game, so the fix targets hands-off gold income only. **Full Auto reward multiplier 0.1 → 0.15** (`FULL_AUTO_REWARD_MULT`) and **offline efficiency 0.1 → 0.15** (`OFFLINE_EFFICIENCY`) — both idle modes now pay ~1/7 instead of ~1/10. **Offline cap 8 h → 12 h** (`OFFLINE_CAP_HOURS`). Net effect: ~+50 % idle income (Porygon by pure idling drops from ~7 h to ~4.7 h at endgame). Base gold formula (`2 + level`) and the Yield boost ceiling (×1.5) are deliberately untouched, so ball/item pricing and active-play balance are unchanged and active manual play stays clearly the fastest. The Full-Auto tooltip + tutorial text now say "~1/7". *(The offline cap is shared via `OFFLINE_CAP_HOURS`, so breeding / daycare / egg hatching also now count up to 12 h offline — consistent with the idle-friendlier direction.)*
+### Notes
+- No save-version bump (still v47): pure constant tuning, no data or schema change.
+- This closes the last open pre-1.0.0 punch-list item (final economy rebalance).
+
+
+## [0.118.0] – 2026-09-14 · Drag & drop Pokémon between the Team panel and PC boxes
+### Added
+- **Drag & drop between Team and PC (both directions, to specific slots)** (`src/ui/dragState.js`, `src/systems/team.js`, `src/ui/teamView.js`, `src/ui/pcView.js`, `css/main.css`): you can now drag a Pokémon from a PC box straight onto a chosen Team slot (and back to any PC slot) — not just via the old buttons. Within the Team you can also drag to reorder into a specific position. A new shared `dragState` module (`dragState.js`) holds the dragged uid + its source panel ("pc" | "team"), because the Team and PC render into different DOM containers and HTML5 `dataTransfer` is only readable on drop, not on dragover. Team gained two systems helpers: `addToTeamAt(uid, index)` (insert from PC at a slot, with the same guards as `addToTeam` — max 6, must be in collection, not busy in Daycare/breeding) and `reorderTeam(uid, toIndex)`. Dropping a team-sourced Pokémon onto a PC slot removes it from the team first, then places it. A short drag guard stops the click-to-open-card handler from firing after a drag.
+### Notes
+- No save-version bump (still v47): the `team` array and `pcBoxes` already exist; this only adds a new way to move existing uids between them, no schema change.
+
+
+## [0.117.0] – 2026-09-14 · Wild loot drops enabled (Poké Balls) + Blackjack in the Game Corner
+### Added
+- **Wild battle loot drops are now live** (`data/areas.js`, `src/systems/loot.js`, `src/systems/battleSystem.js`, `src/systems/idle.js`): the dormant loot system (which shipped with logic but empty `drops: []` on every area) now has balanced drop tables on all 33 routes/caves. Modest, progression-tiered Poké Ball drops: early routes drop Poké Balls ~8 %, mid routes Poké Balls ~6 % + Great Balls ~3 %, late routes Great ~4 % + Ultra ~2 %, caves Great ~5 % + Ultra ~3 %. Cities and the Safari Zone (own ball supply) stay empty. Drops apply both in active battles and offline idle. *(The ~1.5 % random TM drop and egg drops were already live in active battles.)*
+- **Blackjack — a second Game Corner game** (`src/ui/storyBuildingView.js`, `css/main.css`): the Celadon Game Corner now has **tabs** (🎰 Slots · 🃏 Blackjack · 🎁 Prizes · 💱 Exchange) inside the same modal (no window resize). Blackjack is coin-based with a selectable bet (5 / 25 / 100 coins), Hit/Stand, dealer stands on 17. Rules follow real blackjack (blackjack/natural pays 3:2, other wins 1:1, push returns the bet); the house keeps a small edge (you lose slightly more hands than you win, as in any casino) so the arcade can't be farmed into a coin printer (coins → Porygon). Cards are text glyphs, no assets needed.
+### Fixed
+- **Loot application now routes Poké Balls correctly** (`src/systems/loot.js`): a new shared `applyLoot(res, resource, amount)` helper sends `"gold"` to `res.gold`, ball ids into the nested `res.balls[id]` map (matching how balls are stored), and anything else to a generic top-level key. The old flat `res[resource] += amount` would have written a Poké-Ball drop into an unusable `res.poke` instead of `res.balls.poke`. Both the active-battle and offline idle loot paths use it.
+### Notes
+- No save-version bump (still v47): drops are data, balls/coins use existing resource containers, no migration. Blackjack state is transient (module-level, not persisted).
+
+
+## [0.116.0] – 2026-09-14 · Dev menu isolated into `src/dev/` + shown only on localhost
+### Changed
+- **Dev menu moved into its own `src/dev/` folder** (`src/dev/devTools.js`, `src/dev/devPanel.js`, `src/dev/devEnv.js`, `src/dev/devMapPlacement.js`): all developer tooling is now in one place instead of being scattered. `devTools.js` (spawn / money / Complete Dex / story checkpoints) moved out of `src/systems/`; the two per-Pokémon dev helpers `devSetLevel` / `devToggleShiny` were pulled out of `src/systems/evolutionSystem.js` into `src/dev/devTools.js`; the whole Dev section UI (HTML + event wiring) was extracted from `src/ui/settingsView.js` into `src/dev/devPanel.js`; and the **map node-placement tool** (📍 Place nodes / position dump) was extracted from `src/ui/mapView.js` into `src/dev/devMapPlacement.js` (mapView now only calls a small render/wire/handle API). `settingsView.js` is now just real settings (audio / layout / panel order / game rules).
+- **Dev menu only renders on localhost** (`src/dev/devEnv.js`): a new `isDevEnv()` check (`location.hostname` is `localhost` / `127.0.0.1` / `[::1]` / `file://`) gates whether the Dev section **and** the map placement tool are built and wired. On the live GitHub/GitLab Pages build the files are still shipped but neither the Dev section (Settings modal) nor the 📍 Place nodes button ever appears — so players can't see or use them, while they stay available to me on any machine that runs the game from a local server. No build step required (the map tool no longer needs a manual `DEV_MAP_PLACEMENT` flag flip before release).
+### Notes
+- No save-version bump (still v47): pure code reorganization + runtime gate, no data or state changes. No gameplay change on localhost; the only difference on the deployed build is that the Dev section is hidden.
+
+
+## [0.115.0] – 2026-09-14 · Teleport + Conversion (last two Gen 1 utility moves) + centralized HM field-gating
+### Added
+- **Teleport now works** (`data/moves.js`, `src/systems/battleSystem.js`): the Gen 1 escape move. In a **wild** battle the user flees — the player's Teleport ends the fight (like the Run button); an enemy's Teleport makes the wild Pokémon escape and a fresh encounter spawns, so the idle grind keeps going. Against a **trainer** it always fails (canon). Handled safely from both the auto tick and the manual step loop via a `_teleportFlee` flag (no mid-`useMove` teardown). The auto-AI never picks it (power 0), so it won't interrupt idle auto-battles.
+- **Conversion now works** (`data/moves.js`, `src/systems/battleSystem.js`): the Gen 1 Porygon move changes the user's own type to that of one of its known moves (prefers a type it doesn't already have). Transient on the combatant like Transform — it resets on switch / after the battle.
+### Changed
+- **Centralized HM field-gating** (`data/hms.js`, `data/areas.js`, `src/systems/hmSystem.js`, `src/systems/battleSystem.js`, `src/systems/safariSystem.js`, `src/ui/storyBuildingView.js`): area gates no longer hard-code magic story-flag strings. `isAreaUnlocked` now understands `unlock.hm: <HM number>`, which it resolves to the right story flag through the central `HMS` table (`data/hms.js`). The three HM-gated areas (Rock Tunnel → HM05 Flash, Route 19 → HM03 Surf, Victory Road → HM04 Strength) were converted to `unlock.hm`. A new canonical `grantHmToPlayer(num)` (`hmSystem.js`) sets the story flag **and** grants the HM item atomically; the five scattered "set flag + add item" story sites (S.S. Anne Cut + Fly, Route 9 Flash ×2, Safari Surf, Warden Strength) now go through it. No behaviour change — gating and rewards are identical, just single-sourced.
+### Notes
+- No save-version bump (still v47): gating reads the same story flags, `grantHmToPlayer` sets the same flags/items, so existing saves are unaffected.
+- This finishes the two utility moves that v0.114.0 had deliberately left as no-ops, and closes the "HM field-gating not centralized" punch-list item.
+
+
+## [0.114.0] – 2026-09-14 · 1.0.0 completeness audit — Gen 1 move effects (OHKO / fixed / level damage + Disable / Mist), Struggle recoil
+### Added
+- **Gen 1 special-damage moves now work** (`data/moves.js`, `src/systems/battleSystem.js`): moves that were defined but did nothing (power 0, no effect) now deal their canonical damage. **OHKO** — Guillotine / Horn Drill / Fissure (one-hit KO; fails against a faster target, respects type immunity, 30 % accuracy as before). **Fixed damage** — Sonic Boom (20 HP), Dragon Rage (40 HP). **Level damage** — Seismic Toss, Night Shade (= attacker's level). All respect type immunity (e.g. Night Shade doesn't affect Normal) and can hit a Substitute. The auto-battle AI now scores these correctly (`chooseAction`), so they're actually used in idle/auto fights (this also fixes Super Fang never being auto-selected).
+- **Disable & Mist** (`data/moves.js`, `src/systems/battleSystem.js`): **Disable** locks the target's last-used move for several turns (uses the existing `lastMoveId`; the auto-AI skips a disabled move, the engine blocks it without spending PP). **Mist** shrouds the user and blocks stat drops until it switches out (guarded in `applyStatStage`).
+- **Low Kick** (`data/moves.js`): now a real 50-power Fighting move with a 30 % flinch (Gen 1 behaviour), instead of doing nothing.
+### Fixed
+- **Struggle now deals recoil** (`src/systems/battleSystem.js`): the fallback move used when all PP is gone now costs the user ¼ of the damage dealt (canon), via the existing recoil pipeline — previously it was a free typeless attack.
+- **Offline-progress guard** (`src/systems/idle.js`): `applyOfflineProgress` now bails out on a non-finite or negative elapsed time (missing `lastSaved` → `NaN`, or the system clock moved backwards), which previously could slip past the minimum-time check.
+### Notes
+- No save-version bump (data-only move `effect` fields + engine logic; existing saves unaffected).
+- **Big 1.0.0 completeness/correctness audit done** (6 dimensions, every finding verified against code): **no hard release blockers**. Confirmed false alarms — Mew *is* obtainable (the "truck by the S.S. Anne" event, `storyBuildingView.js`), Porygon (Celadon Game Corner prize), Achievements (done since v0.105.0), the type chart is the intended modern 18-type table. Still deliberately left as harmless no-ops: **Teleport** (its "flee" only makes sense in the wild loop, where the Run button already covers it) and **Conversion** (Porygon-only type change; needs type-mutation plumbing for near-zero benefit). See `docs/BACKLOG.md` punch-list.
+
+
+## [0.113.0] – 2026-09-14 · Per-area fishing pools (freshwater vs ocean) + "Better IVs" auto-catch filter
+### Added
+- **"Better IVs" auto-catch filter** (`src/ui/battleView.js`, `src/systems/battleSystem.js`, `src/core/state.js`): a fourth independent Auto catch toggle (alongside All / New / Shiny) that catches a wild Pokémon when it would **improve the IVs** of one you already own (the duplicate-merge in `acquirePokemon` keeps the better per-stat values). Filters combine with OR; the summary chip shows `IV+`. Uses the existing `ivWouldImprove()` helper (defined since the IV rework but never wired to auto-catch).
+### Changed
+- **Per-area fishing pools (freshwater vs ocean)** (`data/fishing.js`, `src/systems/fishingSystem.js`): fishing now varies by location instead of one global table per rod. Inland water uses the default **freshwater** pool (Poliwag/Goldeen/Psyduck/Slowpoke/Krabby); coastal cities and sea routes (Vermilion, Fuchsia, Cinnabar, Routes 11/12/13/18/19/20/21) use a new **ocean** pool (Tentacool/Horsea/Shellder/Staryu; Super Rod adds Seadra/Tentacruel/Kingler/Gyarados). New `FISHING_POOLS` + `AREA_FISHING` map and a `poolFor(rod, area)` helper; unmapped areas fall back to freshwater. Per-rod level ranges unchanged.
+- **Water-type badge in the fishing minigame** (`src/ui/fishingView.js`, `src/systems/fishingSystem.js`, `css/main.css`): a badge in the top-right of the scene shows whether you're fishing **🏞️ Freshwater** or **🌊 Ocean**, so it's clear the catch depends on the location. New `fishingBiome(area)` helper.
+### Notes
+- Save v46 → v47 adds `catchBetterIv:false` for old saves (auto-catch behaviour unchanged until you toggle it).
+- **Wild-encounter audit (Gen 1):** rarities and per-area level bands were reviewed against FR/LG and found already canon-accurate — no changes needed. The dex stays fully obtainable in one playthrough: Farfetch'd / Mr. Mime / Jynx come from the city Trade Houses (`CITY_TRADES` in `storyBuildingView.js`), not wild spawns.
+
+
+## [0.112.0] – 2026-09-14 · Fishing rework — dedicated tab with a reaction minigame, rods from NPCs, fish anywhere there's water
+### Added
+- **Fishing tab (new)** (`src/ui/fishingView.js`): fishing is now its own tab, not an in-battle button. Cast the line → wait for a bite → a big **"!"** appears → click the water in time to hook the Pokémon, which starts the battle (auto-switches to the Battle tab). Reeling in too early or too late lets it get away. The minigame is **redraw-safe** — its state lives in module vars and timers aren't tied to the DOM, so the ~1×/s `STATE_CHANGED` re-render (idle grind) never resets it (guarded by the new `currentMainTab()` export).
+- **Rods are now NPC gifts (canon)**: Old Rod from the **Vermilion Fishing Hut**, Good Rod **and** Super Rod from the **Fuchsia Fishing House** (near the Safari Zone). Two new `STORY_BUILDINGS` + views in `storyBuildingView.js`; one-time via story flags `oldRodGift` / `goodRodGift` / `superRodGift`.
+### Changed
+- **Fish anywhere there's water** (`data/areas.js`, `src/systems/fishingSystem.js`): fishing is gated on a per-area `water: true` flag (20 areas: Pallet, Viridian, Cerulean, Vermilion, Fuchsia, Cinnabar + Routes 4/6/10/11/12/13/18/19/20/21/22/23/24/25) instead of only `biome:"water"` (which was just Routes 19/20/21). New helpers `areaHasWater()` / `canFishHere()`; `castRod()` uses the flag. Safari Zone is intentionally excluded (different catch rules — deferred).
+- **Fishing tab visibility** (`src/ui/mainPanel.js`): the tab shows only where there's water **and** the player owns a rod (hidden in the Safari Zone).
+- **Return to the Fishing tab after a fishing battle** (`src/ui/battleView.js`, `src/systems/battleSystem.js`): when a battle started from fishing ends — win, catch, or defeat — the "Next battle" / "New battle" button now takes the player **back to the Fishing tab** instead of chaining another wild fight or leaving them on the Battle tab. Fishing is a one-off encounter: `pauseForInterlude` no longer auto-spawns a next enemy for fishing battles (even in Auto mode), so the return path always fires.
+- **Fishing minigame — nicer water visual** (`src/ui/fishingView.js`, `css/main.css`): the flat blue box is replaced by a layered, animated **water scene** (pure CSS, no assets) — sky with a sun glint, a rippling surface with three drifting wave bands, a fishing line down to a bobbing float, expanding ripple rings, and a proper "!" speech-bubble on the bite (the surface brightens and the float dips under). Redraw-safe as before.
+- **Pick your rod in the minigame** (`src/ui/fishingView.js`, `src/systems/fishingSystem.js`): rod chips (Old / Good / Super — only the ones you own) overlay the top of the scene; the active one is highlighted, and the choice decides which pool/level range you fish. `castRod(rodId)` takes an optional rod (falls back to the best owned); new `ownedRods()` helper. Rod switching is locked while a cast is in progress (as in the games — you pick before you cast).
+- **Cast by clicking the water, full-size scene** (`src/ui/fishingView.js`, `css/main.css`): the "Cast line" button is gone — you now click the water itself to cast (and to reel in on a bite / cast again after a result). The scene stretches across the whole tab area (`clamp(300px, 62vh, 560px)`), with the hint text as an overlaid caption at the bottom.
+- **Fishing blocked with a wiped team** (`src/systems/fishingSystem.js`, `src/systems/battleSystem.js`): `canFishHere()` now refuses to cast when the **whole team has fainted** (new `teamHasFighter()` helper) — prevents casting straight into an instant loss after returning from a lost fishing battle.
+- **Dev skip grants rods** (`src/systems/devTools.js`): "Skip to Vermilion" gives the Old Rod; "Skip to Fuchsia" gives Good + Super — so fishing is testable after a skip.
+- **Lure Ball pipeline preserved**: `castRod()` still starts the encounter with `{ fishing: true }`, so `ctx.fishing` reaches `ballMultiplier` and the Lure Ball keeps its ×3 catch bonus while fishing (already active, tier 2, 400₽).
+### Removed
+- **In-battle 🎣 button** (`src/ui/battleView.js`): superseded by the Fishing tab.
+- **Rods removed from the shop** (`src/ui/buildingView.js`): the Celadon Dept. Store no longer sells Old/Good/Super Rod (`"fishing"` dropped from its category list) — they're NPC gifts only now.
+### Fixed
+- **Fishing building sprites wired in** (`assets/buildings/`): the user-supplied `fishing-house.png` is processed (white-background removal + normalize) into **both** `fuchsia-fishing-house.png` and `vermilion-fishing-hut.png` (same art for both fishing buildings), replacing the 🎣 emoji fallback.
+- **All building sprites normalized to a uniform size** (`assets/buildings/*.png`, `tools/prep_building.py`): several buildings had been hand-cropped to inconsistent content sizes (32–80 % canvas fill), so they rendered at visibly different scales in the city view. New `--normalize-only` mode (crop to alpha bbox → longest side = 232 px → center on 256²) re-applied to all 24 buildings so every one fills the canvas consistently. Originals backed up outside the repo first (not a git repo).
+- **In-battle Items menu now lists only usable items** (`src/ui/battleView.js`): a `BATTLE_ITEM_CATEGORIES` whitelist (`hp` / `status` / `revive`) filters the bag — TMs, HMs, evolution stones, held/key items no longer appear mid-battle.
+- **Fossil revival text points to Cinnabar, not Pewter** (`data/items.js`, `src/ui/mapView.js`): the Helix/Dome/Old Amber item descriptions and both Mt. Moon fossil popups now say "the Pokémon Lab on Cinnabar Island" (revival moved there in v0.88.0; the old "Museum of Science in Pewter City" wording was stale).
+### Notes
+- No save-version bump — fishing adds only story flags and item counts to existing structures.
+
+
+## [0.111.0] – 2026-09-14 · Art drop — 41 user sprites wired in (cities, Elite Four, buildings, backgrounds, item) + main theme
+### Added
+- **City backgrounds (11/11)**: every `type:"city"` area now has a scene backdrop at `assets/city/<areaId>.png` (Pallet Town … Indigo Plateau). Fallback grass gradient retired for cities.
+- **League portraits (5/5)**: Elite Four (Lorelei, Bruno, Agatha, Lance) + Champion Blue at `assets/gym-leaders/<id>/front.png`.
+- **Story building sprites (16 new)**: all remaining `STORY_BUILDINGS` now render an image instead of the CSS emoji house — `assets/buildings/<id>.png` + `sprite:` field (oak-lab, player-home, rival-home, trade houses, museums, S.S. Anne, Pokémon Tower, dept-store, game-corner, Silph Co, Fighting Dojo, mansions, boost-center, …).
+- **Battle backgrounds**: a per-area scene for the Power Plant (`power-plant.png`, wired via `background:` in `data/areas.js`), a 2nd `mountain` variant, and per-area scenes for Seafoam Islands, Victory Road, and Indigo Plateau.
+- **Shiny Charm item sprite**: `assets/items/shiny-charm.png` (new `assets/items/` folder).
+- **Main theme**: `main.mp3` mapped to Showdown's `dpp-trainer` in `tools/fetch_music.ps1` — the hub/map/menu track off the Battle tab.
+### Changed
+- **`data/backgrounds.js`**: `BACKGROUND_BIOMES.mountain` gains `mountain-2.png`.
+- **Cycling Road is now a two-way branch** (`data/areas.js`): `unlock.visited` accepts an **array** (OR) in `isAreaUnlocked`, and Route 16/17/18 unlock from either end — Route 18 now opens on reaching Fuchsia (canon: it exits right by Fuchsia), Route 17 from 16 *or* 18, Route 16 from Celadon *or* 17. Previously the branch was one-directional (Celadon → 16 → 17 → 18 only).
+- **Dev "Skip to Celadon" now marks Route 16/17/18 visited** (`src/systems/devTools.js`): the optional Cycling Road branch no longer stays locked after a skip (the skip follows the main axis and never walked it).
+- **Old building sprites normalized to 256²** (`day-care`, `poke-center`, `poke-mart`): re-cropped/centred on the standard transparent 256×256 canvas to match the v0.111.0 batch (were 161×207 / 678×592 / 271×263).
+### Fixed
+- **Building sprites now show ONLY the building — no scenery** (`tools/prep_building.py`, new): the 19 story-building sources are full pixel-art scenes (building on grass/sky), and `prep_sprite.py` only strips *white*, so colored backdrops leaked through. New tool floods from the edges **anchored to the seed (edge) color** rather than the neighbor — this cuts the anti-aliased "bridge" where a beige roof shares the grass's green/blue channels and only differs in red. All 19 buildings reprocessed to building-only on a transparent 256² canvas (per-image `--tol`: white-on-white `pokemon-mansion` at 15, the rest at 40). Verified via checkerboard contact sheet.
+### Notes
+- All 41 supplied sprites processed with `tools/prep_sprite.py` / `tools/prep_building.py` (subjects → transparent 256² canvas: buildings, portraits, item) or plain copy (full 3:2 scenes: city + battle backgrounds). League portraits + item had pure-white corners, so `prep_sprite` (white removal) sufficed. Power Plant is a route with `biome:"building"`, not a building — its user-made background is wired as a per-area override (`power-plant.png`), so that area no longer falls back to a gradient.
+- `docs/SPRITES-TODO.md` re-audited against the whole game (see that file for the remaining gaps).
+
+
+## [0.110.0] – 2026-09-14 · Battle BGM — context-based music (wild / trainer / rival / gym / champion)
+### Added
+- **Battle music**: five context-based tracks from Pokémon Showdown play on the Battle tab depending on the opponent — wild encounters, regular trainers, rivals, Gym Leaders, and the Elite Four/Champion. Music loops continuously through idle grinding.
+- **Music download script** (`tools/fetch_music.ps1`): predownloads the five tracks into `assets/audio/bgm/` under context names (`wild.mp3`, `trainer.mp3`, `rival.mp3`, `gym.mp3`, `champion.mp3`). Run manually like `tools/fetch_cries.ps1`. ASCII-only (Windows PowerShell 5.1 without BOM misreads non-ASCII).
+### Changed
+- **BGM switching** (`src/ui/mainPanel.js`, `syncBattleBgm()`): on the Battle tab a battle plays its context track; elsewhere the game falls back to `main.mp3` (map/menu theme, user-supplied). Idempotent — `playBgm()` never restarts the same track, so idle chains and map browsing stay gap-free. Runs on `STATE_CHANGED` and `BATTLE_UPDATE`.
+- **Battle context** (`src/systems/battleSystem.js`): each battle now carries a `bgm` context; new `battleMusicFor(trainer, gymId)` classifier (League members → champion, `rival*` ids → rival, gym leaders → gym, else trainer; wild/static → wild) and exported `battleBgm()`.
+### Notes
+- Layering respected: `battleSystem` only tags/exposes the context; the UI (`mainPanel`) calls `audioSystem.playBgm`. BGM plays in auto/full-auto too (unlike hit/faint SFX and cries) — continuous music is the point of idle.
+- Showdown only hosts battle music, so map/overworld music stays `main.mp3` (or silence if not supplied).
+
+
+## [0.109.0] – 2026-09-14 · Pokémon cries — species voices on spawn, evolution, hatch, and faint
+### Added
+- **Pokémon cries**: each species now plays its cry (voice) sound at four moments — a wild/static Pokémon appearing in battle, an evolution reveal, an egg hatching, and a Pokémon fainting.
+- **Cry playback** (`src/systems/audioSystem.js`, `playCry(speciesId)`): plays `assets/audio/cries/<speciesId>.mp3` at SFX volume with a per-species throttle and silent fallback (missing file never crashes the game).
+- **Cry download script** (`tools/fetch_cries.ps1`): predownloads all 151 Gen 1 cries from Pokémon Showdown into `assets/audio/cries/`; maps our `speciesId` to Showdown's toID (lowercase, non-alphanumerics stripped). Run manually like `tools/fetch_ev_yields.ps1`.
+### Changed
+- **New event** `WILD_APPEARED` (`src/core/events.js`, `"battle:wild"`): emitted by `spawnEnemy()` and `startStaticEncounter()` with `{ speciesId }` so the cry can play on encounter.
+- **BATTLE_FAINT payload** now includes `speciesId` (both emit sites in `battleSystem.js`); the faint cry plays only in manual mode (muted during auto/full-auto, like hit/faint SFX).
+- **EGG_HATCHED payload** now includes `speciesId` (`src/systems/eggSystem.js`); the hatch cry always plays.
+### Notes
+- Layering respected: `battleSystem`/`eggSystem`/`evolutionPopup` emit or call, `main.js` subscribes and calls `audioSystem`. Wild-spawn and faint cries are muted in auto modes; evolution and hatch cries always play.
+
+
+## [0.108.0] – 2026-09-14 · Post-game rematches — Elite Four, Champion, and Gym Leader re-challenges; Hall of Fame
+### Added
+- **Elite Four & Champion rematches**: after becoming Champion, use "Challenge the League again" at the Indigo Plateau to re-run the whole gauntlet (Elite Four + Champion) for repeatable gold + XP (idle farming).
+- **Gym Leader rematches**: once a Gym is fully cleared, its Leader can be re-challenged from the Gym tab for repeatable rewards.
+- **Rematch rewards**: reduced to 50% of the original prize money; story bonuses (extra gold, gifts, badges, TMs) are still only granted on first victory. XP is always awarded, so rematches are also useful for leveling.
+- **Hall of Fame**: every League victory records your team (species, level, nickname, shiny status) with a timestamp on the Profile tab, shown newest first.
+### Notes
+- Rematch reward logic lives in `finishTrainerBattle()` (`REMATCH_GOLD_MULT`, applied only to Gym Leaders and League members); Hall of Fame is written in the League-clear block of the same function.
+- Hall of Fame data is stored in `state.hallOfFame` as an array of `{ timestamp, team }` entries (save v46).
+
+
+## [0.107.0] – 2026-09-14 · Fishing system — tiered water encounter pools via rods, Lure Ball bonus
+### Added
+- **Fishing rods** (`data/items.js`, category "fishing"): three tiers purchasable in Celadon Dept. Store—Old Rod (500g, reels in Magikarp/Tentacool, Lv 5–15), Good Rod (2500g, 8 species, Lv 10–25), Super Rod (6000g, 16 species, Lv 20–40).
+- **Fishing pools** (`data/fishing.js`, `ROD_POOLS`, `ROD_ORDER`): weighted species pools per rod tier; highest owned rod auto-selected when casting.
+- **Fishing System** (`src/systems/fishingSystem.js`): `bestRod()`, `hasAnyRod()`, `castRod()` functions. Cast behavior: checks rod ownership, water biome, picks weighted species, random level in tier range, then `startStaticEncounter(speciesId, level, { fishing: true })`.
+- **🎣 Fish button** in Battle Area header (manual mode only, visible in water biomes when rod owned): manual casting trigger. Shows encounter/combat normally (can catch).
+- **Lure Ball** upgrade (`data/pokeballs.js`, tier 2, 400g): changed from comingSoon to active ball with bonus `{ type: "fishing", mult: 3 }` (×3 catch rate only during fishing).
+- **Fishing context** (`src/systems/battleSystem.js`): `startStaticEncounter()` now accepts `opts` param; `battle.fishing` flag tracks encounter origin; `catchContext()` includes `fishing: true/false` for bonus evaluation.
+- **Fishing bonus case** (`src/systems/pokeballSystem.js`): `ballMultiplier()` now handles `case "fishing"` → if `ctx.fishing`, apply `b.mult` (×3 for Lure Ball).
+- **Fishing shop tab** (`src/ui/buildingView.js`): added "🎣 Fishing" department to Celadon Dept. Store (SHOP_DEPT_SETS).
+- **Fishing category** (`data/items.js`, `ITEM_CATEGORIES`): new "fishing" category for rods, visible in Bag and shop.
+### Changed
+- **Poké Ball data comment** (`data/pokeballs.js`): removed legacy note about fishing not being implemented; Lure Ball is now active.
+- **Dept. Store description** (`src/ui/buildingView.js`): updated to mention rods alongside other offerings.
+### Notes
+- No save migration required (v45 persists). Rods are ordinary items in `resources.items`; Lure Ball is an ordinary Poké Ball.
+- Lure Ball bonus (`×3`) applies *only* when `fishing: true` in battle context, ensuring it doesn't affect regular water encounters (Surfs, scuba dives).
+
+
+## [0.106.0] – 2026-09-14 · Audio system — SFX + BGM with Master/Music/SFX volume controls
+### Added
+- **Audio system** (`src/systems/audioSystem.js`): handles SFX and BGM playback with automatic tichý fallback (missing files/blocked autoplay cause no errors). Exports `playSfx(name)`, `playBgm(name)`, `stopBgm()`, `applyAudioSettings()` and `audioSettings()` getter.
+- **9 sound effect channels**: hit, faint, catch, catch-fail, levelup, evolve, hatch, achievement, click (all optional assets in `assets/audio/sfx/`).
+- **BGM loop** (`assets/audio/bgm/main.mp3`): plays automatically after title screen (respects browser autoplay policy by triggering on user interaction).
+- **Audio Settings in UI** (`src/ui/settingsView.js`, `css/main.css`): new "🔊 Audio" section with three range sliders (Master, Music, SFX; 0–100) and a "Mute all" checkbox. Live volume adjustment via `applyAudioSettings()`.
+- **Event-driven sound triggers** (`src/main.js`): SFX auto-fire on BATTLE_HIT, BATTLE_FAINT, POKEMON_CAUGHT, POKEMON_EVOLVED, LEVEL_UP, EGG_HATCHED; UI click handler for button taps.
+- **Throttling for idle modes** (autoSystem.js): hit/faint SFX suppressed during auto-battle and full-auto (70 ms debounce) to prevent spam during grinding sessions.
+- **Asset guide** (`assets/audio/README.md` + `.gitkeep` structure): documents expected file paths, suggests CC0 sound sources (Freesound, Zapsplat, OpenGameArt), clarifies that missing files cause no errors.
+### Changed
+- **Settings schema** (`src/core/state.js`): added `audio: { master: 70, music: 50, sfx: 80, mute: false }` to default settings.
+- **SAVE_VERSION remains 45**: no migration needed — audio settings read with fallback to defaults for old saves.
+### Notes
+- **Tichý fallback design**: browser autoplay restrictions and missing MP3s are silently ignored. Hra pracuje bez zvuků do chvíle, kdy je hráč dodá.
+- Sound playback uses native `new Audio()` + `.play().catch(() => {})` for broad browser support and offline resilience.
+
+
+## [0.105.0] – 2026-09-14 · In-Game Achievements system — 16 unlockable achievements with rewards
+### Added
+- **16 in-game achievements across 5 categories** (`data/achievements.js`, `src/systems/achievementSystem.js`): Collection (first catch, Dex milestones 10/50/100/151, shiny hunter), Battle (Level 100), Story (gym badges, champion), Breeding (eggs, evolutions), Economy (gold milestones). Each achievement tracks a simple condition, unlocks once and grants a one-time reward (gold/coins/items).
+- **Achievement toast notifications** (`src/ui/achievementToast.js`, `css/main.css`): non-blocking toasts appear in the bottom-right corner when an achievement unlocks, showing icon, name, description and reward summary, auto-dismiss after 4 seconds or on click.
+- **Achievement progress in Profile tab** (`src/ui/profileView.js`): new "Achievements" section lists all 16 unlockables with their current status (locked/unlocked + date), sorted by unlock order, with a counter "X / 16 unlocked".
+- **Achievement event hooks** (`src/core/events.js`): new EVENTS.POKEMON_CAUGHT and EVENTS.LEVEL_UP for tracking catches, hatches (EGG_HATCHED), evolves (POKEMON_EVOLVED) and level-ups automatically.
+- **Persistence and auto-evaluation** (`src/systems/achievementSystem.js`): achievements are tracked in `state.achievements.unlocked` and `.stats` (catches/hatches/evolves counters). The system subscribes to game events and evaluates all eligible achievements automatically; rewards are applied only on first unlock.
+### Changed
+- **SAVE_VERSION bumped to 45**: migration adds empty achievement structures to existing saves so they can unlock achievements immediately.
+### Notes
+- Rare Candy item confirmed (`data/items.js`) — achievement rewards reference it directly.
+- Achievement unlock is **one-time and irreversible** — no reset, no re-rolling; designed to track genuine milestones.
+
+
+## [0.104.0] – 2026-09-11 · Training Grounds finds a canonical home — EV Training moves into Saffron's Fighting Dojo
+### Changed
+- **Training Grounds (EV training + reset) now lives inside the Fighting Dojo in Saffron** (`src/ui/storyBuildingView.js`, `src/ui/buildingView.js`, `data/buildings.js`): the homeless Training Grounds building no longer squats on the Indigo Plateau roster. Instead the **Fighting Dojo** — Kanto's canonical training establishment — gains an **"🏋️ EV Training"** section (available on both visits, before and after receiving the Hitmons) that opens the existing Pokémon picker → EV train/reset window. The training logic is unchanged and still keyed to the `training-grounds` building id, so all buy/upgrade/reset pricing, levels and caps carry over verbatim.
+- **Indigo Plateau roster trimmed to the canonical pair** (`data/buildings.js`): now just **Poké Center + Poké Mart**; the EV facility is reachable mid-game as soon as you can enter Saffron, matching the "expensive shortcut" economy rather than being locked behind the League.
+### Notes
+- **No save migration** — the `training-grounds` building def and its per-save level/tracks are untouched; only its map placement moved. Save stays **v44**.
+
+
+## [0.103.0] – 2026-09-11 · EVs from battle — canonical Effort Values, and Training Grounds becomes a paid shortcut + reset
+### Added
+- **Pokémon now gain EVs from every battle, just like in the games** (`data/evYields.js`, `src/systems/pokemonSystem.js`, `src/systems/battleSystem.js`): defeating a Pokémon awards your **active** Pokémon that species' canonical **EV yield** (e.g. Rattata → +1 Speed, Machop → +1 Attack). New data file `data/evYields.js` maps `speciesId → { stat: n }` (only non-zero stats), plus helpers `evYield()` and `grantEvYield()`. Yields respect the existing **252-per-stat / 510-total caps**. This applies in **manual battles, Auto-battle and Full Auto** at full value (yields are tiny integers and the cap is finite, so there's no exploit — a team just fills up to its cap over time).
+- **Offline idle trains EVs too, area-weighted** (`src/systems/idle.js`): since offline can't defeat individual Pokémon, it grants a **rarity-weighted average** of the area's EV yields × the number of kills — a faithful "what you'd have picked up here", still bounded by the caps.
+- **EV yield shown on the Pokémon card** (`src/ui/pokemonCard.js`): a new **EV yield** line (e.g. "+2 Attack") appears on the card of a **caught** species — same as all other card info, hidden until you own the species.
+- **Training Grounds — EV reset (full and per-stat)** (`data/buildings.js`, `src/systems/buildingSystem.js`, `src/ui/buildingView.js`): alongside buying EVs you can now **reset a Pokémon's whole EV spread** or **a single stat** for gold — quality-of-life cleanup for EVs picked up accidentally while levelling around the map.
+### Changed
+- **Training Grounds re-pitched as a paid shortcut, not the main path** (`data/buildings.js`): now that battles give EVs for free, buying EVs is a deliberate **premium** — the per-lesson price rose from **50 → 800 gold** (a full 510 spread costs ~102k early → ~10k once the building is maxed), so grinding stays the "free but slower, targeted" route and buying is a lategame convenience. Reset prices: **3000** gold for a full reset, **800** per stat.
+- **`addEv` docstring / EV comments updated** (`src/systems/pokemonSystem.js`): EVs are no longer described as "not gained from battle".
+### Notes
+- **No save migration** — `pokemon.evs` already existed; save stays **v44**.
+- **`data/evYields.js` ships empty and must be populated** by running `pwsh tools/fetch_ev_yields.ps1` (fetches canonical yields from PokeAPI CSV, same workflow as `tools/fetch_tm_compat.ps1`). Until then the game runs fine but awards no battle EVs (safe fallback).
+
+
+## [0.102.0] – 2026-09-11 · Trainer Boost Center — a Celadon idle-boost building (XP · Fortune · Yield)
+### Added
+- **Trainer Boost Center — a new idle-boost building in Celadon** (`data/buildings.js`, `src/ui/storyBuildingView.js`, `src/systems/buildingSystem.js`): a members-only facility next to the Game Corner with **three independent, permanent upgrade lines** you sink gold into. **⭐ XP Boost** multiplies all XP gained, **💰 Yield** multiplies gold from repeatable battles, and **✨ Fortune** multiplies your wild-shiny chance. Each line has a **hard cap of level 50** and an **exponential price** (`1500 × 1.15^level` — Lv10 ≈ 6k, Lv25 ≈ 49k, Lv50 ≈ 1.6M), so max ranks are a long-haul goal rather than a quick shortcut. Effects are deliberately restrained so idling can't trivialise the game: XP/Yield reach **×1.5** at max (+1 %/level), and Fortune reaches only **×1.2** at max (+0.4 %/level) — kept tiny on purpose so it doesn't compound with the Shiny Charm into overpowered odds (base 1/8192 × charm ×3 × fortune ×1.2 ≈ 0.044 %).
+### Changed
+- **Boosts apply across every play mode** (`src/systems/progression.js`, `src/systems/battleSystem.js`, `src/systems/idle.js`): the XP boost is applied centrally in `grantXp`, so it covers active battles, Auto-battle, Full Auto, Day Care and offline idle. The Yield gold boost is applied to repeatable battle wins and offline idle gains (not to one-time trainer/gym payouts). The Fortune boost multiplies the wild encounter shiny roll. New helpers `boostMult`/`xpBoostMult`/`goldBoostMult`/`shinyBoostMult` in `buildingSystem.js` read the building's track levels (data-driven `perLevel`).
+### Notes
+- **No save migration** — the three lines reuse the existing building **tracks** mechanism (same as Day Care / Poké Center), which defaults to level 0 when absent; save stays **v44**. Without the building every multiplier is ×1, so existing saves are unaffected until the player buys upgrades.
+
+
+## [0.101.0] – 2026-09-11 · Shop revamp — department tabs, the Celadon Dept. Store fully opens, and new boost items
+### Added
+- **Boost items — Rare Candy, PP Up, PP Max** (`data/items.js`, `src/systems/progression.js`, `src/systems/itemSystem.js`, `src/ui/bagView.js`): three new long-term gold sinks in a new `boost` item category. **Rare Candy** (4800₽) instantly raises a Pokémon's level by 1 (respects the effective level cap; new level-up moves are offered via the usual queue). **PP Up** (9800₽) raises a single move's max PP by one stage (20 % of base, up to 3 stages), **PP Max** (12000₽) maxes a move's PP in one go. In the Bag they live in a new **🍬 Boosts** tab: Rare Candy uses the normal "pick a Pokémon" flow, while PP Up/Max add a second step — after picking the Pokémon you choose **which move** to boost (a move-slot picker; moves already at max PP are disabled).
+- **The Celadon Dept. Store actually sells things now** (`src/ui/storyBuildingView.js`): a **🛒 Shop the floors** button opens the full store. As Kanto's biggest shop it stocks **everything buyable** — Poké Balls, healing, TMs, evolution stones, held items, and the new boosts — which fixes that roughly half of the game's items (stones, held items, most TMs, boosts) previously had **no place to buy them**. The rooftop Fresh Water stand is unchanged.
+### Changed
+- **Shops rebuilt as tabbed department windows, like the Bag** (`src/ui/buildingView.js`): the old "pick Balls or one giant Items list" market is replaced by a single window with **department tabs** — ⚪ Balls · 🧴 Healing · 🍬 Boosts · 🪨 Evolution · 💎 Held · 💿 TMs — so the long item list is split into readable per-type subcategories and the buy quantity is shared across the shop.
+- **Canon split of what sells where** (`src/ui/buildingView.js`): the everyday **Poké Mart** now stocks only the basics (**Balls + Healing**); the premium goods (**TMs, evolution stones, held items, and boosts**) are exclusive to the **Celadon Dept. Store**. This matches the games and naturally gates the boost gold sinks behind reaching Celadon (mid-game) instead of letting them be bought in the first town.
+### Fixed
+- **`ballPrice` returned `NaN` for buildings with no level** (`src/systems/buildingSystem.js`): story buildings such as the Dept. Store have no `startLevel`, so `getLevel` returned `undefined` and `(level − 1)` poisoned the discount math → `NaN` prices and un-buyable balls. It now falls back to level 1.
+### Removed
+- **Old `openBallShop` / `openItemShop` modals** (`src/ui/buildingView.js`): replaced by the unified tabbed `openMarket` plus `ballSectionHtml` / `itemSectionHtml` renderers.
+### Dev
+- **`tools/jscheck2.py`** — a template-literal-aware brace/bracket checker (tracks backticks nested inside `${…}`), so the files `jscheck.py` has to skip (`buildingView.js`, `storyBuildingView.js`, `safariView.js`, `main.js`) can finally be syntax-checked.
+### Notes
+- **No save migration** — new items just occupy existing `resources.items`, and PP/level changes use existing fields; save stays **v44**.
+
+
+## [0.100.0] – 2026-09-11 · Full Auto idle mode + healing moved to buildings only
+### Added
+- **Full Auto — a second, hands-off idle mode** (`src/systems/battleSystem.js`, `src/ui/battleView.js`, `src/core/state.js`): a new **Full Auto** toggle sits next to Auto-battle. It fights on its own exactly like Auto-battle, but your active Pokémon **lose no HP and no PP**, so you can leave it running indefinitely with no healing between fights. The trade-off: gold & XP rewards are cut to **~1/10** (`FULL_AUTO_REWARD_MULT = 0.1`, floored at 1 each). Use **Auto-battle** for full-speed gains while you watch, and **Full Auto** for safe, walk-away idling. HP protection is enforced at the single combatant `hp` setter (covers attacks, recoil, confusion, poison/burn — every damage source), and PP is skipped for the player's moves; healing still passes through. Like Auto-battle, Full Auto is disabled in gym battles (`forceManual`).
+- **Full Auto hides only the HP/EXP meters** (`src/ui/battleView.js`): in Full Auto the battle scene and your opponent are still shown (you can see what you're fighting), but the HP bars, HP numbers, and EXP bar are hidden — you don't babysit those while idling. Auto-battle shows everything as before.
+### Changed
+- **Idle economy rebalance — gold from wild wins roughly halved** (`src/systems/battleSystem.js`): `battleRewards` gold changed from `3 + level×2` to `2 + level` (e.g. Lv30 wild: 63 → 32 gold), so gold has weight and shops/upgrades/stones/TMs stop being trivially affordable after a few seconds of auto-battle. The curve is gentler early (Lv5: 13 → 7) so buying Poké Balls early game isn't a chore, and **XP is left untouched** (leveling to 100 is a grind of its own). Full Auto still earns ~1/10 of this. Item prices were **not** raised — halving income already doubles their relative cost. Trainer/gym rewards (one-time) are unchanged.
+- **Onboarding tutorial now teaches both idle modes** (`src/ui/tutorial.js`): a new **Full Auto** step follows the Auto-battle step and explains the difference — Auto-battle = full rewards but HP/PP deplete (heal between fights); Full Auto = no HP/PP loss for ~1/10 rewards (safe infinite idling).
+### Removed
+- **Game speed selector removed — the game now always runs at 1×** (`src/ui/settingsView.js`, `src/systems/battleSystem.js`, `css/main.css`, `src/core/state.js`): the 1×/2×/4× speed control is gone; one battle round is always one second. `getSpeed()` is hard-wired to `1` (the `settings.speed` key is kept but ignored for save compatibility), and `setSpeed` plus the `.spd`/`.speed-group` styles were removed. This also reinforces the economy rebalance — no more 4× fast-farming.
+- **In-battle "Heal team" button removed** (`src/ui/battleView.js`, `css/main.css`): the quick-heal button on the defeat overlay is gone. Healing now happens **only at a Poké Center, at home, or another building that allows it** — the defeat screen points you there instead. (Idle without healing is exactly what Full Auto is for.)
+### Notes
+- **No save migration** — `settings.fullAuto` defaults to `false` on existing saves (missing key reads falsy); save stays **v44**.
+
+
+## [0.99.0] – 2026-09-11 · Guided onboarding tutorial + game-style animated evolution
+### Added
+- **Guided onboarding tutorial** (`src/ui/tutorial.js`, hooks in `src/main.js`, `src/systems/save.js`, `src/systems/battleSystem.js`, `src/ui/settingsView.js`, `css/main.css`): first-time players are offered a short, scenic coach-mark tour after the intro (Start / Skip). A spotlight overlay walks through the **resource bar, map, window tabs, a real DEMO battle (manual attack → throw a Poké Ball to catch a Pidgey), auto-battle, auto-catch, the team, and the Bag** (evolution stone → Thunder Stone evolves Pikachu into Raichu, and TM24 teaches Raichu Thunderbolt). Everything runs in an isolated **sandbox** (`beginSandbox`/`endSandbox` + `state.tutorialDemoActive`) so the demo battle/items leave no trace on the real save — autosave is suspended while it runs and the state is restored afterwards. Replayable any time from **Settings → Dev tools → Replay tutorial**.
+- **Game-style animated evolution** (`src/ui/evolutionPopup.js`, listener in `src/main.js`, `css/main.css`): evolving a Pokémon (level-up button, evolution stone, or trade item) now plays a proper animated overlay instead of finishing silently — the old form glows for ~2s, then flickers as a white silhouette between the two forms (accelerating), a flash, and the new form is revealed ("*X evolved into Y!*") before the **Great!** button appears. Uses animated GIF sprites (PNG fallback). Driven centrally off the `POKEMON_EVOLVED` event, so it covers **all** evolution paths and the tutorial. Click/Esc skips the animation to the reveal.
+### Fixed
+- **Tutorial demo wiped the Pidgey you just caught** (`src/ui/tutorial.js`): `ensureDemoBattleRunning` reset `state.collection = [player]` on every new demo round, so the Pidgey caught in the manual-battle step vanished the moment the Auto-battle step started a fresh fight. It now swaps in a fresh full-HP demo battler while **keeping anything caught during the demo** (tracked via `demoPlayerUid`), cleared on teardown.
+- **Evolution tutorial step could soft-lock** (`src/ui/tutorial.js`): the step gated on the Evolution tab being active, but using the Thunder Stone consumes it → the Evolution section empties → the tab disappears → the gate reverted and the step got stuck saying "click the evolution tab" even though Raichu was already in the party. It now gates on the **real result** (a Raichu in the collection; the TM step likewise gates on Thunderbolt actually being learned).
+- **Spotlight drew a tiny square in the middle** (`src/ui/tutorial.js`): when a step's target selector matched nothing (e.g. the item disappeared after an action), `reposition` fell back to a 0×0 spot centered on screen, showing a confusing 1px square. The spotlight is now hidden when a selector is given but has no visible match; the tip + hint keep guiding.
+- **Bag step felt like it asked to click the Bag twice** (`src/ui/tutorial.js`): the two bag steps were merged into one and targets are now **dynamic functions** that follow the interaction — the spotlight moves from the 🎒 Bag button to the section tabs once the Bag is open (the button hides behind the modal), so there's no phantom "click the Bag again".
+### Changed
+- **Faster tutorial gating** (`src/ui/tutorial.js`): tab/category clicks emit no state event, so the overlay now also re-checks the current step's gate on every document click (via `requestAnimationFrame`) in addition to the 200 ms poll and bus events, and the auto-advance delay was shortened (350 → 250 ms).
+### Notes
+- **No save migration** — the tutorial is sandboxed and the evolution popup is UI only; save stays **v44**. First-time detection uses the existing `state.story.tutorialDone` flag.
+
+
+## [0.98.0] – 2026-09-11 · Bag rework: categorized tabs + teach TM/HM from the Bag, and a repo-wide anti-flicker sweep
+### Added
+- **Bag is now split into clickable sub-sections (tabs)** (`src/ui/bagView.js`, `css/main.css`): instead of one long scroll the Bag has category tabs — 🧴 Heal · ⚪ Balls · 💿 TMs · 📀 HMs · 🪨 Evolution · 💎 Held · 🔑 Key. Only non-empty categories show a tab; the active tab persists across live re-renders. A new **Poké Balls** section lists your ball stock (read-only — balls are thrown in battle).
+- **Teach TM/HM straight from the Bag** (`src/ui/bagView.js`): tapping a TM or HM item now opens a Pokémon picker and teaches the move (reusing `teachTm`/`teachHm`). If the Pokémon already knows 4 moves, you pick which one to replace. **Only Pokémon in your team can be taught** — PC-stored Pokémon are excluded, as in the games. HMs stay in the list forever (reusable, shown as `∞`).
+- **Learn confirmation popup** (`src/ui/bagView.js`): after a Pokémon learns a TM/HM a popup confirms e.g. "*Charizard learned TM24 Thunderbolt!*".
+- **Image/graphics counter in the README** (`tools/count_lines.py`, `README.md`): the project-stats block now also counts every image across the whole repo **including `assets/`** (sprites, maps, backgrounds, Poké Balls, custom art), broken down by type (`.png`/`.gif`/…) with a total and disk size. Run `python tools/count_lines.py` to refresh.
+### Changed
+- **Gyms now gate progress (canon badge order)** (`data/areas.js`): previously only Brock (Boulder → Route 3) and Giovanni (Earth → Route 23) were map gates — Misty in particular could be skipped entirely. Now the main route out of each early/mid city requires that city's Gym Badge, enforcing Boulder → Cascade → Thunder → Rainbow → Soul → … → Earth: Route 5 **and** Route 9 require **Cascade** (Misty), Rock Tunnel additionally requires **Thunder** (Surge), Fuchsia City requires **Rainbow** (Erika), and Route 19 (the sea to Cinnabar) requires **Soul** (Koga). Blaine and Sabrina were already enforced via the Viridian Gym's 7-badge requirement + the Earth gate. Bill's sidequest (Route 24/25) stays open before Misty, as in the games.
+### Fixed
+- **Dev "Skip to" jumps left the Cerulean Gym unfinished** (`src/systems/devTools.js`): the `cerulean` checkpoint drops you *at* Misty (to test the fight), but no later checkpoint actually beat her — so every step after Cerulean was missing the Cascade Badge and the gym showed as not cleared (the bulk badge grant at `earth` gave the badge but never marked Misty / her gym trainers as defeated). The `vermilion` checkpoint now completes the Cerulean Gym (defeats Misty + both gym trainers, grants Cascade Badge, sets `mistyCleared`); since jumps are cumulative, all later checkpoints inherit it.
+### Changed
+- **Fossil revival moved to Cinnabar Island's Pokémon Lab** (`src/ui/storyBuildingView.js`, `data/buildings.js`): as in the games, Helix Fossil → Omanyte, Dome Fossil → Kabuto, and Old Amber → Aerodactyl are now revived at the Cinnabar Lab, not at Pewter's Museum of Science. The museum now just displays fossils and points you to Cinnabar; the revive logic itself is unchanged.
+- **Repo-wide anti-flicker / scroll-preservation sweep** (`src/ui/gymView.js`, `rivalView.js`, `rocketView.js`, `cityView.js`, `legendaryView.js`, `leagueView.js`, `safariView.js`, `settingsView.js`): every tab that repaints on the auto-battle tick (`STATE_CHANGED`) now wraps its `innerHTML` rewrite in `saveScroll`/`restoreScroll`, so the view no longer jumps to the top or flickers while you read/scroll during auto-battle. (Battle view already preserved window scroll; the map only toggles CSS classes, so neither needed changes.)
+### Removed
+- **"Teach TM/HM" sections removed from the Pokémon card** (`src/ui/pokemonCard.js`): move teaching lives in the Bag now (tap the machine → pick a team member), so the card's dropdowns/handlers were removed to avoid two competing entry points.
+### Notes
+- **No save migration** — all changes are UI/flow only; save stays **v44**.
+
+
+## [0.97.0] – 2026-09-11 · New-game flow: name yourself, get your starter at Oak's Lab
+### Added
+- **Trainer name in the intro** (`src/ui/introScene.js`): the naming step now asks for **your name** as well as your rival's, saved to `state.player.name` (defaults to "Trainer" if left blank). Both fields accept Enter to continue.
+- **Animated starter sprites** (`src/ui/starterModal.js`): the starter picker now shows the animated **GIF** front sprites (`animated: true`), falling back to PNG if a GIF is missing.
+- **Post-battle rival popup** (`src/systems/battleSystem.js`): after the first rival fight a one-time popup fires on **both win and defeat** — the rival dashes off north out of Pallet Town ("you'll cross paths again"), nudging the player to continue north on the map. The defeat variant is the same minus the "you won" line (losing the first rival doesn't block you — Route 1 opens either way).
+### Changed
+- **Bag button made prominent** (`src/ui/teamView.js`, `css/main.css`): the 🎒 Bag button in the Team header now matches the in-battle command buttons (filled orange like "Items", bold white text) via `.bag-btn` — clearly visible but kept compact so it doesn't hog header space.
+- **You now receive your starter at Oak's Lab, not in the intro** (`src/main.js`, `src/ui/starterModal.js`, `src/ui/storyBuildingView.js`): after the intro the game no longer auto-opens the starter picker. Instead the player is guided to **Pallet Town → Oak's Lab**, where Professor Oak hands over the first Pokémon. `openStarterModal(onDone)` now takes a callback; once the starter is chosen Oak gives some parting words, mentions your **Pokédex**, and tells you that **your rival** has also picked a Pokémon and wants to battle — then points you to the **Rival** tab.
+- **First rival battle uses a counter-starter, not Eevee** (`data/trainers.js`): the Pallet-town rival (`rival-pallet`) now takes the starter that **type-counters yours** (`counterStarter: true` → `COUNTER_STARTER`, canonical: Grass→Fire, Fire→Water, Water→Grass). It stays intentionally beatable — Lv 4, weak non-STAB moves (`tackle`/`tail-whip`) so the type advantage is thematic, not a super-effective nuke. Added `pikachu → eevee` to `COUNTER_STARTER` for the hidden 4th starter (canonical Pokémon Yellow matchup).
+### Notes
+- **No save migration** — `state.player.name` already existed (defaulted to "Trainer"); existing games already have a starter and skip both the intro and the Oak's Lab nudge. All 151 already ship animated GIF sprites under `assets/pokemon/<id>/`.
+
+
+## [0.96.0] – 2026-09-10 · HM system: real, reusable teachable moves (canonical)
+### Added
+- **Full Gen 1 HM system** (`data/hms.js`, `data/hmCompat.js`, `src/systems/hmSystem.js`): **HM01 Cut · HM02 Fly · HM03 Surf · HM04 Strength · HM05 Flash** are now real teachable moves. Unlike TMs, **HMs are reusable — never consumed** and teachable to any number of compatible Pokémon (canonical behavior). HM ownership = holding the HM key item in `resources.items` (never decremented). **The existing story-flag gating is unchanged** (S.S. Anne / Safari / Warden / Route 9 still hand out the HMs the same way).
+- **Per-species canonical HM compatibility for all 151** (`data/hmCompat.js`): regenerated 1:1 from PokeAPI Gen 1 (Red/Blue, machine method) via the extended `tools/fetch_tm_compat.ps1` (now emits both TM and HM tables). E.g. only Water/strong lines learn Surf, only winged learn Fly, Mew learns all 5.
+- **"Teach HM" section on the Pokémon card** (`src/ui/pokemonCard.js`): mirrors "Teach TM" — dropdown of compatible HMs the Pokémon can learn, with the same full-slot "choose a move to forget" flow. HMs stay available after teaching (reusable).
+- **HM02 Fly item + move** (`data/items.js`, `data/moves.js`): `hm02-fly` key item and the `flash` move (Normal status, lowers target accuracy) were added. Fly is granted alongside HM01 Cut at the S.S. Anne captain event (thematically travel; Cut is the canonical prerequisite for reaching Fly). **Fly is a battle-only two-turn Flying attack — NOT fast-travel** (the game uses a clickable idle map).
+### Changed
+- **Auto level-up never overwrites player-taught TM/HM moves** (`src/systems/pokemonSystem.js`): TM/HM-taught slots are now marked `taught: true`. The auto moveset rebuild (`learnLevelUpMoves` auto path, `repairWeakMoveset`) pins taught moves first so they're never dropped, and `setActiveMoves` preserves the `taught` flag through reshuffles. The manual level-up flow is unchanged (the player still explicitly chooses what to replace).
+### Notes
+- Save bumped to **v44**: players past S.S. Anne get HM02 Fly + `hasFly` backfilled. Dive is intentionally **not** an HM (it isn't a Gen 1 HM) — it stays a regular move. HM data was fetched from PokeAPI directly during development, so `data/hmCompat.js` is already populated.
+
+
+## [0.95.0] – 2026-09-10 · Battle engine finished: Bide implemented + Fly/Dive two-turn fixes
+### Added
+- **Bide is now a real move** (`src/systems/battleSystem.js`, `data/moves.js`): previously a placeholder no-op (it's Brock's TM34 reward). It now **stores damage for 2 turns and strikes back for ×2**. The user is locked into Bide while charging (via `lockedAction`, mirroring the two-turn charge lock), all attack damage taken accumulates in `volatile.biding`, and on release it deals double the total to the opponent (or "failed" if no damage was stored). No PP is spent on the forced storing turns, and biding clears naturally on switch/faint (transient volatile state).
+- **HM02 Fly added as a battle move** (`data/moves.js`): Flying, 90 power / 95 acc, `twoTurn`. The engine already referenced `fly` in `TWO_TURN_MSG` and `INVULN_CHARGE_MOVES` (semi-invulnerable charge turn), so this fills a dangling reference — Fly now charges turn 1 (untouchable) and hits turn 2, like Dig/Bounce.
+### Fixed
+- **Dive is now actually a two-turn move** (`data/moves.js`): it was listed in `INVULN_CHARGE_MOVES` but was missing `effect: { kind: "twoTurn" }`, so it behaved as a plain one-turn attack and never went semi-invulnerable. Added the effect so it dives (untouchable) turn 1 and surfaces to hit turn 2.
+### Notes
+- With Bide done, the deferred move-effect list from v0.61.0 is closed. **Haze** (wipes all stat stages both sides) and **Metronome** (calls a random non-blocked move) were already implemented in an earlier version; the backlog note listing them as pending was simply stale — verified against the code. The battle engine's `effect` handling is now feature-complete for Gen 1.
+
+
+## [0.94.0] – 2026-09-10 · Poké Ball completion: progression-gated unlocks + Dusk/Dive balls
+### Changed
+- **Ball tiers now unlock from real progress (badges)** (`src/systems/pokeballSystem.js`): `unlockedBallTier()` used to read the never-written `progress.tier` seam (so only the tier-1 starter set was ever purchasable). It now derives from **earned badges** — 0–1 badges → tier 1, 2–4 → tier 2, 5+ → tier 3 — so Great/Ultra/Net/Repeat/Timer/Love/Heavy/Level/Fast/Dream/Moon/Luxury (and the new Dusk/Dive) actually become buyable as you beat gyms. An explicit `progress.tier` can still only raise the tier (dev/future). No save migration.
+- **TM compatibility rewritten from canonical data** (`data/tmCompat.js`): the previous per-species TM lists were systematically under-listed. Regenerated 1:1 from PokeAPI Gen 1 (Red/Blue, machine method) mapped to our TM numbering (`tools/fetch_tm_compat.ps1`), fixing hundreds of false negatives (e.g. Machamp now learns Earthquake/Counter/Rock Slide/Hyper Beam) and removing wrong entries (Bulbasaur line no longer "learns" Self-Destruct).
+### Added
+- **Dusk Ball & Dive Ball are now real, buyable balls** (`data/pokeballs.js`, `src/systems/pokeballSystem.js`): moved out of the `comingSoon` reserve into tier 3. **Dusk Ball** ×3 in cave areas (`biome:"cave"`), **Dive Ball** ×3.5 in water areas (`biome:"water"`). New declarative bonus types `darkPlace`/`waterPlace`; `catchContext()` now passes the active area's `biome`.
+- **Locked-ball preview in the Poké Ball shop** (`src/ui/buildingView.js`, `css/main.css`): the shop now shows the next-tier balls dimmed with a **🔒 N badges** hint (below the sellable list), so tier progression is visible. Non-sellable balls (Master + remaining `comingSoon`) stay hidden.
+### Notes
+- Remaining `comingSoon` balls (Lure/Safari/Sport/Park/Cherish/Premier/Friend) still need mechanics we don't have yet (fishing, events, friendship), so they're honestly left reserved rather than faked. HMs remain out of scope.
+
+
+## [0.93.0] – 2026-09-10 · TM system (all 50 Gen 1 TMs, canonical sources & compatibility)
+### Added
+- **Full Gen 1 TM system** (`data/tms.js`, `data/tmCompat.js`, `src/systems/tmSystem.js`): all **TM01–TM50** implemented as single-use items (`💿`, id `tm01`..`tm50`) stored in the generic `resources.items` map (no save migration). Each TM teaches its canonical move; teaching consumes 1 TM. Per-species canonical compatibility for all 151 Pokémon (`TM_COMPAT`, e.g. Caterpie/Weedle/Magikarp/Ditto learn none, Mew learns all 50).
+- **Teach TMs from a Pokémon's card** (`src/ui/pokemonCard.js`): new **"Teach TM"** section — a dropdown of TMs the selected Pokémon can currently learn (owned ∩ compatible ∩ not-yet-known) + **Teach**. If it already knows 4 moves, a slot-picker asks which move to forget (with Cancel).
+- **Canonical ways to obtain TMs, "as in the games":**
+  - **Gym Leader rewards** (`src/systems/battleSystem.js`): beating a leader grants their canonical TM once with the badge — Brock → TM34 Bide, Misty → TM11 Bubble Beam, Lt. Surge → TM24 Thunderbolt, Erika → TM21 Mega Drain, Koga → TM06 Toxic, Sabrina → TM46 Psywave, Blaine → TM38 Fire Blast, Giovanni → TM27 Fissure.
+  - **Poké Mart** (`data/items.js`, `buildingView.js`): buyable TMs in a new **TMs** shop category (only priced TMs are stocked): TM01/03/05/09/10/15/17/26/32/33/39/44/45/50.
+  - **Game Corner prizes** (`storyBuildingView.js`): coin-exchange TMs — TM13 Ice Beam (4400), TM23 Dragon Rage (3300), TM48 Rock Slide (5500).
+  - **Rare wild battle drops** (`src/systems/battleSystem.js`): ~1.5% chance a wild win drops a random TM.
+- **Bag TM section** (`src/ui/bagView.js`): read-only **TMs** list showing your TM stock with a hint that teaching happens on the Pokémon card (shown only when you own at least one).
+- **4 missing Gen 1 TM moves added** (`data/moves.js`): Razor Wind, Egg Bomb, Psywave, Bide (Psywave uses fixed power and Bide is a placeholder no-op, as the engine lacks variable/turn-delayed damage).
+### Notes
+- TMs reuse the generic item/shop/bag plumbing (`getItem`, `buyItem`, `itemCount`), so no save-version bump was needed (`resources.items` is lazily initialized). HMs (Cut/Surf/…) stay separate key items — not part of the TM system.
+
+
+## [0.92.0] – 2026-09-10 · Big bundle: level cap, hidden species, move effects, held-item UI + full English UI
+### Added
+- **Optional level cap by story progress** (`src/systems/progression.js`, `src/core/state.js`, `src/ui/settingsView.js`): new **Game rule "Level cap"** (off by default). When on, Pokémon can't out-level the next challenge — the cap is the ace level of the next *unbeaten* gym leader (Brock 14 → Misty 21 → Lt. Surge 24 → Erika 29 → Koga 43 → Sabrina 43 → Blaine 47 → Giovanni 50), then the Elite Four / Champion ace once all 8 badges are earned, then removed entirely (MAX_LEVEL 100) after becoming Champion. Implemented centrally in `grantXp()` so every XP source (battle, daycare, idle) honours it with no caller changes. `currentLevelCap()` derives the cap from `GYMS`/`trainers.js` data. Safe on old saves (rule absent → off, no migration).
+- **Per-area catch progress** (R-023, `src/systems/pokedex.js`, `src/ui/battleView.js`): the Battle Area header now shows a small **`🔴 caught/total`** badge for the current wild area (not on the map node — that was too cramped), so "catch 'em all" in each area becomes a visible goal. New `areaCatchProgress(area)` helper counts owned species out of the area's pool.
+- **Held-item equip/unequip UI outside breeding** (`src/ui/pokemonCard.js`): the Pokémon card now has a proper held-item section — a dropdown of owned held items + **Equip**/**Unequip** buttons, so you can manage held items anywhere, not just in the daycare/breeding screen.
+- **New held items** (`data/items.js`): **Sitrus Berry** (restores 30 HP below 50%, consumed), **Focus Sash** (survive a would-be KO from full HP with 1 HP, consumed). Both buyable in the Poké Mart Held Items section.
+### Changed
+- **More move effects implemented** (`data/moves.js`, `src/systems/battleSystem.js`):
+  - **Haze** now clears all stat-stage changes (and crit-rate boosts) on both combatants.
+  - **Metronome** now actually fires a random usable move (via a dedicated resolver so it doesn't re-trigger can't-act/PP gates).
+  - **Dig / Bounce / Fly / Dive** now grant semi-invulnerability during their charge turn — targeted damaging moves miss the charging Pokémon that turn (multi-turn releases like Solar Beam / Hyper Beam still connect).
+- **Full English UI conversion:** remaining Czech player-facing strings were translated to English across **Settings** (panel/layout/rules labels + dev feedback), **Map** (dev placement hints, position-dump modal), **Dev tools** (all 26 story checkpoint labels), the **title screen** ("Ready – click to enter"), and the Pokémon card ("Male"/"Female", "Evolves with a stone"). Code comments stay Czech by project convention.
+### Notes
+- Level cap is a **rule toggle**, so nothing changes for existing players unless they opt in. Focus Sash / Sitrus Berry reuse existing battle hooks (`focusSash`, `lowHpHeal`); Choice items were intentionally deferred (they'd require move-locking + manual-battle UI enforcement). Bide/Fly-as-a-move have no data entry, so no dead engine cases were added.
+
+
+## [0.91.0] – 2026-09-10 · Per-area wild level ranges
+### Added
+- **Per-area level ranges for wild Pokémon** (`data/areas.js`): wild encounters used to spawn at a flat `recommendedLevel`..`recommendedLevel+1` for the *whole* area. New `AREA_LEVELS` table maps each route/cave `id` → canonical `[min, max]` band (e.g. Route 1 `Lv 2–4`, Viridian Forest `Lv 3–6`, Power Plant `Lv 20–26`, Victory Road `Lv 36–44`, Cerulean Cave `Lv 46–60`), so battles across Kanto track story progression and feel varied. Helpers `areaLevelRange(area)` (explicit band, else fallback to the old `recommendedLevel`..+1) and `rollAreaLevel(area)` (uniform inclusive roll). Kept as a single tunable table like `RARITY_WEIGHTS`.
+- **UI shows the band:** map node labels (`mapView.js`) and the Pokédex "Where to catch" list (`pokemonCard.js`) now display `Lv min–max` instead of a single `Lv X` / `Lv X+`.
+### Changed
+- **`spawnEnemy()`** (`src/systems/battleSystem.js`) now rolls the wild level via `rollAreaLevel(area)` instead of `recommendedLevel + rand(0..1)`. Fully backwards compatible: any area not listed in `AREA_LEVELS` falls back to the previous behaviour. No save-version bump (spawn levels are transient).
+### Notes
+- Level bands are a **design choice, easy to retune** in one place (`AREA_LEVELS`). They loosely follow Gen 1 canon while staying monotonic-ish along the story path.
+
+
+## [0.90.1] – 2026-09-10 · Gen 1 polish: rarity consistency + data integrity audit
+### Fixed
+- **Rarity consistency across areas** (`data/areas.js`): three species were tagged inconsistently between areas (rare in one place, accidentally plain-string `common` in another). Unified them so grinding an area feels the same everywhere the mon appears:
+  - `sandshrew` → `uncommon` on **Route 4** (it was already `uncommon` on all 7 other routes it spawns on).
+  - `tentacruel` → `uncommon` on **Route 19 & Route 20** (matches Route 21; it's Tentacool's evolution, so it shouldn't be as common as the base form).
+  - `dugtrio` → `uncommon` in **Diglett's Cave** (evolved form should be rarer than Diglett).
+### Notes
+- **Data integrity audit (no code change needed):** cross-checked every species id in `areas.js` against `pokemon.js` (94 unique — all exist), every move id in `learnsets.js` against `moves.js` (394 — all exist), every learnset species against `pokemon.js`, and all evolution targets. **Everything resolves; no broken references.** A false-positive claim that `nidoran-m`/`nidoran-f`/`mr-mime` lacked learnsets was verified against `learnsets.js` (they're present at lines 518/471/2007) and dismissed.
+- As always, rarity changes **frequency only, never availability** — all three species remain catchable; they just spawn a bit less often in the corrected spots.
+
+
+## [0.90.0] – 2026-09-10 · Auto catch: "New species" filter
+### Added
+- **Auto catch "New species" filter.** The auto-catch control is now a compact **drop-down multi-select**: one small button (`Catch: …`) in the Battle Area toolbar opens a panel with checkboxes **All / New / Shiny** — tick any combination (they combine with **OR**). *New* means `!ownsSpecies(enemy)`, so it's the set-and-forget way to complete the Pokédex during idle auto-battle (especially valuable now that spawns are rarity-weighted). Stays a single collapsed control so the toolbar remains short, but you can select several options at once.
+### Changed
+- **Autocatch state model:** `settings.autocatch.mode` (`"none"|"all"|"shiny"`) → independent booleans `catchAll` / `catchNew` / `catchShiny` that combine with **OR**. The dropdown just encodes the useful combinations onto those booleans. `getAutocatch()` migrates old saves lazily (all→catchAll, shiny→catchShiny) — no save-version bump needed; `setAutocatch()` rewrites the clean shape on first change.
+### Notes
+- Autocatch behaviour is unchanged otherwise: it still throws at **full power / full HP** every turn (per user: "hází na plno, kdo nechce být u toho, ať trpí") and auto-battle may KO the target first — wild targets simply respawn later. Dedicated autocatch ball selector and auto-off-when-empty are unchanged.
+
+
+## [0.89.0] – 2026-09-10 · Wild encounter rarities (weighted route spawns)
+### Added
+- **Rarity/weight system for wild spawns** (`data/areas.js`): each entry in an area's `species` is now either a plain string (tier `common`) or an object `{ id, rarity }` where `rarity` ∈ `uncommon` / `rare` / `veryrare`. New `RARITY_WEIGHTS` (`common:40, uncommon:15, rare:5, veryrare:1`) + helper `areaEncounters(area)` normalises the mixed list into `[{ id, weight }]`.
+- **Weighted spawn selection** (`src/systems/battleSystem.js`): new `pickWeighted()`; `spawnEnemy()` now rolls the wild species by weight instead of uniform random. Fully backwards compatible — legacy plain-string pools behave as all-common.
+- **Canonical rarities tagged across all Kanto routes/caves:** iconic uncommons (Pikachu in Viridian Forest, Clefairy in Mt. Moon, Abra on Cerulean/Saffron routes, Growlithe/Vulpix, Ponyta on Cycling Road, Electabuzz/Magmar in Power Plant…) are `rare`; Safari Zone / Cerulean Cave super-rares (Chansey, Kangaskhan, Scyther, Pinsir, Tauros, Dratini/Dragonair, Lickitung) are `veryrare`; evolved wild forms (Raticate, Fearow, Sandslash, Dugtrio, Kadabra, Machoke, Graveler, Golbat…) are `uncommon`.
+### Fixed
+- **`[object Object]` crash / rarity regression:** consumers of `area.species` that still assumed plain strings broke once entries became `{ id, rarity }` objects. Route-trainer team generation (`data/trainers.js` `poolForArea`), egg drops (`eggSystem.js rollEggDrop`) and the Pokédex "where to catch" (`pokedex.js areasForSpecies`) now use the new `areaSpeciesIds(area)` / `speciesEntryId(entry)` helpers to normalise the mixed list to plain ids. Fixes `Uncaught Error: Neznámý druh Pokémona: [object Object]` in auto battle.
+- **Pokémon could end up with 8 moves instead of 4:** `balancedMovesetIds()` used `status.slice(-statusSlots)`, and when all 4 slots were filled by attacking moves `statusSlots` was `0` → `slice(-0)` === `slice(0)` returned the **entire** status list, appending every status move. Now guarded (`if (statusSlots > 0)`). Save migration **v43** re-trims existing over-stuffed movesets to `MAX_MOVES` (dedup by id, keep first 4).
+### Notes
+- Rarity changes **frequency only, never availability**: no species has weight 0, so all 151 remain catchable in a single playthrough (per the full-dex rule) — `veryrare` (weight 1 vs common 40) is just a long idle grind, not impossible. Nothing was removed from any area's pool. Weights live in one constant (`RARITY_WEIGHTS`) — easy to retune.
+- `jscheck.py` now also covers `data/areas.js`.
+
+
+## [0.88.0] – 2026-09-10 · Gym Challenges: interactive minigames before gym battles (Vermilion, Fuchsia, Saffron)
+### Added
+- **Gym Challenges Framework** (`src/ui/gymChallengeView.js`): reusable data-driven registry of mini-games per gym. Exports `hasGymChallenge(gymId)`, `isGymChallengeDone(gymId)`, `startGymChallenge(gymId, { onComplete })`. Challenges are **mandatory** pre-fight puzzles (thematic, faithful to canon): they gate the entire gym — no gym trainer or leader can be fought until the puzzle is solved.
+- **Vermilion Gym Challenge – Trash Can Puzzle (Surge):** clickable 3×5 grid of trash cans. Find and flip the first switch → second switch must be in an adjacent can → wrong guess resets the lock. Mimics the Red/Blue/Yellow puzzle. Completion flag `state.story.vermilionGymSwitches` (repurposed from old flavour status). Once solved, gym leader battles unlock; previously locked trainers open with a card "🧩 Gym Challenge → Start Challenge" in Gym tab.
+- **Fuchsia Gym Challenge – Invisible-Wall Maze (Koga):** 5×5 tile maze with hidden walls. Step from the bottom entrance up to Koga (🥷) by clicking highlighted adjacent tiles; bumping a hidden wall reveals it (🧱) so you feel your way through. Fixed, guaranteed-solvable layout. Completion flag `state.story.fuchsiaGymWalls` (repurposed from old flavour popup). Replaces the old Koga flavour popup.
+- **Saffron Gym Challenge – Teleport Pads (Sabrina):** 3×3 grid of warp pads with one fixed correct sequence of 4 pads to reach Sabrina. Correct pad hums and locks lit; a wrong pad warps you back to the entrance (maze never re-shuffles, so it's a fair memory puzzle). Completion flag `state.story.saffronGymIntro` (repurposed from old flavour popup). Shows only after Silph Co. is freed (existing story gate). Replaces the old Sabrina flavour popup.
+- **Gym Challenge UI Integration** (`src/ui/gymView.js`): challenge gate check before starting trainer battles. Guards `started`/`cleared` skip minigame for old saves (backwards compatible, no save migration needed). Challenge card displays in Gym tab when unsolved.
+- **CSS styling** (`css/main.css`): new sections for `.gym-challenge-card`, `.gym-challenge-modal`, `.gc-cans` grid layout, `.gc-can` / `.gc-can.on` states, `.gc-win` completion state.
+### Changed
+- **Gym Tab Lock:** Trainers and gym leader remain locked until challenge is solved (if challenge exists). Old saves with `started` or `cleared` flags bypass the challenge entirely.
+### Notes
+- All three interactive challenges (Vermilion, Fuchsia, Saffron) share the same data-driven `gymChallengeView.js` registry — adding another gym is just one registry entry + a `build()` function.
+- Blaine's quiz (v0.77.0) remains unchanged (already interactive); Surge/Koga/Sabrina puzzles replace their old flavour popups. Pewter/Cerulean/Celadon/Viridian are canonically puzzle-free → no challenge.
+- Sprite-less: puzzle uses emoji grid + CSS only; no new assets required.
+
+
+## [0.87.0] – 2026-09-10 · Interaktivní obřad u Oaka + stažitelný diplom + přepínač Shiny Charmu
+### Added
+- **Slavnostní obřad udělení diplomu u Prof. Oaka** (`src/ui/diploma.js` → `startDiplomaCeremony`). Po zkompletování dexu a kliknutí na „Show Prof. Oak your completed Pokédex" proběhne vícekrokový dialog se **spritem Oaka** (`assets/npc/oak.png`): (1) gratulace → (2) vizuální **Diplom** + stažení → (3) předání **Shiny Charmu** (sprite vedle Oaka) → (4) poděkování. Flagy (`story.dexDiploma`, `story.shinyCharm`) se nastaví AŽ na konci obřadu (přeruší-li ho hráč, tlačítko u Oaka zůstane → žádný softlock).
+- **Reálný stažitelný diplom (PNG).** `renderDiplomaCanvas()` vykreslí certifikát 1000×720 na `<canvas>` (krémový gradient, dvojitý zlatý rámeček, jméno trenéra, počet druhů, Shiny Charm, odznaky/čas/datum, podpis „Prof. Oak"). `downloadDiplomaPng()` stáhne jej jako `pokedex-diploma-<jmeno>-<datum>.png`. `showDiplomaModal()` ho ukáže vizuálně v okně s tlačítky „⬇ Download PNG" a „Close" (podpora `onClose` callbacku pro navázání obřadu).
+- **Stažení diplomu i později z Profilu.** V záložce Profile přibylo tlačítko „🎓 View / Download Diploma" (jen když `story.dexDiploma`) → otevře `showDiplomaModal`.
+- **Přepínač Shiny Charmu v horní liště** (`src/main.js` `renderResourceBar`). Zobrazí se JEN když hráč Charm vlastní (`story.shinyCharm`). Klik přepíná `settings.shinyCharmActive` (ON = ×3 shiny, OFF = vypnuto). Vizuál: zlatá záře (ON) / ztlumeno (OFF).
+### Changed
+- **Shiny Charm respektuje přepínač.** Spawn (`battleSystem.spawnEnemy`) i breeding (`breedingSystem`) násobí šanci na shiny jen když `story.shinyCharm && settings.shinyCharmActive !== false`.
+- **Profil**: řádek „Shiny Charm" nově rozlišuje „✨ Active (×3 shiny)" vs „✨ Owned (off)"; řádek „Dex Diploma" ukazuje „🎓 Earned" / pobídku k návštěvě Oaka.
+- **Save migrace v42:** doplní `settings.shinyCharmActive = true` (výchozí zapnuto; koho se netýká, přepínač neuvidí). `VERSION` = 0.87.0, save v42.
+### Notes
+- Sprite Shiny Charmu (`assets/items/shiny-charm.png`) zatím neexistuje → fallback ✨ glyf (viz docs/SPRITES-TODO.md).
+
+
+## [0.86.0] – 2026-09-10 · Pokédex Diploma + Shiny Charm (capstone Gen 1)
+### Added
+- **Pokédex Diploma (Prof. Oak reward).** When player collects all 151 unique species, they must visit **Oak's Lab** (Pallet Town) and interact with **Prof. Oak** → button appears: "Show Prof. Oak your completed Pokédex" → triggers reward popup with **Pokédex Diploma** (one-time, flag `dexDiploma`). No auto-trigger; player action required. Visually confirmed in **Profile tab** (new row: "Dex Diploma" → "Complete!" when `dexCounts.caught >= total`).
+- **Shiny Charm (multiplier ×3).** Awarded alongside Diploma via same Oak's Lab interaction (flag `shinyCharm` in `state.story`). Globally multiplies shiny spawn chance by **3×** via constant `SHINY_CHARM_MULT` in `pokemonSystem.js`. Applied in two contexts: (1) wild spawns via `battleSystem.spawnEnemy(shinyChance * SHINY_CHARM_MULT)`, (2) breeding via `breedingSystem.BREED_SHINY_CHANCE * shinyCharmMult`. Displayed in Profile as "Shiny Charm: Active ×3" or "—" when inactive.
+- **Save migration v41:** retroactive grant for users with all 151 species already caught (anti-softlock: `dexCounts.caught >= 151` → set both flags without popup).
+### Changed
+- **Dev tool `devCompleteDex()`** in `devTools.js` — fills all 151 species into collection; does **NOT** grant Diploma/Charm (player must still visit Oak's Lab).
+- **Function `grantDexDiploma()`** in `team.js` called by Oak's Lab view; applies both flags and popup.
+- **Oak's Lab interaction** (`storyBuildingView.js`) handles button and triggers reward.
+- **Version 0.86.0**, save v41.
+### Notes
+- Diploma + Charm awarded only via player action at Oak's Lab, not automatic upon 151st catch.
+- Shiny Charm persists for remainder of game.
+
+
+## [0.85.0] – 2026-09-09 · Kompletace Gen 1 dexu – uzavření posledních děr (Poliwag linie + Mew)
+### Added
+- **Poliwag linie do spawnů.** Audit dexu odhalil, že Poliwag/Poliwhirl/Poliwrath nebyli nikde získatelní (a tím pádem ani **Jynx** přes Cerulean Trade House). `poliwag` doplněn do `data/areas.js`: Route 22, Route 24, Route 25, Route 6 a Seafoam Islands; `poliwhirl` navíc do Seafoam Islands (přímý záložní odchyt). Poliwrath = Water Stone na Poliwhirl.
+- **Mew (#151) – „pod náklaďákem" (kanon legenda).** Skrytý event v `ssAnneView` (`storyBuildingView.js`): po odplutí S.S. Anne (`ssAnneCleared`) a s **hasSurf + hasStrength** se u vzdáleného doku objeví opuštěný náklaďák → tlačítko „heave the truck aside" spustí statické setkání s **Mew** (`startStaticEncounter("mew", max(50, giftLevel()))`, legendary rarita → chytatelný, těžký, vrací se dokud ho nechytíš; žádný trvalý zámek). Nový import `startStaticEncounter` do storyBuildingView.
+### Changed
+- Bez save migrace (jen spawny + event, žádný nový stav). `VERSION` = 0.85.0.
+### Notes
+- Tím je **všech 151 Gen 1 získatelných na 1 průchod** (spawny/evoluce vč. trade+stone přes Linking Cord/kameny z obchodu / fosílie / dary / výměny / Game Corner / legendární / Mew truck). Ditto ✓ (divoké spawny).
+
+
+## [0.84.0] – 2026-09-09 · Kompletace Gen 1 dexu (3/3): Game Corner „Plná herna" (automat + coiny + prize corner → Porygon)
+### Added
+- **Nová měna: coiny** (`state.resources.coins`). Zobrazená v Profilu (řádek „Coins 🪙") a v Game Corneru. Migrace save v40 doplní `coins: 0` (jen bump, hráč si je vydělá v herně).
+- **Game Corner „Plná herna"** (`storyBuildingView.gameCornerView`, odemyká se po `rocketHideoutCleared` – z Rockety provozované herny je zase obyčejná herna). Tři služby:
+  - **Automat (slot machine):** sázka `SLOT_BET` = 3 coiny/spin, 3 válce s váženými symboly (🍒/🔔/🍊/⭐/🔵/7️⃣), výplaty za tři shodné (7️⃣=300 … 🍒=8) + bonus za třešně. Výsledek se drží přes překreslení (`lastSpin`), reset při otevření okna.
+  - **Směnárna coinů** (`COIN_PACKS`): 50 🪙 za 1000₽ nebo 500 🪙 za 10000₽ (kanon ~50/1000).
+  - **Prize corner** (`GAME_CORNER_PRIZES`): coiny za vzácné Pokémony – Abra 180 · Clefairy 500 · Vulpix 1000 · Pinsir 2500 · Dratini 2800 · Scyther 5500 · **Porygon 9999** (jinde v Gen 1 nezískatelný). Level škálovaný dle týmu (`giftLevel()`), 1×/druh (tlačítko „✓ Owned"/disabled u vlastněných – šetří coiny).
+- **Dev „Skip to":** checkpoint ⑪ (silphscope – vyčištění Rocket Hideoutu = odemčení herny) nově dá **9999 coinů**, ať jde herna i Porygon otestovat.
+### Changed
+- **Save migrace v40:** doplní `resources.coins = 0` u starých savů. `CURRENT_SAVE_VERSION` = 40.
+
+
+## [0.83.0] – 2026-09-09 · Kompletace Gen 1 dexu (2/3): dárkoví/výměnní Pokémoni (Eevee, Lapras, oba Hitmoni, Mr. Mime, Jynx, Farfetch'd)
+### Added
+- **Kanonické Trade Houses ve městech** (nový mechanismus výměny NPC): 3 nové story budovy „Trade House" (`buildings.js` `viridian-trade-house`/`cerulean-trade-house`/`vermilion-trade-house`, 🏠; přidány do `CITY_BUILDINGS`). NPC vymění tvého Pokémona za svého — **věrné hře**: **Abra → Mr. Mime** (Viridian, flag `mrMimeGift`), **Poliwhirl → Jynx** (Cerulean, `jynxGift`), **Spearow → Farfetch'd** (Vermilion, `farfetchdGift`). Nahrazuje dřívější nápad „dárek na routě".
+- **Nový export `tradePokemon(wantId, giveId, flag)`** (`battleSystem.js`): najde požadovaný druh v kolekci, pustí ho a vytvoří vyměněného **na STEJNÉM levelu** (věrné hře – přijatý Pokémon má level toho odevzdaného; auto-škáluje se dle hráče). Guardy: hráč musí druh vlastnit, nesmí to být jeho jediný Pokémon (anti-softlock), jednorázově přes flag. Odevzdaný druh zůstává znovu-chytatelný (žádný trvalý zámek dexu).
+- **View `tradeHouseView(storyKey)`** + config `CITY_TRADES` (`storyBuildingView.js`): 3 stavy – nabídne výměnu jen když druh vlastníš (`ownsSpecies`), jinak navede si ho chytit; po výměně „done". Handler `[data-trade]` v `wire()`.
+- **Celadon Mansion → Eevee.** Nová story budova (`buildings.js` `celadon-mansion`, 🏨; přidána do `CITY_BUILDINGS["celadon-city"]`). View `celadonMansionView` dá **Eevee** (`data-take-eevee`, flag `eeveeGift`).
+- **Fighting Dojo → OBA Hitmoni.** Nová story budova (`fighting-dojo`, 🥋; v `CITY_BUILDINGS["saffron-city"]`). View `fightingDojoView` dá **Hitmonlee + Hitmonchan** najednou (`data-take-hitmons`, flag `hitmonsGift`) — věrně cíli „celý dex na 1 průchod" (žádná volba jednoho).
+- **Silph Co. → Lapras.** Po osvobození (`silphCleared`) přidán do `silphCoView` vděčný zaměstnanec, který dá **Lapras** (`data-take-lapras`, flag `laprasGift`).
+- **Škálování darů dle týmu hráče:** nový export `giftLevel()` (`battleSystem.js`) vrátí max level týmu (min 5); Eevee/oba Hitmoni/Lapras se udělují na tomto levelu, ať nejsou proti hráči přestřelené.
+### Changed
+- **Dárci nejsou na routách, ale ve městech (tajně/kanon).** Odstraněny dřívější arrival eventy + „Receive" popupy na Route 2/10/13 (`setActiveArea` a `mapView` vyčištěny). Getování probíhá v městských budovách – výměnou (Trade House) nebo darem (Mansion/Dojo/Silph).
+- **Dev „Skip to" – dary/výměny navázané na existující milníky** (žádný nový hrubý skok, helper `giftMon`): Mr. Mime u Viridian, Jynx u Cerulean, Farfetch'd u Vermilion, Eevee u Celadon, oba Hitmoni u Saffron, Lapras u Silph Co.
+- **Save migrace v39:** nové flagy jsou u existujících savů prostě nevyzvednuté (hráč si pro ně dojde); žádné doplňování dat, jen bump `CURRENT_SAVE_VERSION` = 39.
+
+
+## [0.82.0] – 2026-09-09 · Kompletace Gen 1 dexu (1/3): divoké spawny + fosílie (obě + Old Amber)
+### Added
+- **Chybějící divoké druhy do spawn poolů** (`data/areas.js`): `gastly`+`haunter` (Route 8 u Lavenderu, +`gastly` Route 12), `koffing` (Route 16) a `koffing`+`weezing` (Route 17/18), `goldeen`+`seaking` (Route 13, +`goldeen` Route 12), `lickitung` (Route 11), `magmar` (Power Plant). Evoluce doplní `gengar` (trade z haunter), `weezing`, `seaking`.
+- **Dratini + Dragonair do Safari Zone** (`safariSystem.js` hloubkové pooly: Dratini oblast 3, Dragonair oblast 4; + `areas.js` safari species). Dragonite přes evoluci.
+- **Old Amber → Aerodactyl** – nový klíčový item (`data/items.js`, 🟠). Oživení v **Museum of Science** (Pewter) vedle Helix/Dome (`storyBuildingView` `FOSSIL_TO_SPECIES` + revive UI).
+### Changed
+- **Fosílie z Mt. Moon už NEjsou nevratná volba jedné.** Hráč dostane **všechny tři** (Helix + Dome + Old Amber) najednou — cíl „celý dex na 1 průchod". `applyFossilChoice()` (bez parametru) udělí všechny tři; Mt. Moon popup přepsán z volby na jedno potvrzení; `pickFossil()` upraven.
+- **Save migrace v38:** kdo dřív vybral jednu fosílii (`fossilChosen` "helix"/"dome"), dostane zpětně chybějící druhou + nový Old Amber (`fossilChosen` → "all"). `CURRENT_SAVE_VERSION` = 38.
+
+
+## [0.81.0] – 2026-09-09 · Věrný Kanto – Krok 11: Saffron City (Silph Co · Master Ball · Sabrina) + Cerulean Cave lore
+### Added
+- **Saffron City obsazen Team Rocket.** Arrival event `saffron-arrival` (`setActiveArea` + popup v `mapView`): Rocketi drží město, žíznivý strážce blokuje **Silph Co.** a **Sabrinin gym je zamčený**, dokud město neosvobodíš. Naváděcí popup pošle hráče koupit pití v Celadonu.
+- **Žíznivý strážce (gate na kánon).** Nový klíčový item **Fresh Water** (`data/items.js`, 🥤). V **Celadon Dept. Store** (`storyBuildingView` → `deptStoreView`) se kupuje za 200 💰; podání strážci (`silph-co` view, `data-give-drink`) nastaví `saffronGuardsCleared` a otevře budovu. Bez softlocku – strážce blokuje jen budovu (a gym), ne průchod přes Saffron.
+- **Silph Co. – Rocket gauntlet.** `ROCKET_GAUNTLETS["saffron-city"]` (tab **🏢 Silph Co.**, `requiresStory: "saffronGuardsCleared"`): 3× Rocket grunt → **rival** (`rival-silph`, plný tým s counter-startérem) → **Giovanni** (`giovanni-silph`). Po vyčištění (`silphCleared`) payoff v `finishTrainerBattle`: Giovanni prchá, president dá **Master Ball** (`resources.balls.master`, garantovaný odchyt) a Sabrinin gym se otevře.
+- **Sabrina – Marsh Badge.** `saffron-gym` má `requiresStory: "silphCleared"` (gate v `gymView` `GYM_GATES`), jednorázový intro popup (flag `saffronGymIntro`, teleport-bludiště). Po výhře payoff (badge `marsh-badge`, flag `sabrinaCleared`, +1800 💰).
+- **Cerulean Cave lore (endgame).** Arrival event `cerulean-cave-arrival` (`setActiveArea` + popup v `mapView`): lore o **Mewtwovi** stvořeném ve zříceninách Pokémon Mansion; zmíní Master Ball a Legendary tab.
+- **Dev „Skip to" ㉑–㉔ (rozmělněno na dílčí milníky):** ㉑ příchod do Saffronu · ㉒ Fresh Water podána (Silph Co otevřeno) · ㉓ Silph Co vyčištěn (Master Ball) · ㉔ Sabrina poražena (Marsh Badge). Earth/Champion skoky posunuty na ㉕/㉖.
+### Changed
+- **Save migrace v37:** doplní nové flagy; kdo má **marsh-badge**, dostane zpětně `saffronGuardsCleared`/`silphCleared`/`sabrinaCleared` (+ Silph trenéři jako poražení + 1 **Master Ball** za férovost); kdo navštívil Saffron → `saffronArrival`; kdo dokončil Ligu → `ceruleanCaveArrival`. `CURRENT_SAVE_VERSION` = 37.
+
+
+## [0.80.0] – 2026-09-09 · Věrný Kanto – Krok 10: Viridian Gym (Giovanni), Victory Road, Indigo Plateau (Elite Four + Champion) = endgame
+### Added
+- **Poslední odznak – Giovanni ve Viridian Gymu.** Přidáni gym trenéři + leader **Giovanni** (Earth Badge, 8/8). Jednorázový intro popup v `gymView` (flag `viridianGymIntro`) naznačí tajemného Leadera; po výhře payoff popup (`finishTrainerBattle`, badge `earth-badge`, flag `giovanniCleared`, +3000 💰) odhalí Giovanniho jako **šéfa Team Rocket**, který gang rozpustí, a otevře cestu **Route 22 → Victory Road → Indigo Plateau**.
+- **Pokémon League (Elite Four + Champion) – nepřerušený řetězec soubojů.** Nová data `LEAGUE` + `leagueForArea` v `data/trainers.js`: **Lorelei → Bruno → Agatha → Lance → Champion Blue** (Champion má `counterStarterFinal` eso). Nová obtížnost `TRAINER_DIFFICULTY` pro `elite-four` (IV30/EV252) a `champion` (IV31/EV252). Nový tab **🏆 League** (`src/ui/leagueView.js`) na Indigo Plateau: Begin/Continue/Forfeit, roster s postupem, varování o léčení.
+- **Mechanika Ligy dle kánonu (na výslovné přání):** souboje jdou **jeden za druhým**, **žádné léčení v Poké Centru** mezi nimi (jen bag itemy – Potion/Revive), **HP se přenáší** (`owned.hp` je trvalé). **Prohra kdekoli = restart od Lorelei.** Běh drží `progress.leagueActive` + `progress.leagueStep`; postup a payoff řeší `finishTrainerBattle`, wipe reset řeší `handleFaint`. `healTeam()` je během běhu zablokovaný (vrací `-1`; Poké Center i máma ukážou vysvětlení). Po dokončení jednoho zápasu se UI automaticky přepne zpět na League tab (mezi zápasy jde přes Bag dohealovat).
+- **Champion payoff + odemčení Mewtwa.** Poražení Championa nastaví `leagueCleared` + `isChampion` (+20000 💰 poprvé) a Hall of Fame popup. `isChampion` odemkne **Cerulean Cave** (`areas.js` unlock rozšířen o `story: "isChampion"`) → legendární **Mewtwo** (viz v0.79.0).
+- **Arrival eventy Victory Road + Indigo Plateau** (`setActiveArea` + popupy v `mapView`): `victory-road-arrival` (silní divocí, balvany/Strength, Moltres uvnitř) a `indigo-arrival` (vysvětlí pravidla Ligy – bez léčení, jen bag, restart při prohře).
+- **Dev „Skip to" ㉑–㉒:** ㉑ Giovanni poražen · Earth Badge · 8/8 · Victory Road + Indigo otevřeny; ㉒ Elite Four + Champion poraženi · Champion (Krok 10 hotov; Cerulean Cave / Mewtwo).
+### Changed
+- **Sprity Ligy:** `trainerSpriteUrl` řeší `elite-four`/`champion` jako leadery – 1 stálý sprite dle id (`assets/gym-leaders/<id>/front.png`), fallback glyph při chybějícím assetu.
+- **Cerulean Cave** vyžaduje `isChampion` (kanon: Unknown Dungeon se otevře až Championovi).
+- **Save migrace v36:** doplní `progress.leagueActive`/`leagueStep` (neutrální default); kdo má `earth-badge`, dostane `giovanniCleared`. `CURRENT_SAVE_VERSION` = 36.
+
+
+## [0.79.0] – 2026-09-09 · Articuno má vlastní „Legendary" tab (popup jen 1×) + per-area pozadí Seafoam
+### Added
+- **Nový vzor „Legendary" tab pro statická legendární setkání.** `data/legendaries.js` (`LEGENDARY_ENCOUNTERS` keyed by areaId + `legendaryForArea`) a `src/ui/legendaryView.js` (`renderLegendaryTab`). Tab se v `mainPanel` ukáže jen když oblast má legendárního, je splněná `requiresStory` (HM/story gate) a druh ještě **nevlastníš** (`ownsSpecies`) → sám zmizí po chycení. Dynamický popisek + ikona jako u gauntletů (např. „❄️ Articuno"). Karta s velkým spritem, lore textem a tlačítkem, které spustí `startStaticEncounter` a přepne do Battle tabu.
+- **Všichni tři legendární ptáci + Mewtwo tímto vzorem.** `assets`/data přidány: **Articuno** (Seafoam Islands, gate Strength, L50), **Zapdos** (Power Plant, gate Surf, L50), **Moltres** (Victory Road, gate Strength, L50) a **Mewtwo** (Cerulean Cave, gate `isChampion` = po poražení Ligy, L70). Každý má vlastní lore + ikonu; všichni `rarity:"legendary"` (těžké chytání) a vždy manuál. Snorlax zůstává jako probouzecí event (Poké Flute), ne legendary tab.
+- **Per-area pozadí soubojů (override).** `battleSystem.pickBackground` teď preferuje `area.background` (string nebo pole souborů v `assets/backgrounds/`) před sdíleným biome poolem. Seafoam Islands dostal `background: "seafoam-islands.png"` (do nahrání assetu běží fallback).
+### Changed
+- **Articuno přesunut z opakovaného popupu do vlastního tabu.** Dřív se při každé návštěvě Seafoam (se Strength) otevíral encounter popup s Face/Back away. Teď je Articuno stálá výzva v **Legendary** tabu; příběhový popup Seafoam Islands se ukáže **jen jednou** (první příchod) a upozorní na tab + Strength gate.
+### Removed
+- **Event `articuno-encounter`** (větev v `setActiveArea` + handler v `mapView`) nahrazen tabovým vzorem. Chování chytání (statický souboj, forceManual, znovuobjevení dokud nechytíš) zůstává beze změny – jen se spouští z tabu, ne z popupu.
+
+
+## [0.78.0] – 2026-09-09 · Krok 9 dopilování: ztížený Pokémon Mansion (labyrint + gauntlet + boss), Articuno na Seafoam, oprava pořadí mořské cesty
+### Added
+- **Pokémon Mansion je teď skutečná výzva, ne dárek u dveří.** Cesta k **Secret Key** je třífázová: (1) **spínačový labyrint** – tři místnosti, v každé útržek deníku napoví správnou z pokřivených soch; špatná volba spustí oblak jedovatého kouře a místnost se opakuje (řetězené `showPopup`, `dismissible:false`), po vyřešení flag `mansionPuzzleSolved`; (2) **gauntlet** dvou **Burglarů** + **boss Scientist Volk** (Koffing/Magmar/Weezing/Rapidash) v novém tabu **Mansion** (přes zobecněný `ROCKET_GAUNTLETS`, gate `requiresStory: "mansionPuzzleSolved"`); (3) vyčištění gauntletu udělí **Secret Key** + flag `hasSecretKey` + 1800 💰 a payoff popup navede k Blaineovi.
+- **Articuno na Seafoam Islands (legendární úlovek).** Nový **statický souboj** – `startStaticEncounter(speciesId, level)` v `battleSystem` (divoký = chytatelný, přežije refresh přes speciesId+level). Hluboko v ledových jeskyních (gate na **Strength**) se objeví **Articuno L50** (event `articuno-encounter`, nabídka Face/Back away v `mapView`). Legendární = `rarity:"legendary"` → násobek chytání 0,3 (na plné HP ~4,5 % Poké / ~9 % Ultra, oslabený ~25 % / ~50 %) – musíš ho oslabit a házet bally. Souboj je **vždy manuál** (`battle.forceManual`, serializuje se), aby Auto battle legendárního neubilo. **Znovuobjeví se, dokud ho nechytíš** (jednorázovost = vlastnictví druhu přes `ownsSpecies`; útěk/prohra/KO ho nezablokují – nutné pro plný dex 151).
+### Changed
+- **Pořadí mořské cesty opraveno** na kánon: **Route 19 → Seafoam Islands → Route 20 → Cinnabar Island → Route 21** (řetěz `unlock: { visited }` v `areas.js`).
+- **Mansion tab** (Rockets/gauntlet) se ve `mainPanel` odemkne až po `mansionPuzzleSolved` (nová `requiresStory` větev + import `getState`).
+- **Dev „Skip to" ⑲ (Secret Key)** teď nastaví `mansionPuzzleSolved` + `cinnabarMansionCleared` + porazí 3 mansion trenéry (deterministický skok).
+- **Save migrace v35:** kdo už má `hasSecretKey` (starý instantní zisk), dostane `mansionPuzzleSolved` + `cinnabarMansionCleared`, ať se mu labyrint ani gauntlet znovu nespustí. `CURRENT_SAVE_VERSION` = 35.
+
+
+## [0.77.0] – 2026-09-09 · Věrný Kanto příběh – Krok 9: Cinnabar Island (Blaine, Volcano Badge, Pokémon Mansion + Secret Key)
+### Added
+- **Mořská cesta na Cinnabar (arrival eventy).** První nasednutí na **Surf** na **Route 19** (event `route-19-arrival`, flag `route19Arrival`), průchod **Seafoam Islands** (`seafoam-arrival`, `seafoamArrival`) a příchod na **Cinnabar Island** (`cinnabar-arrival`, `cinnabarArrival`) – každý s vlastním popupem v `mapView`.
+- **Pokémon Mansion (nová story budova).** Vyhořelý sídlo na Cinnabaru: prozkoumáš ruiny, přečteš útržky deníků o původu **Mewtwa** (Mew → gen. experimenty) a najdeš **Secret Key** (`secret-key`, special item, flag `hasSecretKey`).
+- **Pokémon Lab (nová story budova).** Flavour laboratoř na Cinnabaru – vědci o fosíliích a pověstech o Mewtwovi (napojení na Mansion). Oživení fosílií nadále řeší Pewter Museum.
+- **Cinnabar Gym zamčený na Secret Key.** `cinnabar-gym` má `requiresStory: "hasSecretKey"`; brána gymu (zobecněný `GYM_GATES` v `gymView`) navede hráče na Mansion. Neuvedené gymy dostaly obecný fallback text.
+- **Blaineův kvíz (kánon).** Při prvním vstupu do odemčeného, nevyčištěného gymu proběhne řetěz pravda/nepravda otázek (přes `popup.choices`, flag `cinnabarGymQuiz`), pak souboj s Blainem.
+- **Volcano Badge payoff.** Po poražení Blaina (`finishTrainerBattle`, badge **volcano-badge**, flag `blaineCleared`, +2000 gold) popup navede zpět do znovuotevřeného **Viridian Gymu** (8. odznak).
+- **Dev „Skip to" ⑱–⑳:** příchod na Cinnabar (mořská cesta), Secret Key/Mansion, Volcano Badge/Blaine (Krok 9 hotov).
+### Changed
+- **Roster budov `cinnabar-island`:** Poké Center + Mart + **Pokémon Lab** + **Pokémon Mansion**.
+- **Save migrace v34:** dopočítá arrival flagy podle navštívených oblastí; kdo už má **volcano-badge**, dostane `blaineCleared`/`cinnabarGymQuiz`/`hasSecretKey`, aby se vyčištěný gym nezamkl `requiresStory`.
+- `CURRENT_SAVE_VERSION` = 34.
+
+
+## [0.76.0] – 2026-09-09 · Safari Zone – plná věrná expedice (žádné odměny zadarmo)
+### Added
+- **Safari Zone je teď skutečná expedice, ne dárek u vchodu.** Nový samostatný engine `src/systems/safariSystem.js` + běhový stav `state.safari`. Zaplatíš **vstupné (500 💰)** → dostaneš rozpočet **500 kroků** a **30 Safari Ballů**. Idle tik popojde a občas narazíš na divokého Pokémona.
+- **Věrné Safari chytání (Bait/Rock/Ball/Run).** Žádné souboje/HP. **Bait** (jídlo) sníží šanci na útěk, ale zhorší chytání; **Rock** (kámen) zlepší chytání, ale zvýší útěk. Safari Ball má vlastní násobič; Pokémon může **utéct**. Šance na útěk i chycení škáluje vzácností druhu.
+- **4 oblasti do hloubky (`goDeeper`, −60 kroků).** Nekumulativní pooly – vzácnější druhy vyžadují dojít hlouběji (Chansey/Scyther/Pinsir/Tauros/Kangaskhan až ve 4. oblasti).
+- **Odměny za dojití, ne za vstup:** **Gold Teeth** v oblasti 3, **HM03 Surf** v **Secret House** (oblast 4) – oboje s vlastním popupem, jen jednou (řízeno flagy `hasGoldTeeth`/`hasSurf`).
+- **„Ding-dong! Time's up!"** – když dojdou kroky nebo Bally, ranger tě odvede ke vchodu (úlovky/itemy si necháš). Odchod z oblasti safari-zone ukončí probíhající výpravu.
+- **Nový tab „Safari"** (`src/ui/safariView.js`) viditelný jen v oblasti safari-zone; v této oblasti se schová tab **Battle** (nebojuje se). HUD: kroky / Safari Balls / oblast + živé bary.
+- **Setkání vypadá jako souboj (jiným stylem):** encounter panel ukazuje **animovaný sprite** divokého Pokémona (`spriteImg`, gif→png→glyph fallback) v malé travnaté „scéně" + jméno/level. Akce **Bait/Rock/Safari Ball/Run** (i „Press deeper"/„Leave") jsou přestylované do **stejných tlačítek jako tahy v manuálním souboji** (`move-grid` + `move-btn move-typed` s ikonou, názvem a podtitulkem, barevně odlišené).
+### Changed
+- **Zrušen automatický dárek při vstupu do Safari** (dřívější `safari-entry` event dával Surf + Gold Teeth zadarmo). Nahrazeno pravidlovým popupem `safari-arrival` (jen vysvětlí expedici, nic nedá).
+- **Save migrace v33 upravena:** Surf/Gold Teeth se už neudělují za pouhou návštěvu safari-zone; migrace jen dorovná HM za branami (kdo je na Route 19 → Surf, kdo na Victory Road → Strength), aby se nikdo nezamkl. Nový `state.safari` se dolaďuje líně.
+- **Dev „Skip to" ⑯** popisuje dokončenou Safari expedici (flag `safariArrival` místo obsoletního `safariEntered`).
+### Notes
+- Bez nových spritů – encounter panel je zatím textový (jméno + level + % šance). Battle engine se v safari-zone při vstupu bezpečně zastaví (`stopBattle`).
+
+
+## [0.75.0] – 2026-09-09 · Věrný Kanto příběh – Krok 8: Fuchsia City (Koga, Soul Badge, Safari Zone, HM Surf/Strength)
+### Added
+- **Jižní osa přesměrována na Fuchsia.** Hlavní cesta do Fuchsia City vede nyní z **JIHU** přes **Route 15** (unlock `visited:route-15`), což je kanonické. **Cycling Road (route-18)** zůstává boční slepá větev z Celadonu (west side).
+- **Koga & Soul Badge – příběhová vrstva.** Při prvním vstupu do odemčeného, nevyčištěného Fuchsia Gymu vyskočí jednorázový popup „bludiště neviditelných zdí" (flag `fuchsiaGymWalls`). Po poražení Kogy payoff popup v `finishTrainerBattle` (badge **soul-badge**, flag `kogaCleared`, +1500 gold).
+- **Safari Zone – primární zdroj Surf.** První vstup event `safari-entry` vrátí **HM03 Surf** (`hm03-surf`, special item) + **Gold Teeth** (`gold-teeth`, special item, flagy `safariEntered`/`hasSurf`/`hasGoldTeeth`). Vzácní druhy (Chansey, Kangaskhan, Scyther, Pinsir, Tauros, Tangela aj.) v datech.
+- **Warden's House (nová story budova).** Ve Fuchsia vrátíš Gold Teeth → dostaneš **HM04 Strength** (`hm04-strength`, special item, flag `hasStrength`), zuby se spotřebují (flagy `wardenThanked`/`hasGoldTeeth=false`).
+- **Nové HM gaty.** Route 19 (`unlock: {story:"hasSurf"}`), Victory Road (`unlock: {story:"hasStrength"}`).
+- **Dev „Skip to" – Krok 8 rozdělen na 4 checkpointy** (testovatelné fáze): **⑭ Fuchsia arrival** (příchod), **⑮ Soul Badge** (Koga), **⑯ Safari/Surf+Gold Teeth** (vstup), **⑰ Strength** (hotov). Kumulativní, odstraněna duplikace v `applyOne`.
+- **New eventy:** `fuchsia-arrival` (mapView), `safari-entry` (mapView), soul-badge payoff (finishTrainerBattle).
+### Changed
+- **Save migrace v32→v33:** retroaktivní propuštění dle postupu (visited route-15, Koga, Safari Zone, HM03/04, Gold Teeth).
+### Notes
+- Warden-house je story budova bez popupu. Route 15 návštěva bez trainers.
+
+
+## [0.74.0] – 2026-09-09 · Věrný Kanto příběh – Krok 7: Celadon → Rocket Hideout → Pokémon Tower finále (Erika, Silph Scope, Poké Flute, Snorlax)
+### Added
+- **HM05 Flash je nově těžší (kanonicky).** Zrušen laciný dárek od náhodného turisty. Na **Route 9** je teď **Hiker gauntlet** (tab „Hikers": 3 tuzí Hikeři) a **Oakův pomocník** dá **HM05 Flash** až po jejich poražení **A** po registraci **10 druhů** v Pokédexu. Když druhů zatím nemáš dost, Flash dostaneš při **návratu na Route 9** (žádný soft-lock).
+- **Celadon City – příběhová vrstva.** Vlastní roster budov: **Poké Center + Poké Mart + Dept. Store + Game Corner**. Příchodový popup navede na Dept Store / Game Corner / Erika. **Celadon Gym** (Erika) dá **Rainbow Badge** + payoff popup (+1000₽) navádějící na Game Corner.
+- **Team Rocket Hideout (za Game Cornerem).** Game Corner má tajný vchod → tab „Team Rocket": gauntlet 4 grunty + boss **Giovanni**. Vyčištění dá **Silph Scope** (`hasSilphScope`) + 2500₽ + popup směřující do Pokémon Tower.
+- **Pokémon Tower finále.** Stavový automat věže: bez Silph Scope duch nejde poznat → se Scope souboj s **duchem Marowak** (`marowakCalmed`) → osvobození **Mr. Fujiho** na vršku → dostaneš **Poké Flute** (`hasPokeFlute`). Mr. Fuji's House po záchraně navede na Snorlaxe.
+- **Snorlax na Route 12.** Spící Snorlax blokuje jih. Bez Poké Flute jen flavour; s Poké Flute příchodový popup **„Play the Poké Flute!"** spustí souboj → po výhře `snorlaxCleared` otevře cestu dál na jih.
+### Changed
+- **Obrácená jižní osa (věrně kánonu).** Route 12/13/14/15 nově vedou z **Lavenderu dolů** (Lavender → Route 12 → 13 → 14 → 15). Snorlax gate je na přechodu **Route 12 → Route 13** (`unlock.story: "snorlaxCleared"`). Fuchsia zůstává dostupná přes Cycling Road.
+- **Gauntlet systém zobecněn** na členství (`trainerIds`) místo `t.kind === "rocket"`, aby fungoval i pro Hikery, a nově aplikuje `clearItem` / `clearStoryFlag` + per-gauntlet payoff popupy.
+- **Rockets tab má dynamický popisek** podle oblasti („Hikers" na Route 9, „Team Rocket" v Celadonu).
+- **Dev „Skip to" – Krok 7 rozdělen na 4 jemné milníky** (dřív by byl jeden obří skok): **⑩ Celadon/Rainbow Badge** (hideout ještě netknutý), **⑪ Silph Scope získán** (Rocket Hideout vyčištěn, věž netknutá), **⑫ Poké Flute získán** (věž hotová, Snorlax ještě spí), **⑬ Snorlax probuzen** (jih otevřen). Každý = jeden konkrétní zisk, kumulativně. Odstraněna duplikace obsahu předchozího milníku v `applyOne` (kumulativnost řeší smyčka).
+### Notes
+- Migrace **save v32**: kdo má Flash → Route 9 Hikeři označeni za poražené; kdo má Rainbow Badge → Erika hotová; kdo navštívil Route 13 → Snorlax vyřešen + Poké Flute v batohu. Žádná regrese.
+- Marowak i Snorlax jsou implementováni jako **boss „trenéři"** (`forceManual`), ne divoká setkání (engine nemá snadný spawn konkrétního druhu). Bez nových spritů – vše přes existující fallbacky.
+
+
+## [0.73.0] – 2026-09-09 · Věrný Kanto příběh – Krok 6: Vermilion → Lavender Town (Lt. Surge, HM Flash)
+### Added
+- **Lt. Surge / Thunder Badge – příběhová vrstva.** Při prvním otevření odemčeného Vermilion Gymu vyskočí okno s kanonickou **hádankou s odpadkovými koši** (dva skryté vypínače otevřou elektrické dveře). Po poražení **Lt. Surge** dostaneš gratulační okno + drobnou odměnu (**+800₽**) a rozcestník kam dál (flag `surgeCleared`).
+- **HM05 Flash + Rock Tunnel.** Na **Route 9** ti horský turista dá **HM05 Flash** (nový klíčový item, flag `hasFlash`) – stejně jako HM Cut. **Rock Tunnel** je nově zamčený, dokud Flash nemáš (`unlock.story: "hasFlash"`). Po zisku popup potvrdí, že tunelem projdeš.
+- **Příchodové popupy** pro **Route 11**, **Diglett's Cave** a **Lavender Town** (flavour, každý jednorázově).
+- **Lavender Town – příběhová vrstva.** Město má nově vlastní roster budov: **Poké Center + Poké Mart + Pokémon Tower + Mr. Fuji's House**. **Pokémon Tower** je zamčená duchem (potřebuje **Silph Scope** z pozdějšího kroku – zatím flavour), **Mr. Fuji's House** naznačuje, že Mr. Fuji zmizel ve věži.
+### Changed
+- **Dev „Skip to".** Přidán checkpoint **⑨ Lt. Surge poražen · Thunder Badge · Lavender Town** (celá cesta Route 11/Diglett's + Route 9/Flash → Rock Tunnel → Route 10 → Lavender).
+### Notes
+- Migrace **save v31**: kdo už Rock Tunnel (nebo dál) navštívil, se automaticky „propustí" (nastaví `hasFlash` + dostane HM05 Flash do batohu) – žádná regrese.
+- Bez nových spritů: příběhové budovy (Pokémon Tower, Mr. Fuji's House) používají CSS ikonu; Lt. Surge používá existující leader/gym sprity (fallback).
+
+
+## [0.72.0] – 2026-09-08 · Věrný Kanto příběh – Krok 5: Cerulean → Vermilion (Bill, fosílie, S.S. Anne, HM Cut)
+### Added
+- **Bill na Route 25.** Při dojití na konec **Route 25** pomůžeš **Billovi** z jeho teleportéru a dostaneš **S.S. Anne Ticket** (nový klíčový item). Jednorázově (flag `billHelped`).
+- **Oživení fosílií.** V **Museum of Science** (Pewter) můžeš nechat oživit **Helix Fossil → Omanyte** nebo **Dome Fossil → Kabuto** (lv 20). Fosílie se spotřebuje, Pokémon přibude do kolekce.
+- **Cesta do Vermilion.** Řetěz Cerulean → Route 5 → Route 6 → **Vermilion City**. Vermilion má nově vlastní roster budov (**Poké Center + Poké Mart + S.S. Anne**) a **popup při příchodu** (navede na loď + upozorní na strom u Gymu).
+- **S.S. Anne + souboj s rivalem.** Příběhová budova **S.S. Anne** (v City tabu) – s lodním lístkem nastoupíš na palubu, kde tě vyzve **rival** (Pidgeotto, Raticate + jeho starter v prostřední evoluci). Výhra dá **HM01 Cut** (nový klíčový item, flag `hasCut`).
+- **HM Cut gate na Vermilion Gym.** Vchod do **Vermilion Gymu** (Lt. Surge) blokuje strom – Gym tab ukáže ceduli, dokud nemáš **HM Cut**. Po jeho zisku je Gym přístupný.
+### Changed
+- Rozšířen counter-starter systém o **prostřední evoluci** (`counterStarterMid` – Charmeleon/Wartortle/Ivysaur) pro mid-game rivaly (S.S. Anne).
+- **Dev „Skip to".** Přidán checkpoint **⑧ Vermilion City · S.S. Anne + HM Cut** (Bill, ticket, rival poražen, HM Cut, gym odemčen).
+### Notes
+- Migrace **save v30**: kdo už porazil kteréhokoli trenéra Vermilion Gymu, se automaticky „propustí" (nastaví `hasCut`) – žádná regrese.
+- Bez nových spritů: rival používá existující třídu `rival`, příběhové budovy (S.S. Anne) používají CSS ikonu (jako ostatní story budovy).
+
+
+## [0.71.0] – 2026-09-08 · Mt. Moon – povinný Team Rocket gauntlet + oprava 8 tahů
+### Added
+- **Mt. Moon – povinné souboje s Team Rocket.** Nová záložka **Rockets** (jako Gym/Rival) se ukáže, když jsi v Mt. Moon. Je to **fronta 5 grunts** (striktní pořadí, odemčený je vždy jen další neporažený), **povinně manuální** souboje. Poražení **všech pěti** odemkne cestu dál na **Route 4** a Cerulean City (+ jednorázový bonus **1000₽** a payoff okno).
+- Route 4 je nově **gated** na poražení celého gauntletu (`story.mtMoonRocketsCleared`). Staré savy, které už jsou za Mt. Moon, se automaticky „propustí" (migrace save v29 – žádná regrese).
+### Fixed
+- **Bug „8 útoků místo 4".** Fronta nabídek naučení tahu mohla přidat tah do už plných 4 slotů bez capu → jedinci nasbírali víc než 4 tahy. Opraveno v jádře (`resolveMoveLearn` už respektuje `MAX_MOVES`) i zpětně: migrace save (v28) ořeže existující přebujelé sady na první 4 unikátní tahy.
+### Changed
+- **Dev „Skip to".** Checkpoint **⑦ Cerulean City** teď navíc označí Rocket gauntlet za dokončený (grunts poraženi + flag), aby skok za Mt. Moon dával konzistentní stav.
+### Notes
+- Grunti používají existující sprity třídy `rocket-grunt` (`assets/trainers/rocket-grunt/1.png`, `2.png` – 2 varianty, náhodně se střídají).
+
+
+## [0.70.0] – 2026-09-08 · Věrný Kanto příběh – Krok 4: Route 3 → Mt. Moon → Cerulean City
+### Added
+- **Mt. Moon – Team Rocket.** Při prvním vstupu do jeskyně vyskočí okno: **Team Rocket** obsadil Mt. Moon a kope tu po fosíliích a Moon Stonech.
+- **Volba fosílie (Helix vs Dome).** Po průchodu Mt. Moon (příchod na Route 4) si hráč **jednorázově a nevratně** vybere jednu fosílii – 🐚 **Helix Fossil** (→ Omanyte) nebo 🗿 **Dome Fossil** (→ Kabuto). Item se uloží do batohu (nová kategorie **Special**); oživení fosílie doděláme později.
+- **Cerulean City – příběhová vrstva.** Město má nově vlastní roster budov (**Poké Center + Poké Mart**) a **popup při příchodu**, který navede do Gymu (**Misty**, Water typ – ber Grass/Electric). Cerulean Gym (Misty, Cascade Badge) funguje beze změny (v0.67.0).
+- **Nugget Bridge (Route 24).** Při prvním vstupu na Route 24 dostaneš **Nugget**, který rovnou zpeněžíš (**+1000₽**), a odmítneš náborového agenta **Team Rocket**.
+- **Popup okno s volbou.** `showPopup` umí nově tlačítka volby (`choices`) – použito pro nevratnou volbu fosílie (okno bez zavření křížkem).
+### Changed
+- **Dev „Skip to".** Přidány checkpointy **⑥ Brock poražen · Boulder Badge · Route 3** a **⑦ Cerulean City · u Misty**. Reset postupu při skoku je teď **plně deterministický** – maže i nové příběhové flagy (fosílie, nugget, Rocket eventy…), takže se dají znovu otestovat.
+- Popis Pewter City už neříká „Gym coming soon" (Brock funguje od v0.69.0).
+
+
+## [0.69.0] – 2026-09-08 · Věrný Kanto příběh – Krok 3: Viridian Forest → Pewter City
+### Added
+- **Pewter City – příběhová vrstva.** Město má nově vlastní roster budov: **Poké Center + Poké Mart + Museum of Science** (příběhová budova). Gym (Brock) má dál vlastní tab.
+- **Museum of Science.** Příběhová budova s flavour (fosilie, Moon Stone, kus rakety) a **jednorázovou uvítací odměnou** (3× Potion).
+- **Popup při příchodu do Pewteru.** Když dorazíš do Pewteru a ještě jsi neporazil Brocka, vyskočí okno, které tě navede do **Gymu** (Brock = Rock typ, ber Grass/Water) a upozorní na Museum.
+- **Event po poražení Brocka.** První zisk **Boulder Badge** spustí gratulační okno + **drobnou odměnu** (5× Poké Ball + 500 gold) a připomene otevřenou **Route 3** (k Mt. Moon).
+- **Viridian Forest – jednorázový pickup.** Při prvním vstupu do lesa najdeš na zemi **Potion + Antidote** (věrné kánonu) a naskočí okno s tipem na vzácného **Pikachu**.
+- **Sběrnicová událost `STORY_POPUP`.** Systémová vrstva umí požádat UI o vyskakovací okno bez přímé závislosti na UI (napojeno v `main.js`).
+### Notes
+- Route 2, Viridian Forest i Route 3 dál používají divoké druhy + procedurální trenéry (viz v0.67.0); Krok 3 přidává hlavně **věrnou příběhovou vrstvu** kolem nich. Route 3 zůstává gated na Boulder Badge.
+- Nové dev checkpointy: ⑤ Pewter City tě dá k Brockovi (odznak zatím nemáš), takže jde otestovat celý příchod i souboj.
+
+
+## [0.68.5] – 2026-09-08 · Dev: deterministický „Skip to"
+### Fixed
+- **„Skip to" byl jen kumulativní dopředu** – když jsi předtím skočil na vyšší milník, návrat na nižší (např. ③ Viridian) postup nevrátil, takže zůstalo otevřeno až po Pewter a Parcel se tvářil jako doručený. Skok teď **nejdřív vynuluje příběhový postup** (visited, defeatedTrainers, badges, parcel flagy, aktivní oblast) a pak nastaví přesně zvolený milník → **skok na X tě dá přesně na X**. Kolekce, tým, zlato a itemy zůstávají nedotčené.
+
+
+## [0.68.4] – 2026-09-08 · Dev: Story checkpointy (přeskočení začátku)
+### Added
+- **Dev „Skip to" (Nastavení → 🔧 Dev tools).** Tester může jedním klikem přeskočit na daný bod příběhu bez procházení intra a celého úvodu. Milníky jsou **kumulativní** (zvolený nastaví i vše před ním): ① Pallet (máš startéra), ② Rival poražen / Route 1, ③ Viridian / Parcel quest připraven, ④ Parcel doručen / Route 2, ⑤ Pewter City. Skok nastaví startéra (fallback Bulbasaur), jméno rivala (fallback „Blue"), story-flagy, navštívené oblasti i poražené trenéry. Přidání dalšího kroku Kanta = jen položka v `DEV_CHECKPOINTS`.
+### Notes
+- Skok jde spustit i z **title screenu** (⚙ Settings) ještě před vstupem do hry – tím se přeskočí i intro s pojmenováním rivala.
+
+
+## [0.68.3] – 2026-09-08 · Oak's Parcel – vyskakovací okna (žádný text pod mapou)
+### Added
+- **Nové znovupoužitelné vyskakovací okno** (`src/ui/popup.js`) pro krátká příběhová sdělení (OK / ✕ / klik mimo / Esc).
+### Changed
+- **Žádný příběhový text pod mapou.** Po příchodu do Viridianu vyskočí **okno**, které tě navede na **modrou budovu (Poké Mart)** – místo hlášky pod mapou.
+- **Oak's Parcel dostaneš až v Poké Martu.** Klik na Mart ve Viridianu otevře okno, kde tě **clerk poprosí o doručení balíčku Oakovi**; potvrzením **OK přijmeš quest** (`oakParcelGiven`) a Mart se pak otevře normálně. Doručení dál probíhá v Oak's Lab v Pallet Townu (→ 5 Poké Ballů, odemčení Route 2).
+
+
+## [0.68.2] – 2026-09-08 · Oak's Parcel – robustní spuštění
+### Fixed
+- **Oak's Parcel se nespouštěl.** Předání balíčku ve Viridianu už nezávisí na „první návštěvě" (`firstVisit`) – řídí ho **pouze story-flagy**, takže se předá i savům, které Viridian už dřív navštívily, dokud ho hráč nemá/nedoručil.
+- **Trvalá připomínka:** při každém příchodu do Viridianu s nedoručeným balíčkem naskočí hláška „You're still carrying Oak's Parcel…", ať je pořád jasné, co dělat (doručit Oakovi v Pallet).
+### Changed (save)
+- **Save v26 → v27:** oprava chybného „propuštění" z v0.68.0 – savy, které dostaly `oakParcelDelivered=true`, aniž kdy vyrazily na sever, se vrátí do stavu s aktivním questem (`oakParcelGiven`).
+
+
+## [0.68.1] – 2026-09-08 · Oprava Viridian Gym gating + Oak's Parcel
+### Fixed
+- **Viridian Gym šel dřív odehrát** (zbytek z v0.67.0, kdy byly aktivní všechny gymy). Nově je **zamčený a gatekeepovaný na 7 odznaků** (Giovanni až úplně na konci). Záložka **Gym zůstává viditelná**, ale místo souboje ukáže ceduli „doors are firmly shut" + průběh sběru odznaků (`x / 7`).
+- **Oak's Parcel quest se u některých hráčů nespustil**: bezpečnostní migrace v25→v26 dřív „propustila" každý save, který už Viridian navštívil (nastavila `oakParcelDelivered`). Nově se auto-doručení uplatní **jen na save, který už vyrazil na sever** (Route 2 / Viridian Forest / Pewter); save pouze ve Viridianu dostane rovnou **quest** (`oakParcelGiven`).
+### Removed
+- Odstraněna redundantní „viridian-gym" story budova z City rosteru – zavřený gym řeší výhradně **Gym tab** (jeden zdroj pravdy).
+### Notes
+- Save už na v26 migraci znovu nepřehraje. Pro otestování čerstvého Parcel questu je nutná **nová hra**.
+
+
+## [0.68.0] – 2026-09-08 · Věrný Kanto příběh – Intro, Pallet Town, Viridian City
+### Added
+- **Úvodní scéna (intro).** Nová hra začíná krátkou **přeskočitelnou** textovou scénou: profesor Oak (sprite) přivítá hráče a Mew vyskočí z **Master Ballu**. Na konci si hráč **pojmenuje svého rivala** – jméno se používá celý playthrough (Rival tab, budovy).
+- **Skrytý 4. starter (Pikachu).** V okně výběru startéra se volba nově **potvrzuje (Ano/Ne)**; když odmítneš všechny tři nabízené, Oak odhalí čtvrtou **skrytou volbu – Pikachu**.
+- **Budovy per město + příběhové (interakční) budovy.** Roster budov je nově **per-oblast** (upgrade levely zůstávají globální – žádná riziková migrace). Pallet Town = **Oak's Lab** (výběr startéra + Pokédex), **Tvůj domov** (máma jednorázově dá 5 Potionů; nově i **bezplatné doléčení týmu** jako pojistka proti soft-locku) a **Rivalův dům**. Pallet **nemá Center ani Mart** (věrné kánonu).
+- **Rival v Pallet Town.** První souboj s rivalem (**Eevee**) přes klikací **Rival tab**. Je záměrně **snadný** (0 IV/0 EV, Lv 4, slabé tahy) a hlavně **nepovinný na výsledek** – Route 1 se odemkne, ať **vyhraješ, nebo prohraješ** (věrné kánonu; při prohře se rival vysměje a odejde).
+- **Viridian City.** První skutečné služby: **Poké Center + Poké Mart**. **Viridian Gym** je zatím **zavřený** (cedule „Leader away" – Giovanni až později).
+- **Oak's Parcel quest (věrné).** Při **prvním příchodu** do Viridianu ti v Martu předají **Oak's Parcel**; **doručením Oakovi** v Pallet Town získáš **5 Poké Ballů** a **odemkne se sever (Route 2)**. Do té doby je Route 2 zavřená; **Route 22** (západ, rival grinding) je dostupná hned.
+- **Story-flag gating oblastí (`unlock.story`).** Odemčení oblasti umí nově vyžadovat **příběhový flag** (platí zároveň s visited/badge/trainer).
+### Changed
+- **Obtížnost trenéra lze ladit per-kus (`trainer.difficulty`)** nad rámec profilu podle `kind` (merge). Využívá to snadný první rival.
+- **Manuální souboj:** sprite Pokémonů má teď **stejnou velikost jako v auto battle** (oprava CSS `max-width` vs `width` na `img`).
+### Fixed
+- **Prohraný první rival** už nehlásí falešné „beaten your Rival" – ukáže korektní prohru (rival se vysměje a odejde), ale cestu dál stejně otevře.
+### Changed (save)
+- **Save v25 → v26:** přidán kontejner `state.story` + migrace, která „propustí" starší save, jenž už Viridian navštívil (nastaví `oakParcelDelivered`), aby nikomu sever nezůstal zamčený (žádná regrese).
+### Notes
+- **Celý herní text je anglicky** (kódové komentáře zůstávají česky). Nový sprite profesora Oaka: `assets/npc/oak.png` (prohnaný `tools/prep_sprite.py`).
+
+
+## [0.67.0] – 2026-09-07 · Trenéři a gymy na celém Kantu
+### Added
+- **Všech 8 gymů Kanta.** Kromě Pewteru (Brock) teď fungují i Cerulean (Misty), Vermilion (Lt. Surge), Celadon (Erika), Fuchsia (Koga), Saffron (Sabrina), Cinnabar (Blaine) a Viridian (Giovanni). Každý gym = záložka „Gym" ve svém městě, sekvence gym trenérů → leader, poražení leadera dá odznak. Rostery a levely leaderů vycházejí z kánonu FRLG (přibližně). Souboje v gymu jsou dál **jen manuální**.
+- **Route trenéři po celém regionu (procedurální).** Na routách se teď (~15 % místo divokého setkání) objevují trenéři s **náhodně generovaným týmem**. Druhy se losují **hlavně z divokých druhů dané routy**, občas z **nižších rout** – a každý kus se **vyvine nahoru, kam vylosovaný level dovolí** (takže na pozdějších routách potkáš vyvinuté formy). Level odpovídá zhruba kánonu té oblasti. Počet trenérů (3–5) i velikost jejich týmu (2–5) roste s významem routy. Třída trenéra (a jeho sprite) se odvíjí od biomu: jeskyně → Hiker/Poké Maniac, voda → Swimmer/Fisherman, tráva → Youngster/Lass/Bug Catcher atd.
+- **Badge-gate k Victory Road.** Vstup na Route 23 (k Victory Road) nově vyžaduje **Earth Badge** od Giovanniho – kanonická „badge check" před Ligou. Route 3 dál vyžaduje Boulder Badge.
+### Changed
+- **Route trenéři už nejsou pojmenované fixní rostery** – nahradil je výše popsaný generátor. Odměna route trenéra se dopočítává z jeho týmu. Gymy, leadeři a rival zůstávají pevné (signature soupeři).
+### Notes
+- Zóny bez trenérů dle kánonu (Diglett's Cave, Power Plant, Safari Zone, Seafoam Islands, Cerulean Cave) route trenéry nemají.
+- Sprity trenérů/leaderů/odznaků se teprve dodají – zatím fallback (skryje se, dokud obrázek chybí).
+
+
+## [0.66.0] – 2026-09-07 · Trenéři, gymy a rival (řez po Pewter City)
+### Added
+- **Souboje s trenéry.** Trenér = předdefinovaná fronta konkrétních Pokémonů pro stávající bojový engine (žádný nový režim). Bojuje se popořadě přes celý jeho tým; **cizí Pokémony u trenérů nejde chytat** (batoh to během trenérského souboje zakáže). Za KO padá XP jako obvykle, ale **bez léčení mezi Pokémony** – trenér je náročnější než divočina. První výhra dá jednorázovou odměnu ve zlatě a zapíše se, takže se neopakuje.
+- **Route trenéři.** Na routách se občas (~15 %) místo divokého setkání objeví route trenér. V tomto řezu: **Viridian Forest = dva Bug Catcheři**. Poražení se pamatuje – jednou poraženého route trenéra už znovu nepotkáš.
+- **Gym = samostatná záložka.** Když jsi ve městě s gymem, objeví se nahoře **nová záložka „Gym"** (ne sekce v City). V ní procházíš sekvenci trenérů **striktně po pořadí** (odemčený je vždy jen další neporažený). **Pewter City Gym**: Camper Liam → **Leader Brock** (Geodude Lv 12, Onix Lv 14). Poražením Brocka získáš **Boulder Badge** – a ta odemyká **Route 3** za Pewterem.
+- **Souboje v gymu jsou jen MANUÁLNÍ.** Auto battle je v gymovém souboji vypnutý a přepínač zašedlý – gym leadera musíš porazit ručně. (Tvoje globální nastavení Auto battle to nemění, po gymu platí zas.)
+- **Rival = klikací záložka „Rival Battle" (gateway).** Na místě s rivalem (v tomto řezu **Route 22**) je nahoře **nová záložka „Rival Battle"**, kterou si souboj **spustíš sám** – hra ti ho nevnucuje náhodně. Na routě přitom dál můžeš normálně bojovat s divokými. Rival je **předligový** soupeř: **plný tým na vysokých úrovních** (Pidgeot, Alakazam, Rhydon, Gyarados, Arcanine + **plně vyvinutý** counter-starter proti tvému startovnímu Pokémonovi, Lv 45–50). Volba startera se pamatuje explicitně.
+- **Vícevrstvý gating oblastí – `unlock.trainer`.** Odemčení oblasti umí navíc vyžadovat **poražení konkrétního trenéra** (platí zároveň s návštěvou a odznakem – vše musí platit). Mechanismus je zapojený; konkrétní trenérský gate se rozdá až s expanzí do celého Kanta.
+- **Odstupňovaná obtížnost trenérů.** Čím důležitější soupeř, tím lepší staty: route = kánon (náhodné IV, 0 EV), gym/rival = slušné IV + část EV do útoku a rychlosti + vhodná povaha, gym-leader = vysoké IV + plné EV + vhodná povaha.
+### Changed
+- **Save v24 → v25:** doplněno `progress.defeatedTrainers` (evidence poražených trenérů/leaderů). Nová hra začíná s prázdným seznamem.
+
+
+## [0.65.0] – 2026-09-07 · Profile (trainer card) + příprava trenérů/gymů
+### Added
+- **Profile (trainer card).** Nové tlačítko **👤 v horní liště** (vlevo vedle Goldu, ukazuje jméno hráče) otevře přehled hráče na jednom místě: **badge case** (8 slotů odznaků – získané barevné, chybějící „???" ztmavené), souhrn Pokédexu (chyceno / z 151 + viděno), počet shiny, gold a odehraný čas. Jméno hráče lze přejmenovat klikem.
+- **Kanonická data odznaků (`data/badges.js`)** – 8 gym odznaků Kanta (jméno, vůdce, město, typ) jako zdroj pravdy pro badge case (a budoucí gym systém). Ikony se načítají z `assets/badges/<id>.png`; dokud sprity nedodáme, ukáže se glyf-fallback.
+- **Připravená struktura složek pro sprity trenérů/gymů:** `assets/gym-leaders/` (8 leaderů), `assets/trainers/` (33 tříd vč. `rival`), `assets/badges/`. Kompletní checklist v `docs/SPRITES-TODO.md`.
+
+
+## [0.64.0] – 2026-09-04 · klikací mapa + nové rozvržení panelů
+### Added
+- **Klikací mapa světa (à la PokeClicker / nintendo).** Panel Mapy je nově interaktivní art mapa Kanta s klikacími uzly (města i routy). Klik na uzel tě „přesune" – nastaví aktivní oblast a souboje pak spawnují nepřátele odsud. Aktivní oblast je zvýrazněná (pulzující marker), aktuální lokace se ukazuje pod mapou.
+- **MVP rozsah: celá linka po Pewter City (1. gym)** – Pallet Town → Route 1 → Viridian City → Route 2 → Viridian Forest → Pewter City. Route 22 je volitelná západní odbočka od Viridianu (grinding). Routy mají vlastní divoké druhy (Viridian Forest: Caterpie/Metapod/Weedle/Kakuna/Pidgey + vzácně Pikachu); města jsou zatím jen orientační body (obchody a Gym přibudou). Diglett's Cave a Route 3 patří až za Pewter → přibudou později.
+- **Lineární postup přes NÁVŠTĚVY.** Pallet Town máš od začátku, Route 1 je otevřená. Vstup na uzel odemyká navazující (Route 1 → Viridian City → Route 2 + Route 22 → Viridian Forest → Pewter City). Hráč vidí jen odemčené uzly; zamčené jsou neviditelné.
+- **Záložka City je podmíněná lokací** – ukáže se jen když jsi ve městě, na routě mizí.
+- **Dev přepínač viditelnosti uzlů** (Nastavení → Dev): „ukázat všechny uzly" vs. „podle postupu" – ať se dá mapa ladit bez reálného průchodu.
+- **Umísťovací režim mapy (📍):** uzly si na art mapu naklikáš sám – vybereš uzel (klikem na jeho tečku na mapě nebo na čip), klikneš kam patří; přepínač skrytí popisků (ať tag jednoho uzlu nepřekáží v kliknutí na druhý). Pozice se uloží a zobrazí jako výpis k přepsání do dat.
+- **Badge-gating oblastí (základ):** `unlock.badge` navíc vyžaduje odznak z gymu (platí zároveň s návštěvou) – připraveno pro route za Brockem. Gymy zatím žádný odznak nedávají.
+- **Auto catch: výběr vyhrazeného Poké Ballu.** Vedle módu (None/All/Shiny) si vybereš, kterým typem míčku autocatch chytá. **Když ten typ dojde, autocatch se sám vypne** a nesáhne po jiných (dražších) míčcích.
+- **Art mapa optimalizována:** `Mapa-Kanto.png` (9,2 MB) → `kanto.webp` (~430 KB, 1600×1131) kvůli rychlosti načtení.
+### Changed
+- **Nové rozvržení panelů.** Nahoře vlevo tabový panel (Battle / City / PC / Pokédex), vpravo mapa; dole přes celou šířku kompaktní **Tým jako mřížka 3×2 s čísly slotů**. Souboj i správcovské záložky tak sdílí jeden velký panel a tým je pořád na očích. (City se tu objeví jen ve městě.)
+- **Souboj startuje v aktivní oblasti mapy** (dřív natvrdo Route 1). Ve městě (bez divokých druhů) souboj nejde spustit – hra vyzve k výběru route na mapě.
+- **Auto catch má nově výchozí mód „None".** Po zapnutí Auto catch se hned nezačne chytat vše – nejdřív vyber, co chytat. Komu Auto catch nikdy neběžel, přepne se ze starého „All" na „None".
+- **Save v21 → v24:** doplněno `progress.activeAreaId`, `progress.visited` (navštívené oblasti), `progress.badges`, `autocatch.ball` (vyhrazený míček) a přenastaven výchozí autocatch mód na „none". Staré savy dostanou všechny oblasti jako navštívené (žádná regrese). Zpětně kompatibilní.
+
+
+## [0.63.1] – 2026-09-04 · mobilní layout
+### Added
+- **Nový layout „Mobil" (v Nastavení): jednosloupcové rozvržení jako „Pod sebou", ale battle area je rozdělená svisle – scéna souboje nahoře, log a ovládání pod ní** (na úzké obrazovce se scéna nezmenší jen na tlačítko battle). Oproti módu „Pod sebou" dává lepší přehled v manuálním souboji na telefonu.
+
+
+## [0.63.0] – 2026-09-04 · responsive layout
+### Added
+- **Responsive layout: panels now stack vertically on narrow screens/windows instead of shrinking (playable on phones and half-screen).** New layout switch in Settings: Auto (responsive), Wide (always two columns), Stacked (always one column).
+- **Customizable stacked order.** In Stacked mode, reorder panels (Battle → Map → Menu) via arrow buttons in Settings. Rearrangement persists in saves.
+### Changed
+- **Výrazně rychlejší načtení úvodní obrazovky (title screen).** `Title_screen.png` (2,74 MB) blokoval první vykreslení; nově se servíruje jako **WebP (~488 KB) s JPG fallbackem** přes `<picture>` (−82 % dat). Obrázek má navíc `fetchpriority="high"` a `decoding="async"`. Originál PNG zachován jako `assets/Title_screen_original_backup.png`.
+### Fixed
+- **Auto battle už nevybírá sebe-poškozující tahy (recoil: Take Down, Double-Edge, Submission, Flare Blitz, Brave Bird, Wood Hammer, Wild Charge).** Dřív auto vyhodnotilo Take Down (power 90) jako „nejlepší“ útok a Pokémon si tak v auto souboji ubližoval recoilem sám sobě. Nově je auto vybere jen jako KRAJNÍ fallback (kdyby nebylo čím jiným útočit) – jinak nikdy. Manuální souboj se nemění, hráč si recoil tah dál může zvolit.
+- **Auto-učení tahů (auto battle / offline / Školka) už si recoil tahy samo nenaučí.** Vyvážená sada „útočné-first“ recoil přeskočí (fallback jen když by jinak nebyl žádný útočný tah). Existující jedinci s Take Down apod. si ho v auto souboji přestanou vybírat okamžitě a při dalším auto level-upu ho ze sady vypustí.
+- **Skládaný layout: stránka už „neuskakuje“ nahoru při kliknutí (auto battle, přepínače…).** Ve skládaném/úzkém režimu scrolluje celé okno; překreslení panelu (přepis innerHTML, hlavně rychlé tiky auto souboje) dokument na okamžik zkrátilo a prohlížeč scroll vyhodil nahoru. Nově se pozice okna při každém překreslení battle i levého panelu zachovává.
+
+
+## [0.62.1] – 2026-09-03 · oprava přesunu jedinců mezi PC boxy (drag & drop)
+### Fixed
+- **Výběr boxů při přetažení jedince už „nespadne".** Když nad horní lištu (jméno boxu) přetáhneš jedince, rozbalí se výběr boxů a **zůstane otevřený, dokud jedince držíš „v ruce"** – zavře se až po puštění na box nebo po konci tažení. Dřív se picker kvůli překreslování panelu (živé progress bary) i falešnému `dragleave` zavíral okamžitě, takže se do jiného boxu nedalo trefit.
+- **Výběr boxů je teď mřížka dlaždic 6×5 (všech 30 boxů naráz), ne scrollovací seznam.** Každá dlaždice ukazuje číslo boxu a obsazenost (x/30), aktivní box je zvýrazněný, plný box má obsazenost červeně. Konec se scrollbarem, na cílový box stačí pustit jedince na příslušnou dlaždici.
+
+
+## [0.62.0] – 2026-09-03 · breeding & vajíčka · nové Poké Bally · přehlednější léčení
+### Added
+- **Destiny Knot (held item, 2000 gold).** Drží-li ho jeden z rodičů ve Školce, potomek zdědí **5 IV místo 3**. Kupuje se v Marketu (sekce held items), nasazuje jako ostatní held předměty.
+- **Potomek se líhne v základní formě.** Breeding vejce teď vždy vyprodukuje kořen evoluční linie (dědí po ne-Ditto rodiči) – dřív mohlo vzniknout přímo vyvinutého druhu.
+- **Procedurální sprite vajíček (per druh).** Skořápka se deterministicky odvodí ze species.id (barva + puntíky), takže vejce druh vizuálně naznačuje a hráč se učí vzory. Jméno a staty zůstávají skryté až do vylíhnutí (R-021). Zobrazuje se ve slotech líhně i ve výběru vejce.
+- **Nové Poké Bally (odemčeno z „coming soon").**
+  - **Love Ball** (tier 2, 100 g) – ×8 na stejný druh opačného pohlaví, než je tvůj aktivní Pokémon.
+  - **Heavy Ball** (tier 2, 80 g) – čím těžší druh, tím lepší (×2 / ×3 / ×4 dle hmotnosti).
+  - **Dream Ball** (tier 3, 120 g) – ×4 na soupeře se stavovým postižením, ×6 pokud spí.
+  - **Moon Ball** (tier 3, 140 g) – ×4 na druhy vyvíjené Měsíčním kamenem.
+### Changed
+- **Léčení v Poké Centru zůstává zdarma; jen zpřehledněno.** Manuální **Heal team** je nově označen „(free)" a jasně uvádí, že obnovuje **plné HP, vyléčí status i doplní PP naplno** (potiony tak mají smysl hlavně v souboji, kde do Centra nelze). Hláška po vyléčení to potvrzuje.
+### Poznámky
+- Master Ball zůstává bez zdroje (plán až na konec release 1.0). Dusk Ball zůstává „coming soon" (chybí noc/jeskyně). Bez batch-použití itemů (vždy po 1 ks). Rychlost breedingu se záměrně neupgraduje.
+
+
+## [0.61.2] – 2026-09-03 · přehlednější Herní pravidla (tabulka + toggle)
+### Changed
+- **Sekce „Herní pravidla" v Nastavení přepsána do kompaktní tabulky** s toggle přepínači vpravo (dřív roztažené checkboxy s dlouhým popisem, nepřehledné v úzkém okně). Každé pravidlo = řádek: název + krátký popis vlevo, zapínač vpravo (zapnuto = zelený).
+
+
+## [0.61.1] – 2026-09-03 · oprava auto-výběru tahů (jedinec vždy „bojeschopný")
+### Fixed
+- **Auto režim už nedá jedinci převahu status tahů (dřív např. 3 status + 1 útok).** Výběr tahů teď dává přednost ÚTOČNÝM tahům (zaplní klidně všechny 4 sloty), status tahy jen doplní zbylé sloty. Platí pro výchozí sadu při vzniku jedince i pro auto battle / offline / Školku, kde se sada při každém level-upu přeskládá na „útočné-first" (zachová i egg/TM tahy mimo learnset a PP naučených tahů). Důsledek: v auto souboji má jedinec vždy čím ubírat HP a souboj se nezasekne. V manuálním souboji zůstává chování beze změny (nový tah při plných slotech nabídne frontu na nahrazení).
+- **Oprava už pokažených save (migrace v20 → v21).** Jedinci s ≤ 1 útočným tahem, u kterých jde získat víc útočných, se při načtení přeskládají na útočné-first (řeší i deadlock, kdy zaseknutý jedinec v auto souboji nedostával XP, takže se sám nikdy neopravil level-upem). Záměrné vyvážené sady (2+ útoky) se nemění.
+
+
+## [0.61.0] – 2026-09-03 · dokončení soubojových mechanik · skutečné ikony míčků · herní režimy (No items / No potions / Nuzlocke)
+### Added
+- **Dokončené soubojové mechaniky (Gen 1).**
+  - **Reflect / Light Screen** – po dobu 5 kol půlí přijaté fyzické (Reflect) resp. speciální (Light Screen) poškození; kritické zásahy clonu ignorují. Clona po odeznění zmizí („wore off").
+  - **Substitute** – obětuje ¼ max HP a vytvoří návnadu, která pohlcuje poškození i navěšování statusů, dokud nepraskne.
+  - **Counter** – vrátí 2× poslední přijaté FYZICKÉ poškození (priorita −5, takže jde poslední). Jinak selže.
+  - **Rest** – jedinec se plně vyléčí, vyčistí status a usne na 2 kola.
+  - **Whirlwind / Roar (force switch)** – u divokého soupeře přivolá nového (bez odměny), hráče vytáhne náhodného zdravého člena z lavičky.
+  - **Transform / Mimic (Metamorf)** – Transform převezme typy, staty, stat-stage, jméno i tahy soupeře; Mimic dočasně zkopíruje jeho poslední tah. Dočasné tahy (`moveOverride`) mizí po výměně/konci souboje.
+  - **Sleep a Freeze jako trvalé (non-volatile) stavy** – přežijí výměnu jedince (dle kánonu). Spánek trvá 1–3 kola, zmrznutí má 20% šanci na rozmrznutí každé kolo a rozmrazí ho i zásah Fire tahem. Ice typ nelze zmrazit. Odznaky **SLP** / **FRZ** na kartě i v souboji.
+- **Herní režimy / pravidla (⚙ Nastavení → Rules).**
+  - **No items** – v souboji nelze použít žádný předmět (ani auto-heal). Batoh v souboji to hlásí.
+  - **No potions** – zakáže jen léčivé (HP) předměty; ostatní zůstávají.
+  - **Nuzlocke** – **permadeath** (omdlelý jedinec navždy opouští tým i kolekci) + na každé oblasti smíš chytit jen **jeden** úlovek (další chytání je zablokované).
+### Changed
+- **Skutečné ikony Poké Ballů místo emoji 🔴.** Catch tlačítka v liště i v batohu, hod míčkem a hlavičky/oddělení v Poké Martu teď používají opravdový obrázek vybraného míčku (fallback na emoji zůstává, když obrázek chybí). Ikona chyceného míčku na kartě i v týmu už fungovala dřív.
+### Fixed
+- (nic nového – viz 0.60.0)
+
+
+## [0.60.0] – 2026-09-03 · plynulý scroll (konec záseků kolečkem)
+### Fixed
+- **Scroll se už neseká.** Okna i panely se překreslovaly každý herní tik (kvůli živým progress barům); když překreslení padlo doprostřed scrollu kolečkem, prohlížeč scroll přerušil (element pod kolečkem se zničil) a uživatel musel pustit a scrollovat znovu. Nově se během aktivního scrollování překreslení odloží a proběhne až po jeho uklidnění (~200 ms), víc ticků se sloučí do jednoho. Platí pro market/obchody, batoh, kartu Pokémona, tým, PC, Pokédex i nastavení. Živé prvky (bary, počítadlo zlata) při scrollu na okamžik „zamrznou" a hned se dorovnají; počítadlo zlata v horní liště zůstává živé i během scrollu.
+### Changed
+- `scrollPreserve.js` má nově sdílené helpery `isScrolling()` a `scrollAware(renderFn)` (obalí render callback, aby se během scrollu neprováděl). Nasazeno na všechna překreslení řízená `STATE_CHANGED`.
+
+
+## [0.59.0] – 2026-09-03 · dědičnost tahů (egg moves) · evoluce kamenem + výměnou · multi-stat boost tahy · prodej itemů
+### Added
+- **Dědičnost tahů (egg moves).** Vejce z breedingu předá potomkovi „egg moves": vezme se sjednocení aktivních tahů obou rodičů, ponechají se jen ty, které druh potomka umí naučit (celý level-up movepool), a max 4 dostanou při vylíhnutí přednost před výchozí sadou. Ukládá se na vejce (`breed.eggMoves`), zpětně kompatibilní (stará vejce = beze změny).
+- **Evoluce kamenem.** Nová kategorie itemů „🪨 Evolution": Fire/Water/Thunder/Leaf/Moon Stone + Linking Cord (náhrada výměny). Kameny i cord jsou k dostání v obchodě Items. Použití z batohu → výběr vhodného jedince → evoluce (spotřebuje kámen). Větvené evoluce řeší volba kamene (Eevee → Vaporeon vodním / Jolteon hromovým / Flareon ohnivým kamenem).
+- **Evoluce výměnou (Linking Cord).** Kadabra→Alakazam, Machoke→Machamp, Graveler→Golem, Haunter→Gengar se vyvinou přes Linking Cord z batohu.
+- **Prodej itemů.** V batohu má každý consumable i held item tlačítka „Sell 1" / „Sell all" (výkup za 50 % nákupní ceny). Seznamy v batohu se řadí abecedně.
+- **Multi-stat boost tahy.** Engine efektů nově umí měnit víc statů jedním tahem (`effect.changes[]`). Přidáno/rozšířeno: Dragon Dance (Atk+Spe), Calm Mind (SpA+SpD), Bulk Up (Atk+Def), Shell Smash (Atk/SpA/Spe +2, Def/SpD −1); Swords Dance a Nasty Plot zůstávají jednostatové. Napojeno do learnsetů (Dragonite, Gyarados, Alakazam, Machamp, Squirtle, Scyther).
+### Changed
+- Evoluční druhy (kámen/výměna) mají v datech nové pole `evolutions: [{toId, method, item?}]` a vynulované levelové `evolvesTo`/`evolutionLevel`; levelové evoluce fungují beze změny.
+### Fixed
+- (nic nového – viz 0.58.0)
+
+
+## [0.58.0] – 2026-09-03 · ikona Pokédexu v liště · hromadný nákup · autocatch fallback · PC boxy (30, drag mezi boxy, přejmenování)
+### Added
+- **Ikona Pokédexu v horní liště.** Položka „📕 Pokédex" (s počtem chycených) je klikatelná (i klávesnicí) a otevře záložku Pokédex v levém panelu. Dřív tam byl jen neinteraktivní počet „📦 Pokémon".
+- **Hromadný nákup v obchodech.** Poké Mart i Items mají přepínač množství **×1 / ×5 / ×10 / Max**; tlačítko nákupu ukazuje reálný počet a celkovou cenu, „Max" koupí tolik, na kolik stačí zlato. Deaktivuje se, když není na jediný kus.
+- **Přesun mezi PC boxy a přejmenování boxu.** Jedince lze přetáhnout na navigační šipky ◀/▶ (přesun do sousedního boxu) **nebo na jméno boxu → rozbalí se seznam všech 30 boxů** a lze ho přesunout o víc než jeden box. Klik na jméno boxu ho přejmenuje.
+- **Globální Dev menu v Nastavení (⚙).** Nová sekce „🔧 Dev tools": přidat peníze (+1 000 / +10 000), přidat vejce (náhodný druh) a přidat Ditta, a per-jedincové úpravy **level (−10/−1/+1/+10/Max) a shiny** s výběrem cílového Pokémona z rozbalovacího seznamu.
+### Changed
+- **PC má napevno 30 boxů** (po 30 slotech). Tlačítko „＋ Box" zrušeno; `reconcile()` počet boxů vždy dorovná.
+- **Dev nástroje přesunuty z Karty Pokémona do globálního Dev menu.** Řádek „🔧 Dev level" a shiny přepínač na kartě zrušeny; totéž (a víc) je teď v ⚙ Settings s výběrem cíle.
+### Fixed
+- **Autocatch fallback při došlém míčku.** Když dojde vybraný typ Poké Ballu, autocatch se nezastaví, ale přepne na jiný vlastněný (nejlevnější → nešetří prémiové). Chytá, dokud má hráč aspoň jeden míček.
+- **Čas líhnutí ukazoval `13.539999… s`.** `formatDuration` teď vstup nejdřív zaokrouhlí na celé sekundy (řeší i přetečení 60 s), takže se zlomkové zbývající sekundy zobrazí čistě.
+- **Changelog servíroval starou verzi z cache.** `fetch("CHANGELOG.md")` má nově `{ cache: "no-store" }`, takže se „Co je nového" vždy načte aktuální (dřív rozpor „verze 0.55 vs. changelog 0.45").
+- **Hatchery (Egg Breeders) přetékaly okno.** Mřížka slotů měla `repeat(5, 1fr)`; obsazené sloty (bar + čas + „Take out") mají větší min-content, takže po naplnění pár slotů řádek utekl doprava mimo modal. Nově `repeat(5, minmax(0, 1fr))` + `min-width:0` na slotu (a zalamování textu/tlačítek), takže se sloupce korektně zúží a zůstanou v okně.
+
+
+## [0.57.0] – 2026-09-03 · Pokédex info (výška/váha/entry) · sprity podle výšky · title screen jako brána
+### Added
+- **Pokédex info u všech 151 druhů.** Do `data/pokemon.js` doplněny `height` (m), `weight` (kg), `genus` (angl. druhový popisek) a `dexEntry` (angl. flavor text) z PokeAPI. Zobrazují se na Kartě Pokémona (chycený i jen viděný druh): druhový popisek pod jménem, flavor text jako citace a řádky Height/Weight v meta přehledu.
+- **Nový generačně nezávislý nástroj `tools/gen_pokedex_info.py`.** Druhy (id + dexNo) čte z `data/pokemon.js`, info stahuje z PokeAPI; idempotentní (dá se pouštět opakovaně) a připravený na další generace.
+### Changed
+- **Velikost spritu v Battle Area podle výšky druhu.** Pidgey (0,3 m) už není stejně velký jako Charizard (1,7 m) ani Onix (8,8 m). Reálné výšky mají obrovský rozptyl, takže se komprimují mocninou a ořezávají do pásma [0,55 – 1,5]× (`spriteScaleForHeight`); poměr se násobí přes CSS proměnnou `--mon-scale` nad rámec škálování scény podle úhlopříčky.
+- **Title screen je teď skutečná BRÁNA do hry.** Offline souhrn, nabídky naučení tahu a výběr startéra se ukážou až PO kliknutí na Continue (dřív probleskly pod úvodní obrazovkou). Overlay leží nad herním obsahem (z-index 200), modály nad ním (300), aby šlo Nastavení otevřít i z title screenu.
+### Fixed
+- **Rozbité načtení hry po přegenerování learnsetů (v0.56.0).** Tři klíče druhů s pomlčkou (`nidoran-f`, `nidoran-m`, `mr-mime`) byly v `data/learnsets.js` bez uvozovek → `SyntaxError: Unexpected token '-'` → celý modul se nenačetl a po Continue zůstal prázdný layout. Klíče s pomlčkou teď VŽDY v uvozovkách (opraveno i v generátoru `tools/gen_movepools.py`).
+- **Trvalý on-page zachytávač chyb.** Jakákoli neodchycená chyba (včetně selhání načtení ES modulu) se vypíše dole na stránce, aby šla přečíst i bez F12.
+
+
+## [0.56.0] – 2026-09-03 · Title screen · sdílené nastavení · větší sprity · gify obou stran
+### Added
+- **Úvodní obrazovka (title screen).** Po načtení se přes hru položí `assets/Title_screen.png` s tlačítky **CONTINUE** (vstup do hry) a **SETTINGS**.
+- **Sdílené modální nastavení (`openSettingsModal`).** Jedno okno nastavení dostupné z horní lišty (⚙) i z title screenu; herní rychlost se v něm živě překresluje. Zdroj pravdy je jeden (žádný duplicitní dropdown).
+- **Animované gify pro celé evoluční linie obtainable druhů.** Doplněny front/back i shiny varianty pro Ivysaur, Venusaur, Charmeleon, Charizard, Wartortle, Blastoise, Pidgeotto, Pidgeot a Raticate → hráčův Pokémon animuje v manuálním souboji i po evoluci (obě strany scény).
+### Changed
+- **Škálování soubojové scény podle úhlopříčky.** Velikost spritů teď řídí JS (`ResizeObserver`) podle **úhlopříčky** battle areny (√(š²+v²)), takže sprite roste i klesá s celkovou velikostí scény při každé změně okna/panelu (dřív CSS container queries reagovaly jen na jeden rozměr → na nízké aréně se sprite zasekl). Bojovníci se rozestoupí dál od rohů; na úzkém panelu se info panel a sprite už nepřekrývají (omezené šířky + zalamování). Auto/idle mód dál používá statické png.
+- **Horní lišta ⚙** místo malého rozbalovacího menu otevírá plné modální nastavení.
+- **Přesné learnsety a data tahů z PokeAPI (Gen 9 Scarlet/Violet).** `data/learnsets.js` a `data/moves.js` přegenerovány kanonicky z PokeAPI (dřív šlo o aproximaci se starogeneračními úrovněmi). Ruční bojová pole (`effect`, `ailment`/`ailmentChance`) se při merge **zachovala**; u nově přidaných tahů se z PokeAPI meta odvodila bezpečná podmnožina efektů. Nový generačně nezávislý nástroj `tools/gen_movepools.py` (druhy čte z dat, version-group fallback řetězec) → znovupustitelný na další generace.
+### Removed
+- **Ditto z výběru startérů** (zůstává v Pokédexu a pro breeding).
+
+
+## [0.55.0] – 2026-09-02 · PC boxy · úložiště mimo tým · drag & drop
+### Added
+- **Nová záložka „PC"** v levém panelu (vedle Team). Úložiště všech vlastněných jedinců, kteří nejsou v týmu, v boxech po 30 slotech (mřížka 6×5).
+- **Více boxů + navigace.** Přepínání mezi boxy (◀ / ▶) a tlačítko „＋ Box" pro založení dalšího; boxy se zakládají automaticky, když se úložiště zaplní.
+- **Drag & drop.** Jedince lze přetáhnout na jiný slot v boxu; obsazený cíl se prohodí. Klik na slot otevře Kartu Pokémona, tlačítko „＋ Team" ho přidá do týmu.
+- **Samohojivé úložiště (`pcSystem.reconcile`).** Každý vlastněný jedinec mimo tým je vždy právě v jednom slotu: přidání úlovku ho do boxu doplní, přidání do týmu ho z boxu vyjme, odebrání z týmu ho zase uloží – bez duplikátů a osiřelých slotů.
+### Changed
+- **Save v18 → v19:** doplněno pole `pcBoxes`. Staré save se při načtení rozmístí do boxů automaticky (Pokédex zůstává beze změny).
+
+
+## [0.54.0] – 2026-09-02 · Kanto data layer · 151 druhů · learnsety · 268 tahů
+### Added
+- **Všech 151 druhů Kanto v `data/pokemon.js`.** Doplněny kanonické staty a typy dle nejnovější mainline generace, s moderním přetypováním Fairy/Steel, evoluční řetězce včetně evolucí kamenem a náhradního trade-itemu „linking-cord" (zastoupuje výměnu), `genderRatio` a `eggGroups` na každém druhu, `gen` (generace) a všechny relevantní evoliční informace.
+- **Kompletní level-up movepooly v `data/learnsets.js`.** Všech 151 druhů má kanonický level-up movepool se všemi svými tahy (267 unikátních tahů celkem), sjednocené move-id napojené na `data/moves.js`.
+- **Rozšířená `data/moves.js` na 268 tahů** (+213 nově). Všechny tahy Kanta s kanonickými daty (power, accuracy, PP, kategorie, typ), připravené efekty (`effect.kind` pročištěno pro budoucí implementaci).
+- **Bezpečnostní guardy pro nová data:** Eevee s větvovanou evolucí, kamenné a trade evoluce se zatím auto-nespouští (tlačítko, ne automatika); null-guardy pro `eggGroups`, spawn a startéry, aby chyba v datech nezbourala hru.
+- **Křížová validace:** všech 151 druhů má souvislý Dex, unikátní `id`, všechny cíle evolucí i všechny tahy v learnsetech existují. Integrity check v `pokemonSystem.validatePokemonData()`.
+
+
+## [0.53.0] – 2026-09-02 · Move effects wired up · stat stages · full 18-type chart
+### Added
+- **Stat-stage system.** Battlers now track the seven classic stat stages — **Attack, Defense, Sp. Atk, Sp. Def, Speed, accuracy and evasion** — with the standard stage multipliers. Stages feed into **damage** (Atk/Def/SpA/SpD), **turn order** (Speed) and **hit chance** (accuracy vs. evasion), so a Swords Dance, an Agility or a Sand-Attack finally does what it should.
+- **Move effects are live (`move.effect`), in both auto and manual battle.** The battle engine now executes the effect data that shipped "prepared" in 0.50.0: **statChange**, **recoil** (Take Down / Double-Edge), **drain**, **heal** (Roost / Synthesis), **highCrit** and **critUp** (Focus Energy), **flinch**, **confuse**, **sleep**, **leechSeed**, **trap** (Fire Spin & co.), **rapidSpin** (clears trap/Leech Seed), **fixedDamageHalf** (Super Fang), **twoTurn** (Solar Beam / Skull Bash — a charging turn), **thrash** (Petal Dance — locks in, then confuses), **weather / rain** (Rain Dance: Water ×1.5, Fire ×0.5), **tailwind** (×2 Speed) and **rage**.
+- **Type chart expanded to the full 18 types**, adding **Dark** and **Fairy** (among the missing ones). Dual-type damage now multiplies both matchups correctly.
+### Changed
+- **End-of-round residual damage is unified.** Poison / burn, **Leech Seed** and **trap** damage now resolve through one shared path (with step-by-step animation in manual battle), instead of poison/burn being handled on their own.
+- **Self-KO from recoil or confusion is resolved correctly** — a Pokémon that faints itself (recoil, a confusion hit) is now properly counted as fainted.
+### Notes
+- **Save format is unchanged** — move effects are runtime/transient state, so there's no migration.
+- **Deferred (data is "prepared", but the effect does nothing yet / shows "but it failed!"):** **transform**, **copyMove**, **forceSwitch**.
+
+
+## [0.52.0] – 2026-09-02 · Evolution sprites · building sprites · shiny dev toggle
+### Added
+- **Real sprites for all nine evolved species.** Ivysaur, Venusaur, Charmeleon, Charizard, Wartortle, Blastoise, Pidgeotto, Pidgeot and Raticate now show their proper artwork (front, back and shiny variants) instead of the "?" placeholder — in the Pokédex, on the Pokémon card and in battle. Venusaur and Raticate also have their female-form sprites.
+- **Sprites for the Training Grounds and Move Tutor buildings**, normalized to the same 256×256 transparent standard as the other buildings.
+### Changed
+- **Shiny survives evolution — confirmed.** A shiny stays shiny through every evolution step (e.g. a shiny Squirtle evolves into a shiny Wartortle and then a shiny Blastoise). This already worked; the new sprites just make it visible.
+### Added (dev)
+- **Shiny toggle on the Pokémon card's dev row** (next to the level tools) to flip a Pokémon's shiny state for testing shiny sprites and shiny-through-evolution. Debug only.
+
+
+## [0.51.0] – 2026-09-02 · Move Tutor building · learn-on-level-up asks in manual battle
+### Added
+- **Move Tutor — a new building.** A place to freely rearrange any Pokémon's four active moves. Pick a Pokémon, and you see **every move it can learn by level-up** up to its current level — tick up to four to make them its active set. Reteaching is **free** and **keeps the remaining PP** of moves you keep. This solves two long-standing pains: getting back a move that was overwritten on level-up, and picking up an **evolved form's new moves** (an evolved species' learnset includes its own moves, so they show up here after you evolve).
+### Changed
+- **Learning a move on level-up now depends on the battle mode.** In **manual battle**, when a Pokémon with four moves would learn a new one, the game **asks** whether to learn it and which move to replace (as before). In **auto battle** — and for offline/Day Care XP — it **auto-replaces** the weakest move (by power; it never downgrades itself), so nothing interrupts an unattended run. Use the Move Tutor afterwards to fine-tune the set.
+
+
+## [0.50.0] – 2026-09-02 · Full level-up movepools · dev level-setter
+### Added
+- **Complete level-up movepools for every current species.** All 15 Pokémon (the three starter lines, the Pidgey line, the Rattata line and Ditto) now learn their **full canonical level-up move list**, not just their damaging attacks. That means the support/status moves are in too — Growl, Leer, Tail Whip, Sand-Attack, Growth, Swords Dance, Focus Energy, Sweet Scent, Withdraw, Agility, Feather Dance, Whirlwind, Mirror Move, Leech Seed, Sleep Powder, Poison Powder, Smokescreen, Roost, Tailwind, Rain Dance, Synthesis and Ditto's Transform — plus more attacks (Take Down, Double-Edge, Rage, Skull Bash, Rapid Spin, Water Pulse, Aqua Tail, Fire Spin, Petal Dance, Super Fang, Pursuit, Sucker Punch, Crunch, Hurricane…).
+- **Move data is "prepared" for future mechanics.** Every move now carries an optional `effect` descriptor (stat changes, sleep, confusion, flinch, recoil, drain, two-turn charge, multi-hit, force-switch, copy-move, transform, heal, weather…). ⚠️ **Heads-up:** the battle engine does **not** execute these special effects yet — for now the game still only resolves direct damage, accuracy/miss, PP, priority and the poison/burn/paralysis conditions. The rest are in the data so they're ready to be wired up later; a status move whose effect isn't implemented simply does nothing this version.
+### Added (dev)
+- **Dev level-setter on the Pokémon card** (for testing evolutions/learnsets): a 🔧 row with −10 / −1 / +1 / +10, a jump-to-evolution-level button and **Max (Lv 100)**. Setting a level re-rolls the move set for that level and refills HP. It's a debug tool, not part of normal play.
+
+
+## [0.49.0] – 2026-09-02 · Evolutions (opt-in) · Nature inheritance · Everstone
+### Added
+- **Evolutions — but you decide.** Nine new evolved species are in the game (Ivysaur, Venusaur, Charmeleon, Charizard, Wartortle, Blastoise, Pidgeotto, Pidgeot, Raticate). Evolution is **never automatic**: once a Pokémon reaches its evolution level, an **✨ Evolve** button appears on its **Team** slot and on its **Pokémon card** (also reachable from the Pokédex). Evolving keeps the same individual (level, XP, IVs, EVs, nature, gender, shiny) — it just grows into the stronger form, gains the max-HP bump, and learns the new form's moves. One step per click; the next stage becomes available when it reaches its own level.
+- **Level cap is 100.** Because evolution is optional, any Pokémon — even an un-evolved starter — can now be trained all the way to **Lv 100**.
+- **Nature inheritance via Everstone.** A new held item, **🪨 Everstone** (Poké Mart, Held Items). If a breeding parent holds one, the baby inherits **that parent's Nature** instead of a random one (if both hold one, one is picked at random). A Pokémon holding an Everstone also won't show the Evolve button (the classic "won't evolve" rule).
+- The Pokémon card now shows **what a species evolves into and at what level** (and notes when an Everstone is blocking it).
+
+
+## [0.48.0] – 2026-09-02 · Auto-battle AI · unequip held items · market scroll fix
+### Added
+- **Smarter auto-battle.** With auto-battle on, your Pokémon now plays a real strategy instead of always spamming its first move:
+  - **Move choice weighs damage and accuracy** — it picks the move with the best expected damage (average roll × accuracy), so a shaky high-power move no longer beats a reliable one.
+  - **Status-inflicting moves are preferred on a healthy target** — against a full-ish, status-free opponent it favours a move that can inflict a condition (e.g. Body Slam's paralysis) over a plain hit.
+  - **Auto-heal** — when the active Pokémon drops below 30% HP and you own a healing Potion, it uses the smallest Potion that covers the missing HP (spending the turn, as in the classic games).
+  - **Auto-switch on a type disadvantage** — if the opponent's best move would hit your active Pokémon for ≥2× and a benched Pokémon resists it better, it switches out (with a guard so it never switch-loops).
+- **Unequip held items from the Bag.** The Bag now has a **📌 Currently held** section listing every Pokémon carrying an item, each with a **Remove** button that returns the item to your inventory.
+### Fixed
+- **Nothing jumps to the top on a refresh anymore.** Previously any scrollable window would snap back to the top whenever the game state changed — most visibly the market while buying items or when gold ticked up during auto-battle. Windows now keep their scroll position across refreshes. This covers all city/market windows (market, Poké Balls, Items, Upgrades, Training, Breeders, Breeding) as well as the Bag, the Pokémon card, the Pokédex and the Team panel. (The scroll lives on the inner scroll containers, not the outer modal, which is why the earlier attempt didn't help.)
+
+
+## [0.47.0] – 2026-09-02 · Held items managed in the Bag · radar layout
+### Changed
+- **Held items are now managed from the Bag**, not from the Pokémon card. The Bag is split into **Consumables** and a **💎 Held Items** section. Tap a held item and choose **Use** (a berry heals a chosen Pokémon right away and is consumed) or **Equip as Held Item** (pick who carries it). The Pokémon card now shows the held item read-only, with a hint to manage it in the Bag.
+- **Oran Berry** can now be used directly from the Bag to restore 10 HP (on top of its held effect).
+- **Stat radar** on the Pokémon card was reordered. Clockwise from the top vertex: **HP, Attack, Defense, Speed, Sp. Def, Sp. Atk**. The nature's boosted/lowered axes stay highlighted on the correct stats.
+
+
+## [0.46.0] – 2026-09-02 · Item targeting in battle · Revive in battle · Held items
+### Added
+- **Choose the target for items in battle.** The battle **Items** menu no longer only heals your active Pokémon — after picking an item you now choose which team member it applies to. The target list is filtered to valid choices (a Potion only lists hurt Pokémon, a status cure only afflicted ones, a Revive only fainted ones). Using an item still costs your turn.
+- **Revive in battle.** With targeting in place, **Revive / Max Revive** can now bring a fainted teammate back **during** a battle (pick it from the item's target list). The revived Pokémon stays on the bench — switch it in when you want it.
+- **Held items.** Pokémon can now hold an item that works automatically in battle. Two to start: **🍖 Leftovers** (restores 1/16 max HP at the end of every turn) and **🍒 Oran Berry** (restores 10 HP the first time HP drops below 50%, then is consumed). Equip/unequip from the Pokémon card; the held item shows on the team slot. Buy them in the new **Held Items** section of the Poké Mart.
+- Save migrates to **v18** (adds the `heldItem` field to every Pokémon, defaulting to none).
+
+
+## [0.45.0] – 2026-09-01 · Healing items · Poké Mart Items section · Bag (in & out of battle)
+### Added
+- **Healing items.** A full line of consumables you can buy and use: **Potions** (Potion / Super / Hyper / Max Potion — restore 20 / 60 / 120 / full HP), **status heals** (Antidote, Burn Heal, Paralyze Heal, and Full Heal for any condition), and **Revives** (Revive → half HP, Max Revive → full HP) that bring back a fainted Pokémon. Items are data-driven (`data/items.js`), so adding more later is just a new entry.
+- **Poké Mart — Items section.** The market now has an **Items** department next to Poké Balls, grouped by category (Potions / Status Heals / Revives) with live prices and your current stock.
+- **Bag (outside battle).** A new **🎒 Bag** button on the Team tab opens your inventory: pick an item, then pick a valid target from your whole collection (only Pokémon the item can actually help are offered — e.g. Revive only lists fainted ones). This is the main way to heal HP, cure status, and revive between battles.
+- **Items in battle.** The battle **Items** menu now lists healing items usable on your active Pokémon (HP potions and status cures) in addition to Poké Balls. Using one costs your turn — the enemy gets a free attack, as in the classic games.
+- Save migrates to **v17** (adds the item inventory `resources.items`).
+
+### Notes
+- Revive is bag-only (outside battle) for now, since the active Pokémon can't be fainted mid-battle.
+
+
+## [0.44.0] – 2026-09-01 · Natures · EV training (Training Grounds) · stat radar
+### Added
+- **Natures.** Every Pokémon now has one of the 25 classic natures. A nature raises one stat by **+10%** and lowers another by **−10%** (HP is never affected); five natures are neutral. Natures are rolled at creation (caught, gifted, hatched) and shown on the Pokémon card, with the boosted/lowered stat colour-coded (green/red). Existing Pokémon get a random nature via save migration to **v16** — their stats shift slightly to match.
+- **Training Grounds (new building).** A new building in the city where you spend gold to add **Effort Values (EV)** to a stat of your choice. Pick a Pokémon, pick a stat, and each paid session adds EV (respecting the classic caps: **252 per stat, 510 total**). Upgrading the building raises the EV gained per session; gold isn't spent if a stat is already maxed.
+- **Stat radar.** The Pokémon card now shows a hexagonal **radar chart** of the six stats above the stat table, so a Pokémon's shape (its strengths and weaknesses) is readable at a glance. The nature's boosted/lowered axes are highlighted.
+
+### Notes
+- EV training is active (gold-for-EV) for now; a passive/idle EV track can come later.
+- Natures are rolled randomly on hatched Pokémon — nature inheritance (Everstone) is a future addition.
+
+
+## [0.43.0] – 2026-09-01 · Status effects persist · paralysis · cure status
+### Added
+- **Status effects now persist.** Poison, burn (and the new paralysis) stay on a Pokémon through switching out **and** page refreshes — they no longer clear on their own. They last until you heal, for **both** your Pokémon and the enemy. Save migrates to **v15**.
+- **Status is shown everywhere.** The PSN/BRN/PAR badge now appears not just in the Battle Area (for both sides) but also on each Pokémon in the **Team** tab and on its **card** (modal).
+- **Paralysis.** A new status: a paralyzed Pokémon has a **25% chance to lose its turn** and moves at **half Speed** (affecting who acts first). It's inflicted by the new move **Body Slam** (Normal, 30% chance), which Rattata and Pidgey learn as they level up. Electric-types are immune.
+- **Cure status.** A **💊 Cure** button appears on any team member with a status effect — it removes the status without restoring HP/PP (a full **Heal team** at the Poké Center still clears status too).
+
+### Notes
+- Status moves with no direct damage (power 0) are now supported by the engine, laying the groundwork for pure status moves (Thunder Wave, Stun Spore) later.
+
+
+## [0.42.0] – 2026-09-01 · Critical hits · status effects · rarity affects catch rate
+### Added
+- **Critical hits.** Every attack has a ~1 in 16 chance to land a critical hit for 1.5× damage, called out in the log ("A critical hit!") and shown as a bigger, golden damage number.
+- **Status effects — poison & burn.** Some moves can now inflict a status: **Poison Sting** may poison (30%), **Ember** may burn (10%). Poison drains 1/8 of max HP each round, burn drains 1/16 **and** halves the victim's physical damage. Immunities apply (Fire can't be burned; Poison/Steel can't be poisoned). A small **PSN/BRN badge** shows next to the affected Pokémon, and end-of-round damage floats up in the status colour.
+- **Rarity now affects catch rate.** Rarer species are harder to catch — the base catch chance is scaled down by rarity (common 100% → uncommon 85% → rare 60% → epic 45% → legendary 30%), on top of the existing HP-based chance.
+
+### Notes
+- Status is tracked per battle for now (it clears if you switch that Pokémon out or on a page refresh). Paralysis and status persistence will come later.
+### Added
+- **A fainted Pokémon now drops and fades out.** When a Pokémon goes down (in a manual battle), it tilts, sinks and disappears before the scene moves on — the victory/catch window or the next team member only appears once the faint animation has played.
+
+
+## [0.40.0] – 2026-09-01 · Manual battles play out turn by turn
+### Changed
+- **A manual round now resolves one attack at a time.** The faster Pokémon (by priority, then Speed) strikes first — its attack animation plays — and only after a short pause does the second Pokémon act, instead of both hitting at the same instant.
+- **A knockout blow now shows its animation before the result window.** Fainting is handled after the attack animation finishes, so the finishing hit is always visible (previously the scene could switch to the victory/catch window before the animation played, which made the leap look like it "randomly" didn't happen).
+
+### Fixed
+- **You can no longer squeeze in another move mid-round.** Input is locked while the round is playing out (`resolving`), preventing overlapping turns from double-clicks.
+
+
+## [0.39.2] – 2026-09-01 · Physical leap now actually reaches the target
+### Fixed
+- **The physical-attack leap now lands on the opponent.** The jump distance is measured from the sprites' real positions on screen instead of a fixed offset, so the attacker reaches the enemy sprite regardless of the battle area's size.
+
+
+## [0.39.1] – 2026-09-01 · Physical vs. special attack animation · changelog tidy-up
+### Added
+- **Physical attacks now leap onto the target.** When a Pokémon uses a **physical** move, it jumps across and lands right on its opponent (a bigger arcing lunge), while **special** moves keep the previous short lunge for now.
+
+### Changed
+- **The in-game changelog opens fully collapsed.** No version is expanded by default anymore — click any version to read its entry.
+
+### Removed
+- **Dropped the empty "Unreleased" section** from the changelog.
+
+
+## [0.39.0] – 2026-09-01 · Battle animations: attack lunge & hit reaction
+### Added
+- **Attack animation.** When a Pokémon lands a hit, the attacker now lunges toward its opponent and springs back — the enemy from the top, your Pokémon from the bottom.
+- **Hit reaction.** The Pokémon that gets hit shakes and briefly flashes red (alongside the floating damage number), so exchanges read at a glance.
+- *(Next: a faint animation when a Pokémon goes down.)*
+
+
+## [0.38.5] – 2026-09-01 · "No Poké Balls" hint moved into the Catch button
+### Changed
+- **The "No Poké Balls" hint no longer sits below the battle log.** When you're out of balls in Auto mode, the header Catch button itself now reads **🔴 No Poké Balls** (disabled, with a tooltip pointing to the Poké Mart). Nothing is shown below the log anymore.
+
+
+## [0.38.4] – 2026-09-01 · Catch button moved into the battle header
+### Changed
+- **The Catch button (Auto mode) moved up into the Battle Area header**, next to Pause/Resume and the Auto battle / Auto catch toggles, instead of sitting below the battle log. It still shows the current catch chance (%). Below the log there's now just a "No Poké Balls" hint when you're out.
+
+
+## [0.38.3] – 2026-09-01 · Poké Ball inventory moved to the top bar
+### Changed
+- **The Poké Ball chips below the Catch button (Auto catch) are gone.** The catch controls now just show the **Catch** button (with a "no balls" hint when you're out).
+- **Your Poké Ball inventory now lives in the top bar.** Hover the Poké Ball icon to see a breakdown of how many of each ball type you own.
+
+
+## [0.38.2] – 2026-09-01 · Hide enemy HP numbers
+### Changed
+- **The wild Pokémon's numeric HP is now hidden** — only its HP bar is shown, so you can gauge roughly how hurt it is without knowing the exact value. Your own Pokémon still shows its full HP number.
+
+
+## [0.38.1] – 2026-09-01 · Per-fight battle log · colored log lines
+### Changed
+- **The battle log now resets between fights** — it only ever shows the current encounter, instead of piling up across the whole session.
+- **Log lines are color-coded by side:** your actions (attacks, catches, level-ups, wins) are green, the enemy's (its attacks, your Pokémon fainting, a Pokémon breaking free) are red; other lines stay neutral.
+
+
+## [0.38.0] – 2026-09-01 · Victory & catch result window · manual is the default mode
+### Added
+- **Result window between encounters (manual mode only).** After you win or catch a wild Pokémon in a normal (non-Auto) battle, the fight now pauses and shows a result window before the next enemy appears, with a **Next battle ▶** button to continue.
+  - **On a win:** a "Victory!" window listing the rewards — XP, gold, any loot, an egg if one dropped, and a level-up notice.
+  - **On a successful catch:** a "Gotcha!" window showing the thrown Poké Ball (with a little wiggle) and the caught Pokémon settling inside it, plus whether it was added to your collection, improved an existing one, or was released.
+- **A failed catch does not open a window** — the battle simply continues (the wild Pokémon gets its free attack), as before.
+### Changed
+- **Normal (manual) battle is now the default mode** for new games instead of Auto battle. Auto battle is still one toggle away in the Battle Area header.
+- **Auto battle is unchanged** — it keeps chaining encounters continuously with no result window (idle behavior).
+
+
+## [0.37.1] – 2026-09-01 · Bigger, bold battle command labels
+### Changed
+- **Battle command buttons now use large, bold, white labels** — **Battle / Run / Items / Switch** — with the icons removed, for a cleaner in-game look like the mainline titles.
+
+
+## [0.37.0] – 2026-09-01 · Starter picker popup · type-colored battle UI
+### Added
+- **Starter selection popup on a new game.** Starting a new game now opens a modal with the starter Pokémon as picture cards (sprite, name, colored types) — pick one to begin, instead of hunting for the choice in the Pokédex. The window stays until you choose.
+- **Type colors across the Battle Area.** Type badges (on both combatants' HP boxes and the enemy info panel) are now colored by their Pokémon type using the classic palette, and the move buttons in the Battle menu are tinted by each move's type.
+### Changed
+- **Battle command buttons use the classic menu colors** — **Battle** red, **Run** blue, **Items** orange, **Switch** green — like the mainline Pokémon games. – 2026-09-01 · Battle area redesign · scene fills the panel · side log · enemy info
+### Changed
+- **The battle scene now fills the whole Battle Area** instead of being locked to a 3:2 box that only used about a third of the panel. The background stretches across the available space.
+- **The battle log moved to a side panel** on the right of the Battle Area (with the catch controls / message line below it), instead of sitting under the scene.
+- **The command menu is overlaid in the scene.** In manual mode the root menu is a row of four tiles — **Battle / Run / Items / Switch** — along the bottom of the scene, so all four are always visible (nothing gets clipped by the fixed window). The player's sprite/HP box shifts up so the tiles don't cover it.
+### Added
+- **Battle opens a move window with enemy info.** Clicking **Battle** now opens an overlay over the scene: the wild Pokémon at the top with the 4 moves as a 2×2 grid below, and a **← Back** button. The enemy's **type and base stats (HP/Atk/Def/SpA/SpD/Spe)** are shown **only if you've already caught that species** (it's in your Pokédex); otherwise they read **???** with a hint to catch one. **Items** and **Switch** open in the same overlay window.
+
+
+## [0.35.0] – 2026-09-01 · Manual battle UI · move-replacement popup
+### Added
+- **Manual battle menu (like a classic Pokémon game).** With **Auto battle** off, the battle window now shows a 4-button menu — **Battle / Run / Items / Switch**. **Battle** opens your active Pokémon's moves (name, type, category, power, PP) to pick your attack; **Items** opens your bag of Poké Balls to throw one and try to catch the wild Pokémon; **Switch** swaps in another team member; **Run** flees the fight. Each choice resolves one round (the enemy takes its turn too).
+- **Move-replacement popup.** When a Pokémon levels up and learns a move but already knows 4, a popup now asks whether to **forget one move to make room** (or skip learning it) — instead of silently dropping the new move. It shows the new move next to your current four so you can compare, works through several queued learns one by one, and even handles moves learned **offline** (the queue is saved). Save migrates to **v14**.
+### Changed
+- **Manual mode resolves a full round per action.** Attacking, switching, or throwing a ball all count as your turn — the enemy responds. Running ends the battle.
+
+
+## [0.34.0] – 2026-09-01 · Quick heal on the Defeat screen
+### Added
+- **Heal team right from the Defeat screen.** When your whole team faints, the defeat overlay now has a **🏥 Heal team** button — one click heals everyone (HP + PP) without going to the Poké Center. Once healed it turns into "✓ Team healed — ready to go" next to **New battle**.
+### Changed
+- **PP Regen upgrade retuned to +1 % per level, up to 100 %** (100 levels) so it takes a while to build up, instead of the previous +5 %/level.
+
+
+## [0.33.0] – 2026-09-01 · Floating damage numbers · PP Regen upgrade
+### Added
+- **Floating damage numbers.** When a move connects, a red **"-N"** now pops up over the hit Pokémon in the battle scene and floats away — you can see each hit land, not just read it in the log.
+- **PP Regen upgrade at the Poké Center.** A new **PP regen** upgrade line tops up a % of your active Pokémon's move PP after each **Auto battle** win (0 % until you buy it, up to 100 %). This keeps auto battles going instead of grinding down to Struggle once PP runs out. Manual mode still only refills PP via **Heal team**.
+
+
+## [0.32.0] – 2026-09-01 · Move-based battle engine (damage · STAB · types · PP)
+### Added
+- **Battles now use real moves.** Each turn both sides pick a move and attack with it instead of a single fixed hit. Damage is computed from the move's **power and category** — physical moves use Attack vs. Defense, special moves use Sp. Atk vs. Sp. Def.
+- **STAB and type effectiveness per move.** A move gets the **1.5× same-type bonus** when it matches the user's type, and its damage is scaled by how effective its type is against the target (super effective / not very effective shown in the log).
+- **Accuracy and misses.** Moves can now **miss** based on their accuracy.
+- **PP is consumed.** Each move use spends 1 PP; when a Pokémon has no usable move left it falls back to **Struggle** (a weak typeless attack; recoil will come later).
+- **Priority-based turn order.** Turn order now respects **move priority first** (e.g. Quick Attack goes first), then Speed, with a random tiebreak.
+### Changed
+- **Auto/enemy move choice = highest expected damage** (a placeholder policy until the real auto-battle AI). Idle kill-speed estimates use this same best-move damage.
+
+
+## [0.31.0] – 2026-09-01 · Pokémon know moves (moves + PP on individuals)
+### Added
+- **Pokémon now have moves.** Each individual carries up to **4 moves with PP** (`owned.moves` = `{ id, pp, maxPp }`), assigned from its species' level-up learnset when created. Save migrates to **v13**, giving existing Pokémon the moves they'd know at their current level (full PP).
+- **Learn new moves on level-up.** When a Pokémon levels up and its species learns a new move, it's **auto-learned into a free slot** (up to 4). If all four slots are full, the new move is skipped for now — choosing which move to replace will come with the manual battle UI.
+- **Moves on the Pokémon card.** The individual's card now shows a **Moves** section (name, type, category, PP x/max), so you can see what each Pokémon knows.
+### Changed
+- **Healing at the Poké Center also restores PP** (not just HP) — a full heal means full PP too. (PP isn't consumed yet; that lands with the turn engine.)
+
+
+## [0.30.0] – 2026-09-01 · Persistent HP · battle rework foundations
+### Added
+- **Persistent per-Pokémon HP.** Each individual now carries its own current HP (`owned.hp`) that survives fainting, switching, and the end of a battle — the foundation for the manual battle mode (swapping, real stakes). Save migrates to v12, giving existing Pokémon full HP.
+- **Heal team at the Poké Center.** The Poké Center building now has a **Heal team** button that restores your whole team to full HP — your manual way to recover, and the way back after a wipe.
+- **Move data (`data/moves.js`).** First step of the battle rework: a data model for moves (physical / special / status category, accuracy with miss chance, PP) plus a starter set of 8 moves covering all current types.
+- **Learnsets (`data/learnsets.js`).** Level-up learnsets per species (which moves a species learns and at what level); `movesAtLevel()` returns the (up to 4) most recent moves known at a given level. Not wired into gameplay yet.
+### Changed
+- **HP now matters and is mode-aware.** In **Auto battle** mode the Poké Center still auto-heals your active Pokémon after each win (up to its level-based cap) — leave it running and a wipe is on you. In **manual** mode you genuinely lose HP and must heal at the Poké Center. Full/background idle ignores HP entirely (it stays an abstraction). Level-up still heals to full.
+### Fixed
+- **Team HP no longer resets to full when a Pokémon faints.** Previously a fainted Pokémon showed full HP again in the Team tab (HP was only tracked for the active battler); now the whole team keeps its real, persistent HP, and fainted members are shown as such and skipped when the next one steps in.
+
+
+## [0.29.0] – 2026-09-01 · Battle window controls, part 2
+### Added
+- **Pause/Resume moved up next to the toggles.** The Pause/Resume button now sits in the **top-right control cluster** of the battle window, next to Auto battle / Auto catch, instead of in a row under the scene.
+- **Battle info textbox in the window (like a normal Pokémon game).** The battle narration is now shown in a dedicated, framed **message box** right under the scene — it auto-scrolls to the newest line and highlights it — so you can follow what's happening in the fight inside the battle window.
+- **Auto catch mode selector.** Next to the Auto catch toggle there's now a small selector for **which Pokémon to auto-catch: All or Shiny only**.
+### Changed
+- **Pause and Auto battle are now separate things.** *Pause/Resume* only pauses/resumes the fight; *Auto battle* switches the mode where your Pokémon fight on their own (automatic turns). Manual mode (the opposite) will come later — for now, with Auto battle off, the fight simply doesn't take automatic turns.
+### Removed
+- **Auto-catch "Better IVs" and "New species" filters** (the old three-checkbox row). Auto catch is now a simple **All / Shiny only** choice; Better IVs is dropped for now.
+
+
+## [0.28.0] – 2026-09-01 · Battle window controls reshuffle
+### Added
+- **Global game settings in the top bar (⚙).** A new settings button opens a dropdown for options that affect the whole game. First option: **Game speed (1× / 2× / 4×)**, moved here out of the Battle Area. Placeholder note lists more options coming later (Lock max level, Nuzlocke, …).
+- **Auto battle / Auto catch toggles in the battle window.** Two checkboxes sit at the **top-right of the Battle Area**. *Auto battle* controls whether the fight runs on its own — turning it on starts/resumes the battle (and a saved battle auto-resumes on load); turning it off pauses it. *Auto catch* is the former autocatch switch (its New species / Better IVs / Shiny filters stay below the Catch button).
+- **Defeat screen inside the battle window.** When your whole team faints, the scene now shows a **"Defeated"** overlay with a **New battle** button right in the battle window, instead of a plain control-row button.
+### Changed
+- **Game speed is now a global, persisted setting** (`settings.speed`) rather than per-battle state, controlled from the top-bar settings menu.
+### Fixed
+- **The Battle Area window is now fixed-size and never scrolls.** The panel is a flex column with hidden overflow; the scene has a bounded height (its width is derived from the height so the whole background image still shows, no cropping), and only the battle log scrolls internally when needed.
+### Removed
+- Speed buttons and the standalone "Autocatch" checkbox from the Battle Area controls (moved to the settings menu / top-right toggles).
+
+
+## [0.27.0] – 2026-09-01 · Pokémon sprites in-game · Team & battle bars
+### Added
+- **Real Pokémon sprites in the game.** The Pokédex (caught cards) and the Pokémon card now render the actual sprite from `assets/pokemon/<id>/<view>.png` instead of the `?` placeholder. Shiny individuals automatically use the `shiny-<view>` variant. Sprites are prepared to a uniform standard (256×256 transparent canvas, character scaled so its longer side is 232 px, centered) via `tools/prep_sprite.py`. First species with art: Bulbasaur, Charmander, Squirtle, Pidgey, Rattata, Ditto.
+- **Gender-specific sprites.** Females (`gender === "f"`) first try a `-f` variant (e.g. `back-f.png`, `shiny-back-f.png`) and automatically fall back to the default sprite when a species has no separate female art — so `-f` files are only needed where the sprite actually differs (Rattata's back, for now).
+- **HP and EXP bars in the Team tab.** Each team slot now shows a live **HP bar** (real remaining HP for the Pokémon currently battling, full HP otherwise) and an **EXP bar** toward the next level.
+- **EXP bar in the Battle Area.** Your active Pokémon now shows an EXP bar under its HP bar, so you can watch it fill toward the next level during battle.
+- **The Battle Area is now a real scene (first step toward the battle rework).** Instead of text-only combatant cards, the battle draws a **background scene** that fills the whole battle window (3:2, so the full image shows without ugly cropping), with the fighters as an **overlay on top**: the wild enemy up top from the **front**, your Pokémon at the bottom from the **back**, each with a small translucent name + HP/XP panel. Shiny and female (`-f`) sprite variants are respected. Purely visual — the battle logic is unchanged.
+- **Battle backgrounds that change each fight, shared by environment.** Backgrounds are **shared across areas by biome**, not tied to a single route: images live flat in `assets/backgrounds/` with descriptive names, grouped into biomes in `data/backgrounds.js`, and an area just points at a biome (`data/areas.js` → `biome`). The game **randomly picks one and re-rolls it on every new encounter** (after a win or a catch), so the scenery changes battle to battle while staying stable within one fight (survives refresh). Biome `grassland` ships with 3 test backgrounds (forest / path / grass); Route 1 uses it. If a biome has no images, a fallback gradient shows and nothing breaks (see `assets/backgrounds/README.md`).
+
+
+## [0.26.0] – 2026-09-01 · Poké Ball art everywhere
+### Added
+- **Real Poké Ball sprites everywhere.** All 13 in-game balls now have art in `assets/pokeballs/<id>-ball.png`, so the ball icon shows the actual image in the top bar, the Battle Area ball chips, the Poké Mart, and the "Caught in" line on the Pokémon card. The image is now the **primary** icon — the emoji is only a fallback if a sprite is genuinely missing (no more emoji flash before the image loads).
+- **Reserved future balls.** 13 more balls (Premier, Friend, Love, Heavy, Lure, Moon, Dusk, Dive, Dream, Safari, Sport, Park, Cherish) are pre-registered in `data/pokeballs.js` with `comingSoon: true` and their sprites in place. They **don't appear** in the shop or in battle yet (no mechanic), but their art is wired and ready — enabling one later just means giving it a tier/price/bonus.
+### Notes
+- **Beast Ball** (the only ball missing from the full roster) is intentionally deferred until Ultra Beasts exist — no sprite or data yet (tracked in BACKLOG).
+
+
+## [0.25.0] – 2026-09-01 · Per-individual gender (♂/♀)
+### Added
+- **Per-individual gender.** Each Pokémon now has its own **sex** (♂/♀, or genderless for species like Ditto), rolled from the species' gender ratio when the individual is created (caught, gifted, or hatched). New helper `rollGender` in `pokemonSystem.js`.
+- **Gender symbol in the UI.** The ♂/♀ symbol now shows next to a Pokémon's name on the **Pokémon card** (with a dedicated "Gender" row in the details, alongside the species ratio), on **caught Pokédex cards**, and on **Team slots**. Blue ♂ / pink ♀; genderless shows nothing. New helper `src/ui/gender.js` (`genderSymbolHtml`).
+### Changed
+- Save model bumped to **v11** (`gender` on each Pokémon; existing Pokémon get a gender rolled once from their species ratio during migration).
+
+
+## [0.24.0] – 2026-09-01 · Starters always seen · Poké Ball icons · caught-in ball
+### Added
+- **Starters are always in the Pokédex as "seen"** — you really see all of them on the starter selection screen, so Bulbasaur, Charmander, Squirtle and Ditto now show up as discovered from the start (the one you pick is "caught"). Also backfilled for existing saves. Starter IDs are now a single source of truth (`STARTER_IDS` in `data/pokemon.js`).
+- **Poké Ball icons from art assets.** The Poké Ball counter in the top bar, the ball chips in the Battle Area, and the Poké Mart shop rows now render the actual ball image from `assets/pokeballs/<id>-ball.png` (e.g. `poke-ball.png`), with the emoji as a **fallback** until the image loads. New helper `src/ui/ballIcon.js`.
+- **"Caught in" ball on the Pokémon card.** Each caught individual now records the **ball it was caught in** (`caughtBall`) and the card shows that ball's icon + name. Wild catches record the ball actually used; starters are marked as caught in a Poké Ball; hatched/gifted Pokémon show "— (gift / hatched)".
+### Changed
+- Save model bumped to **v10** (`caughtBall` on each Pokémon; existing Pokémon are backfilled to Poké Ball as a best-effort default, since the original ball wasn't recorded before).
+
+
+## [0.23.0] – 2026-09-01 · Pokémon card (full detail view)
+### Added
+- **Pokémon card (R-025)** — a modal with the full detail of a Pokémon, opened by **clicking a Team slot** or a **Pokédex card**. Two modes:
+  - **Caught individual:** sprite (shiny variant if shiny), name + dex number + types + rarity, **level and EXP bar**, a **stats table** with each of the 6 stats showing species base, the individual's computed value, its **IV (0–31, with a bar)** and **EV (0–252, with a bar)**, plus IV total / % and EV total / 510. Gender ratio, egg groups, generation, and a shiny marker.
+  - **Seen-but-not-caught species:** silhouette + name + dex + types, a "Seen — not caught yet" tag, the species' **base stats**, gender ratio, egg groups, generation.
+- **"Where to catch"** section on the card — lists the real areas the species appears in (from `area.species`: name · region · recommended level), or "Not currently found in the wild." Unseen species can't be opened.
+### Changed
+- Team slots and caught/seen Pokédex cards now show a hover highlight to signal they're clickable.
+### Notes
+- **Gender** is shown as the species' **ratio** (♂/♀ % or Genderless), not a per-individual sex — per-individual gender isn't stored yet (see BACKLOG). Likewise the **ball a Pokémon was caught in** isn't on the card yet: the `caughtBall` field doesn't exist in the data model (a separate BACKLOG item). Both will appear on the card once those seams land.
+
+
+## [0.22.0] – 2026-09-01 · Pokédex (replaces the Collection tab)
+### Added
+- **Pokédex tab** (in place of Collection). Lists **every species** ordered by dex number with one of three states: **caught** (you own it — shows its sprite, dex number, name, shiny ✨ mark, and a team action), **seen** (met in battle but not yet owned — silhouette + name + "Seen" tag), or **unseen** (silhouette + "???"). A **"caught X / of Y"** counter sits in the header.
+- **"Seen" tracking.** Encountering a wild Pokémon in battle now records it in the Pokédex (`state.pokedex.seen`); caught status is still derived from your collection (R-018: one individual per species). New system `src/systems/pokedex.js` (`markSeen`, `dexStatus`, `dexCounts`, `isCaught`, `areasForSpecies`).
+- **Search & filters** in the Pokédex (reusing the shared filter bar): search by name (only for species you've discovered — unseen ones stay hidden) or by dex number, filter by **status** (All / Caught / Seen / Missing) and by **type**.
+- **Sprite rendering helper** `src/ui/sprites.js` (`spriteImg`, `silhouetteHtml`) with a graceful **"?" placeholder fallback**, so the game works before any sprite art is dropped in. Sprites load from the flat `assets/pokemon/<id>/` folders.
+- **Collapsible changelog.** The "What's new" window now shows each version as a **click-to-expand** row (native `<details>`), so you see the version list at a glance instead of scrolling through everything — the newest version opens by default.
+### Changed
+- **The Collection tab is gone**, replaced by the Pokédex. The **starter picker** (empty-collection state) and the **add-to-team** action moved into the Pokédex; the Team tab's empty hint now points there.
+- Save model bumped to **v9** (adds `pokedex.seen`, filled in lazily; old saves keep working — everything you already own shows up as caught immediately).
+
+
+## [0.21.0] – 2026-09-01 · Species schema: gender ratio + generation
+### Added
+- **`gen` on every species** (generation number, 1 = Kanto). Groundwork for the per-generation maps (each map will only let you catch that generation's Pokémon). Does **not** affect the sprite path — sprites stay in one flat folder keyed by `id`.
+- **`genderRatio` on every species** — either `{ m, f }` shares (summing to 1) or `"genderless"` (Ditto). Canonical values: starters 87.5 % ♂ / 12.5 % ♀, Pidgey/Rattata 50/50, Ditto genderless. Groundwork for the Pokémon card / Pokédex and future per-individual gender.
+- Typedefs extended in `data/pokemon.js` (`GenderRatio`, plus `gen`/`genderRatio` on `Species`), with a note that `id` doubles as the sprite folder name.
+### Changed
+- Pure data addition — **no save bump**, no behavioural change yet (fields aren't rendered anywhere until the card/Pokédex/maps land).
+
+
+## [0.20.1] – 2026-09-01 · Fix: one Pokémon, one place
+### Fixed
+- **A Pokémon set up for breeding (or training in the Day Care) can no longer be added to the team.** The Collection tab now shows **"in Day Care" / "in breeding"** instead of an "Add to team" button for those Pokémon, and `addToTeam` refuses them as a safety net. This enforces the "a Pokémon can only be in one place at a time" rule in the remaining direction — the Day Care/breeding pickers already excluded team members. New shared helper `pokemonEngagement(uid)` in `buildingSystem.js`.
+
+
+## [0.20.0] – 2026-08-31 · Breeding by egg groups (R-022)
+### Added
+- **Breeding at the Day Care (R-022).** Two Pokémon placed in the new **breeding slots** (Parent A + Parent B) produce an egg over time if they're compatible: they must **share an egg group**, or one of them must be a **Ditto** (the wildcard "žolík" — egg group `ditto`, pairs with anything that can breed; two Dittos can't, and `no-eggs` species never breed). A compatible pair lays an egg roughly every `BREED_MINUTES` (30 min), ticking **live and offline** (capped at `OFFLINE_CAP_HOURS`, like training/incubation).
+- **Bred eggs inherit genetics.** A bred egg carries the parents' IVs and rolls at hatch: **3 IVs are inherited** from the parents (`INHERIT_IV_COUNT`, configurable — future Destiny Knot item will raise it), the rest are random, and the shiny odds are boosted to **1/4096** (`BREED_SHINY_CHANCE`, Masuda-style, double the normal 1/8192). As with all eggs (R-021) the species and exact stats stay hidden until it hatches.
+- **Breeding window** in the Day Care: a **"💞 Breeding"** button opens a window with the two parent slots (Choose parent / Remove), a compatibility indicator, and a live progress bar toward the next egg. Parent picker reuses the shared Pokémon picker (search / rarity / type / shiny / sort), offering only breedable Pokémon outside your team, training slot and the other parent slot.
+- **Ditto** added to `data/pokemon.js` (dexNo 132, egg group `ditto`). **Temporarily available as a starter** so breeding can be tested; it will become a normal catch later (see BACKLOG).
+### Fixed
+- **Live progress in real time.** Breeding and egg-incubation progress bars (and countdowns) now advance **every second** in an open window, instead of only updating when an egg was produced/hatched or when another system (a running battle) forced a redraw. Breeding and incubation loops tick at 1 s and commit each tick while active.
+### Changed
+- The Day Care window now shows a **Breeding** status line (parents / compatibility / progress) alongside training and Egg Breeders.
+- The Day Care training picker now also **excludes Pokémon set up for breeding** (a Pokémon can only be in one Day Care role at a time).
+- Save model bumped to **v8** (breeding slot `city.daycare.breeding = { a, b, buffer }`, filled in lazily; old saves keep working).
+
+
+## [0.19.0] – 2026-08-31 · Poké Mart Market window
+### Added
+- **Market window in the Poké Mart:** a **"🛒 Market"** button opens a shop hub whose goods are split into clickable **departments** (shown as cards). First department is **Poké Balls**, which opens its own window listing the balls as tidy rows (icon, name, description, owned count, buy button). Built to grow — future departments (items, evolution stones…) drop in as more cards.
+### Changed
+- The ball shop is no longer inline in the Poké Mart window; it lives two clicks deep (Market → Poké Balls), keeping the building window focused on actions (Market / Upgrades).
+- **Locked / not-yet-unlocked goods are hidden** from the shop entirely — the Poké Balls list shows only what you can actually buy right now (unlocked and priced), instead of previewing locked/special balls.
+
+
+## [0.18.0] – 2026-08-31 · Picker filters (Day Care + eggs)
+### Added
+- **Day Care picker filters:** search by name, rarity toggles, type toggles, "✨ Shiny only", and sorting (Level ↓ / Name A–Z / Dex #). Tiles now also show rarity and type. Filter options are built from the Pokémon you actually own. The whole filter panel is tucked behind a **"🔎 Filters"** toggle button.
+- **Egg picker filters:** rarity toggles and hatch-time sorting (↑/↓), also behind the "🔎 Filters" toggle. In line with R-021 the egg species stays hidden — you filter/sort only by rarity and hatch time (never by name/species).
+### Added
+- **Egg Breeders window** in the Day Care: a single **"🥚 Hatch an egg"** button opens a window with a grid of all breeder slots (max = Egg slots cap). Each unlocked empty slot has its own **"Hatch an egg"** button that opens the egg picker; occupied slots show the incubating egg (🥚 + progress + time + "Take out"); still-locked slots show 🔒.
+### Changed
+- **Upgrades moved behind a menu.** Every building now has an **"⬆️ Upgrades"** button that opens a dedicated window listing the building upgrade and any upgrade lines (tracks) together, keeping the main building window focused on actions (shop / Day Care / breeders).
+- **Egg species is now hidden until it hatches** (R-021). The breeders and the egg picker show only "Egg" and the incubation time/progress — no species name — so hatching stays a surprise.
+
+
+## [0.16.0] – 2026-08-31 · Day Care hatch upgrades + multi-slot incubation
+### Added
+- **Day Care upgrade lines (tracks):** two independent upgrade tracks with their own level and cost curve — **Hatch speed** (Lv 1→50, +1 %/level, up to +50 % faster incubation) and **Egg slots** (Lv 1→10, incubate 1→10 eggs at once). Generic, data-driven mechanism (`BuildingDef.tracks` in `data/buildings.js`, logic in `src/systems/buildingSystem.js`), reusable for other buildings.
+- **Incubate multiple eggs at once** – the Day Care now shows one progress row per incubating egg with its own "Take out" button; pick eggs into any free slot.
+### Changed
+- Incubation model reworked from a single egg slot to an **array of slots** (`city.daycare.eggs`); the old single `city.daycare.egg` is migrated in lazily (no save-version bump). Offline hatching and the "Welcome back" summary now report **all** eggs that hatched while away.
+
+
+## [0.15.0] – 2026-08-31 · Eggs + hatching
+### Added
+- **Eggs drop from battles** – after a victory there is a small chance (`EGG_DROP_CHANCE`) to find an egg. The egg's species is drawn from the area's species pool (`data/areas.js` → `species`); its genetics (IV/EV/shiny) are rolled only when it hatches.
+- **Hatching at the Day Care** – the Day Care now has a **second slot** for an egg. Incubation ticks while the game runs and offline (same as passive training, no efficiency nerf, capped at `OFFLINE_CAP_HOURS`). Hatch time scales with the species' **rarity** (`data/eggs.js`). When it hatches, the Pokémon (Lv 1–5) goes through `acquirePokemon()` (R-018): a new species is added, otherwise only better values are merged.
+- **Egg inventory** (`state.eggs`) with a 🥚 counter in the top bar; an egg picker in the Day Care; a live incubation progress bar; and an egg-hatched line in the offline "Welcome back" summary plus a status message when one hatches live.
+- Battle enemies now spawn from the **area's species pool** (`area.species`) instead of a hardcoded list.
+### Changed
+- Save model **v6 → v7**: adds `eggs: []`; the Day Care incubation slot (`city.daycare.egg`) is filled in lazily.
+### Decisions
+- R-021: eggs are a rare battle drop carrying a species from the area; genetics roll at hatch; hatch time scales with rarity; hatching reuses `acquirePokemon`. Breeding (egg groups) builds on this system next. Masuda/shiny-boosted eggs and per-area egg chances are deferred (see docs/BACKLOG.md).
+
+
+## [0.14.0] – 2026-08-31 · Poké Ball types + Poké Mart shop
+### Added
+- **13 Poké Ball types** with classic-style properties (`data/pokeballs.js`): Poké, Great, Ultra, Master, Net, Nest, Quick, Timer, Repeat, Level, Fast, Heal, Luxury. Each ball multiplies the catch chance; conditional bonuses are evaluated from the battle context (`src/systems/pokeballSystem.js`) — e.g. Quick (×5 first turn), Net (×3.5 vs Water/Bug), Repeat (×3.5 on owned species), Timer (grows with rounds), Nest (better vs low-level), Level (out-leveling), Fast (fast species). Master Ball is a guaranteed catch.
+- **Ball type picker in battle:** the Battle Area shows the balls you own; the selected type is used for both manual and auto catch, and the 🔴 Catch button shows the real chance for that ball.
+- **Poké Ball inventory by type** (`resources.balls`): balls are counted per type; the top bar shows the total.
+- **Poké Mart shop:** buy any unlocked ball type; upgrading the Mart lowers all ball prices (percentage discount).
+- **Progression-gated unlocks:** balls have a `tier` and unlock as you advance through the world (`progress.tier`). Locked types are shown as a preview in the shop. The starter set is available from the start.
+### Changed
+- **Poké Balls are no longer loot** – they are bought in the Poké Mart only (Route 1 drop table cleared).
+- Save model **v5 → v6**: `resources.pokeballs` (single count) → `resources.balls` (per-type map, migrated to the `poke` type); adds `settings.selectedBall` and `progress.tier`.
+### Decisions
+- R-020: balls are shop-only (no loot); ball types unlock by world progression (tier). Master Ball is not for sale — a future milestone reward. Effects needing data we don't have yet (Love/Heavy/Dusk/Dive/Dream…) are deferred (see docs/BACKLOG.md).
+
+
+## [0.13.0] – 2026-08-31 · Catching in battle + autocatch
+### Added
+- **Catching happens in battle** – you can only catch the enemy you are currently fighting. New **🔴 Catch** button in the Battle Area attempts to catch the current enemy for 1 Poké Ball; the catch chance depends on the enemy's HP (the lower the HP, the higher the chance).
+- **Autocatch** toggle with filters (New species / Better IVs / Shiny): during battle the game automatically tries to catch enemies that match the enabled filters, as long as you have Poké Balls. Settings are saved.
+- `acquirePokemon()` – the "one per species, merge the better values" rule (R-018): catching a species you already own transfers only the **better** values (higher per-stat IV/EV, shiny) onto your existing individual; level and XP stay, the newly caught one is released.
+### Changed
+- The old "Catch wild" button in the Collection was removed – catching is now tied to battle.
+- Save model **v4 → v5**: adds `settings.autocatch` (default: off; filters on). Old saves keep working with catching disabled until you turn it on.
+### Decisions
+- R-019: catch chance scales with enemy HP; catching a Pokémon is an alternative to defeating it (no XP/gold on catch). Poké Ball types and species rarity affecting the catch rate are deferred (see docs/BACKLOG.md).
+
+
+## [0.12.0] – 2026-08-31 · In-game changelog + backlog
+### Added
+- **"What's new" window inside the game** – clicking the version in the footer opens the changelog. It loads from `CHANGELOG.md` (single source of truth) with a lightweight Markdown conversion (`src/ui/changelogView.js`).
+- **`docs/BACKLOG.md`** – a list of things that are prepared or agreed upon but not yet finished (EV/Training Grounds, `acquirePokemon`, eggs, hatching, breeding, Poké Ball types…), so we don't forget them.
+
+
+## [0.11.0] – 2026-08-31 · IV, EV and shiny
+### Added
+- **IV (Individual Values):** every individual has IVs 0–31 per stat, random and fixed at creation (`randomIvs` in `pokemonSystem.js`). They affect battle stats.
+- **EV (Effort Values):** field 0–252 per stat (max 510 total) + contribution to stats. **Not gained from battles** – they will come from the future **Training Grounds** building; the seam `addEv(pokemon, stat, amount)` is ready, respecting the caps.
+- **Shiny:** rare color variant (cosmetic), rolled at creation (`SHINY_CHANCE = 1/8192`, the classic value – tunable). Shown as ✨ in the Collection, Team, battle, and in the catch message.
+- `data/pokemon.js`: species now have `eggGroups` and `rarity` (preparation for eggs/breeding).
+- Collection and Team show an **IV % · EV** line per individual (quality at a glance).
+### Changed
+- `computeStats()` now computes stats from base + level + IV + EV (Gen 3+ formula without natures). Backward compatible: if IV/EV are missing, they count as 0 and the numbers come out as before.
+- Save model **v3 → v4**: migration fills existing individuals with random IVs, empty EVs and `shiny=false` (stats are only filled in, not overwritten).
+### Decisions
+- R-017: EVs are gained through training (Training Grounds), not from battles. R-018: rule "duplicate = merge the better values (IV/EV/shiny) into the existing one, the new one is released; one individual per species in the collection" – built in the next step (`acquirePokemon`).
+
+
+## [0.10.0] – 2026-08-31 · Unique species + Day Care picker as boxes
+### Changed
+- **Each Pokémon can be owned only once (per species).** Catching only allows a species you don't have yet; when all available species are caught, the Poké Ball is not consumed (`catchWild` + new `ownsSpecies` in `team.js`).
+- **Choosing a Pokémon for the Day Care** is no longer a dropdown: the detail has a button that **opens a separate window** with a **scrollable grid of tiles ("boxes") and search by name** – usable even with hundreds of Pokémon (`buildingView.js` `openDaycarePicker` + `.daycare-*` styles).
+### Note
+- The uniqueness rule applies to new catches; any older duplicates in a save are not deleted automatically (irreversible) – can be cleaned up on request.
+
+
+## [0.9.0] – 2026-08-31 · Third building: Day Care + Center rebalance
+### Added
+- New building **Day Care** (`data/buildings.js`, `src/systems/daycare.js`): place a Pokémon (outside the team) and it passively gains XP – both while playing and **offline** (full rate, 8 h cap; not nerfed like battle idle, because passive training is the whole point of the building).
+- `daycareXpPerMinute()`, occupant slot `city.daycare` (uid + fractional XP buffer), `setDaycareOccupant`/`clearDaycareOccupant` in `buildingSystem.js`.
+- Active training loop (`startDaycareLoop`, tick every 15 s) + offline catch-up (`applyDaycareOffline`).
+- Day Care detail in `buildingView.js`: choose a Pokémon (outside the team), pick up, show the rate and the occupant's XP.
+- The return summary (`offlineView.js`) is now **sectioned** – it shows battle idle and the Day Care together.
+- CSS facade of the Day Care as a fallback.
+### Changed
+- **Pokémon Center rebalanced:** healing is now **1 % per level, capped at 50 %** (previously 10 % + 5 %/level). To make the cap reachable, the Center has max level 50 and a gentler upgrade cost curve (tunable in data).
+- `healPercent()` respects the `maxPercent` cap.
+### Decisions
+- R-015: third building = Day Care (passive idle XP, offline at full rate). R-016: Center healing 1 %/level, cap 50 %.
+
+
+## [0.8.1] – 2026-08-31 · Pokémon Center image sprite
+### Added
+- Pixel-art sprite of the Pokémon Center (provided by the user) → `sprite` in `data/buildings.js`. The CSS facade remains as a fallback.
+### Changed
+- The grassy background of the sprite was removed via green color-keying (Pillow) and cropped → transparent building. Source `pokecenter.png` kept.
+
+
+## [0.8.0] – 2026-08-31 · Second building: Pokémon Center
+### Added
+- New building **Pokémon Center** (`data/buildings.js`): after each victory it heals part of the active Pokémon's max HP (Lv 1 = 10 %, +5 % per level). It exists from the start, upgrades increase healing.
+- `healPercent()` in `buildingSystem.js`; `battleSystem` heals the player after a win (except on level-up, where HP is filled to max) and logs it.
+- The building detail (`buildingView.js`) is now **data-generic**: sections and actions are assembled based on the building's capabilities (`ball` = buying Poké Balls, `heal` = healing). The upgrade is shared.
+- CSS facade of the Pokémon Center (white clinic) as a fallback when the building has no image.
+### Decisions
+- R-014: second building = Pokémon Center; "heal after victory" effect (integer HP, scales with upgrades and max HP). No save version change – just a new record in `city.buildings`.
+
+
+## [0.7.0] – 2026-08-31 · Building image sprite (Poké Mart)
+### Added
+- Graphic assets: `assets/buildings/` folder + pixel-art sprite of the Poké Mart (provided by the user).
+- The building is shown in the city as an **image** (`sprite` field in `data/buildings.js`); the CSS house remains as a fallback when the sprite is missing.
+- `image-rendering: pixelated` for crisp pixel-art.
+### Changed
+- The sprite background was removed (flood fill from the corners via Pillow) and cropped → transparent building on the grass.
+### Decisions
+- R-013: buildings can be image sprites (local assets, no dependency); appearance driven by data.
+
+
+## [0.6.3] – 2026-08-31 · Poké Mart as a storefront (not a cube)
+### Changed
+- The building is no longer a solid-color cube: **roof (color from data) + cream walls** + a front **storefront** (red awning, windows, entrance) – pure CSS `clip-path`.
+- Building emoji `🛒` → `🏪` (shop).
+### Added
+- The facade is styled per building (`.iso-b-<id>`), so each building can have its own look.
+
+
+## [0.6.2] – 2026-08-31 · Isometric 2.5D city
+### Changed
+- The city was redrawn as **isometric 2.5D** (pure CSS, no dependencies): buildings are 3D houses (roof + 2 walls via `clip-path`) on a grassy area, empty lots as flat diamonds.
+- The building's roof color is data-driven (`color` in `data/buildings.js`).
+### Decisions
+- R-012: city visualization = isometric CSS (true WebGL 3D deferred as a later optional upgrade – it would add a dependency and is the lowest priority per the spec).
+
+
+## [0.6.1] – 2026-08-31 · City as a clickable map
+### Changed
+- The **City** tab is no longer a list of cards but a **visual city**: buildings are tiles on a map + empty lots for future buildings.
+- **Clicking a building opens its detail** (modal) with options (Buy Poké Ball / Upgrade); the numbers update live, close with a button / Esc / clicking outside.
+### Added
+- `src/ui/buildingView.js` (building detail) + city map and detail styles.
+
+
+## [0.6.0] – 2026-08-31 · Step 5 (city + building) → MVP done
+### Added
+- **City → Building** concept: data definition `data/buildings.js` + logic `src/systems/buildingSystem.js`.
+- First building **Poké Mart**: buy Poké Balls for gold; **upgrading the building lowers the price** (levels 1–10, upgrade cost grows ×1.6).
+- Functional **City** tab `src/ui/cityView.js` (building card, Buy / Upgrade buttons with disabled state) + building styles.
+- State extended with `city.buildings`; save migration **v2 → v3**.
+### Changed
+- `CURRENT_SAVE_VERSION` = 3; `leftPanel` passes `onStatus` to the city.
+### Decisions
+- R-010: first building = Poké Mart (buy Poké Balls, upgrade lowers price). With this step the **MVP (Steps 0–5) is done**.
+
+
+## [0.5.1] – 2026-08-31 · Fix offline progress sensitivity
+### Fixed
+- A short absence (~1 min) showed no offline gain. Causes: the 60 s minimum threshold and rounding the number of defeats down (over a short time → 0).
+### Changed
+- `MIN_OFFLINE_SECONDS` lowered 60 → 15 s.
+- Offline is computed from a **fractional** number of defeats (no lost progress); rewards are rounded only at the end. The summary is shown as soon as at least some XP/gold/loot comes out.
+
+
+## [0.5.0] – 2026-08-31 · Step 4 (idle/offline progress + loot)
+### Added
+- **Offline (idle) progress** `src/systems/idle.js`: after returning, it computes the reward for the time away (estimated from strength), with an 8 h cap. Counted only from a running battle.
+- Constant `OFFLINE_EFFICIENCY = 0.1` – offline is intentionally 10× weaker than active play (tunable with a single number).
+- **Loot** `src/systems/loot.js` (`rollLoot`, `expectedLoot`) + a data drop table in `data/areas.js` (Route 1: chance for a Poké Ball).
+- Return summary panel `src/ui/offlineView.js` (time away, defeats, XP, gold, loot) + modal styles.
+- Shared formulas in `battleSystem.js`: `battleRewards`, `avgDamage`, `makeCombatant`, `lootLabel` (single source of truth for battle and idle).
+### Changed
+- `handleFaint` rolls loot from the area and adds it to resources (+ log entry).
+- `src/main.js`: after loading, it applies offline progress (before restoring the battle) and shows the summary; saves immediately (resets `lastSaved`).
+### Decisions
+- R-008 (v0.4.1), R-009: idle model = estimate from strength, offline efficiency 1/10, minimal loot (Poké Ball drop).
+
+
+## [0.4.1] – 2026-08-31 · Direct battle save
+### Fixed
+- **F5 no longer "revives" Pokémon.** An in-progress battle (player and enemy HP, log, area, speed, team order) is saved and restored on load – paused, the player restarts it with a button.
+### Added
+- `serialize()` / `restore()` in `src/systems/battleSystem.js`; `persist()` called in `emit()` projects the battle into the game state.
+- `battle` field in the game state (`createNewGame`); save migration **v1 → v2** fills in `battle: null`.
+### Changed
+- `CURRENT_SAVE_VERSION` = 2.
+- `src/main.js` calls `restore(getState().battle)` after loading/creating a game.
+
+
+## [0.4.0] – 2026-08-31 · Step 3 (Battle Area)
+### Added
+- Type effectiveness `data/types.js` (`typeMultiplier`).
+- Progression `src/systems/progression.js` (`xpForNextLevel`, `grantXp`).
+- `computeStats` in `src/systems/pokemonSystem.js`.
+- Battle system `src/systems/battleSystem.js`: auto battle, damage with types, XP/level, gold, start/pause, speed 1/2/4×, `stopBattle`.
+- Visual `src/ui/battleView.js`: HP bars, controls, log.
+- `BATTLE_UPDATE` event; Battle Area styles.
+### Changed
+- `saveControls.js` calls `stopBattle` on New Game / Import.
+### Decisions
+- R-007: battle MVP = type effectiveness + auto mode with start/pause and speed.
+
+
+## [0.3.0] – 2026-08-31 · Step 2 (team and obtaining Pokémon)
+### Added
+- Pokémon system `src/systems/pokemonSystem.js` (`createPokemon`).
+- Team system `src/systems/team.js`: `chooseStarter`, `catchWild`, `addToTeam`, `removeFromTeam`, `moveInTeam`, `getTeamPokemon`, `isInTeam`.
+- Left-panel UI tabs Team / Collection / City: `src/ui/leftPanel.js`, `src/ui/teamView.js`.
+- Styles for tabs, type badges and team elements.
+### Changed
+- `src/main.js` uses `renderLeftPanel` and redraws it on state change.
+### Decisions
+- R-006: left panel with tabs (keeps the three panels per the spec).
+
+
+## [0.2.0] – 2026-08-31 · Step 1 (persistent foundation)
+### Added
+- Event bus `src/core/events.js` (separating logic from UI).
+- Game state core `src/core/state.js` (`GameState`, `createNewGame`, `saveVersion` versioning, `MAX_TEAM_SIZE`).
+- Save system `src/systems/save.js`: localStorage, autosave, versioned save with migration, **export/import to .txt**.
+- Data layer `data/pokemon.js` (5 species: Bulbasaur, Charmander, Squirtle, Pidgey, Rattata + `getSpecies`).
+- UI `src/ui/saveControls.js`: Save / Export / Import / New Game buttons.
+- Resource bar wired to the real state (Gold, Poké Balls, number of Pokémon).
+### Changed
+- `src/main.js`: bootstrap loads/creates a game, wires UI to `STATE_CHANGED`, autosave every 30 s + on tab close.
+
+
+## [0.1.0] – 2026-08-31 · Step 0 (project skeleton)
+### Added
+- Project documentation: `docs/NOTES.md` (journal) and `CHANGELOG.md` (this file).
+- Approved decisions R-001 to R-005 (technology, architecture, roadmap, documentation, testing).
+- Project skeleton: `index.html`, `css/main.css`.
+- Modular JS: `src/main.js` (bootstrap), `src/core/version.js`, UI modules
+  `src/ui/{cityView,battleView,mapView}.js`.
+- Data layer – example: `data/areas.js` (first area Route 1).
+- Main screen layout: city on the left, Battle Area top right, map bottom right.
+- `.nojekyll`, `.gitignore`, updated `README.md`.
+
+---
+
+
+## [0.0.0] – 2026-08-31
+### Added
+- Repository creation, empty `README.md` (Initial commit).
+- Verified the git workflow from the work computer (clone + push over HTTPS works).

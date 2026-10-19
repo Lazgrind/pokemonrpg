@@ -1,0 +1,188 @@
+/**
+ * teamView.js – obsah záložky "Tým" v levém panelu. (Kolekci nahradil Pokédex,
+ * viz pokedexView.js.)
+ */
+
+import { getSpecies } from "../../data/pokemon.js";
+import { MAX_TEAM_SIZE } from "../core/state.js";
+import { getTeamPokemon, swapIntoTeam, reorderTeam } from "../systems/team.js";
+import { dragState, beginDrag, endDrag } from "./dragState.js";
+import { healStatus } from "../systems/battleSystem.js";
+import { ivPercent, evTotal, computeStats } from "../systems/pokemonSystem.js";
+import { xpForNextLevel } from "../systems/progression.js";
+import { canEvolveNow, evolvePokemon } from "../systems/evolutionSystem.js";
+import { openPokemonCard } from "./pokemonCard.js";
+import { openBag } from "./bagView.js";
+import { genderSymbolHtml } from "./gender.js";
+import { statusBadge } from "./statusBadge.js";
+import { heldItemOf } from "../systems/itemSystem.js";
+import { ballIconHtml } from "./ballIcon.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
+
+/** Právě proběhlo tažení? (potlačí otevření karty po dropu). */
+let didDrag = false;
+
+/** Jméno druhu daného jedince. */
+function speciesName(p) {
+  return getSpecies(p.speciesId)?.name ?? p.speciesId;
+}
+
+/** Jméno se shiny hvězdičkou. */
+function displayName(p) {
+  return `${p.shiny ? "✨ " : ""}${speciesName(p)}`;
+}
+
+/** Řádek s IV kvalitou a EV součtem. */
+function ivEvLine(p) {
+  const heldItem = heldItemOf(p);
+  const heldStr = heldItem ? ` · ${heldItem.icon}` : "";
+  return `<span class="placeholder iv-ev">IV ${ivPercent(p)}% · EV ${evTotal(p)}${p.shiny ? " · ✨ shiny" : ""}${heldStr}</span>`;
+}
+
+/**
+ * Aktuální HP jedince – čte se přímo z trvalého pole `hp` (fallback = plné max
+ * HP u starých objektů). Zranění tak přežije swap i konec souboje.
+ */
+function currentHp(p, maxHp) {
+  return Math.max(0, Math.min(maxHp, p.hp ?? maxHp));
+}
+
+/** HP + EXP bary jednoho člena týmu (trvalé HP jedince). */
+function statBars(p) {
+  const maxHp = computeStats(p).maxHp;
+  const hp = currentHp(p, maxHp);
+  const hpPct = Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100)));
+  const low = hp <= 0 ? " fainted" : hpPct <= 25 ? " low" : "";
+
+  const need = xpForNextLevel(p.level);
+  const xpPct = Math.max(0, Math.min(100, Math.round((p.xp / need) * 100)));
+
+  return `<div class="slot-bars">
+    <div class="bar-line">
+      <span class="bar-cap">HP</span>
+      <span class="hpbar"><span class="hpfill${low}" style="width:${hpPct}%"></span></span>
+      <span class="bar-val">${hp} / ${maxHp}</span>
+    </div>
+    <div class="bar-line">
+      <span class="bar-cap">XP</span>
+      <span class="hpbar"><span class="xpfill" style="width:${xpPct}%"></span></span>
+      <span class="bar-val">${p.xp} / ${need}</span>
+    </div>
+  </div>`;
+}
+
+/** HTML odznaky typů. */
+function typeBadges(p) {
+  return (getSpecies(p.speciesId)?.types ?? [])
+    .map((t) => `<span class="type">${t}</span>`)
+    .join("");
+}
+
+/**
+ * Záložka Tým: 6 slotů, řazení a odebírání.
+ * @param {HTMLElement} root
+ * @param {(msg: string) => void} onStatus
+ */
+export function renderTeamTab(root, onStatus) {
+  const team = getTeamPokemon();
+  const slots = [];
+  for (let i = 0; i < MAX_TEAM_SIZE; i++) {
+    const p = team[i];
+    if (p) {
+      slots.push(`
+        <div class="card team-slot clickable" data-open="${p.uid}" data-slot="${i}" data-uid="${p.uid}" draggable="true" title="Show card · drag to reorder or move to PC">
+          <span class="slot-num">${i + 1}</span>
+          <div><strong>${displayName(p)}</strong> ${genderSymbolHtml(p.gender)} · Lv ${p.level} ${p.owned?.caughtBall ? ballIconHtml(p.owned.caughtBall, { size: 16 }) : ""} ${typeBadges(p)}${statusBadge(p.status)}</div>
+          <div>${ivEvLine(p)}</div>
+          ${statBars(p)}
+          ${p.status || canEvolveNow(p) ? `<div class="row-actions">
+            ${p.status ? `<button class="btn" data-cure="${p.uid}" title="Cure status effect (no HP/PP restore)">💊 Cure</button>` : ""}
+            ${canEvolveNow(p) ? `<button class="btn btn-evolve" data-evolve="${p.uid}" title="Evolve this Pokémon">✨ Evolve</button>` : ""}
+          </div>` : ""}
+        </div>`);
+    } else {
+      slots.push(`<div class="card team-slot empty" data-slot="${i}"><span class="slot-num">${i + 1}</span>Empty</div>`);
+    }
+  }
+
+  const _savedScroll = saveScroll(root);
+  root.innerHTML = `
+    <div class="team-head">
+      <h2 class="panel-title">Team (${team.length}/${MAX_TEAM_SIZE})</h2>
+      <button class="btn bag-btn" data-bag title="Items, TMs, HMs &amp; healing">🎒 Bag</button>
+    </div>
+    ${team.length === 0 ? `<p class="placeholder">Your team is empty. Add Pokémon from the Pokédex tab.</p>` : ""}
+    <div class="team-grid">
+      ${slots.join("")}
+    </div>
+  `;
+  restoreScroll(root, _savedScroll);
+
+  const bagBtn = root.querySelector("[data-bag]");
+  if (bagBtn) bagBtn.addEventListener("click", () => openBag(onStatus));
+
+  root.querySelectorAll("[data-cure]").forEach((b) =>
+    b.addEventListener("click", () => {
+      if (healStatus(b.dataset.cure)) onStatus("Status cured");
+    })
+  );
+  root.querySelectorAll("[data-evolve]").forEach((b) =>
+    b.addEventListener("click", () => {
+      const res = evolvePokemon(b.dataset.evolve);
+      onStatus(res.ok ? `✨ ${res.fromName} evolved into ${res.toName}!` : res.reason ?? "Can't evolve.");
+    })
+  );
+  // Klik na slot (mimo tlačítka) → karta Pokémona (pokud se zrovna netáhlo).
+  root.querySelectorAll("[data-open]").forEach((slot) =>
+    slot.addEventListener("click", (e) => {
+      if (e.target.closest("button")) return;
+      if (didDrag) { didDrag = false; return; }
+      openPokemonCard({ uid: slot.dataset.open });
+    })
+  );
+
+  // --- Drag & drop: přeuspořádání týmu + přesun z/do PC boxů ---
+  // Zdroj tažení = obsazený slot týmu. Sdílený `dragState` (dragState.js) drží
+  // uid + source ("team"), aby to fungovalo i při dropu do PC panelu (jiný DOM
+  // kontejner). Cíl = kterýkoli slot týmu (obsazený i prázdný).
+  root.querySelectorAll(".team-slot[draggable='true']").forEach((slot) => {
+    slot.addEventListener("dragstart", (e) => {
+      didDrag = true;
+      beginDrag(slot.dataset.uid, "team");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", slot.dataset.uid);
+      slot.classList.add("dragging");
+    });
+    slot.addEventListener("dragend", () => {
+      slot.classList.remove("dragging");
+      endDrag();
+      setTimeout(() => { didDrag = false; }, 0);
+    });
+  });
+
+  root.querySelectorAll(".team-slot").forEach((slot) => {
+    slot.addEventListener("dragover", (e) => {
+      if (!dragState.uid) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      slot.classList.add("drag-over");
+    });
+    slot.addEventListener("dragleave", () => slot.classList.remove("drag-over"));
+    slot.addEventListener("drop", (e) => {
+      e.preventDefault();
+      slot.classList.remove("drag-over");
+      const uid = dragState.uid;
+      const source = dragState.source;
+      if (!uid) return;
+      const toIndex = Number(slot.dataset.slot);
+      if (source === "team") {
+        reorderTeam(uid, toIndex); // commit → překreslení
+      } else if (source === "pc") {
+        // Obsazený cíl = výměna (nový do slotu, starý zpět do PC); prázdný = přidání.
+        const wasFilled = !slot.classList.contains("empty");
+        const ok = swapIntoTeam(uid, toIndex);
+        onStatus(ok ? (wasFilled ? "Swapped into team" : "Added to team") : "Team is full (max 6)");
+      }
+    });
+  });
+}

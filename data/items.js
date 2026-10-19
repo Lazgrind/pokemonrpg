@@ -1,0 +1,179 @@
+/**
+ * items.js – DATA vrstva léčivých předmětů (v0.45.0).
+ *
+ * Čistá data (žádná logika): definice itemů, ceny a jejich efekt. Herní logiku
+ * (nákup, použití, ověření cíle) řeší src/systems/itemSystem.js; UI obchod je
+ * v buildingView.js (openItemShop) a batoh v bagView.js / battleView.js.
+ *
+ * Efekt je datově řízený, aby přidání nového itemu bylo jen přidání záznamu:
+ *   { kind: "heal",   amount: number | "full" }              – doplní HP
+ *   { kind: "cure",   status: "poison"|"burn"|"paralysis"|"any" } – sundá stav
+ *   { kind: "revive", healFrac: number | "full" }            – oživí vyřazeného
+ *   { kind: "level" }                                        – Rare Candy: +1 level (respektuje level cap i MAX_LEVEL)
+ *   { kind: "ppUp" }                                         – PP Up: +1 stupeň max PP jednoho tahu (max 3×, +20 % základu za stupeň)
+ *   { kind: "ppMax" }                                        – PP Max: max PP jednoho tahu rovnou na strop (3 stupně naráz)
+ *
+ * @typedef {Object} ItemDef
+ * @property {string} id
+ * @property {string} name
+ * @property {string} icon
+ * @property {string} desc
+ * @property {number} price          cena v goldu (nákup v Poké Martu)
+ * @property {"hp"|"status"|"revive"|"held"} category  sekce v obchodě/batohu
+ * @property {{ kind: "heal", amount: number|"full" }
+ *          | { kind: "cure", status: "poison"|"burn"|"paralysis"|"any" }
+ *          | { kind: "revive", healFrac: number|"full" }
+ *          | { kind: "level" }
+ *          | { kind: "ppUp" }
+ *          | { kind: "ppMax" }
+ *          | undefined } effect
+ * @property {{ kind: "endTurnHeal", fraction: number }
+ *          | { kind: "lowHpHeal", threshold: number, amount: number }
+ *          | { kind: "focusSash" }
+ *          | undefined } held  efekt v boji (jen pro held itemy)
+ *   - endTurnHeal: doplní `fraction` max HP na konci každého kola (Leftovers)
+ *   - lowHpHeal: když HP klesne pod `threshold`, doplní `amount` HP a spotřebuje se
+ *   - focusSash: z PLNÉHO HP přežije jinak smrtící zásah s 1 HP; pak se spotřebuje
+ */
+
+import { TMS, tmItemId, tmDisplayName } from "./tms.js";
+
+/** @type {ItemDef[]} */
+export const ITEMS = [
+  // --- Potiony: doplnění HP (nefungují na vyřazeného – nejdřív Revive) ---
+  { id: "potion", name: "Potion", icon: "🧴", desc: "Restores 20 HP.", price: 30, category: "hp", effect: { kind: "heal", amount: 20 } },
+  { id: "super-potion", name: "Super Potion", icon: "🧪", desc: "Restores 60 HP.", price: 100, category: "hp", effect: { kind: "heal", amount: 60 } },
+  { id: "hyper-potion", name: "Hyper Potion", icon: "⚗️", desc: "Restores 120 HP.", price: 250, category: "hp", effect: { kind: "heal", amount: 120 } },
+  { id: "max-potion", name: "Max Potion", icon: "🍶", desc: "Fully restores HP.", price: 400, category: "hp", effect: { kind: "heal", amount: "full" } },
+
+  // --- Léčení statusů ---
+  { id: "antidote", name: "Antidote", icon: "💊", desc: "Cures poison.", price: 40, category: "status", effect: { kind: "cure", status: "poison" } },
+  { id: "burn-heal", name: "Burn Heal", icon: "🧯", desc: "Cures a burn.", price: 40, category: "status", effect: { kind: "cure", status: "burn" } },
+  { id: "paralyze-heal", name: "Paralyze Heal", icon: "⚡", desc: "Cures paralysis.", price: 40, category: "status", effect: { kind: "cure", status: "paralysis" } },
+  { id: "full-heal", name: "Full Heal", icon: "🩹", desc: "Cures any status condition.", price: 80, category: "status", effect: { kind: "cure", status: "any" } },
+
+  // --- Revive: oživení vyřazeného Pokémona ---
+  { id: "revive", name: "Revive", icon: "✨", desc: "Revives a fainted Pokémon with half HP.", price: 200, category: "revive", effect: { kind: "revive", healFrac: 0.5 } },
+  { id: "max-revive", name: "Max Revive", icon: "🌟", desc: "Revives a fainted Pokémon and fully restores HP.", price: 500, category: "revive", effect: { kind: "revive", healFrac: "full" } },
+
+  // --- Boosts: trvalá vylepšení jednotlivců (dlouhodobé gold sinky) ---
+  // Rare Candy = okamžitý +1 level (respektuje level cap i MAX_LEVEL 100).
+  // PP Up/PP Max zvyšují maximální PP JEDNOHO tahu (výběr tahu je v batohu):
+  // PP Up +20 % základu za kus (max 3× = +60 %), PP Max rovnou na strop.
+  { id: "rare-candy", name: "Rare Candy", icon: "🍬", desc: "Raises a Pokémon's level by 1.", price: 4800, category: "boost", effect: { kind: "level" } },
+  { id: "pp-up", name: "PP Up", icon: "🔼", desc: "Slightly raises the max PP of a single selected move (up to 3 times).", price: 9800, category: "boost", effect: { kind: "ppUp" } },
+  { id: "pp-max", name: "PP Max", icon: "⏫", desc: "Maximizes the PP of a single selected move at once.", price: 12000, category: "boost", effect: { kind: "ppMax" } },
+
+  // --- Evoluční kameny a Linking Cord ---
+  { id: "fire-stone", name: "Fire Stone", icon: "🔥", desc: "Evolves certain Pokémon exposed to fire energy.", price: 1500, category: "evolution", evolution: true },
+  { id: "water-stone", name: "Water Stone", icon: "💧", desc: "Evolves certain Water-loving Pokémon.", price: 1500, category: "evolution", evolution: true },
+  { id: "thunder-stone", name: "Thunder Stone", icon: "⚡", desc: "Evolves certain Electric-type Pokémon.", price: 1500, category: "evolution", evolution: true },
+  { id: "leaf-stone", name: "Leaf Stone", icon: "🍃", desc: "Evolves certain Grass-type Pokémon.", price: 1500, category: "evolution", evolution: true },
+  { id: "moon-stone", name: "Moon Stone", icon: "🌙", desc: "Evolves certain Pokémon exposed to lunar energy.", price: 1500, category: "evolution", evolution: true },
+  { id: "sun-stone", name: "Sun Stone", icon: "☀️", desc: "Evolves certain Pokémon exposed to solar energy.", price: 1500, category: "evolution", evolution: true },
+  { id: "linking-cord", name: "Linking Cord", icon: "🔗", desc: "A device that evolves Pokémon which would normally evolve by trading.", price: 2000, category: "evolution", evolution: true },
+
+  // --- Held items: drží se během souboje, poskytují efekty ---
+  { id: "leftovers", name: "Leftovers", icon: "🍖", desc: "Restores a little HP each turn in battle.", price: 2000, category: "held", held: { kind: "endTurnHeal", fraction: 1/16 } },
+  { id: "oran-berry", name: "Oran Berry", icon: "🍒", desc: "When HP drops below 50%, restores 10 HP. Consumed on use.", price: 100, category: "held", effect: { kind: "heal", amount: 10 }, held: { kind: "lowHpHeal", threshold: 0.5, amount: 10 } },
+  { id: "sitrus-berry", name: "Sitrus Berry", icon: "🫐", desc: "When HP drops below 50%, restores 30 HP. Consumed on use.", price: 300, category: "held", effect: { kind: "heal", amount: 30 }, held: { kind: "lowHpHeal", threshold: 0.5, amount: 30 } },
+  { id: "focus-sash", name: "Focus Sash", icon: "🎗️", desc: "If the holder has full HP, it survives a would-be knockout with 1 HP. Consumed on use.", price: 2000, category: "held", held: { kind: "focusSash" } },
+  { id: "everstone", name: "Everstone", icon: "🪨", desc: "A held Pokémon won't evolve. If it's a breeding parent, the baby inherits its Nature.", price: 300, category: "held" },
+  { id: "destiny-knot", name: "Destiny Knot", icon: "🪢", desc: "If it's a breeding parent, the baby inherits 5 IVs instead of 3.", price: 2000, category: "held" },
+
+  // --- Fishing rods: NEprodávají se – jsou to jednorázové DÁRKY (kánon RBY).
+  //     Old Rod = Vermilion Fishing Hut, Good Rod + Super Rod = Fuchsia Fishing House
+  //     (viz storyBuildingView). `price` zůstává jen jako fallback hodnota pro prodej. ---
+  { id: "old-rod", name: "Old Rod", icon: "🎣", desc: "An old fishing rod. Reels in the most common water Pokémon.", price: 500, category: "fishing" },
+  { id: "good-rod", name: "Good Rod", icon: "🎣", desc: "A decent fishing rod. Reels in more varied water Pokémon.", price: 2500, category: "fishing" },
+  { id: "super-rod", name: "Super Rod", icon: "🎣", desc: "The finest fishing rod. Reels in the rarest water Pokémon.", price: 6000, category: "fishing" },
+
+  // --- Special: příběhové/klíčové předměty (neprodejné v Martu, jen z eventů) ---
+  // Fosílie z Mt. Moon – po vynoření na Route 4 dostaneš VŠECHNY TŘI naráz
+  // (Helix/Dome/Old Amber, viz battleSystem.applyFossilChoice; žádná volba).
+  // Oživení je hotové: Pokémon Lab na Cinnabar Island (storyBuildingView → FOSSIL_TO_SPECIES).
+  { id: "helix-fossil", name: "Helix Fossil", icon: "🐚", desc: "A fossil of an ancient sea Pokémon. It can be revived into Omanyte at the Pokémon Lab on Cinnabar Island.", price: 0, category: "special" },
+  { id: "dome-fossil", name: "Dome Fossil", icon: "🗿", desc: "A fossil of an ancient sea Pokémon. It can be revived into Kabuto at the Pokémon Lab on Cinnabar Island.", price: 0, category: "special" },
+  { id: "old-amber", name: "Old Amber", icon: "🟠", desc: "A piece of amber holding the genetic material of an ancient Pokémon. It can be revived into Aerodactyl at the Pokémon Lab on Cinnabar Island.", price: 0, category: "special" },
+
+  // Klíčové předměty z Kroku 5 (Cerulean → Vermilion).
+  { id: "ss-anne-ticket", name: "S.S. Anne Ticket", icon: "🎫", desc: "A ticket that grants passage aboard the luxury liner S.S. Anne, docked at Vermilion City.", price: 0, category: "special" },
+  { id: "hm01-cut", name: "HM01 Cut", icon: "🌿", desc: "A Hidden Machine that teaches Cut. Also used to clear small trees blocking the way.", price: 0, category: "special" },
+  { id: "hm02-fly", name: "HM02 Fly", icon: "🕊️", desc: "A Hidden Machine that teaches Fly. A powerful two-turn Flying-type attack.", price: 0, category: "special" },
+
+  // Klíčový předmět z Kroku 6 (Vermilion → Lavender).
+  { id: "hm05-flash", name: "HM05 Flash", icon: "🔦", desc: "A Hidden Machine that teaches Flash. Also lights up pitch-dark caves like Rock Tunnel.", price: 0, category: "special" },
+
+  // Klíčové předměty z Kroku 7 (Celadon → Lavender → Snorlax).
+  { id: "silph-scope", name: "Silph Scope", icon: "👁️", desc: "A device from Silph Co. that reveals the identity of ghostly Pokemon. Recovered from Team Rocket's hideout.", price: 0, category: "special" },
+  { id: "poke-flute", name: "Poke Flute", icon: "🎵", desc: "A flute whose melody wakes any sleeping Pokemon. A gift from Mr. Fuji.", price: 0, category: "special" },
+
+  // Klíčové předměty z Kroku 8 (Fuchsia City → Safari Zone → Warden's House).
+  { id: "hm03-surf", name: "HM03 Surf", icon: "🌊", desc: "A Hidden Machine that teaches Surf. Also allows riding on water with a Pokemon that knows it.", price: 0, category: "special" },
+  { id: "hm04-strength", name: "HM04 Strength", icon: "💪", desc: "A Hidden Machine that teaches Strength. Also allows pushing large boulders that block the way.", price: 0, category: "special" },
+  { id: "hm06-whirlpool", name: "HM06 Whirlpool", icon: "🌀", desc: "A Hidden Machine that teaches Whirlpool. Also lets you cross swirling whirlpools on the water.", price: 0, category: "special" },
+  { id: "hm07-waterfall", name: "HM07 Waterfall", icon: "⛲", desc: "A Hidden Machine that teaches Waterfall. Also allows climbing up waterfalls.", price: 0, category: "special" },
+  { id: "gold-teeth", name: "Gold Teeth", icon: "🦷", desc: "A precious artifact lost by the Safari Zone Warden. He will reward you handsomely for returning it.", price: 0, category: "special" },
+
+  // Klíčový předmět z Kroku 9 (Cinnabar Island → Pokémon Mansion → Gym).
+  { id: "secret-key", name: "Secret Key", icon: "🔑", desc: "A small key found in the burnt-out Pokemon Mansion. It unlocks the door to the Cinnabar Island Gym.", price: 0, category: "special" },
+
+  // Klíčový předmět z Kroku 11 (Celadon Dept Store → strážce Silph Co v Saffronu).
+  { id: "fresh-water", name: "Fresh Water", icon: "🥤", desc: "Cool, refreshing water from a Celadon vending machine. A parched guard at Silph Co. in Saffron would love one.", price: 0, category: "special" },
+
+  // Gen 2 (Johto) klíčový předmět: Squirtbottle z goldenrodského květinářství –
+  // probudí Sudowoodo blokující Route 36 (story flag hasSquirtbottle / sudowoodoCleared).
+  { id: "squirtbottle", name: "Squirtbottle", icon: "💦", desc: "A bottle for watering plants, given by the Goldenrod Flower Shop. A squirt might stir something that only looks like a tree.", price: 0, category: "special" },
+];
+
+// --- TM (Technical Machines): generované z data/tms.js ---
+// Každý TM je item kategorie "tm" (id "tm01".."tm50"), který jednorázově naučí
+// kompatibilního Pokémona daný tah (viz src/systems/tmSystem.js). Kupitelné jsou
+// jen ty s `price` (obchod filtruje price>0); zbytek se získá dropem / od gym
+// leaderů / v Game Corneru. Pole `tm` (číslo) a `move` (id tahu) drží vazbu.
+for (const tm of TMS) {
+  ITEMS.push({
+    id: tmItemId(tm.num),
+    name: tmDisplayName(tm),
+    icon: "💿",
+    desc: `Teaches ${tm.name} to a compatible Pokémon. Single use.`,
+    price: tm.price ?? 0,
+    category: "tm",
+    tm: tm.num,
+    move: tm.move,
+  });
+}
+
+/**
+ * Definice itemu podle id (nebo null).
+ * @param {string} id
+ * @returns {ItemDef|null}
+ */
+export function getItem(id) {
+  return ITEMS.find((i) => i.id === id) ?? null;
+}
+
+/** Sekce obchodu/batohu v pořadí zobrazení. */
+export const ITEM_CATEGORIES = [
+  { key: "hp", name: "Potions", icon: "🧴" },
+  { key: "status", name: "Status Heals", icon: "💊" },
+  { key: "revive", name: "Revives", icon: "✨" },
+  { key: "boost", name: "Boosts", icon: "🍬" },
+  { key: "evolution", name: "Evolution", icon: "🪨" },
+  { key: "held", name: "Held Items", icon: "💎" },
+  { key: "fishing", name: "Fishing", icon: "🎣" },
+  { key: "tm", name: "TMs", icon: "💿" },
+  // Pozn.: kategorie "special" (klíčové/příběhové itemy jako fosílie) ZÁMĚRNĚ
+  // není v tomto seznamu – Poké Mart iteruje přes ITEM_CATEGORIES, takže se
+  // neprodejné příběhové itemy v obchodě neobjeví. Batoh je ukazuje ve vlastní
+  // read-only sekci „Key Items" (viz bagView.js).
+];
+
+/**
+ * Je item drženého typu?
+ * @param {string} id
+ * @returns {boolean}
+ */
+export function isHeldItem(id) {
+  return getItem(id)?.category === "held";
+}

@@ -1,0 +1,510 @@
+/**
+ * main.js – vstupní bod aplikace.
+ *
+ * Bootstrap: načte/založí herní stav, vykreslí UI moduly a napojí je na
+ * změny stavu přes event sběrnici. Herní logika žije v systems/, data v data/.
+ */
+
+import { VERSION } from "./core/version.js";
+import { bus, EVENTS } from "./core/events.js";
+import { getState, commit } from "./core/state.js";
+import { loadGame, newGame, saveGame } from "./systems/save.js";
+import { renderMainPanel, openMainTab } from "./ui/mainPanel.js";
+import { renderTeamTab } from "./ui/teamView.js";
+import { restore as restoreBattle, getAutoBattle, getFullAuto } from "./systems/battleSystem.js";
+import { playSfx, playCry, playBgm, applyAudioSettings } from "./systems/audioSystem.js";
+import { applyOfflineProgress } from "./systems/idle.js";
+import { applyDaycareOffline, startDaycareLoop } from "./systems/daycare.js";
+import { applyEggOffline, startEggLoop } from "./systems/eggSystem.js";
+import { applyBreedingOffline, startBreedingLoop } from "./systems/breedingSystem.js";
+import { ensureStartersSeen } from "./systems/pokedex.js";
+import { hasShinyCharm } from "./systems/team.js";
+import { isNightNow } from "./systems/evolutionSystem.js";
+import { initAchievements, recordAfk, recordPlaytime, flushAchievementToasts } from "./systems/achievementSystem.js";
+import { ACHIEVEMENTS } from "../data/achievements.js";
+import { showOfflineSummary } from "./ui/offlineView.js";
+import { renderMap } from "./ui/mapView.js";
+import { renderSaveControls } from "./ui/saveControls.js";
+import { renderSettings } from "./ui/settingsView.js";
+import { initTitleScreen } from "./ui/titleScreen.js";
+import { openChangelog } from "./ui/changelogView.js";
+import { initMoveLearnPrompts } from "./ui/moveLearnView.js";
+import { startIntro } from "./ui/introScene.js";
+import { maybeStartTutorial } from "./ui/tutorial.js";
+import { showPopup } from "./ui/popup.js";
+import { showEvolutionPopup } from "./ui/evolutionPopup.js";
+import { showHatchPopup } from "./ui/hatchPopup.js";
+import { ballIconHtml } from "./ui/ballIcon.js";
+import { scrollAware, preserveWindowScroll } from "./ui/scrollPreserve.js";
+import { POKEBALLS } from "../data/pokeballs.js";
+
+/** Interval automatického ukládání (ms). */
+const AUTOSAVE_MS = 30_000;
+
+/** Bezpečně najde element podle id, jinak vyhodí srozumitelnou chybu. */
+function el(id) {
+  const node = document.getElementById(id);
+  if (!node) throw new Error(`Chybí element #${id} v index.html`);
+  return node;
+}
+
+/** Navede nového hráče (po intru / bez startéra) do Oakovy laboratoře v Pallet
+ *  Townu, kde teprve dostane svého prvního Pokémona. Otevře záložku City, aby
+ *  na Oakovu laboratoř rovnou viděl. */
+function guideToOakLab() {
+  showPopup({
+    title: "Your adventure awaits",
+    body:
+      "Professor Oak has hurried back to his Lab in <strong>Pallet Town</strong>. " +
+      "Head over to <strong>Oak's Lab</strong> to receive your very first Pokémon!",
+    okLabel: "Head to the Lab",
+    onOk: () => openMainTab("city"),
+  });
+}
+
+/** Mapování klíčů pořadí na ID panelů. */
+const PANEL_BY_KEY = { tabs: "team-panel", battle: "main-panel", map: "map-panel" };
+
+/** Promítne rozvržení z nastavení: režim do body[data-layout] + pořadí panelů
+ *  (inline `order`, projeví se jen ve skládaném/flex režimu; v grid režimu je order ignorován). */
+function applyLayout() {
+  const s = getState().settings ?? {};
+  document.body.dataset.layout = s.layout ?? "auto";
+  const order = Array.isArray(s.stackOrder) ? s.stackOrder : ["battle", "map", "tabs"];
+  order.forEach((key, i) => {
+    const node = document.getElementById(PANEL_BY_KEY[key]);
+    if (node) node.style.order = String(i);
+  });
+}
+
+/** Krátká stavová hláška v horní liště. */
+function setStatus(msg) {
+  el("status").textContent = msg;
+}
+
+/**
+ * Rozpis Poké Ballů podle typu pro tooltip pod ikonou v horní liště.
+ * Ukáže jen vlastněné typy (count > 0), jinak pobídku k nákupu.
+ */
+function ballsTooltipHtml(balls) {
+  const owned = POKEBALLS.filter((ball) => (balls[ball.id] ?? 0) > 0);
+  const rows = owned.length
+    ? owned
+        .map(
+          (ball) =>
+            `<span class="ball-row">${ballIconHtml(ball.id, { size: 16 })}
+               <span class="ball-row-name">${ball.name}</span>
+               <span class="ball-row-count">×${balls[ball.id]}</span>
+             </span>`
+        )
+        .join("")
+    : `<span class="placeholder">No Poké Balls — buy some in the Poké Mart.</span>`;
+  return `<div class="ball-tooltip">
+      <div class="ball-tooltip-title">Poké Balls</div>
+      ${rows}
+    </div>`;
+}
+
+/**
+ * Ikonka itemu z `assets/items/<file>.png`. Když sprite ještě není nahraný,
+ * `onerror` ho nahradí emoji fallbackem (hra funguje i bez spritů). Jakmile
+ * uživatel soubor přidá se správným názvem, ikonka se použije automaticky.
+ */
+function itemIconHtml(file, emoji) {
+  return `<img class="icon res-item-img" src="assets/items/${file}.png" alt="" onerror="this.outerHTML='<span class=&quot;icon&quot;>${emoji}</span>'">`;
+}
+
+/** Vykreslí zdrojovou lištu z reálného herního stavu. */
+function renderResourceBar(root) {
+  const s = getState();
+  const balls = s.resources.balls ?? {};
+  const totalBalls = Object.values(balls).reduce((a, b) => a + b, 0);
+  const items = [
+    {
+      icon: "👤",
+      label: "Profile",
+      value: s.player?.name ?? "Trainer",
+      // Klik otevře záložku Profile (trainer card) v hlavním panelu.
+      action: "profile",
+    },
+    { icon: "💰", label: "Gold", value: s.resources.gold },
+    {
+      iconHtml: ballIconHtml("poke", { size: 18 }),
+      label: "Poké Balls",
+      value: totalBalls,
+      // Přehled kolik a jakých míčků mám – ukáže se po najetí myší na ikonu.
+      tooltipHtml: ballsTooltipHtml(balls),
+    },
+    {
+      icon: "🏆",
+      label: "Achievements",
+      value: `${Object.keys(s.achievements?.unlocked ?? {}).length}/${ACHIEVEMENTS.length}`,
+      // Klik otevře záložku Achievements v hlavním panelu.
+      action: "achievements",
+    },
+    { icon: "🥚", label: "Eggs", value: (s.eggs ?? []).length },
+  ];
+  // Hodiny + denní doba. Od v1.34.0 ovlivňuje den/noc evoluce (Espeon/Umbreon) i
+  // některé spawny, tak ať hráč vidí, kolik je a jaká fáze zrovna běží. Čas je
+  // reálný systémový (new Date()); Noc 18:00–05:59, Den 06:00–17:59 (viz isNightNow).
+  {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, "0");
+    const mm = String(now.getMinutes()).padStart(2, "0");
+    const night = isNightNow();
+    items.push({
+      icon: night ? "🌙" : "☀️",
+      label: `${night ? "Night" : "Day"} — ${hh}:${mm} · Day 06:00–17:59, Night 18:00–05:59 (affects some evolutions & spawns)`,
+      value: `${hh}:${mm}`,
+      extraClass: `clock-indicator ${night ? "night" : "day"}`,
+    });
+  }
+  // Pokédex se v liště ukáže až když ho hráč od Oaka dostal (odevzdání Parcelu).
+  // Do té doby je skrytý – vloží se hned za Poké Bally (index 3), ať drží pořadí.
+  if (s.story?.oakParcelDelivered) {
+    items.splice(3, 0, {
+      icon: "📕",
+      iconHtml: itemIconHtml("pokedex", "📕"),
+      label: "Pokédex",
+      value: s.collection.length,
+      // Klik otevře záložku Pokédex v levém panelu.
+      action: "pokedex",
+    });
+  }
+  // EXP Share přepínač – ukáže se JEN po odevzdání Parcelu Oakovi (dárek spolu
+  // s Pokédexem). Klik přepíná settings.expShareActive (ON = 20 % XP i lavičce).
+  // Vloží se hned ZA Pokédex (index 4), ať jsou oba Oakovy dárky pohromadě.
+  if (s.story?.oakParcelDelivered) {
+    const on = s.settings?.expShareActive !== false; // default ON
+    items.splice(4, 0, {
+      icon: "🔗",
+      iconHtml: itemIconHtml("exp-share", "🔗"),
+      label: `EXP Share — ${on ? "ON (+20% to bench)" : "OFF"} · click to toggle`,
+      value: on ? "ON" : "OFF",
+      action: "exp-share",
+      extraClass: `exp-share-toggle ${on ? "on" : "off"}`,
+    });
+  }
+  // Shiny Charm přepínač – ukáže se JEN když ho hráč vlastní PRO AKTUÁLNÍ REGION
+  // (charm je regionální, odměna za kompletní dex daného regionu). Po přechodu do
+  // Johta kantský charm zmizí z lišty, dokud nezískáš johtský. Klik přepíná
+  // settings.shinyCharmActive. Vloží se hned ZA EXP Share (index 5), ať jsou spolu.
+  if (hasShinyCharm()) {
+    const active = s.settings?.shinyCharmActive !== false;
+    items.splice(5, 0, {
+      icon: "✨",
+      iconHtml: itemIconHtml("shiny-charm", "✨"),
+      label: `Shiny Charm — ${active ? "ON (×3 shiny)" : "OFF"} · click to toggle`,
+      value: active ? "ON" : "OFF",
+      action: "shiny-charm",
+      extraClass: `shiny-charm-toggle ${active ? "on" : "off"}`,
+    });
+  }
+  root.innerHTML = items
+    .map(
+      (r) => `<span class="resource${r.tooltipHtml ? " has-tooltip" : ""}${r.action ? " resource-clickable" : ""}${r.extraClass ? ` ${r.extraClass}` : ""}"${r.action ? ` data-action="${r.action}" role="button" tabindex="0"` : ""}${r.tooltipHtml ? "" : ` title="${r.label}"`}>
+                ${r.iconHtml ?? `<span class="icon">${r.icon}</span>`}
+                <span class="value">${r.value}</span>
+                ${r.tooltipHtml ?? ""}
+              </span>`
+    )
+    .join("");
+
+  // Klikatelné položky lišty (Profile a Pokédex → otevřou svou záložku).
+  root.querySelectorAll(".resource-clickable").forEach((node) => {
+    const open = () => {
+      if (node.dataset.action === "pokedex") openMainTab("pokedex");
+      else if (node.dataset.action === "profile") openMainTab("profile");
+      else if (node.dataset.action === "achievements") openMainTab("achievements");
+      else if (node.dataset.action === "shiny-charm") {
+        // Přepni aktivitu Shiny Charmu (vlastnictví řeší hasShinyCharm() per-region,
+        // tady jen zap/vyp). commit() překreslí lištu a projeví se ve spawnu/breedingu.
+        const st = getState();
+        if (!st.settings || typeof st.settings !== "object") st.settings = {};
+        st.settings.shinyCharmActive = st.settings.shinyCharmActive === false;
+        commit();
+      } else if (node.dataset.action === "exp-share") {
+        // Přepni EXP Share (ON = lavička dostává 20 % XP z výher aktivního mona).
+        const st = getState();
+        if (!st.settings || typeof st.settings !== "object") st.settings = {};
+        st.settings.expShareActive = st.settings.expShareActive === false;
+        commit();
+      }
+    };
+    node.addEventListener("click", open);
+    node.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        open();
+      }
+    });
+  });
+}
+
+/** Inicializace hry. */
+function init() {
+  // 1) Načíst uloženou hru, jinak založit novou. Nečitelný save se nepřepíše
+  // naslepo – save.js ho odloží do zálohy (obnova přes 🗂️ Backups).
+  let loaded = false;
+  const load = loadGame();
+  if (load.status === "loaded") {
+    loaded = true;
+    setStatus(load.notice ?? "Game loaded");
+  } else {
+    newGame();
+    if (load.status === "legacy") {
+      setStatus("New game – the game was rebuilt, old save kept as backup");
+      alert("The game has been rebuilt from scratch, so progress from the old version cannot be continued.\n\n" +
+        "Your old save was kept as a backup (Backups → Download).");
+    } else if (load.status === "unreadable") {
+      setStatus("Save could not be loaded – backup kept, new game started");
+      alert("Your saved game could not be loaded, so a new game was started.\n\n" +
+        "Nothing was lost: the old save was kept as a backup. You can restore it any time via Backups.");
+    } else {
+      setStatus("New game");
+    }
+  }
+
+  // 1a) Startéry jsou vždy „viděné" (potkali jsme je na výběrové obrazovce) –
+  // dorovná i starší rozehrané save, které je ještě nemá v Pokédexu.
+  if (getState().collection.length > 0) ensureStartersSeen();
+
+  // 1b) Offline (idle) progres – POČÍTÁ SE Z ULOŽENÉHO SNÍMKU souboje,
+  // proto ještě před restore (ten by běh souboje přepsal na pauzu).
+  // Elapsed čteme jednou (saveGame níže resetne lastSaved).
+  let elapsedSec = 0;
+  let offlineBattle = null;
+  let offlineDaycare = null;
+  let offlineEgg = null;
+  let offlineBred = null;
+  // Čas dokončení bootu = konec „offline" období počítaného hned níže. Doba od
+  // teď do proklikání title screenu (6d) se u vajec/breedingu dopočte navíc,
+  // ať title screen „nezmrazí" reálný čas (2 h = 2 h IRL i s otevřenou úvodní obrazovkou).
+  const bootTs = Date.now();
+  if (loaded) {
+    const elapsedMs = bootTs - getState().meta.lastSaved;
+    elapsedSec = Math.floor(elapsedMs / 1000);
+    offlineBattle = applyOfflineProgress(getState().battle, elapsedMs);
+    offlineDaycare = applyDaycareOffline(elapsedMs);
+    // Breeding vyprodukuje vejce PŘED inkubací, ať se čerstvá vejce mohou hned
+    // dál dopočítat (nezačnou inkubovat sama, ale ať je pořadí předvídatelné).
+    offlineBred = applyBreedingOffline(elapsedMs);
+    offlineEgg = applyEggOffline(elapsedMs);
+  }
+
+  // 2) Vykreslit panely. renderMainPanel postaví i battle podpanel (nutné před
+  // restoreBattle, které do něj obnoví rozehraný souboj).
+  renderMainPanel(el("main-panel"), setStatus);
+  renderTeamTab(el("team-panel"), setStatus);
+  renderMap(el("map-panel"));
+  applyLayout();
+
+  // 2b) Obnovit rozehraný souboj ze save (pozastavený) – „přímý save”:
+  // po F5 zůstane HP i nepřítel zachovaný, souboj se jen pozastaví.
+  // (Case offline: hráč už má případný level-up z idle, restore ho zohlední.)
+  restoreBattle(getState().battle);
+
+  // 3) Ovládání save + globální nastavení + zdrojová lišta.
+  renderSaveControls(el("save-controls"), setStatus);
+  renderSettings(el("settings-controls"));
+  renderResourceBar(el("resource-bar"));
+
+  // 4) UI reaguje na změny stavu (oddělení logiky od UI).
+  // Levý panel obsahuje scrollovací seznamy (tým/PC/pokédex) → jeho překreslení
+  // odložíme během aktivního scrollování, ať kolečko neseká (viz scrollAware).
+  // Resource bar (zlato) není scrollovací, ať zůstane živý, necháváme napřímo.
+  const renderPanel = scrollAware(() =>
+    preserveWindowScroll(() => {
+      renderMainPanel(el("main-panel"), setStatus);
+      renderTeamTab(el("team-panel"), setStatus);
+    })
+  );
+  bus.on(EVENTS.STATE_CHANGED, () => {
+    applyLayout();
+    renderResourceBar(el("resource-bar"));
+    renderPanel();
+  });
+
+  // 5) Automatické ukládání a uložení při zavření karty.
+  setInterval(saveGame, AUTOSAVE_MS);
+  window.addEventListener("beforeunload", saveGame);
+  // Hodiny v liště běží na reálném čase → osvěžuj resource bar i bez změny stavu,
+  // ať minuty tikají a fáze den/noc se přepne krátce po hranici (18:00 / 06:00).
+  setInterval(() => renderResourceBar(el("resource-bar")), 30_000);
+  // Idle smyčky (pasivní výcvik / inkubace vajec / breeding) spouštíme až PO
+  // proklikání title screenu (viz 6d) – jinak by živě vylíhnuté vejce (nebo jiná
+  // událost) vyskočilo POD úvodní obrazovkou. Do té doby je vše dopočtené offline.
+  initAchievements();
+
+  // Achievementy: délka právě proběhlé offline pauzy (He Went To Get Milk…).
+  if (loaded && elapsedSec > 0) recordAfk(elapsedSec);
+  // Achievementy: kumulativní odehraný čas – tik po minutě (commit uvnitř).
+  setInterval(() => recordPlaytime(60), 60_000);
+
+  // Zvuky a BGM: napojení na event sběrnici.
+  bus.on(EVENTS.BATTLE_HIT, () => {
+    if (!getAutoBattle() && !getFullAuto()) playSfx("hit");
+  });
+  bus.on(EVENTS.BATTLE_FAINT, (p) => {
+    if (!getAutoBattle() && !getFullAuto()) {
+      playSfx("faint");
+      if (p?.speciesId) playCry(p.speciesId); // cry padlého Pokémona
+    }
+  });
+  // Cry divokého/statického Pokémona při vstupu do souboje (v auto režimu ticho).
+  bus.on(EVENTS.WILD_APPEARED, (p) => {
+    if (!getAutoBattle() && !getFullAuto() && p?.speciesId) playCry(p.speciesId);
+  });
+  bus.on(EVENTS.POKEMON_CAUGHT, () => playSfx("catch"));
+  bus.on(EVENTS.LEVEL_UP, () => playSfx("levelup"));
+  bus.on(EVENTS.EGG_HATCHED, () => {
+    playSfx("hatch"); // cry vylíhnutého Pokémona zazní až při odhalení v popupu
+  });
+
+  // Vejce vylíhnuté při běžící hře: krátká hláška v liště + animované vyskakovací
+  // okno „co se vylíhlo" se statistikami (jako u evoluce). Víc vajec naráz se ve
+  // hatchPopup.js frontuje, takže si je hráč odklikává jedno po druhém. Offline
+  // vylíhnutá vejce sem nechodí (applyEggOffline neemituje EGG_HATCHED) – jejich
+  // reveal popupy spouští title-screen callback po zavření offline souhrnu (6d).
+  bus.on(EVENTS.EGG_HATCHED, (r) => {
+    setStatus(`🥚 Egg hatched: ${r.name}${r.shiny ? " ✨" : ""} (Lv ${r.level})`);
+    showHatchPopup(r);
+  });
+
+  // Vejce vyprodukované breedingem při běžící hře: krátká hláška (druh skrytý).
+  bus.on(EVENTS.EGG_BRED, () => {
+    setStatus("💞 The Day Care couple produced an egg!");
+  });
+
+  // Evoluce (tlačítko v týmu/na kartě NEBO evoluční kámen/trade v Bagu): krátká
+  // hláška v liště + vyskakovací okno „X → Y" se sprity, ať je jasně vidět, že se
+  // Pokémon vyvinul. Centrálně tu, takže platí pro VŠECHNY cesty evoluce naráz
+  // (evolvePokemon / evolveWithItem / evolveByTrade emitují týž event) i v tutoriálu.
+  bus.on(EVENTS.POKEMON_EVOLVED, (e) => {
+    playSfx("evolve");
+    setStatus(`✨ ${e.fromName} evolved into ${e.toName}!`);
+    showEvolutionPopup(e);
+  });
+
+  // Příběhové vyskakovací okno na žádost systémové vrstvy (např. po poražení
+  // Brocka). NIKDY nedáváme takový text pod mapu – vždy do popupu (viz popup.js).
+  bus.on(EVENTS.STORY_POPUP, (p) => {
+    if (p) showPopup(p);
+  });
+
+  // 6) Offline zisky jsou už APLIKOVÁNY na stav (výše); hned ulož (reset
+  // lastSaved → žádné dvojí počítání). Uživatelský SOUHRN se ale ukáže až po
+  // Continue (title screen je brána – viz 6d), ať se nevynoří pod úvodní
+  // obrazovkou. Krátká hláška v liště je pod overlayem, takže nevadí.
+  const hasOffline = !!(offlineBattle || offlineDaycare || offlineEgg || offlineBred);
+  if (hasOffline) {
+    saveGame();
+    const parts = [];
+    if (offlineBattle) parts.push(`battle +${offlineBattle.xp} XP, +${offlineBattle.gold} gold`);
+    if (offlineDaycare) parts.push(`day care +${offlineDaycare.xp} XP`);
+    if (offlineEgg) parts.push(`hatched ${offlineEgg.length} egg${offlineEgg.length > 1 ? "s" : ""}`);
+    if (offlineBred) parts.push(`bred ${offlineBred.length} egg${offlineBred.length > 1 ? "s" : ""}`);
+    setStatus(`Offline: ${parts.join(" · ")}`);
+  }
+
+  // 6d) Úvodní obrazovka (title screen) = BRÁNA do hry. Overlay leží nad vším a
+  // teprve po Continue se spustí VIDITELNÉ věci: offline souhrn, nabídky
+  // naučení tahu (fronta z offline) a výběr startéra u nové hry. Do té doby
+  // vidí hráč jen title screen (SETTINGS jde otevřít i z něj).
+  initTitleScreen(() => {
+    // Spusť BGM po vstupu do hry (respektuj autoplay policy: až po akci uživatele).
+    playBgm("main");
+
+    // Teď je hráč „ve hře": otevři bránu achievement toastů (vyprázdní ty, co se
+    // odemkly už při načtení / z offline pauzy) a rozjeď idle smyčky. Vše
+    // viditelné se tak ukáže až tady, po Continue – nikdy pod title screenem.
+    flushAchievementToasts();
+
+    // Dopočítej dobu strávenou na TITLE SCREENU (boot → Continue). Idle smyčky
+    // ještě neběží, takže hráč je pořád „mimo hru" – u vajec (a breedingu, který
+    // vejce plodí) to musí běžet na reálný čas. Děláme to JEŠTĚ před startem
+    // živých smyček, aby se stejný úsek nezapočítal dvakrát. Souboje/day care
+    // jsou beztak stropnuté odhady, dwell u nich neřešíme.
+    if (loaded) {
+      const dwellMs = Date.now() - bootTs;
+      if (dwellMs >= 1000) {
+        const dwellBred = applyBreedingOffline(dwellMs); // bred před egg (jako při bootu)
+        const dwellEgg = applyEggOffline(dwellMs);
+        if (dwellBred) offlineBred = offlineBred ? offlineBred.concat(dwellBred) : dwellBred;
+        if (dwellEgg) offlineEgg = offlineEgg ? offlineEgg.concat(dwellEgg) : dwellEgg;
+        if (dwellBred || dwellEgg) {
+          elapsedSec += Math.floor(dwellMs / 1000); // souhrn ukáže i čas na title screenu
+          saveGame(); // ať se dwell přírůstek neztratí při okamžitém pádu
+        }
+      }
+    }
+
+    startDaycareLoop();
+    startEggLoop();
+    startBreedingLoop();
+
+    // Reveal popup za KAŽDÉ offline vylíhnuté vejce (fronta v hatchPopup je
+    // odklikáváš jedno po druhém) – stejný zážitek jako u živého líhnutí, jen
+    // odložený za title screen / offline souhrn. Vylíhnutá vejce se ZÁMĚRNĚ
+    // neukazují v offline souhrnu (byla by to dvojí informace) – jen tady.
+    const revealEggs = () => {
+      if (offlineEgg) for (const h of offlineEgg) showHatchPopup(h);
+    };
+
+    // Souhrn ukazujeme jen kvůli battle/day care/nově sneseným vejcím (bred).
+    // Vylíhnutá vejce (egg) do rozhodnutí nepočítáme – ta mají vlastní popupy.
+    // (dwell výše mohl vejce vylíhnout, i když při bootu nebylo co hlásit.)
+    const showSummary = !!(offlineBattle || offlineDaycare || offlineBred);
+    if (showSummary) {
+      showOfflineSummary(
+        {
+          elapsedSec,
+          battle: offlineBattle,
+          daycare: offlineDaycare,
+          bred: offlineBred,
+        },
+        revealEggs // reveal vajec po zavření souhrnu
+      );
+    } else {
+      revealEggs(); // žádný souhrn → rovnou odhal vejce
+    }
+    // Nabídky naučení tahu (plné sloty) – sleduje frontu i položky z offline.
+    initMoveLearnPrompts();
+    // Nová hra: nejdřív krátké intro + pojmenování hráče i rivala. Startera si
+    // hráč NOVĚ vybírá až v Oakově laboratoři (dojde tam po mapě), NE hned v intru.
+    // Po intru (a stejně tak u rozehrané hry bez startéra) hráče jen navedeme do
+    // Oakovy laboratoře. Rozehraná hra se startérem intro i navedení přeskočí.
+    const st = getState();
+    if (st.collection.length === 0 && !st.player?.rivalName) {
+      startIntro(() => maybeStartTutorial(guideToOakLab));
+    } else if (st.collection.length === 0) {
+      maybeStartTutorial(guideToOakLab);
+    }
+  });
+
+  // Globální click handler na UI zvuky (tlačítka).
+  document.addEventListener("click", (e) => {
+    if (e.target.closest("button, .btn")) playSfx("click");
+  });
+
+  // Indikator nacitani na title screenu → hotovo (hra je pod overlayem pripravena).
+  const titleLoading = document.getElementById("title-loading");
+  if (titleLoading) {
+    titleLoading.classList.add("is-ready");
+    const readyText = titleLoading.querySelector(".title-loading-text");
+    if (readyText) readyText.textContent = "Ready – click to enter";
+  }
+
+  const versionTag = el("version-tag");
+  versionTag.textContent = `Pokémon Idle RPG · v${VERSION}`;
+  versionTag.title = "Show changelog";
+  versionTag.classList.add("clickable");
+  versionTag.addEventListener("click", openChangelog);
+  console.log(`[Pokémon Idle RPG] v${VERSION} – inicializováno.`);
+}
+
+if (document.readyState === "loading") {
+  document.addEventListener("DOMContentLoaded", init);
+} else {
+  init();
+}

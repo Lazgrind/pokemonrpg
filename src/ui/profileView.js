@@ -1,0 +1,176 @@
+/**
+ * profileView.js – záložka „Profile" (trainer card).
+ *
+ * Přehled hráče na jednom místě (jako trainer card ve hrách): jméno, badge case
+ * (8 slotů odznaků – získané barevné, chybějící ztmavené), souhrn Pokédexu,
+ * peníze, odehraný čas a pár statistik. Žádná herní logika – jen čte `state`.
+ *
+ * Data: `state.player.name`, `state.resources.gold`, `state.progress.badges`,
+ * `state.collection` (shiny), `dexCounts()` (chyceno/celkem), `state.meta.createdAt`
+ * (odehraný čas). Odznaky definuje data/badges.js; ikona = assets/gen<N>/badges/<id>.png
+ * (chybí-li, ukáže se glyf-fallback; N = generace). Scroll přežije překreslení (scrollPreserve).
+ */
+
+import { getState, commit } from "../core/state.js";
+import { dexCounts, dexCountsByGen, getPokedex } from "../systems/pokedex.js";
+import { BADGES } from "../../data/badges.js";
+import { saveScroll, restoreScroll } from "./scrollPreserve.js";
+import { showDiplomaModal } from "./diploma.js";
+import { getSpecies } from "../../data/pokemon.js";
+import { badgeUrl } from "../core/assets.js";
+import { hasShinyCharm, hasDexDiploma } from "../systems/team.js";
+import { generationByRegion } from "../../data/generations.js";
+
+/** ms → „Xd Yh" / „Yh Zm" / „Zm" (odehraný čas). */
+function formatPlaytime(ms) {
+  const totalMin = Math.max(0, Math.floor(ms / 60000));
+  const d = Math.floor(totalMin / 1440);
+  const h = Math.floor((totalMin % 1440) / 60);
+  const m = totalMin % 60;
+  if (d > 0) return `${d}d ${h}h`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+/** Jeden slot badge case (získaný vs. zamčený). */
+function badgeSlotHtml(badge, earned) {
+  return `<div class="badge-slot ${earned ? "earned" : "locked"}" title="${badge.name} · ${badge.leader}">
+    <span class="badge-icon-wrap">
+      <img src="${badgeUrl(badge.id)}" alt="${badge.name}" class="badge-icon" onerror="this.remove()">
+      <span class="badge-fallback">${earned ? "◆" : "◇"}</span>
+    </span>
+    <span class="badge-label">${earned ? badge.name : "???"}</span>
+  </div>`;
+}
+
+/** Řádek statistiky (label + hodnota). */
+function statRow(label, value) {
+  return `<div class="profile-stat"><span class="ps-label">${label}</span><span class="ps-value">${value}</span></div>`;
+}
+
+/** Sekce Hall of Fame — historie týmů, které pokořily Ligu (nejnovější nahoře). */
+function renderHallOfFame(state) {
+  const hof = Array.isArray(state.hallOfFame) ? state.hallOfFame : [];
+  if (hof.length === 0) return "";
+  const entries = hof
+    .map((entry, i) => ({ entry, num: i + 1 }))
+    .reverse()
+    .map(({ entry, num }) => {
+      const date = entry.timestamp ? new Date(entry.timestamp).toLocaleDateString() : "";
+      const team = (entry.team ?? [])
+        .map((p) => {
+          const name = p.nickname || getSpecies(p.speciesId)?.name || p.speciesId;
+          return `<span class="hof-mon">${p.shiny ? "✨ " : ""}${name} <span class="hof-lv">Lv ${p.level}</span></span>`;
+        })
+        .join("");
+      return `<div class="hof-entry">
+        <div class="hof-entry-head"><span class="hof-rank">🏆 #${num}</span><span class="hof-date">${date}</span></div>
+        <div class="hof-team">${team}</div>
+      </div>`;
+    })
+    .join("");
+  return `
+    <h3 class="profile-subtitle">Hall of Fame <span class="dex-count">${hof.length}</span></h3>
+    <div class="hof-list">${entries}</div>
+  `;
+}
+
+/**
+ * Vykreslí záložku Profile.
+ * @param {HTMLElement} root
+ * @param {(msg: string) => void} onStatus
+ */
+export function renderProfileTab(root, onStatus = () => {}) {
+  const s = getState();
+  const { caught, total } = dexCounts();
+  const seen = getPokedex().seen.length;
+  const badges = s.progress?.badges ?? [];
+  const shiny = s.collection.filter((p) => p.shiny).length;
+  const playtime = formatPlaytime(Date.now() - (s.meta?.createdAt ?? Date.now()));
+
+  // Shiny Charm i Dex Diploma jsou REGIONÁLNÍ (per-gen) – zobrazujeme stav pro
+  // aktivní region. Dokončení = dex té generace, profesor = kdo diplom uděluje.
+  const region = s.progress?.region ?? "kanto";
+  const regionGen = generationByRegion(region)?.gen ?? 1;
+  const regionDex = dexCountsByGen()[regionGen] ?? { caught: 0, total: 0 };
+  const regionLabel = region === "johto" ? "Johto" : "Kanto";
+  const diplomaNpcLine = region === "johto"
+    ? "See Prof. Elm in New Bark Town"
+    : "See Prof. Oak in Pallet Town";
+  const charmOwned = hasShinyCharm(region);
+  const diplomaOwned = hasDexDiploma(region);
+  const regionDexComplete = regionDex.total > 0 && regionDex.caught >= regionDex.total;
+
+  const _savedScroll = saveScroll(root);
+  root.innerHTML = `
+    <h2 class="panel-title">Profile</h2>
+    <div class="card profile-head">
+      <div class="profile-name" data-rename title="Click to rename">
+        <span class="pn-text">${s.player?.name ?? "Trainer"}</span>
+        <span class="pn-edit">✎</span>
+      </div>
+      <div class="profile-stats">
+        ${statRow("Pokédex", `${caught} / ${total} caught`)}
+        ${statRow("Seen", `${seen}`)}
+        ${statRow("Badges", `${badges.length} / ${BADGES.length}`)}
+        ${statRow("Shiny caught", `${shiny}`)}
+        ${statRow(
+          `Shiny Charm (${regionLabel})`,
+          charmOwned
+            ? s.settings?.shinyCharmActive !== false
+              ? "✨ Active (×3 shiny)"
+              : "✨ Owned (off)"
+            : "—"
+        )}
+        ${
+          diplomaOwned
+            ? statRow(`Dex Diploma (${regionLabel})`, "🎓 Earned")
+            : regionDexComplete
+              ? statRow(`Dex Diploma (${regionLabel})`, diplomaNpcLine)
+              : ""
+        }
+        ${statRow("Gold", `${s.resources?.gold ?? 0} G`)}
+        ${statRow("Coins", `${s.resources?.coins ?? 0} 🪙`)}
+        ${statRow("Play time", playtime)}
+      </div>
+      ${
+        diplomaOwned
+          ? `<div class="profile-diploma-action">
+               <button class="btn" data-view-diploma>🎓 View / Download ${regionLabel} Diploma</button>
+             </div>`
+          : ""
+      }
+    </div>
+
+    <h3 class="profile-subtitle">Badge Case <span class="dex-count">${badges.length} / ${BADGES.length}</span></h3>
+    <div class="badge-case">
+      ${BADGES.map((b) => badgeSlotHtml(b, badges.includes(b.id))).join("")}
+    </div>
+
+    ${renderHallOfFame(s)}
+  `;
+  restoreScroll(root, _savedScroll);
+
+  // Přejmenování hráče (klik na jméno → prompt).
+  const nameEl = root.querySelector("[data-rename]");
+  if (nameEl) {
+    nameEl.addEventListener("click", () => {
+      const current = getState().player?.name ?? "Trainer";
+      const val = window.prompt("Trainer name:", current);
+      if (val == null) return; // zrušeno
+      const trimmed = val.trim();
+      if (!trimmed || trimmed === current) return;
+      const st = getState();
+      if (!st.player) st.player = { name: trimmed };
+      else st.player.name = trimmed;
+      commit(); // → STATE_CHANGED → překreslení
+      onStatus("Trainer name updated");
+    });
+  }
+
+  // Diplom: znovu ukázat vizuálně + nabídnout stažení PNG (dostupné kdykoli po zisku).
+  const diplomaBtn = root.querySelector("[data-view-diploma]");
+  if (diplomaBtn) {
+    diplomaBtn.addEventListener("click", () => showDiplomaModal(getState(), { region }));
+  }
+}

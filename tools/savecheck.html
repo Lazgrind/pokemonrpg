@@ -1,0 +1,18 @@
+<!doctype html>
+<!--
+  savecheck.html – testy kompatibility savů (tools/savecheck.js) v prohlížeči.
+  Běžně se spouští `python tools/savecheck.py` (Node); tahle stránka je ruční
+  varianta: `python -m http.server` → http://localhost:8000/tools/savecheck.html
+  POZOR: maže localStorage svého originu (localhost:port) – hru tam nehraj.
+-->
+<html lang="cs">
+<head><meta charset="utf-8"><title>savecheck</title></head>
+<body>
+<pre id="result">RUNNING</pre>
+<script type="module">
+import { runSaveChecks } from "./savecheck.js";
+const { lines } = await runSaveChecks();
+document.getElementById("result").textContent = lines.join("\n");
+</script>
+</body>
+</html>

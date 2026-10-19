@@ -1,0 +1,216 @@
+/**
+ * state.js – jádro herního stavu (jeden zdroj pravdy).
+ *
+ * Stav je běžný JS objekt. Systémy ho čtou přes getState() a mění přes
+ * commit()/setState(), což vyvolá událost STATE_CHANGED pro UI.
+ *
+ * @typedef {Object} MoveSlot
+ * @property {string} id     id tahu (data/moves.js)
+ * @property {number} pp     aktuální PP (počet zbývajících použití)
+ * @property {number} maxPp  maximální PP tohoto slotu (základ z tahu; budoucí PP Up ho zvýší)
+ *
+ * @typedef {Object} StatSpread
+ * @property {number} hp
+ * @property {number} attack
+ * @property {number} defense
+ * @property {number} spAttack
+ * @property {number} spDefense
+ * @property {number} speed
+ *
+ * @typedef {Object} OwnedPokemon
+ * @property {string} uid        unikátní id konkrétního jedince
+ * @property {string} speciesId  odkaz do data/pokemon.js
+ * @property {number} level
+ * @property {number} xp
+ * @property {number} hp         aktuální HP jedince (trvalé; 0 = vyřazený, léčí se v Poké Centru)
+ * @property {MoveSlot[]} moves  naučené tahy (max 4), z learnsetu; PP se spotřebovává v boji
+ * @property {{ kind: "poison"|"burn"|"paralysis" }|null} status  trvalý stavový efekt
+ *                                     (přežije výměnu i refresh; čistí ho až léčení – viz healTeam/healStatus)
+ * @property {StatSpread} ivs    Individual Values (0–31 na stat), pevné při vzniku
+ * @property {StatSpread} evs    Effort Values (0–252 na stat, max 510), z tréninku
+ * @property {string} nature     povaha (id z data/natures.js): +10 % jeden stat, −10 % jiný (nikdy HP)
+ * @property {boolean} shiny     vzácná barevná varianta (kosmetika)
+ * @property {string|null} caughtBall  id Poké Ballu, ve kterém byl chycen
+ *                                     (null = dar/vylíhnutý – žádný ball)
+ * @property {"m"|"f"|"genderless"} gender  pohlaví jedince (dle genderRatio druhu)
+ * @property {string|null} heldItem  id drženého itemu (held item) nebo null
+ * @property {number} [friendship]  přátelství 0–255 (kanon base 70); roste level-upem
+ *                                  a řídí happiness evoluce (Golbat→Crobat…). Staré
+ *                                  save bez pole se čtou s výchozí hodnotou (viz evolutionSystem).
+ * @property {string} [caughtRegion]  region, kde jedinec vznikl ("kanto"/"johto"…).
+ *                                  Řídí region-lock v boji (team.canBattleInRegion):
+ *                                  v Johtu smí bojovat jen jedinci chycení v Johtu.
+ *
+ * @typedef {Object} GameState
+ * @property {number} saveVersion
+ * @property {number} saveEpoch   generace hry (SAVE_EPOCH); save z jiné epochy se nenačítá
+ * @property {{ createdAt: number, lastSaved: number, gameVersion?: string }} meta  gameVersion = verze hry,
+ *   která save naposledy uložila (doplňuje saveGame; po aktualizaci hry spouští zálohu)
+ * @property {{ name: string, rivalName?: string, starterId?: string }} player  jméno trenéra,
+ *   jméno rivala (zvolené v intru, drží se celý playthrough) a id zvoleného startéra
+ * @property {Record<string, boolean>} [story]  jednorázové příběhové flagy (např. momGift = vzal dárek od mámy)
+ * @property {{ gold: number, balls: Record<string, number>, items: Record<string, number> }} resources  balls/items: id → počet
+ * @property {OwnedPokemon[]} collection
+ * @property {string[]} team         uid jedinců v týmu (max 6)
+ * @property {Array<{ name: string, slots: Array<string|null> }>} pcBoxes  PC boxy: úložiště
+ *                                     jedinců mimo tým; každý box = PC_BOX_SIZE slotů (uid | null).
+ *                                     Uspořádání drží hráč (drag & drop); pcSystem.reconcile()
+ *                                     zaručí, že každý vlastněný jedinec mimo tým je právě v 1 slotu.
+ * @property {Array<{ id: string, speciesId: string }>} eggs  nalezená vejce (líhnou se ve Školce)
+ * @property {{ tier: number, region: string, activeAreaId: string, visited: string[], badges: string[], defeatedTrainers: string[], leagueActive?: boolean, leagueStep?: number }} progress  postup světem:
+ *   tier (odemyká typy ballů), region (aktivní generační region "kanto"|"johto" –
+ *   řídí zobrazenou mapu a uzly, přepíná ho travelToRegion přes S.S. Anne),
+ *   activeAreaId (aktuální oblast na mapě – kde se bojuje),
+ *   visited (id navštívených oblastí → odemykají další uzly mapy, viz data/areas.js),
+ *   badges (získané odznaky z gymů; unlock.badge gatuje oblasti, viz data/areas.js),
+ *   defeatedTrainers (id poražených trenérů → jednorázová odměna + sekvenční postup
+ *   gymem; viz data/trainers.js a battleSystem),
+ *   leagueActive/leagueStep (běh Pokémon League – Elite Four + Champion na Indigo
+ *   Plateau: active = jsi uprostřed nepřerušeného řetězce, step = kolik členů jsi
+ *   v tomto běhu porazil; viz data/trainers.js LEAGUE a battleSystem)
+ * @property {Array<{ uid: string, moveId: string }>} moveLearnQueue  čekající nabídky naučení tahu
+ *                                     (jedinec chce nový tah, ale má plné 4 sloty → hráč volí nahrazení)
+ * @property {{ seen: string[] }} pokedex  druhy potkané v souboji (chycené se odvozují z kolekce)
+ * @property {{ autoBattle: boolean, speed: number, autocatch: AutocatchSettings, selectedBall: string, layout: string, stackOrder: string[] }} settings
+ *
+ * @typedef {Object} AutocatchSettings
+ * @property {boolean} enabled       chytat automaticky během souboje
+ * @property {boolean} catchAll      chytat všechny divoké
+ * @property {boolean} catchNew      chytat druhy, které ještě nemáš (kompletace dexu)
+ * @property {boolean} catchShiny    chytat shiny (filtry se sčítají přes NEBO)
+ * @property {boolean} catchBetterIv chytat jedince, kteří by zlepšili IV druhu, co už máš
+ * @property {string} ball           vyhrazený typ míčku pro autocatch (nezávislý na selectedBall);
+ *                                   když dojde, autocatch se sám vypne (nesahá po jiných)
+ * @property {{ buildings: Record<string, { level: number }>, daycare?: { uid: string|null, buffer: number, eggs?: Array<{ id: string, elapsedSec: number }>, breeding?: { a: string|null, b: string|null, buffer: number } } }} city  budovy města + sloty školky (výcvik + inkubace vajec + breeding)
+ */
+
+import { bus, EVENTS } from "./events.js";
+
+/**
+ * Aktuální verze datového modelu save. Zvyšuje se JEN spolu s novým krokem
+ * v MIGRATIONS (systems/save.js) – při přejmenování / přesunu / změně významu
+ * pole. Nové pole stačí přidat do createNewGame(), doplní se samo.
+ */
+export const CURRENT_SAVE_VERSION = 1;
+
+/**
+ * Epocha savu – „generace" hry. Save s jinou (nebo žádnou) epochou je ze hry
+ * před úplným resetem (2026-10: smazaná a znovu založená hra, saveVersion
+ * tehdy 48–56) a nenačítá se: zazálohuje se a začne se načisto (viz save.js).
+ * Zvýšit JEN při dalším záměrném resetu všech hráčů – nikdy kvůli běžné změně.
+ */
+export const SAVE_EPOCH = 2;
+
+/** Maximální velikost aktivního týmu (zadání, sekce 9). */
+export const MAX_TEAM_SIZE = 6;
+
+/** Počet slotů v jednom PC boxu (mřížka 6×5). */
+export const PC_BOX_SIZE = 30;
+
+/** Pevný počet PC boxů (nepřidávají se ručně; reconcile je vždy dorovná na tento počet). */
+export const PC_BOX_COUNT = 30;
+
+/** @type {GameState | null} */
+let state = null;
+
+/**
+ * Vytvoří čerstvý stav nové hry.
+ * @returns {GameState}
+ */
+export function createNewGame() {
+  const now = Date.now();
+  return {
+    saveVersion: CURRENT_SAVE_VERSION,
+    saveEpoch: SAVE_EPOCH,
+    meta: { createdAt: now, lastSaved: now },
+    player: { name: "Trainer", rivalName: "" }, // rivalName zadá hráč v úvodním intru
+    resources: { gold: 0, coins: 0, balls: { poke: 5 }, items: {} }, // coins = měna Game Corneru
+    collection: [],
+    team: [],
+    pcBoxes: [{ name: "Box 1", slots: Array(PC_BOX_SIZE).fill(null) }], // úložiště mimo tým (viz pcSystem)
+    eggs: [], // nalezená vejce; líhnou se ve Školce (viz eggSystem)
+    // Start doma v Pallet Townu; Route 1 je odemčená (start), vstup na ni odemkne
+    // Viridian City atd. (řetěz viz data/areas.js). visited = kde už hráč byl.
+    // region = aktivní generační region ("kanto" | "johto"…). Řídí, kterou mapu
+    // a které uzly hráč vidí. Přepíná se přechodem přes S.S. Anne (viz
+    // battleSystem.travelToRegion) až po zisku titulu Champion.
+    progress: { tier: 1, region: "kanto", activeAreaId: "pallet-town", visited: ["pallet-town"], badges: [], defeatedTrainers: [], leagueActive: false, leagueStep: 0 },
+    // Override pozic uzlů na mapě (areaId → {x,y} v %). Prázdné = použijí se
+    // výchozí pozice z data/areas.js. Plní je "režim umístění" v mapView.
+    mapPositions: {},
+    moveLearnQueue: [], // čekající nabídky naučení tahu při plných slotech (viz pokemonSystem)
+    pokedex: { seen: [] }, // druhy potkané v souboji (viz pokedex.js)
+    settings: {
+      autoBattle: false, // výchozí je normální (manuální) souboj
+      fullAuto: false, // "Full Auto": jako auto-battle, ale hráči neubývá HP ani PP (bezpečný idling) výměnou za ~1/7 odměn
+      speed: 1, // (ZASTARALÉ) volba rychlosti odebrána – hra běží vždy 1×; klíč zůstává kvůli save kompatibilitě
+      selectedBall: "poke",
+      layout: "auto", // rozvržení panelů: auto (responzivní) | wide (2 sloupce) | stacked (1 sloupec) | mobile (1 sloupec + svislé rozdělení souboje)
+      stackOrder: ["battle", "map", "tabs"], // pořadí panelů ve skládaném režimu (shora dolů)
+      autocatch: { enabled: false, catchAll: false, catchNew: false, catchShiny: false, catchBetterIv: false, ball: "poke" }, // nezávislé filtry (All/New/Shiny/Better IVs, sčítají se NEBO); ball = vyhrazený typ míčku
+      audio: { master: 10, music: 50, sfx: 80, mute: false }, // hlasitost (0–100) a mute přepínač; DRŽ V SYNC s AUDIO_DEFAULTS (audioSystem.js) – master 10 = tichý start
+      // Herní pravidla / režimy (viz settingsView, battleSystem):
+      //  - noItems: zakáže léčivé předměty (žádné lektvary ani jiné itemy) v souboji
+      //  - noPotions: zakáže jen lektvary (Potion apod.), ostatní předměty ok
+      //  - nuzlocke: permadeath (omdlelý jedinec navždy padne) + chytání jen prvního
+      //    druhu na dané oblasti
+      //  - levelCap: strop levelu dle postupu příběhem (ace dalšího gym leadera →
+      //    Liga → bez limitu po titulu; viz progression.currentLevelCap) – proti
+      //    přelevelování v idle režimu
+      rules: { noItems: false, noPotions: false, nuzlocke: false, levelCap: false },
+      shinyCharmActive: true, // Shiny Charm zapnutý (přepínatelný v horní liště, jen když ho vlastníš)
+    },
+    // Nuzlocke: mapa oblast -> true, když už na ní hráč (ne)úspěšně čerpal první
+    // úlovek. Prázdné = ještě nikde nechytal (viz battleSystem).
+    nuzlockeCaught: {},
+    battle: null, // uložený běhový stav souboje (viz battleSystem.serialize)
+    city: { buildings: {} }, // úrovně budov (viz buildingSystem)
+    story: {}, // jednorázové příběhové flagy (viz storyBuildingView) – např. momGift
+    // Běhový stav Safari Zone expedice (viz systems/safariSystem.js).
+    // active=false → mimo výpravu; jinak steps/balls docházejí, depth = hloubka.
+    safari: { active: false, steps: 0, balls: 0, depth: 1, bestDepth: 0, encounter: null },
+    // Johtská Safari Zone (HGSS bloky, viz systems/johtoSafariSystem.js) – samostatná od kantské.
+    // layouts: { [oblast]: { grass, tree, rock, water, since } }.
+    johtoSafari: { active: false, areaId: "plains", balls: 0, encounter: null, visits: 0, layouts: {} },
+    // Achievements: odemčené (id → timestamp) + sledované statistiky.
+    achievements: {
+      unlocked: {},
+      stats: {
+        catches: 0, hatches: 0, evolves: 0,
+        playerFaints: 0, enemyFaints: 0, releases: 0, trades: 0,
+        fishingCatches: 0, autocatchCatches: 0, misses: 0,
+        fullAutoIdle: false, maxAfkSec: 0, playSeconds: 0,
+        speciesCatchCounts: {}, gc: { plays: 0, jackpots: 0, losses: 0 },
+      },
+    },
+    // Hall of Fame: historie týmů, které pokořily Ligu. Každý clear = 1 záznam
+    // { timestamp, team: [{ speciesId, level, nickname, shiny }] } (viz battleSystem).
+    hallOfFame: [],
+  };
+}
+
+/**
+ * Vrátí aktuální stav.
+ * @returns {GameState}
+ */
+export function getState() {
+  if (!state) throw new Error("Stav není inicializovaný (zavolej setState nejdřív).");
+  return state;
+}
+
+/**
+ * Nahradí celý stav a oznámí změnu.
+ * @param {GameState} next
+ */
+export function setState(next) {
+  state = next;
+  bus.emit(EVENTS.STATE_CHANGED, state);
+}
+
+/**
+ * Oznámí, že se stav změnil (po přímé mutaci přes getState()).
+ * Používat, když jsme upravili existující objekt bez setState().
+ */
+export function commit() {
+  bus.emit(EVENTS.STATE_CHANGED, state);
+}
