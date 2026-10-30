@@ -8,6 +8,7 @@
 
 import { SPECIES_GEN1 } from "./pokemon.js";
 import { LEARNSETS_GEN1 } from "./learnsets.js";
+import { TYPES_GEN1 } from "./types.js";
 import { EV_YIELDS_GEN1 } from "./evYields.js";
 import { AREAS_GEN1 } from "./areas.js";
 import { LEGENDARY_GEN1 } from "./legendaries.js";
@@ -30,6 +31,7 @@ export const GEN1 = {
   startAreaId: "pallet-town",
   species: SPECIES_GEN1,
   learnsets: LEARNSETS_GEN1,
+  types: TYPES_GEN1, // typy a tabulka účinnosti této generace (viz ../types.js)
   evYields: EV_YIELDS_GEN1,
   areas: AREAS_GEN1,
   legendaries: LEGENDARY_GEN1,

@@ -370,19 +370,6 @@ export const STORY_BUILDINGS = [
     story: "goldenrod-flower-shop",
   },
   {
-    // Gen 2 (Johto): dům u moře v Cianwood City. Starý námořník dá hráči HM06
-    // Whirlpool (grantHmToPlayer(6) → flag hasWhirlpool + item). JEDINÝ produkční
-    // zdroj HM06 – bez něj nešlo vplout do Whirl Islands (unlock {visited route-41,
-    // hm:6}) → Lugia #249 by byla trvalá díra v dexu. Viz storyBuildingView.
-    id: "cianwood-house",
-    sprite: "assets/gen2/buildings/cianwood-house.png",
-    name: "Cianwood House",
-    icon: "🌀",
-    color: "#4a90c2",
-    description: "A weathered seaside home in Cianwood City. An old sailor here knows the churning tides of the Whirl Islands better than anyone.",
-    story: "cianwood-house",
-  },
-  {
     // Gen 2 (Johto): Goldenrod Dept. Store – johtský protějšek Celadon Dept Store.
     // Patra prodávají kompletní katalog vč. evolučních kamenů a Linking Cordu, které
     // v Johtu dosud NEBYLY ke koupi (poke-mart má jen míčky+léčení) → bez něj nešlo
@@ -440,7 +427,7 @@ export const STORY_BUILDINGS = [
     // Gen 2 (Johto): Dragon's Den shrine za Blackthorn City. Po poražení Clair
     // (rising-badge) tě Dragon Elder podrobí zkoušce; za ni dá hráči dárkového
     // Dratiniho s ExtremeSpeed (kánon GSC). Gate flag rising-badge (viz view).
-    // Oblast `dragons-den` (wild dratini/dragonair) existuje zvlášť pro lov.
+    // Divocí Dratini v Johtu nejsou (Gen 1 druh), Dratini je jen dárek Eldera.
     id: "dragons-den",
     sprite: "assets/gen2/buildings/dragons-den.png",
     name: "Dragon's Den",
@@ -461,18 +448,6 @@ export const STORY_BUILDINGS = [
     color: "#9c6b3f",
     description: "A smoky workshop in Azalea Town where charcoal is fired for the Pokémon of Ilex Forest. The kiln apprentice keeps a spare HM for clearing the thick woods.",
     story: "azalea-kiln",
-  },
-  {
-    // Gen 2 (Johto): Chuckův dům v Cianwood City – johtský zdroj HM02 Fly. Chuckova
-    // žena dá HM02 Fly PO poražení Chucka (gate storm-badge, viz view). HM regionální
-    // (v1.33.0) → kantský Fly se v Johtu nepoužije. grantHmToPlayer(2).
-    id: "chucks-house",
-    sprite: "assets/gen2/buildings/chucks-house.png",
-    name: "Chuck's Home",
-    icon: "🕊️",
-    color: "#c28a4a",
-    description: "The home of Cianwood's gym leader Chuck, perched above the sea. His wife tends the house while Chuck trains on the rocks, and she has a gift for trainers who have bested him.",
-    story: "chucks-house",
   },
   {
     // Gen 2 (Johto): dům v Ecruteak City – johtský zdroj HM03 Surf. Laskavý muž dá
@@ -497,6 +472,19 @@ export const STORY_BUILDINGS = [
     color: "#c89b5a",
     description: "A sturdy house by the Olivine docks. A retired sailor sits among coils of rope and tales of heavy cargo, happy to pass on the HM that served him well.",
     story: "olivine-house",
+  },
+  {
+    // Gen 2 (Johto): loď S.S. Aqua v přístavu Olivine City zpět do Kanta (kánon
+    // HGSS: Olivine ↔ Vermilion). Johtský protějšek S.S. Anne; jede hned, jak hráč
+    // dorazí do Olivine (rozhodnutí autora 2026-10-20). Časem odsud povede i plavba
+    // do gen 3. Prohození regionu řeší travelToRegion. Viz storyBuildingView.
+    id: "ss-aqua",
+    sprite: "assets/gen2/buildings/ss-aqua.png",
+    name: "S.S. Aqua",
+    icon: "⛴️",
+    color: "#4a7bb5",
+    description: "The fast ship S.S. Aqua, moored in Olivine's harbour. It sails across the sea to Vermilion City in Kanto.",
+    story: "ss-aqua",
   },
   {
     // Gen 2 (Johto): dům v Blackthorn City – johtský zdroj HM07 Waterfall. Horský
@@ -665,12 +653,11 @@ export const CITY_BUILDINGS = {
   // Olivine City: služby + maják (Jasmine pečuje o nemocného Amphyho) + námořníkův dům
   // (HM04 Strength – johtský zdroj, HM regionální). Gym (Jasmine) má vlastní tab,
   // zamčený dokud není Amphy vyléčený (amphyHealed, viz gen2/gyms.js).
-  "olivine-city": ["poke-center", "poke-mart", "olivine-lighthouse", "olivine-house"],
-  // Cianwood City: služby + lékárna (SecretPotion pro Amphyho) + dům námořníka
-  // (HM06 Whirlpool → Whirl Islands → Lugia). Gym (Chuck) má vlastní tab.
-  // Cianwood: služby + lékárna + dva domy (HM) + Training Grounds (EV) – Chuckovo
-  // bojové město je johtský protějšek kantského Fighting Dojo (kde EV trénink sídlí).
-  "cianwood-city": ["poke-center", "poke-mart", "cianwood-pharmacy", "cianwood-house", "chucks-house", "training-grounds"],
+  "olivine-city": ["poke-center", "poke-mart", "olivine-lighthouse", "olivine-house", "ss-aqua"],
+  // Cianwood City: služby + lékárna (SecretPotion pro Amphyho) + Chuckův dům (HM02 Fly)
+  // + Training Grounds (EV) – johtský protějšek kantského Fighting Dojo. Gym (Chuck) má
+  // vlastní tab. HM06 Whirlpool dává Lance po vyčištění mahoganské základny (kánon).
+  "cianwood-city": ["poke-center", "poke-mart", "cianwood-pharmacy", "training-grounds"],
   // Mahogany Town: služby. Gym (Pryce) má vlastní tab. (Rocket obchod/hideout.)
   "mahogany-town": ["poke-center", "poke-mart"],
   // Blackthorn City: služby + Dragon's Den shrine (Dragon Elder dá dárkového Dratiniho

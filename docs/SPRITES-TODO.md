@@ -14,8 +14,8 @@
 > leadeři, Liga, odznaky, bally, pozadí biome, cries, BGM, …) je doložené v
 > `CHANGELOG.md`; tady zůstává jen to, co reálně chybí nebo je otevřené.
 
-**Stav ověřen proti disku:** 2026-10-01 (v1.52.0, cílený audit GEN1/Kanto – pokrytí
-prakticky kompletní; viz níže 2 neblokující boss-portréty). Předtím 2026-09-14
+**Stav ověřen proti disku:** 2026-10-20 (v1.65.x, audit Gen 1 + Gen 2 – chybí jen
+2 neblokující boss-portréty; SFX generuje tools/gen_sfx.py; Johto viz SPRITES-TODO-GEN2.md). Předtím 2026-10-01 (v1.52.0). Předtím 2026-09-14
 (v0.111.0, plný audit napříč celou hrou).
 
 ---
@@ -38,38 +38,12 @@ Po nahrání dopsat do příslušného pole v `BACKGROUND_BIOMES` (`data/backgro
 
 ---
 
-### 2. Mapa regionu Johto (gen 2)
-Descriptor `data/gen2/index.js` má `mapImage: null` (schválně). Johto už má první
-oblast (New Bark Town), ale dokud je `mapImage` null, mapView vykresluje uzly nad
-barevným plátnem „ve výstavbě" (`.map-placeholder-bg`) – takže **nic nechybí
-funkčně**, uzly jdou klikat. Jakmile vznikne art mapy, nahraj soubor a v
-`gen2/index.js` nastav `mapImage: "assets/gen2/map/johto.webp"`; placeholder se pak
-sám přestane používat.
-
-- [ ] `assets/gen2/map/johto.webp` — art mapy Johto (stejný formát jako `gen1/map/kanto.webp`).
+### 2. Johto (gen 2)
+Vše chybějící pro Johto vede `docs/SPRITES-TODO-GEN2.md` (odkazy k vyplnění: `docs/gen2_odkazy.txt`).
 
 ---
 
-### 3. Johto startéři (gen 2) – sprity Pokémonů
-Prof. Elm dává v New Bark Town na výběr 3 startéry. Cesta se odvozuje z ID
-(`assets/gen2/pokemon/<id>/<view>.png`), složky už existují, dokud sprity chybí jede
-glyf fallback. Formát jako gen 1 (front/back + shiny, `.png`; `.gif` volitelně).
-
-- [ ] `assets/gen2/pokemon/chikorita/front.png`, `back.png`, `shiny-front.png`, `shiny-back.png`
-- [ ] `assets/gen2/pokemon/cyndaquil/front.png`, `back.png`, `shiny-front.png`, `shiny-back.png`
-- [ ] `assets/gen2/pokemon/totodile/front.png`, `back.png`, `shiny-front.png`, `shiny-back.png`
-
----
-
-### 4. Prof. Elm's Lab (budova New Bark Town)
-Story-budova `elm-lab` (`data/buildings.js`) míří na `assets/gen2/buildings/elm-lab.png`.
-Dokud chybí, jede fallback (ikona 🔬 / barva). Formát jako ostatní budovy.
-
-- [ ] `assets/gen2/buildings/elm-lab.png` — pixel-art laboratoře prof. Elma.
-
----
-
-### 5. GEN1 boss-portréty (2× chybějící třída)
+### 3. GEN1 boss-portréty (2× chybějící třída)
 Bossové typu `kind: "boss"` jdou cestou `assets/gen1/trainers/<class>/<n>.png` (ne
 `gym-leaders/`). Dvě boss třídy nemají složku – portrét se používá jen v tab-listu
 (rocketView) a na výsledkové obrazovce; při chybě se `<img>` přes `onerror` skryje,
@@ -82,10 +56,3 @@ takže **nic nespadne, jen chybí obrázek**. Původní obsah (ne z nové vlny v
   Pokémon Tower).
 
 ---
-
-## 🔮 Odloženo (fíčura, ne chybějící soubor)
-
-- **Náhodné varianty spritů trenérů v souboji** — složky `assets/gen<N>/trainers/<class>/`
-  už drží víc číslovaných variant, ale hra zatím losuje/nelosuje dle
-  `data/spriteVariants.js`; plná náhodná volba per-souboj je odložená (viz paměť
-  „sprite-workflow"). Není to chybějící grafika, jen nevyužitý potenciál.

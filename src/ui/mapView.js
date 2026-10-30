@@ -14,14 +14,12 @@
 
 import { AREAS, getArea, isAreaUnlocked, areaLevelRange } from "../../data/areas.js";
 import { generationByRegion } from "../../data/generations.js";
-import { IS_DEV } from "../../data/gameConfig.js";
-import { travelToRegion } from "../systems/battleSystem.js";
-import { setActiveArea, getActiveAreaId, applyFossilChoice, startTrainerBattle, startStaticEncounter } from "../systems/battleSystem.js";
+import { setActiveArea, getActiveAreaId, applyFossilChoice, startTrainerBattle, startStaticEncounter, giveSaffronGuardDrink } from "../systems/battleSystem.js";
 import { endSafari, isSafariActive } from "../systems/safariSystem.js";
 import { endJohtoSafari, isJohtoSafariActive } from "../systems/johtoSafariSystem.js";
 import { JOHTO_SAFARI_AREA_ID } from "../../data/gen2/safari.js";
-import { areaCompletion } from "../systems/pokedex.js";
-import { getState } from "../core/state.js";
+import { areaCompletion, dexCounts } from "../systems/pokedex.js";
+import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { showPopup } from "./popup.js";
 import { openMainTab } from "./mainPanel.js";
@@ -51,6 +49,24 @@ function currentRegion() {
  * @param {string} emoji      fallback emoji
  * @param {string} cls        poziční/animační třída (.beast-raikou …)
  */
+/** Scéna probuzení tří legendárních psů v Burned Tower (po souboji s rivalem). */
+function showBeastScene() {
+  showPopup({
+    title: "The Burned Tower",
+    body: `<div class="beast-scene" aria-hidden="true">
+        <div class="beast-flash"></div>
+        ${beastSpriteHtml("raikou", "⚡", "beast-raikou")}
+        ${beastSpriteHtml("suicune", "💧", "beast-suicune")}
+        ${beastSpriteHtml("entei", "🔥", "beast-entei")}
+      </div>
+      <p class="story-text">As Silver storms off, the burned floor gives way and you drop into the tower's scorched basement. In the gloom, three statue-still shapes rest on the broken floor — and at your footstep they stir.</p>
+      <p class="story-text">A blinding flash! Three <strong>legendary beasts</strong> rear up as one. <strong>Raikou</strong> bolts away in a crack of thunder, <strong>Entei</strong> tears off in a trail of fire — both vanish to roam Johto. Only <strong>Suicune</strong> lingers, fixing its calm gaze on you before melting into the shadows.</p>
+      <p class="placeholder">A man named <strong>Eusine</strong> dashes past, breathless. "Did you see it? Suicune itself! It only shows itself to a trainer it deems worthy..." The beasts are awake — seek them out on your journey.</p>`,
+    okLabel: "Incredible...",
+  });
+}
+bus.on(EVENTS.BEASTS_AWAKENED, showBeastScene);
+
 function beastSpriteHtml(speciesId, emoji, cls) {
   const src = spriteUrl(speciesId, "front");
   return `<span class="beast ${cls}">
@@ -114,6 +130,32 @@ function posOf(area) {
   return o && typeof o.x === "number" ? o : { x: area.x, y: area.y };
 }
 
+/**
+ * Režimy popisků uzlů na mapě (nastavení `settings.mapLabels`, přepíná tlačítko nad mapou
+ * i Nastavení). „hover" = jen tečky, popisek při najetí (výchozí – popisky blízkých uzlů se
+ * jinak překrývají); ostatní ukazují popisky všech uzlů napořád.
+ */
+export const MAP_LABEL_MODES = [
+  { key: "hover", label: "Hover", desc: "Dots only — a node's name and level show when you point at it" },
+  { key: "all", label: "Name + level", desc: "Always show every node's name and level" },
+  { key: "name", label: "Name", desc: "Always show every node's name, without level" },
+  { key: "level", label: "Level", desc: "Always show only the level range (towns without battles show nothing)" },
+];
+
+/** Aktuální režim popisků mapy. */
+function mapLabelMode() {
+  const m = getState().settings?.mapLabels;
+  return MAP_LABEL_MODES.some((x) => x.key === m) ? m : "hover";
+}
+
+/** Text popisku uzlu podle režimu ("" = žádný popisek). */
+function nodeLabelText(area, mode) {
+  const lvl = areaLevelSuffix(area);
+  if (mode === "name") return area.name;
+  if (mode === "level") return lvl.replace(/^ · /, "");
+  return `${area.name}${lvl}`;
+}
+
 /** Level pásmo oblasti jako suffix (" · Lv x–y"), prázdné pro oblasti bez soubojů. */
 function areaLevelSuffix(area) {
   if (!area.species?.length) return "";
@@ -150,11 +192,13 @@ export function renderMap(root) {
   const region = currentRegion();
   root.dataset.region = region; // detekce přepnutí regionu v STATE_CHANGED
   const areasOfRegion = regionAreas();
+  const labelMode = mapLabelMode();
+  root.dataset.labels = labelMode; // detekce změny režimu popisků v STATE_CHANGED
   const nodesHtml = areasOfRegion.map((area) => {
     const unlocked = isAreaUnlocked(area, visited, badges, beaten, story);
     const p = posOf(area);
-    // Popisek levelu = per-oblast pásmo (Lv min–max), u jednobodového jen jedno číslo.
-    const lvl = areaLevelSuffix(area);
+    // Popisek podle nastavení (název + level pásmo Lv min–max / jen název / jen level).
+    const label = nodeLabelText(area, labelMode);
     // Pozn.: počet objevených druhů (R-023) ZÁMĚRNĚ NENÍ na uzlu mapy (zabíral moc
     // místa). Ukazuje se u aktivní oblasti v hlavičce Battle Area (viz battleView.js).
     return `
@@ -166,7 +210,7 @@ export function renderMap(root) {
         title="${area.name}"
       >
         <span class="map-node-dot"></span>
-        <span class="map-node-label">${area.name}${lvl}</span>
+        ${label ? `<span class="map-node-label">${label}</span>` : ""}
       </button>`;
   }).join("");
 
@@ -202,19 +246,11 @@ export function renderMap(root) {
        ${nodesHtml}`;
   }
 
-  // Návrat z jiného regionu zpět do Kanto: PROZATÍM jen dev-only tlačítko
-  // (IS_DEV), aby šlo testovat obě strany plavby. Hráč se bude moci vrátit až
-  // po odemčení lodi v gen 2 – řádnou přístavní budovou (viz TODO gen2), tohle
-  // tlačítko je dočasná náhrada, na produkci se nikdy neukáže.
-  const backBtn = (region !== "kanto" && IS_DEV)
-    ? `<button class="btn btn-sm" data-region-back title="Dev: dočasný návrat, než vznikne loď v gen 2">🛠️ Zpět do Kanto (dev)</button>`
-    : "";
-
   root.innerHTML = `
     <div class="map-head">
       <h2 class="panel-title">Map${region !== "kanto" ? ` · ${gen?.regionName ?? region}` : ""}</h2>
       <div class="map-head-actions">
-        ${backBtn}
+        <button class="btn btn-sm" data-map-labels title="Map labels: ${MAP_LABEL_MODES.find((m) => m.key === labelMode).desc} (click to change)">🏷 Labels: ${MAP_LABEL_MODES.find((m) => m.key === labelMode).label}</button>
         ${renderPlacementButtons()}
       </div>
     </div>
@@ -223,23 +259,27 @@ export function renderMap(root) {
         <label class="map-travel-label" for="map-travel-select">Travel to</label>
         <select id="map-travel-select" class="map-travel-select" data-sig="">${optionsHtml}</select>
       </div>
-      <div class="map-stage ${mapPlacementActive() ? "is-editing" : ""} ${mapPlacementHideLabels() ? "hide-labels" : ""}">
-        ${stageInner}
+      <div class="map-stage-box">
+        <div class="map-stage ${mapPlacementActive() ? "is-editing" : ""} ${mapPlacementHideLabels() ? "hide-labels" : ""} ${labelMode !== "hover" ? "labels-always" : ""}">
+          ${stageInner}
+        </div>
       </div>
       ${mapPlacementActive() ? renderPlacementBar() : `<div class="map-info" aria-live="polite"></div>`}
     </div>
   `;
-
-  // Návrat do Kanto (přepne region → plná re-render přes STATE_CHANGED).
-  root.querySelector("[data-region-back]")?.addEventListener("click", () => {
-    travelToRegion("kanto");
-  });
 
   const stage = root.querySelector(".map-stage");
   const info = root.querySelector(".map-info");
 
   // DEV placement nástroj (jen localhost) – tlačítka i posluchače řeší modul.
   wirePlacement(root, () => renderMap(root));
+
+  // Přepínač popisků mapy: hover → name + level → name → level → hover.
+  root.querySelector("[data-map-labels]")?.addEventListener("click", () => {
+    const i = MAP_LABEL_MODES.findIndex((m) => m.key === labelMode);
+    getState().settings.mapLabels = MAP_LABEL_MODES[(i + 1) % MAP_LABEL_MODES.length].key;
+    commit(); // STATE_CHANGED → plná re-render (změna root.dataset.labels)
+  });
 
   // Klik na scénu.
   stage.addEventListener("click", (e) => {
@@ -295,7 +335,7 @@ export function renderMap(root) {
     }
     if (res.event === "mt-moon-rocket") {
       showPopup({
-        title: "🌑 Mt. Moon",
+        title: "Mt. Moon",
         body: `<p class="story-text">You enter Mt. Moon — a pitch-black cave echoing with the screech of Zubat.</p>
           <p class="story-text">Shady figures in black uniforms block the tunnels: <strong>Team Rocket</strong> has taken over the cave, digging for rare fossils and Moon Stones!</p>
           <p class="story-text">Five grunts stand between you and the way onward. Open the <strong>Rockets</strong> tab and beat every one of them to clear the path.</p>`,
@@ -305,7 +345,7 @@ export function renderMap(root) {
     }
     if (res.event === "mt-moon-fossil") {
       showPopup({
-        title: "🦴 Ancient Fossils",
+        title: "Ancient Fossils",
         body: `<p class="story-text">Deep in Mt. Moon, after driving off the Rockets, you find <strong>three ancient fossils</strong> resting on a stone table — and pocket them all.</p>
           <p class="placeholder">Helix Fossil → Omanyte · Dome Fossil → Kabuto · Old Amber → Aerodactyl</p>
           <p class="story-text">Take them to the <strong>Pokémon Lab</strong> on Cinnabar Island to bring them back to life.</p>`,
@@ -336,7 +376,7 @@ export function renderMap(root) {
     }
     if (res.event === "bill-route-25") {
       showPopup({
-        title: "🏠 Bill's Cottage",
+        title: "Bill's Cottage",
         body: `<p class="story-text">At the end of Route 25 you find <strong>Bill</strong>, the famous Pokémon researcher — accidentally fused with a Pokémon by his own teleporter!</p>
           <p class="story-text">You help him split back apart. Grateful, he hands you a <strong>S.S. Anne Ticket</strong>.</p>
           <p class="story-text">"The luxury liner <strong>S.S. Anne</strong> is docked at <strong>Vermilion City</strong> to the south. This ticket will get you aboard!"</p>`,
@@ -365,7 +405,7 @@ export function renderMap(root) {
     }
     if (res.event === "digletts-arrival") {
       showPopup({
-        title: "⛏️ Diglett's Cave",
+        title: "Diglett's Cave",
         body: `<p class="story-text">You duck into a narrow, twisting cave. The ground churns with <strong>Diglett</strong> — and the occasional three-headed <strong>Dugtrio</strong>!</p>
           <p class="placeholder">The tunnel runs all the way beneath Kanto, linking back to Route 2 near Viridian.</p>`,
         okLabel: "Watch your step",
@@ -375,26 +415,54 @@ export function renderMap(root) {
     if (res.event === "route-09-arrival") {
       showPopup({
         title: "Route 9",
-        body: `<p class="story-text">The rocky trail to <strong>Rock Tunnel</strong> is swarming with burly <strong>Hikers</strong> who won't let anyone pass.</p>
-          <p class="story-text">Nearby, one of <strong>Professor Oak's aides</strong> leans out of a rest house: "Beat every Hiker here <em>and</em> register <strong>10 kinds</strong> of Pokémon in your Pokédex, and I'll hand you <strong>HM05 Flash</strong> — you'll need it for the pitch-dark tunnel."</p>
-          <p class="placeholder">Open the <strong>Hikers</strong> tab to battle the gauntlet.</p>`,
-        okLabel: "Bring it on",
+        body: `<p class="story-text">A rugged trail winds east toward <strong>Rock Tunnel</strong>, watched over by a gang of burly <strong>Hikers</strong>.</p>
+          <p class="story-text">The tunnel itself is pitch black — you'll need <strong>HM05 Flash</strong> to find your way. One of <strong>Professor Oak's aides</strong> on <strong>Route 2</strong> gives it to trainers who have caught <strong>10 kinds</strong> of Pokémon.</p>`,
+        okLabel: "Got it",
+      });
+      return;
+    }
+    if (res.event === "flash-aide") {
+      showPopup({
+        title: "Professor Oak's aide",
+        body: `<p class="story-text">With <strong>Cut</strong> you reach a small house on Route 2. Inside waits one of <strong>Professor Oak's aides</strong>.</p>
+          <p class="story-text">"If you've caught <strong>10 kinds</strong> of Pokémon, I'm supposed to give you <strong>HM05 Flash</strong>. Come back when you have!"</p>
+          <p class="placeholder">Caught so far: <strong>${dexCounts().caught}/10</strong>.</p>`,
+        okLabel: "I'll be back",
       });
       return;
     }
     if (res.event === "flash-gift") {
       showPopup({
-        title: "🔦 HM05 Flash!",
-        body: `<p class="story-text">You return to Route 9 with <strong>10 kinds</strong> of Pokémon registered. <strong>Professor Oak's aide</strong> nods approvingly.</p>
-          <p class="story-text">"A dedicated trainer — as promised." He presses a Hidden Machine into your hand. You received <strong>HM05 Flash</strong>!</p>
-          <p class="story-text">With Flash to light the way, you can now make it through <strong>Rock Tunnel</strong> toward Lavender Town.</p>`,
+        title: "HM05 Flash!",
+        body: `<p class="story-text"><strong>Professor Oak's aide</strong> checks your Pokédex in the little house on Route 2. "10 kinds of Pokémon — just as the Professor asked!"</p>
+          <p class="story-text">He hands you a Hidden Machine. You received <strong>HM05 Flash</strong>!</p>
+          <p class="story-text">With Flash to light the way, you can make it through <strong>Rock Tunnel</strong> toward Lavender Town.</p>`,
         okLabel: "Thanks!",
+      });
+      return;
+    }
+    if (res.event === "saffron-gate-thirsty") {
+      showPopup({
+        title: "Saffron City gate",
+        body: `<p class="story-text">A guard blocks the gate to <strong>Saffron City</strong>. "I'm on guard duty. Gee, I'm thirsty, though! ...Sorry, I can't let you through."</p>
+          <p class="placeholder">Buy a <strong>Fresh Water</strong> at the <strong>Celadon Dept. Store</strong> rooftop and bring it to a gate guard.</p>`,
+        okLabel: "Hmm...",
+      });
+      return;
+    }
+    if (res.event === "saffron-gate-drink") {
+      showPopup({
+        title: "Saffron City gate",
+        body: `<p class="story-text">The thirsty guard eyes your <strong>Fresh Water</strong>. "Is that... for me? Gee, thanks!"</p>
+          <p class="story-text">He gulps it down. "Ahh, that hit the spot! You can go on through — and pass the word to the other gates."</p>`,
+        okLabel: "Give him the drink",
+        onOk: () => giveSaffronGuardDrink(),
       });
       return;
     }
     if (res.event === "lavender-arrival") {
       showPopup({
-        title: "👻 Lavender Town",
+        title: "Lavender Town",
         body: `<p class="story-text">A mournful tune drifts through Lavender Town. At its heart looms the <strong>Pokémon Tower</strong>, where trainers lay their departed partners to rest.</p>
           <p class="story-text">People whisper of <strong>restless spirits</strong> haunting the upper floors — and of <strong>Mr. Fuji</strong>, who went up to calm them and never came back.</p>
           <p class="placeholder">Open the <strong>City</strong> tab to visit the Tower and Mr. Fuji's House.</p>`,
@@ -416,8 +484,8 @@ export function renderMap(root) {
       showPopup({
         title: "Saffron City",
         body: `<p class="story-text">Saffron City, the bustling heart of Kanto, is eerily tense. Black-clad <strong>Team Rocket</strong> grunts loiter on every corner — they've seized the towering <strong>Silph Co.</strong> headquarters and locked down the city.</p>
-          <p class="story-text">A parched guard blocks the doors of Silph Co., and <strong>Sabrina's Gym</strong> is sealed shut while the Rockets hold the city.</p>
-          <p class="placeholder">Buy a drink (<strong>Fresh Water</strong>) at the <strong>Celadon Dept. Store</strong>, bring it to the Silph Co. guard, then storm the tower to free the city — and claim the <strong>Master Ball</strong>. Open the <strong>City</strong> tab.</p>`,
+          <p class="story-text"><strong>Sabrina's Gym</strong> is sealed shut while the Rockets hold the city.</p>
+          <p class="placeholder">Storm <strong>Silph Co.</strong> (City tab) to free the city — and claim the <strong>Master Ball</strong>.</p>`,
         okLabel: "Let's help",
       });
       return;
@@ -433,18 +501,50 @@ export function renderMap(root) {
     }
     if (res.event === "snorlax-block") {
       showPopup({
-        title: "🎵 Poké Flute",
+        title: "Poké Flute",
         body: `<p class="story-text">The huge <strong>Snorlax</strong> snores on, blocking Route 12. But now you have the <strong>Poké Flute</strong>!</p>
-          <p class="story-text">Raise it to your lips and play the melody. The Snorlax jolts awake — now's your chance to <strong>catch it</strong>! (Catch it to clear the road south.)</p>`,
+          <p class="story-text">Raise it to your lips and play the melody. The Snorlax jolts awake and attacks! Catch it or defeat it to clear the road south.</p>`,
         okLabel: "Play the Poké Flute!",
         onOk: () => {
           // Věrný Kanto: Snorlax je CHYTATELNÉ statické setkání (ne pouhý boss).
           // claimFlag "snorlaxCleared" se nastaví AŽ při chycení → teprve pak se
           // uvolní jih (Route 13). KO/útěk/prohra ho nezablokují: při dalším vstupu
           // na Route 12 se setkání nabídne znovu (jako legendární Red Gyarados).
-          startStaticEncounter("snorlax", 30, { claimFlag: "snorlaxCleared" });
+          startStaticEncounter("snorlax", 30, { claimFlag: "snorlaxCleared", claimOnKo: true });
           openMainTab("battle");
         },
+      });
+      return;
+    }
+    if (res.event === "snorlax-16-asleep") {
+      showPopup({
+        title: "A sleeping Snorlax",
+        body: `<p class="story-text">Another enormous <strong>Snorlax</strong> lies snoring across Route 16, blocking the way to the <strong>Cycling Road</strong>.</p>
+          <p class="placeholder">Only the <strong>Poké Flute</strong> could wake it.</p>`,
+        okLabel: "Hmm...",
+      });
+      return;
+    }
+    if (res.event === "snorlax-16-block") {
+      showPopup({
+        title: "Poké Flute",
+        body: `<p class="story-text">You play the <strong>Poké Flute</strong> for the Snorlax on Route 16. It wakes up in a terrible mood and attacks!</p>
+          <p class="story-text">Catch it or defeat it to clear the way to the Cycling Road.</p>`,
+        okLabel: "Play the Poké Flute!",
+        onOk: () => {
+          startStaticEncounter("snorlax", 30, { claimFlag: "snorlax16Cleared", claimOnKo: true });
+          openMainTab("battle");
+        },
+      });
+      return;
+    }
+    if (res.event === "lance-at-lake") {
+      showPopup({
+        title: "Lake of Rage",
+        body: `<p class="story-text">The Lake of Rage churns with furious <strong>Gyarados</strong> — and among them thrashes one with brilliant <strong>red</strong> scales.</p>
+          <p class="story-text">A caped trainer with a Dragonite steps up beside you. "I'm <strong>Lance</strong>. These Magikarp are being forced to evolve by a strange radio signal — and it's coming from <strong>Mahogany Town</strong>. Will you help me investigate?"</p>
+          <p class="placeholder">Return to <strong>Mahogany Town</strong> and open the <strong>Team Rocket</strong> tab.</p>`,
+        okLabel: "Let's go!",
       });
       return;
     }
@@ -459,7 +559,7 @@ export function renderMap(root) {
     }
     if (res.event === "sudowoodo-block") {
       showPopup({
-        title: "💦 Squirtbottle",
+        title: "Squirtbottle",
         body: `<p class="story-text">The odd <strong>tree</strong> still blocks Route 36. But now you have the <strong>Squirtbottle</strong>!</p>
           <p class="story-text">You give it a good squirt — the "tree" shudders, reveals itself as a furious <strong>Sudowoodo</strong>, and lunges to fight!</p>`,
         okLabel: "Squirt it!",
@@ -470,20 +570,17 @@ export function renderMap(root) {
       });
       return;
     }
-    if (res.event === "burned-tower-beasts") {
+    if (res.event === "burned-tower-rival") {
       showPopup({
         title: "The Burned Tower",
-        body: `<div class="beast-scene" aria-hidden="true">
-            <div class="beast-flash"></div>
-            ${beastSpriteHtml("raikou", "⚡", "beast-raikou")}
-            ${beastSpriteHtml("suicune", "💧", "beast-suicune")}
-            ${beastSpriteHtml("entei", "🔥", "beast-entei")}
-          </div>
-          <p class="story-text">You pick your way down into the tower's scorched basement. In the gloom, three statue-still shapes rest on the broken floor — and at your footstep they stir.</p>
-          <p class="story-text">A blinding flash! Three <strong>legendary beasts</strong> rear up as one. <strong>Raikou</strong> bolts away in a crack of thunder, <strong>Entei</strong> tears off in a trail of fire — both vanish to roam Johto. Only <strong>Suicune</strong> lingers, fixing its calm gaze on you before melting into the shadows.</p>
-          <p class="placeholder">A man named <strong>Eusine</strong> dashes past, breathless. "Did you see it? Suicune itself! It only shows itself to a trainer it deems worthy..." The beasts are awake — seek them out on your journey.</p>`,
-        okLabel: "Incredible...",
+        body: `<p class="story-text">The charred tower creaks underfoot. Someone is already here — your rival <strong>Silver</strong> turns with a sneer. "So you came to see the legendary Pokémon too? Don't get in my way!"</p>
+          <p class="placeholder">Open the <strong>Rival</strong> tab and battle him.</p>`,
+        okLabel: "Bring it on",
       });
+      return;
+    }
+    if (res.event === "burned-tower-beasts") {
+      showBeastScene();
       return;
     }
     if (res.event === "fuchsia-arrival") {
@@ -560,7 +657,7 @@ export function renderMap(root) {
     }
     if (res.event === "indigo-arrival") {
       showPopup({
-        title: "🏆 Indigo Plateau",
+        title: "Indigo Plateau",
         body: `<p class="story-text">You emerge from Victory Road into the crisp air of the <strong>Indigo Plateau</strong>. The grand Pokémon League building rises ahead — the end of every trainer's road.</p>
           <p class="story-text">Inside wait the <strong>Elite Four</strong> — Lorelei, Bruno, Agatha and Lance — and beyond them, the reigning <strong>Champion</strong>. You must beat all five <strong>one after another</strong>, with <strong>no healing at the Poké Center</strong> in between. Only the Potions and Revives in your <strong>Bag</strong> can save you — and if you fall, you start again from the first.</p>
           <p class="placeholder">Stock up, build your best team, then open the <strong>League</strong> tab when you're ready.</p>`,
@@ -612,9 +709,9 @@ export function renderMap(root) {
   updateStates(root);
   if (unsub) unsub();
   unsub = bus.on(EVENTS.STATE_CHANGED, () => {
-    // Přepnutí regionu (S.S. Anne → Johto / zpět) = jiná mapa i sada uzlů →
-    // plná re-render. Jinak jen levná aktualizace stavů markerů.
-    if (root.isConnected && root.dataset.region !== currentRegion()) {
+    // Přepnutí regionu (S.S. Anne → Johto / zpět) = jiná mapa i sada uzlů, změna
+    // režimu popisků = jiné popisky → plná re-render. Jinak jen levná aktualizace markerů.
+    if (root.isConnected && (root.dataset.region !== currentRegion() || root.dataset.labels !== mapLabelMode())) {
       renderMap(root);
     } else {
       updateStates(root);

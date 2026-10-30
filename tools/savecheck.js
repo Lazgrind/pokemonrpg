@@ -178,12 +178,19 @@ async function run() {
     { to: 3, note: "gold→resources.money", run(d) { d.resources.money = d.resources.gold; } },
   ];
   reset();
-  const s10 = createNewGame(); s10.settings.legacyOption = 3; s10.resources.gold = 9;
+  const s10 = createNewGame(); s10.saveVersion = 1; s10.settings.legacyOption = 3; s10.resources.gold = 9;
   const p10 = Save.prepareSave(JSON.parse(JSON.stringify(s10)), JSON.stringify(s10), { migrations: fake, target: 3 });
   check("10) migrace 1→3 proběhnou v pořadí", p10.state.saveVersion === 3 && p10.state.settings.newOption === 3 && !("legacyOption" in p10.state.settings) && p10.state.resources.money === 9);
   const s10b = JSON.parse(JSON.stringify(s10)); s10b.saveVersion = 2; s10b.settings.newOption = 1; delete s10b.settings.legacyOption;
   const p10b = Save.prepareSave(s10b, JSON.stringify(s10b), { migrations: fake, target: 3 });
   check("10) save z v2 spustí jen krok 3", p10b.state.settings.newOption === 1 && p10b.state.resources.money === 9);
+  // skutečný krok 2: Sprout Tower / Dragon's Den už nejsou oblasti mapy
+  const s10c = createNewGame(); s10c.saveVersion = 1;
+  Object.assign(s10c.progress, { activeAreaId: "sprout-tower", visited: ["violet-city", "sprout-tower", "dragons-den"], lastAreaByRegion: { johto: "dragons-den" } });
+  s10c.mapPositions = { "sprout-tower": { x: 1, y: 2 } };
+  const p10c = Save.prepareSave(s10c, JSON.stringify(s10c)).state;
+  check("10) migrace 2: hráč ze Sprout Tower stojí ve Violet City", p10c.progress.activeAreaId === "violet-city" && p10c.progress.lastAreaByRegion.johto === "blackthorn-city"
+    && p10c.progress.visited.join() === "violet-city" && !("sprout-tower" in p10c.mapPositions));
 
   // --- 11) import podepsaného exportu (starší verze hry) → migrace + záloha aktuální hry
   reset();

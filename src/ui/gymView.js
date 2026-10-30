@@ -48,8 +48,13 @@ const GYM_GATES = {
   },
   "mahogany-gym": {
     icon: "🚧",
-    body: `<p class="story-text">A commotion fills the town — Team Rocket has set up a secret base beneath the <strong>souvenir shop</strong>, and Leader <strong>Pryce</strong> won't open the Gym while they're here.</p>
-      <p class="placeholder">Shut down the <strong>Team Rocket hideout</strong> first (City tab), then investigate the <strong>Lake of Rage</strong>. Once the Rockets are gone, Pryce will take your challenge.</p>`,
+    body: `<p class="story-text">Something is wrong in Mahogany Town — shady figures hang around the souvenir shop, and Leader <strong>Pryce</strong> won't open the Gym while the town is in trouble.</p>
+      <p class="placeholder">Investigate the strange happenings at the <strong>Lake of Rage</strong> north of town, then shut down the <strong>Team Rocket hideout</strong> (Team Rocket tab in Mahogany). Once the Rockets are gone, Pryce will take your challenge.</p>`,
+  },
+  "ecruteak-gym": {
+    icon: "👻",
+    body: `<p class="story-text">The Gym's doors are shut. A sage nearby explains: "Morty went to the <strong>Burned Tower</strong> in search of the legendary Pokémon. He won't be back until he has seen them."</p>
+      <p class="placeholder">Explore the <strong>Burned Tower</strong> (map). Morty will return to his Gym afterwards.</p>`,
   },
 };
 
@@ -173,7 +178,10 @@ export function renderGymTab(root, onStatus = () => {}) {
     .join("");
 
   const badgeName = badge?.name ?? gym.badge;
-  const badgeState = cleared
+  const badgeOwned = ownedBadges.includes(gym.badge);
+  const badgeState = cleared && !badgeOwned && gym.badgePending
+    ? `<span class="placeholder">${gym.badgePending}</span>`
+    : cleared
     ? `<span class="gym-badge-won"><img class="badge-icon" src="${badgeUrl(gym.badge)}" alt="${badgeName}" onerror="this.style.display='none'"> ${badgeName} earned!</span>`
     : `<span class="placeholder">Beat the Leader to earn the ${badgeName}.</span>`;
 

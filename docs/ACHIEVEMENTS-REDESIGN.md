@@ -1,8 +1,7 @@
 # Achievements Redesign — návrh k diskuzi (v2)
 
-> Stav: **NÁVRH v2** (Opus, 2026-09-15). Nic z toho ještě není v kódu. Slouží ke
-> společnému projití – projdi, škrtej, přepisuj, dopisuj. Až se shodneme, teprve
-> implementuju (každý dokončený bod = jeden release).
+> **Stav (2026-10-20):** návrh je v kódu – záložka Achievements, model s `tier`, 91 achievementů (viz `data/achievements.js`, CHANGELOG v0.105.0). Dokument zůstává jako záznam návrhu.
+> Původně: NÁVRH v2 (Opus, 2026-09-15) ke společnému projití.
 >
 > **Co je nového ve v2 (po tvém feedbacku + feedbacku druhé AI):**
 > - Sada rozšířena na **60 achievementů, každý má reálný důvod existovat** (žádných

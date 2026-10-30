@@ -16,7 +16,8 @@
  * @property {number} level         level legendárního
  * @property {string} tabLabel      popisek tabu (dynamický, jako u gauntletů)
  * @property {string} tabIcon       ikona tabu
- * @property {string} [requiresStory] story-flag nutný pro zobrazení tabu (HM gate)
+ * @property {string|string[]} [requiresStory] story-flag(y) nutné pro zobrazení tabu (HM gate; pole = všechny)
+ * @property {string} [requiresBadge] odznak nutný pro zobrazení tabu (Lugia: Glacier Badge)
  * @property {string} [displayName] zobrazené jméno na kartě/tabu (když druh v dexu
  *   nese jiné jméno – např. „Red Gyarados" pro shiny #130 gyarados)
  * @property {boolean} [shiny]      VŽDY shiny varianta (vynucená, přebíjí losování) –
@@ -25,6 +26,7 @@
  *   tab zmizí po chycení (řídí claimFlag), ne po pouhém vlastnictví druhu
  * @property {string} [claimFlag]   story-flag označující jednorázové setkání za hotové;
  *   nastaví se až při CHYCENÍ (nutné, když je druh i jinak získatelný – gyarados)
+ * @property {string} [scene]     klíč scény příchodu (src/ui/legendaryScene.js); default = speciesId
  * @property {string} title         nadpis karty
  * @property {string} intro         krátký úvod na kartě
  * @property {string} lore          delší flavour text

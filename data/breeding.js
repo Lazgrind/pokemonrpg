@@ -76,10 +76,14 @@ export function areCompatible(spA, spB) {
  * Procházíme evoluční historii směrem zpět (hledáme druhy, jejichž `evolvesTo`
  * ukazuje na daný druh) a iterujeme, pokud existuje. Fallback: původní speciesId
  * (např. neznámý druh nebo chyba v datech).
+ *
+ * `maxGen` = region-lock breedingu: předek z POZDĚJŠÍ generace se přeskočí, takže
+ * v Kantu (gen 1) dá Pikachu zase Pikachu, ne johtského Pichu (gen 2).
  * @param {string} speciesId
+ * @param {number} [maxGen=Infinity]  nejvyšší povolená generace potomka
  * @returns {string} id základní formy (nebo původní speciesId, je-li neznámý)
  */
-export function baseFormOf(speciesId) {
+export function baseFormOf(speciesId, maxGen = Infinity) {
   if (!speciesId) return speciesId;
 
   // Hledáme kořen evoluční linie iteračně směrem zpět.
@@ -102,7 +106,7 @@ export function baseFormOf(speciesId) {
       const viaEvolvesTo = sp.evolvesTo === currentId;
       const viaEvolutions =
         Array.isArray(sp.evolutions) && sp.evolutions.some((e) => e?.toId === currentId);
-      if (viaEvolvesTo || viaEvolutions) {
+      if ((viaEvolvesTo || viaEvolutions) && (sp.gen ?? 1) <= maxGen) {
         foundPredecessor = sp.id;
         break;
       }
@@ -127,9 +131,10 @@ export function baseFormOf(speciesId) {
  * evoluční linie vybraného NE-Ditto rodiče).
  * @param {import("./pokemon.js").Species} spA
  * @param {import("./pokemon.js").Species} spB
+ * @param {number} [maxGen=Infinity]  generace regionu, kde Školka běží (viz baseFormOf)
  * @returns {string} id druhu potomka (základní forma)
  */
-export function chooseChildSpeciesId(spA, spB) {
+export function chooseChildSpeciesId(spA, spB, maxGen = Infinity) {
   let childSpeciesId;
   if (isWildcard(spA)) {
     childSpeciesId = spB.id;
@@ -139,5 +144,5 @@ export function chooseChildSpeciesId(spA, spB) {
     childSpeciesId = Math.random() < 0.5 ? spA.id : spB.id;
   }
   // Vrátí základní formu vybraného druhu.
-  return baseFormOf(childSpeciesId);
+  return baseFormOf(childSpeciesId, maxGen);
 }

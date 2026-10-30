@@ -13,10 +13,13 @@ import { legendaryForArea } from "../../data/legendaries.js";
 import { getActiveArea, startStaticEncounter } from "../systems/battleSystem.js";
 import { ownsSpeciesInRegion } from "../systems/team.js";
 import { getSpecies } from "../../data/pokemon.js";
+import { speciesTypes } from "../../data/types.js";
+import { getState } from "../core/state.js";
 import { spriteImg } from "./sprites.js";
 import { setHtmlReuseSprites } from "./domReuse.js";
 import { openMainTab } from "./mainPanel.js";
 import { saveScroll, restoreScroll } from "./scrollPreserve.js";
+import { playLegendaryScene } from "./legendaryScene.js";
 
 /** Vykreslí obsah záložky Legendary do zadaného elementu. */
 export function renderLegendaryTab(root, onStatus = () => {}) {
@@ -32,7 +35,7 @@ export function renderLegendaryTab(root, onStatus = () => {}) {
   const sp = getSpecies(leg.speciesId);
   // displayName umožní zobrazit jiné jméno, než nese druh v dexu (Red Gyarados → #130).
   const name = leg.displayName ?? sp?.name ?? leg.speciesId;
-  const types = (sp?.types ?? []).join(" / ");
+  const types = speciesTypes(sp, getState().progress?.region ?? "kanto").join(" / "); // typy podle generace regionu
   const sprite = spriteImg(leg.speciesId, { view: "front", alt: name, extraClass: "legendary-mon", shiny: !!leg.shiny, dataKey: `legendary:${leg.speciesId}:${leg.shiny ? 1 : 0}` });
 
   // Shiny-hunt režim: druh už v tomto regionu vlastníš → setkání zůstává
@@ -71,15 +74,21 @@ export function renderLegendaryTab(root, onStatus = () => {}) {
     // Shiny-hunt (už vlastníš) = opakovatelné, ale bez odměn (viz battleSystem).
     // Jednorázové (leg.oneTime) = owned je vždy false → odměny zůstávají; leg.shiny
     // vynutí barvu; claimFlag se při chycení nastaví a tab pak zmizí (mainPanel).
-    const res = startStaticEncounter(leg.speciesId, leg.level, {
-      noRewards: owned,
-      shiny: leg.shiny ? true : undefined,
-      claimFlag: leg.claimFlag,
+    // Souboj začne až po scéně příchodu (tlačítko v okně, viz legendaryScene.js).
+    playLegendaryScene({
+      speciesId: leg.speciesId, scene: leg.scene, name, shiny: !!leg.shiny, button: buttonLabel,
+      onStart: () => {
+        const res = startStaticEncounter(leg.speciesId, leg.level, {
+          noRewards: owned,
+          shiny: leg.shiny ? true : undefined,
+          claimFlag: leg.claimFlag,
+        });
+        if (!res.ok) {
+          onStatus(res.reason ?? "Can't start the battle.");
+          return;
+        }
+        openMainTab("battle");
+      },
     });
-    if (!res.ok) {
-      onStatus(res.reason ?? "Can't start the battle.");
-      return;
-    }
-    openMainTab("battle");
   });
 }

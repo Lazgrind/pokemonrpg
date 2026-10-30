@@ -72,7 +72,8 @@ export function playSfx(name) {
   const path = SFX_MAP[name];
   if (!path) return;
 
-  const url = `assets/audio/sfx/${path}.mp3`;
+  // Zvuky generuje tools/gen_sfx.py (retro styl, WAV – prohlížeče ho přehrají všude).
+  const url = `assets/audio/sfx/${path}.wav`;
   try {
     const audio = new Audio(url);
     audio.volume = (settings.master / 100) * (settings.sfx / 100);

@@ -42,6 +42,9 @@ export const GYMS_GEN2 = [
     type: "ghost",
     badge: "fog-badge",
     leaderId: "morty",
+    // HGSS: Morty hledá legendární Pokémony v Burned Tower – do gymu se vrátí, až tam
+    // hráč sestoupí (beastsAwakened, arrival event Burned Tower).
+    requiresStory: "beastsAwakened",
     trainerOrder: ["ecruteak-gym-medium-martha", "ecruteak-gym-sage-jeffrey", "morty"],
   },
   {
@@ -87,6 +90,9 @@ export const GYMS_GEN2 = [
     type: "dragon",
     badge: "rising-badge",
     leaderId: "clair",
+    // Kánon GSC: Clair po porážce odznak odmítne vydat – dá ho až po zkoušce v Dragon's
+    // Den (gauntlet dragons-den v Blackthornu udělí rising-badge).
+    badgePending: "Clair refuses to hand over the Rising Badge. Pass the Dragon Elder's test in the Dragon's Den (City tab) first.",
     trainerOrder: ["blackthorn-gym-cooltrainer-paul", "blackthorn-gym-cooltrainer-lola", "clair"],
   },
 ];

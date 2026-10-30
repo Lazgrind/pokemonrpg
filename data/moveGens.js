@@ -1,0 +1,51 @@
+/**
+ * DATA: útoky podle generace, ve které přibyly (jen útoky z data/moves.js).
+ * Útok, který tu není, je z Gen 3+. Používá Metronome (vybírá jen útoky z generace regionu).
+ * Generováno: tools/fetch_classic_types.py → tools/convert_classic_types.py. Ručně needitovat.
+ */
+export const MOVES_GEN1 = [
+  "absorb", "acid", "acid-armor", "agility", "amnesia", "aurora-beam",
+  "barrage", "barrier", "bide", "bind", "bite", "blizzard",
+  "body-slam", "bone-club", "bonemerang", "bubble", "bubble-beam", "clamp",
+  "comet-punch", "confuse-ray", "confusion", "constrict", "conversion", "counter",
+  "crabhammer", "cut", "defense-curl", "dig", "disable", "dizzy-punch",
+  "double-edge", "double-kick", "double-slap", "double-team", "dragon-rage", "dream-eater",
+  "drill-peck", "earthquake", "egg-bomb", "ember", "explosion", "fire-blast",
+  "fire-punch", "fire-spin", "fissure", "flamethrower", "flash", "fly",
+  "focus-energy", "fury-attack", "fury-swipes", "glare", "growl", "growth",
+  "guillotine", "gust", "harden", "haze", "headbutt", "high-jump-kick",
+  "horn-attack", "horn-drill", "hydro-pump", "hyper-beam", "hyper-fang", "hypnosis",
+  "ice-beam", "ice-punch", "jump-kick", "karate-chop", "kinesis", "leech-life",
+  "leech-seed", "leer", "lick", "light-screen", "lovely-kiss", "low-kick",
+  "meditate", "mega-drain", "mega-kick", "mega-punch", "metronome", "mimic",
+  "minimize", "mirror-move", "mist", "night-shade", "pay-day", "peck",
+  "petal-dance", "pin-missile", "poison-gas", "poison-powder", "poison-sting", "pound",
+  "psybeam", "psychic", "psywave", "quick-attack", "rage", "razor-leaf",
+  "razor-wind", "recover", "reflect", "rest", "roar", "rock-slide",
+  "rock-throw", "rolling-kick", "sand-attack", "scratch", "screech", "seismic-toss",
+  "self-destruct", "sharpen", "sing", "skull-bash", "sky-attack", "slam",
+  "slash", "sleep-powder", "sludge", "smog", "smokescreen", "soft-boiled",
+  "solar-beam", "sonic-boom", "spike-cannon", "splash", "spore", "stomp",
+  "strength", "string-shot", "stun-spore", "submission", "substitute", "super-fang",
+  "supersonic", "surf", "swift", "swords-dance", "tackle", "tail-whip",
+  "take-down", "teleport", "thrash", "thunder", "thunder-punch", "thunder-shock",
+  "thunder-wave", "thunderbolt", "toxic", "transform", "tri-attack", "twineedle",
+  "vice-grip", "vine-whip", "water-gun", "waterfall", "whirlwind", "wing-attack",
+  "withdraw", "wrap",
+];
+export const MOVES_GEN2 = [
+  "aeroblast", "ancient-power", "attract", "baton-pass", "beat-up", "belly-drum",
+  "bone-rush", "charm", "conversion-2", "cotton-spore", "cross-chop", "crunch",
+  "curse", "destiny-bond", "detect", "dragon-breath", "dynamic-punch", "encore",
+  "endure", "extreme-speed", "false-swipe", "feint-attack", "flail", "flame-wheel",
+  "foresight", "fury-cutter", "future-sight", "giga-drain", "heal-bell", "hidden-power",
+  "icy-wind", "iron-tail", "lock-on", "mach-punch", "magnitude", "mean-look",
+  "megahorn", "metal-claw", "milk-drink", "mind-reader", "mirror-coat", "moonlight",
+  "morning-sun", "mud-slap", "nightmare", "octazooka", "outrage", "pain-split",
+  "perish-song", "powder-snow", "present", "protect", "psych-up", "pursuit",
+  "rain-dance", "rapid-spin", "reversal", "rollout", "sacred-fire", "safeguard",
+  "sandstorm", "scary-face", "shadow-ball", "sketch", "sleep-talk", "sludge-bomb",
+  "snore", "spark", "spider-web", "spikes", "spite", "steel-wing",
+  "sunny-day", "swagger", "sweet-kiss", "sweet-scent", "synthesis", "triple-kick",
+  "twister", "vital-throw", "whirlpool", "zap-cannon",
+];

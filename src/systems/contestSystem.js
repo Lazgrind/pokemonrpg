@@ -237,7 +237,7 @@ export function endContest(reason = "leave") {
     c.best = null;
     commit();
     resultBody = `<p class="story-text">The whistle blows — the Bug-Catching Contest is over. You didn't catch a single bug this time!</p>
-      <p class="placeholder">The judges award you ${NO_CATCH_GOLD} 💰 for taking part. Better luck tomorrow!</p>`;
+      <p class="placeholder">The judges award you ${NO_CATCH_GOLD}₽ for taking part. Better luck tomorrow!</p>`;
   } else {
     // Nejlepší úlovek si necháš (do kolekce).
     const mon = createPokemon(best.speciesId, best.level, { caughtBall: "park" });

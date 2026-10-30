@@ -5,6 +5,7 @@
 
 import { getSpecies } from "../../data/pokemon.js";
 import { MAX_TEAM_SIZE } from "../core/state.js";
+import { speciesTypes } from "../../data/types.js";
 import { getTeamPokemon, swapIntoTeam, reorderTeam } from "../systems/team.js";
 import { dragState, beginDrag, endDrag } from "./dragState.js";
 import { healStatus } from "../systems/battleSystem.js";
@@ -73,7 +74,8 @@ function statBars(p) {
 
 /** HTML odznaky typů. */
 function typeBadges(p) {
-  return (getSpecies(p.speciesId)?.types ?? [])
+  // Typy podle generace regionu chycení (Clefairy z Kanta = Normal…).
+  return speciesTypes(getSpecies(p.speciesId), p.caughtRegion ?? "kanto")
     .map((t) => `<span class="type">${t}</span>`)
     .join("");
 }

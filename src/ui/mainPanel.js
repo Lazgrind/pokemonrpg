@@ -106,9 +106,11 @@ function visibleTabs() {
   // VÝJIMKA: jednorázová setkání (leg.oneTime, např. Red Gyarados) zmizí po chycení –
   // řídí vlastní claimFlag (ne vlastnictví druhu, protože ten je i jinak získatelný).
   const leg = legendaryForArea(area?.id);
+  const legStory = leg?.requiresStory == null ? [] : [].concat(leg.requiresStory); // string i pole
   const hasLegendary =
     !!leg &&
-    (!leg.requiresStory || !!getState().story?.[leg.requiresStory]) &&
+    legStory.every((f) => !!getState().story?.[f]) &&
+    (!leg.requiresBadge || (getState().progress?.badges ?? []).includes(leg.requiresBadge)) &&
     (!leg.oneTime || !getState().story?.[leg.claimFlag]);
   // League tab: jen na Indigo Plateau (kde Liga je) A ZÁROVEŇ s KOMPLETNÍ sadou
   // odznaků daného regionu. V Kantu to řešil unlock strom (Victory Road za

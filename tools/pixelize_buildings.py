@@ -23,7 +23,7 @@ WIDTH = {
     "player-home": 34, "rival-home": 34, "mr-fuji-house": 30, "viridian-trade-house": 34, "cerulean-trade-house": 38,
     "vermilion-trade-house": 36, "vermilion-fishing-hut": 30, "fuchsia-fishing-house": 32, "warden-house": 32,
     "poke-center": 44, "poke-mart": 40, "boost-center": 34, "day-care": 34, "move-tutor": 34,
-    "oak-lab": 54, "pokemon-lab": 60, "pewter-museum": 64, "game-corner": 52, "fighting-dojo": 48,
+    "oak-lab": 54, "elm-lab": 54, "sprout-tower": 32, "azalea-kiln": 34, "kurts-house": 40, "radio-tower": 44, "bills-house": 36, "goldenrod-flower-shop": 32, "goldenrod-underground": 32, "bell-tower": 24, "burned-tower": 44, "dance-theater": 64, "ecruteak-house": 34, "olivine-house": 36, "olivine-lighthouse": 40, "ss-aqua": 84, "cianwood-pharmacy": 36, "blackthorn-house": 40, "dragons-den": 38, "pokemon-lab": 60, "pewter-museum": 64, "game-corner": 52, "fighting-dojo": 48,
     "celadon-mansion": 42, "dept-store": 52, "silph-co": 42, "pokemon-tower": 26, "pokemon-mansion": 66,
     "training-grounds": 48, "ss-anne": 86, "gym": 56,
     # Pokémon League (Indigo Plateau): zdroj je výřez s budovou i nádvořím – rozdělit pod první dvojicí soch

@@ -60,7 +60,22 @@ const SAVE_KEY = "pokemonIdleRpg.save";
  *
  * @type {{ to: number, note: string, run: (data: any) => void }[]}
  */
-export const MIGRATIONS = [];
+export const MIGRATIONS = [
+  {
+    to: 2,
+    note: "Sprout Tower a Dragon's Den už nejsou oblasti mapy (jen budovy ve Violet City / Blackthornu)",
+    run(data) {
+      const moved = { "sprout-tower": "violet-city", "dragons-den": "blackthorn-city" };
+      const p = data.progress;
+      if (p) {
+        if (moved[p.activeAreaId]) p.activeAreaId = moved[p.activeAreaId];
+        for (const r of Object.keys(p.lastAreaByRegion ?? {})) if (moved[p.lastAreaByRegion[r]]) p.lastAreaByRegion[r] = moved[p.lastAreaByRegion[r]];
+        if (Array.isArray(p.visited)) p.visited = p.visited.filter((id) => !moved[id]);
+      }
+      for (const id of Object.keys(moved)) if (data.mapPositions) delete data.mapPositions[id];
+    },
+  },
+];
 
 /**
  * Mapy „id → hodnota" (a seznamy flagů): fillDefaults do nich nedoplňuje

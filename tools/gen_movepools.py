@@ -218,6 +218,11 @@ def en_name(move_json):
 
 def main():
     args = sys.argv[1:]
+    # Learnsety jsou od v1.65.0 z původních her (Yellow / Crystal) – viz CLAUDE.md
+    # „Útoky po generacích". Tento nástroj (Scarlet/Violet) by je přepsal moderními útoky.
+    if "--i-know" not in args:
+        sys.exit("gen_movepools.py se už nepoužívá: learnsety generuje tools/convert_classic_learnsets.py "
+                 "(viz CLAUDE.md). Kdo opravdu chce, ať přidá --i-know.")
     write = "--write" in args
     only = None
     if "--only" in args:

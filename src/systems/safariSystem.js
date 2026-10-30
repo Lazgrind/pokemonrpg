@@ -202,7 +202,7 @@ function grantDepthReward(depth) {
   if (!s.story) s.story = {};
   if (!s.resources) s.resources = {};
   if (!s.resources.items) s.resources.items = {};
-  if (depth >= 3 && !s.story.hasGoldTeeth) {
+  if (depth >= 3 && !s.story.hasGoldTeeth && !s.story.wardenThanked) {
     s.story.hasGoldTeeth = true;
     s.resources.items["gold-teeth"] = (s.resources.items["gold-teeth"] ?? 0) + 1;
     bus.emit(EVENTS.STORY_POPUP, {

@@ -12,6 +12,7 @@
  */
 
 import { getState, commit } from "../core/state.js";
+import { speciesTypes } from "../../data/types.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getPokeball } from "../../data/pokeballs.js";
 import { getMove } from "../../data/moves.js";
@@ -75,9 +76,9 @@ function evYieldLabel(speciesId) {
   return parts.length ? parts.join(", ") : null;
 }
 
-/** Odznaky typů druhu. */
-function typeBadges(species) {
-  return species.types.map((t) => `<span class="type">${esc(t)}</span>`).join("");
+/** Odznaky typů druhu (typy podle generace regionu; bez regionu domovský region druhu). */
+function typeBadges(species, region) {
+  return speciesTypes(species, region).map((t) => `<span class="type">${esc(t)}</span>`).join("");
 }
 
 /** Pokédex flavor text druhu (jako citace). Prázdné → nic. */
@@ -329,7 +330,7 @@ function ownedBody(owned) {
       ${spriteImg(species.id, { shiny: showShiny, gender: owned.gender, alt: species.name, extraClass: "mc-sprite", dataKey: `card:${owned.uid}:${species.id}:${showShiny ? 1 : 0}:${owned.gender ?? ""}` })}
       <div class="mc-title">
         <div class="mc-name">${esc(name)} ${genderSymbolHtml(owned.gender, { size: 18 })}${statusBadge(owned.status)} <span class="mc-dex">${dexNo}</span></div>
-        <div class="mc-types">${typeBadges(species)}<span class="mc-rarity">${esc(species.rarity)}</span></div>
+        <div class="mc-types">${typeBadges(species, owned.caughtRegion ?? "kanto")}<span class="mc-rarity">${esc(species.rarity)}</span></div>
         ${genusHtml(species)}
         <div class="mc-lvl">Lv ${owned.level}</div>
       </div>
@@ -370,7 +371,9 @@ function ownedBody(owned) {
       ${(() => {
         const ev = evolutionInfo(owned);
         if (!ev) return "";
-        const note = ev.blocked
+        const note = ev.regionLocked
+          ? `<span class="placeholder">(only in the region where it was caught)</span>`
+          : ev.blocked
           ? `<span class="placeholder">(Everstone blocks it)</span>`
           : `<span class="placeholder">${ev.method === "level" || ev.method === "stats" ? "at" : "with"} ${esc(ev.requirementLabel)}</span>`;
         return `<dt>Evolves into</dt><dd>${esc(ev.toName)} ${note}</dd>`;

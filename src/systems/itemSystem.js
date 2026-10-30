@@ -14,7 +14,7 @@ import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { getItem, isHeldItem } from "../../data/items.js";
 import { getMove } from "../../data/moves.js";
-import { computeStats } from "./pokemonSystem.js";
+import { computeStats, isInCaughtRegion, regionLockReason } from "./pokemonSystem.js";
 import { MAX_LEVEL, currentLevelCap, rareCandyLevelUp } from "./progression.js";
 
 /* ---------- PP itemy (PP Up / PP Max) – pomocné výpočty na slotu tahu ----------
@@ -74,6 +74,8 @@ export function canUseItem(itemId, owned) {
   if (!def) return { ok: false, reason: "Unknown item." };
   if (!def.effect) return { ok: false, reason: "This item can't be used." };
   if (!owned) return { ok: false, reason: "No target." };
+  // Region-lock: jedinec z jiného regionu jen odpočívá v PC (nelze ho léčit ani trénovat).
+  if (!isInCaughtRegion(owned)) return { ok: false, reason: regionLockReason(owned) };
   const max = computeStats(owned).maxHp;
   const hp = owned.hp ?? max;
   const fainted = hp <= 0;
@@ -205,6 +207,7 @@ export function usePpItem(uid, itemId, slotIndex) {
   if (itemCount(itemId) <= 0) return { ok: false, reason: `No ${def.name} left.` };
   const owned = getState().collection.find((p) => p.uid === uid);
   if (!owned) return { ok: false, reason: "Unknown Pokémon." };
+  if (!isInCaughtRegion(owned)) return { ok: false, reason: regionLockReason(owned) };
   const slot = owned.moves?.[slotIndex];
   if (!slot) return { ok: false, reason: "No such move." };
 

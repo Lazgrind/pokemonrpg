@@ -9,6 +9,7 @@
 import { getPokeball } from "../../data/pokeballs.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { getState } from "../core/state.js";
+import { regionBadgeCount } from "../../data/badges.js";
 
 /** Base speed druhu, od které se ball „Fast" počítá jako rychlý. */
 const FAST_SPEED_THRESHOLD = 100;
@@ -19,12 +20,13 @@ function clamp(v, min, max) {
 
 /**
  * Aktuálně dosažená úroveň odemčení ballů. Řídí se REÁLNÝM postupem = počtem
- * získaných odznaků (`progress.badges`): 0–1 → tier 1, 2–4 → tier 2, 5+ → tier 3.
+ * získaných odznaků AKTUÁLNÍHO REGIONU (`progress.badges`): 0–1 → tier 1, 2–4 → tier 2,
+ * 5+ → tier 3. Per region jako budovy a HM – v Johtu se obchod odemyká johtskými odznaky.
  * Případný explicitní `progress.tier` (dev/budoucí postup) smí tier už jen zvýšit.
  */
 export function unlockedBallTier() {
   const p = getState().progress ?? {};
-  const badges = Array.isArray(p.badges) ? p.badges.length : 0;
+  const badges = regionBadgeCount(p.badges, p.region ?? "kanto").earned;
   const byBadges = badges >= 5 ? 3 : badges >= 2 ? 2 : 1;
   const explicit = p.tier ?? 0;
   return Math.max(byBadges, explicit);

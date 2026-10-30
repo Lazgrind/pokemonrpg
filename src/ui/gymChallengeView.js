@@ -31,17 +31,17 @@ import { getState, commit } from "../core/state.js";
 const CHALLENGES = {
   "vermilion-gym": {
     flag: "vermilionGymSwitches", // (přepoužit původní flavour-flag: teď = „hádanka splněna")
-    title: "🗑️ Lt. Surge's Gym",
+    title: "Lt. Surge's Gym",
     build: buildTrashCans,
   },
   "fuchsia-gym": {
     flag: "fuchsiaGymWalls", // (přepoužit původní flavour-flag)
-    title: "🥷 Koga's Gym",
+    title: "Koga's Gym",
     build: buildInvisibleWalls,
   },
   "saffron-gym": {
     flag: "saffronGymIntro", // (přepoužit původní flavour-flag)
-    title: "🔮 Sabrina's Gym",
+    title: "Sabrina's Gym",
     build: buildTeleportPads,
   },
 };

@@ -7,8 +7,9 @@ data/gen<N>/:
                  genderRatio, eggGroups, rarity, evolvesTo/evolutionLevel
                  (level-up) NEBO evolutions[] (item/trade/happiness/den-noc),
                  height, weight, genus, dexEntry.
-  • learnsets.js (LEARNSETS_GEN<N>): level-up movepool (priorita VG dle generace –
-                 pro gen 2 nejdřív Crystal/Gold-Silver → éra-věrné tahy).
+  • learnsets.js (LEARNSETS_GEN<N>): JEN s přepínačem --learnsets. Od v1.65.0 learnsety
+                 generuje tools/convert_classic_learnsets.py (Kanto Yellow, Johto Crystal
+                 pro všech 251) – tenhle nástroj by gen2 learnsety zúžil na 152–251.
   • evYields.js  (EV_YIELDS_GEN<N>)
 
 Navíc:
@@ -479,7 +480,10 @@ def main():
 
     print("\nVÝSTUP:")
     out(POKE_OUT, poke_txt)
-    out(LEARN_OUT, learn_txt)
+    if "--learnsets" in args:
+        out(LEARN_OUT, learn_txt)
+    else:
+        print("  learnsets.js přeskočen (generuje tools/convert_classic_learnsets.py; vynutit --learnsets)")
     out(EV_OUT, ev_txt)
     out(MOVES_JS, moves_txt)
     print(f"    (+{added} nových tahů do moves.js)")

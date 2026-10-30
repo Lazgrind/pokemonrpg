@@ -20,7 +20,7 @@
  * Vydat gen 2 i na produkci? Držet na `false`, dokud není Johto hotové.
  * @type {boolean}
  */
-const GEN2_RELEASED = false;
+const GEN2_RELEASED = true;
 
 /**
  * Běžíme lokálně (vývoj), ne na produkci? Poznáme podle hostname.

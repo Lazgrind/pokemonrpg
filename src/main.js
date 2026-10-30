@@ -30,8 +30,10 @@ import { initTitleScreen } from "./ui/titleScreen.js";
 import { openChangelog } from "./ui/changelogView.js";
 import { initMoveLearnPrompts } from "./ui/moveLearnView.js";
 import { startIntro } from "./ui/introScene.js";
+import { initLayoutFit, requestFit } from "./ui/layoutFit.js";
 import { maybeStartTutorial } from "./ui/tutorial.js";
 import { showPopup } from "./ui/popup.js";
+import { maybeAnnounceJohto } from "./ui/johtoAnnouncement.js";
 import { showEvolutionPopup } from "./ui/evolutionPopup.js";
 import { showHatchPopup } from "./ui/hatchPopup.js";
 import { ballIconHtml } from "./ui/ballIcon.js";
@@ -75,6 +77,8 @@ function applyLayout() {
     const node = document.getElementById(PANEL_BY_KEY[key]);
     if (node) node.style.order = String(i);
   });
+  // 2 sloupce / zhuštěné / pod sebe podle toho, co se do okna vejde (viz layoutFit).
+  requestFit();
 }
 
 /** Krátká stavová hláška v horní liště. */
@@ -308,6 +312,7 @@ function init() {
   renderSaveControls(el("save-controls"), setStatus);
   renderSettings(el("settings-controls"));
   renderResourceBar(el("resource-bar"));
+  initLayoutFit(); // až je vykreslená i horní lišta (měří se její šířka)
 
   // 4) UI reaguje na změny stavu (oddělení logiky od UI).
   // Levý panel obsahuje scrollovací seznamy (tým/PC/pokédex) → jeho překreslení
@@ -470,6 +475,8 @@ function init() {
     }
     // Nabídky naučení tahu (plné sloty) – sleduje frontu i položky z offline.
     initMoveLearnPrompts();
+    // Jednorázové oznámení plavby do Johta pro hráče, kteří už jsou Champion (2.0.0).
+    maybeAnnounceJohto();
     // Nová hra: nejdřív krátké intro + pojmenování hráče i rivala. Startera si
     // hráč NOVĚ vybírá až v Oakově laboratoři (dojde tam po mapě), NE hned v intru.
     // Po intru (a stejně tak u rozehrané hry bez startéra) hráče jen navedeme do

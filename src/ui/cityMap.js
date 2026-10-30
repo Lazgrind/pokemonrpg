@@ -5,13 +5,15 @@
  * Statická část (terén, cesty, stromy, budovy) se kreslí jednou a drží v cache; každý snímek
  * se nad ni dokreslí jen pohyb (voda, květiny, kouř, mlha). Nad budovami leží neviditelná
  * tlačítka (klik, dotyk, klávesnice, popisek), proto se klik neřeší přes plátno.
- * Budovy jsou sprity v pixel artu (tools/pixelize_buildings.py); gym jen u města s gymem,
+ * Budovy jsou sprity v pixel artu (tools/pixelize_buildings.py), bez spritu náhradní kreslená budova
+ * (placeholderBuilding); gym jen u města s gymem,
  * Pokémon League jen na oblasti s Ligou. Plošné prvky (`decals`, např. nádvoří Ligy) leží pod budovami.
  */
 
 import { getBuilding } from "../../data/buildings.js";
 import { getGymForCity } from "../../data/gyms.js";
 import { leagueForArea } from "../../data/trainers.js";
+import { buildingPlaceholder } from "../../data/cityMaps.js";
 import { buildingSpriteUrl, citySpriteUrl } from "../core/assets.js";
 import { VERSION } from "../core/version.js";
 
@@ -130,6 +132,76 @@ function banner(b, name, x, y) {
   for (const ch of text) { const g = FONT[ch]; if (g) for (let i = 0; i < 35; i++) if (g[i] === "1") b.fillRect(cx + (i % 5), y + 4 + Math.floor(i / 5), 1, 1); cx += 6; }
 }
 
+// ---------------------------------------------------------------- náhradní budova (dokud chybí sprite)
+/**
+ * Jednoduchá pixelová budova v barvě budovy (`def.color`) – rozměry a tvar z BUILDING_PLACEHOLDERS.
+ * Vrací plátno, které se na mapě použije stejně jako sprite (klikatelné, s popiskem).
+ */
+function placeholderBuilding(id, color = "#8a8aa0") {
+  const { w, h, shape } = buildingPlaceholder(id);
+  const c = document.createElement("canvas"); c.width = w; c.height = h; const b = c.getContext("2d");
+  const dark = mix(color, "#000000", .3), lite = mix(color, "#ffffff", .3), WALL = "#efe4c8", WALL_D = "#cdbf9c";
+  const roof = (x0, y0, x1, y1, over = 3) => {   // lichoběžníková střecha s pruhy
+    fillPolyPx(b, [[x0 - over, y1], [x0, y0], [x1, y0], [x1 + over, y1]], OUTL);
+    fillPolyPx(b, [[x0 - over + 1, y1 - 1], [x0 + 1, y0 + 1], [x1 - 1, y0 + 1], [x1 + over - 1, y1 - 1]], color);
+    b.fillStyle = dark; for (let y = y0 + 3; y < y1 - 1; y += 3) b.fillRect(x0 - over + 2, y, x1 - x0 + over * 2 - 4, 1);
+    b.fillStyle = lite; b.fillRect(x0 + 1, y0 + 1, x1 - x0 - 2, 1);
+  };
+  const wall = (x0, y0, x1, y1, col = WALL) => { b.fillStyle = OUTL; b.fillRect(x0, y0, x1 - x0, y1 - y0); b.fillStyle = col; b.fillRect(x0 + 1, y0, x1 - x0 - 2, y1 - y0 - 1); b.fillStyle = WALL_D; b.fillRect(x0 + 1, y1 - 3, x1 - x0 - 2, 2); };
+  const door = (cx, base, dw = 6, dh = 9) => { b.fillStyle = OUTL; b.fillRect(cx - dw / 2 - 1, base - dh - 1, dw + 2, dh + 1); b.fillStyle = "#7a5432"; b.fillRect(cx - dw / 2, base - dh, dw, dh - 1); };
+  const win = (x, y, ww = 6, wh = 5) => { b.fillStyle = OUTL; b.fillRect(x - 1, y - 1, ww + 2, wh + 2); b.fillStyle = "#9fd0f0"; b.fillRect(x, y, ww, wh); b.fillStyle = "#e8f6ff"; b.fillRect(x, y, ww, 1); };
+  if (shape === "pagoda") {   // patrová věž (Sprout / Bell / Burned Tower)
+    const tiers = h > 60 ? 4 : 3, th = Math.floor((h - 6) / tiers);
+    for (let t = 0; t < tiers; t++) {
+      const inset = Math.round(t * w * .1), base = h - 1 - t * th, x0 = 4 + inset, x1 = w - 4 - inset;
+      wall(x0, base - th + 4, x1, base, "#8a5a3a");
+      roof(x0, base - th, x1, base - th + 5, 3);
+    }
+    b.fillStyle = OUTL; b.fillRect(Math.floor(w / 2) - 1, 0, 3, 7); b.fillStyle = "#e8c050"; b.fillRect(Math.floor(w / 2), 1, 1, 5);
+    door(Math.floor(w / 2), h - 1, 6, 8);
+  } else if (shape === "lighthouse") {   // maják: bílá věž s pruhy, nahoře světlo
+    const cx = Math.floor(w / 2);
+    wall(2, h - 10, w - 2, h);
+    for (let y = 12; y < h - 10; y++) { const hw = Math.round(5 + (y - 12) / (h - 22) * 4); b.fillStyle = OUTL; b.fillRect(cx - hw - 1, y, hw * 2 + 2, 1); b.fillStyle = Math.floor(y / 8) % 2 ? color : "#f4f4f8"; b.fillRect(cx - hw, y, hw * 2, 1); }
+    b.fillStyle = OUTL; b.fillRect(cx - 6, 6, 12, 7); b.fillStyle = "#ffe066"; b.fillRect(cx - 5, 7, 10, 5);
+    roof(cx - 5, 1, cx + 5, 6, 2);
+    door(cx, h - 1, 5, 7);
+  } else if (shape === "radio") {   // rozhlasová věž: vysoká budova s anténou
+    const x0 = Math.round(w * .18), x1 = w - Math.round(w * .18), top = 22;
+    wall(x0, top, x1, h);
+    b.fillStyle = color; b.fillRect(x0 + 1, top, x1 - x0 - 2, 4);
+    for (let y = top + 8; y < h - 12; y += 9) for (let x = x0 + 4; x < x1 - 6; x += 8) win(x, y, 5, 4);
+    b.fillStyle = OUTL; b.fillRect(Math.floor(w / 2) - 1, 2, 3, top - 2);
+    for (let y = 6; y < top; y += 5) { b.fillRect(Math.floor(w / 2) - 5, y, 11, 1); }
+    b.fillStyle = "#ff4040"; b.fillRect(Math.floor(w / 2), 0, 1, 2);
+    door(Math.floor(w / 2), h - 1, 8, 9);
+  } else if (shape === "ship") {   // loď v přístavu
+    fillPolyPx(b, [[0, h - 16], [w, h - 16], [w - 8, h - 1], [8, h - 1]], OUTL);
+    fillPolyPx(b, [[2, h - 15], [w - 2, h - 15], [w - 9, h - 2], [9, h - 2]], color);
+    b.fillStyle = "#f4f4f8"; b.fillRect(4, h - 15, w - 8, 2);
+    wall(18, h - 28, w - 18, h - 15, "#f4f4f8");
+    for (let x = 24; x < w - 24; x += 9) win(x, h - 24, 5, 4);
+    b.fillStyle = OUTL; b.fillRect(w / 2 - 5, 2, 10, h - 29); b.fillStyle = color; b.fillRect(w / 2 - 4, 3, 8, h - 31); b.fillStyle = "#f4f4f8"; b.fillRect(w / 2 - 4, 7, 8, 2);
+  } else if (shape === "cave") {   // vchod do jeskyně / svatyně ve skále
+    ellipsePx(b, w / 2, h - 12, w / 2 - 1, h / 2 - 2, OUTL); ellipsePx(b, w / 2, h - 12, w / 2 - 2, h / 2 - 3, "#8a8c94");
+    ellipsePx(b, w / 2 - 4, h - 18, w / 3, h / 4, "#a4a6ae");
+    ellipsePx(b, w / 2, h - 6, 9, 9, OUTL); ellipsePx(b, w / 2, h - 6, 8, 8, "#2a2230");
+    b.fillStyle = color; b.fillRect(w / 2 - 12, h - 3, 24, 2);
+  } else if (shape === "stairs") {   // vchod do podzemí: stříška nad schody
+    roof(4, 1, w - 4, 8, 3);
+    wall(5, 8, w - 5, h);
+    b.fillStyle = "#2a2230"; b.fillRect(9, 10, w - 18, h - 12);
+    b.fillStyle = "#6a6c74"; for (let y = 12; y < h - 2; y += 3) b.fillRect(10, y, w - 20, 1);
+  } else {   // dům
+    const roofH = Math.round(h * .45);
+    wall(3, roofH - 1, w - 3, h);
+    roof(4, 0, w - 4, roofH, 3);
+    door(Math.floor(w / 2), h - 1);
+    if (w >= 34) { win(8, roofH + 4); win(w - 14, roofH + 4); }
+  }
+  return c;
+}
+
 // ---------------------------------------------------------------- statická vrstva (kreslí se jednou)
 function buildStatic(cityId, name, map, placed, decals) {
   const R = rng("town" + cityId), G = GROUND[map.ground] ?? GROUND.grass;
@@ -144,6 +216,9 @@ function buildStatic(cityId, name, map, placed, decals) {
   const water = map.water;
   if (water) {
     if (water.left) { b.fillStyle = "#f0dca8"; b.fillRect(water.left, 30, 4, H); b.fillStyle = "#4a9ee8"; b.fillRect(0, 30, water.left, H); b.fillStyle = "#2f78c8"; b.fillRect(water.left - 1, 30, 1, H); }
+    if (water.right) { const r = water.right; b.fillStyle = "#f0dca8"; b.fillRect(r - 4, 30, 4, H); b.fillStyle = "#4a9ee8"; b.fillRect(r, 30, W - r, H); b.fillStyle = "#2f78c8"; b.fillRect(r, 30, 1, H); }
+  }
+  if (water && water.y != null) {   // moře dole (bez `y` jen boční pobřeží left/right)
     const x0 = water.x0 ?? 0, x1 = water.x1 ?? W;
     b.fillStyle = "#f0dca8"; b.fillRect(x0 - (water.x0 ? 4 : 0), water.y - 5, x1 - x0 + (water.x0 ? 4 : 0) + (water.x1 ? 4 : 0), 5);
     if (water.x1) b.fillRect(x1, water.y - 5, 4, H); if (water.x0) b.fillRect(x0 - 4, water.y - 5, 4, H);
@@ -175,11 +250,11 @@ function buildStatic(cityId, name, map, placed, decals) {
     const [ex, ew] = map.exit ?? [-99, 0];
     for (let row = 0; row < 4; row++) for (let x = (row % 2) * 7 - 6; x < W + 8; x += 14) { if (x > ex - 10 && x < ex + ew + 10) continue; const bs = 14 + row * 8; add(bs, () => border(x, bs)); }
     if (map.sideTrees) {
-      const [s0, s1] = map.sideTrees, gap = map.roadGap ?? [-1, -1], leftEnd = water && !water.x0 ? water.y - 8 : s1, rightEnd = water && !water.x1 ? water.y - 8 : s1;
+      const [s0, s1] = map.sideTrees, gap = map.roadGap ?? [-1, -1], leftEnd = water?.y != null && !water.x0 ? water.y - 8 : s1, rightEnd = water?.y != null && !water.x1 ? water.y - 8 : s1;
       for (let bs = s0; bs <= s1; bs += 10) {
         if (bs > gap[0] && bs < gap[1]) continue;
-        if (bs <= leftEnd && !map.noLeftTrees) add(bs, () => border(6, bs));
-        if (bs <= rightEnd) add(bs + 1, () => border(W - 6, bs + 1));
+        if (bs <= leftEnd && !map.noLeftTrees && !water?.left) add(bs, () => border(6, bs));
+        if (bs <= rightEnd && !water?.right) add(bs + 1, () => border(W - 6, bs + 1));
       }
     }
   }
@@ -217,10 +292,11 @@ function drawFrame(a, t) {
   ctx.globalCompositeOperation = "source-over"; ctx.drawImage(S.bg, 0, 0);
   ctx.fillStyle = "#b8e4ff";
   if (map.water) {
-    const wy = map.water.y, x0 = map.water.x0 ?? 0, x1 = map.water.x1 ?? W;
+    const wy = map.water.y ?? H, x0 = map.water.x0 ?? 0, x1 = map.water.x1 ?? W;
     for (let y = wy + 2; y < H; y++) for (let x = x0 + (y * 5 + step) % 14; x < x1 - 2; x += 14) if (wet(x, y) && wet(x + 1, y)) ctx.fillRect(x, y, 2, 1);
     if (map.water.left) for (let y = 32; y < wy; y += 3) ctx.fillRect((y * 7 + step) % map.water.left, y, 2, 1);
-    ctx.fillStyle = "#ffffff"; for (let x = x0; x < x1; x++) { const y = wy - 1 + (Math.sin(x * .3 + t * 2) > 0 ? 0 : 1); if (((x + step) % 7) < 3 && wet(x, y)) ctx.fillRect(x, y, 1, 1); }
+    if (map.water.right) for (let y = 32; y < wy; y += 3) ctx.fillRect(map.water.right + 2 + (y * 7 + step) % (W - map.water.right - 3), y, 2, 1);
+    if (map.water.y != null) { ctx.fillStyle = "#ffffff"; for (let x = x0; x < x1; x++) { const y = wy - 1 + (Math.sin(x * .3 + t * 2) > 0 ? 0 : 1); if (((x + step) % 7) < 3 && wet(x, y)) ctx.fillRect(x, y, 1, 1); } }
   }
   if (map.river) { ctx.fillStyle = "#b8e4ff"; for (let k = 0; k < 14; k++) ctx.fillRect(map.river.x + 3 + (k * 5) % (map.river.w - 6), (k * 13 + step * 2) % H, 2, 1); }
   const fr = Math.floor(t * 2) % 2;
@@ -277,7 +353,10 @@ export function mountCityMap(el, cityId, map, { name, labelFor, onPick }) {
     const imgs = all.slice(0, entries.length);
     const decals = decalDefs.flatMap((d, i) => { const img = all[entries.length + i]; return img ? [{ ...d, img, w: img.naturalWidth, h: img.naturalHeight, x: Math.round(d.cx - img.naturalWidth / 2), y: d.top }] : []; });
     const placed = entries.flatMap((e, i) => {
-      const img = imgs[i]; if (!img) return [];
+      // budova bez spritu → náhradní pixelová budova (gym / Liga sprite mají vždy)
+      const img = imgs[i] ?? (e.id === "gym" || e.id === "league" ? null : placeholderBuilding(e.id, getBuilding(e.id)?.color));
+      if (!img) return [];
+      if (!img.naturalWidth) return [{ ...e, img, w: img.width, h: img.height, x: Math.round(e.cx - img.width / 2), y: e.base - img.height + 2 }];
       // pojistka: nečekaně velký obrázek (stará verze) se zmenší na velikost budovy, ať mapu nerozbije
       const k = img.naturalWidth > MAX_SPRITE_W ? FALLBACK_W / img.naturalWidth : 1, w = Math.round(img.naturalWidth * k), h = Math.round(img.naturalHeight * k);
       return [{ ...e, img, w, h, x: Math.round(e.cx - w / 2), y: e.base - h + 2 }];

@@ -14,11 +14,15 @@ Použití:
                                                               rekurzivně, na místě)
   přidej  --force                                           – přepracovat i už
                                                               hotové (256x256+alfa)
+          --key                                             – pozadí = barva rohů (i modrá,
+                                                              zelená…), smaže se všude, kde
+                                                              je barva podobná
 """
 
 import sys
-from collections import deque
+from collections import Counter, deque
 from pathlib import Path
+
 from PIL import Image
 
 CANVAS = 256   # velikost výsledného čtvercového plátna
@@ -65,6 +69,22 @@ def remove_bg(img):
     return img
 
 
+def remove_key_color(img, tol=40):
+    """Barevné pozadí (barva rohů obrázku) → alpha 0 všude, kde je barva blízko (±tol).
+    Bere i uzavřené kapsy pozadí (mezi rukou a tělem); postava nesmí mít podobnou barvu."""
+    img = img.convert("RGBA")
+    w, h = img.size
+    px = img.load()
+    corners = Counter(px[x, y][:3] for x, y in ((0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1)))
+    key = corners.most_common(1)[0][0]
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if abs(r - key[0]) + abs(g - key[1]) + abs(b - key[2]) <= tol:
+                px[x, y] = (r, g, b, 0)
+    return img
+
+
 def normalize(img):
     """Ořez na postavu → zmenšení na TARGET (delší strana) → vycentrování na plátno."""
     bbox = img.getbbox()
@@ -91,12 +111,12 @@ def already_done(img):
     return a.getextrema()[0] == 0  # existuje aspoň jeden plně průhledný pixel
 
 
-def process(src, dst, force=False):
+def process(src, dst, force=False, key=False):
     img = Image.open(src)
     if not force and already_done(img):
         print(f"SKIP (už hotové): {src}")
         return
-    out = normalize(remove_bg(img))
+    out = normalize(remove_key_color(img) if key else remove_bg(img))
     out.save(dst)
     bbox = out.getbbox()
     cw = (bbox[2] - bbox[0]) if bbox else 0
@@ -105,10 +125,12 @@ def process(src, dst, force=False):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if a != "--force"]
+    flags = {"--force", "--key"}
+    args = [a for a in sys.argv[1:] if a not in flags]
     force = "--force" in sys.argv
+    opts = {"key": "--key" in sys.argv}
     if not args:
-        print("Použití: python tools/prep_sprite.py <vstup.png|složka> [<výstup.png>] [--force]")
+        print("Použití: python tools/prep_sprite.py <vstup.png|složka> [<výstup.png>] [--force] [--key]")
         sys.exit(1)
 
     target = Path(args[0])
@@ -119,11 +141,11 @@ def main():
             print(f"Ve složce {target} nejsou žádné .png.")
             return
         for p in pngs:
-            process(str(p), str(p), force)
+            process(str(p), str(p), force, **opts)
         print(f"Hotovo: zpracováno {len(pngs)} souborů (nová = zpracovaná, hotová přeskočená).")
     else:
         dst = args[1] if len(args) > 1 else str(target)
-        process(str(target), dst, force)
+        process(str(target), dst, force, **opts)
 
 
 if __name__ == "__main__":

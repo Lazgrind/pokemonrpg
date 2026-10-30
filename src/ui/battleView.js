@@ -6,6 +6,7 @@
 
 import { bus, EVENTS } from "../core/events.js";
 import { getState } from "../core/state.js";
+import { moveType } from "../../data/types.js";
 import {
   getBattle,
   toggleBattle,
@@ -47,7 +48,7 @@ import { getMove } from "../../data/moves.js";
 import { trainerSpriteUrl } from "../../data/trainers.js";
 import { getBadge } from "../../data/badges.js";
 import { badgeUrl } from "../core/assets.js";
-import { isCaught, isCaughtShiny, areaCatchProgress } from "../systems/pokedex.js";
+import { isCaughtIn, areaCatchProgress } from "../systems/pokedex.js";
 import { getUnownForms, hasUnownForm, unownProgress } from "../systems/unownSystem.js";
 import { UNOWN_FORMS, UNOWN_SPECIES_ID, UNOWN_RUINS_AREA_ID } from "../../data/gen2/unown.js";
 import { typeColor, typeBadge } from "./typeColors.js";
@@ -439,13 +440,14 @@ function openAreaDex(area) {
   const render = () => {
     const ids = areaSpeciesIds(area);
     const { caught, total } = areaCatchProgress(area);
-    const shinyCount = ids.filter((id) => isCaughtShiny(id)).length;
+    const region = getState().progress?.region ?? "kanto"; // region-lock: chyceno TADY
+    const shinyCount = ids.filter((id) => isCaughtIn(id, region, true)).length;
     const cells = ids
       .map((id) => {
         const sp = getSpecies(id);
         const name = sp?.name ?? id;
-        const got = isCaught(id);
-        const shiny = isCaughtShiny(id);
+        const got = isCaughtIn(id, region);
+        const shiny = isCaughtIn(id, region, true);
         if (!got) {
           return `<div class="area-dex-cell is-uncaught" title="Not caught yet">
             <div class="area-dex-sprite"><span class="area-dex-q">?</span></div>
@@ -580,7 +582,7 @@ function battleCmdHtml(b) {
 function enemyInfoHtml(b) {
   const e = b.enemy;
   const sp = getSpecies(e.ref.speciesId);
-  const caught = isCaught(e.ref.speciesId);
+  const caught = isCaughtIn(e.ref.speciesId, getState().progress?.region ?? "kanto");
   const name = `${e.ref.shiny ? "✨ " : ""}${e.name}`;
   const sprite = spriteImg(e.ref.speciesId, {
     view: "front",
@@ -651,9 +653,10 @@ function fightMenuHtml(b) {
           const mv = getMove(m.id);
           if (!mv) return "";
           const out = (m.pp ?? 0) <= 0;
-          return `<button class="btn move-btn move-typed" data-move="${i}" style="--tc:${typeColor(mv.type)}" ${out ? "disabled" : ""}>
+          const mt = moveType(mv, getState().progress?.region ?? "kanto"); // typ podle generace regionu
+          return `<button class="btn move-btn move-typed" data-move="${i}" style="--tc:${typeColor(mt)}" ${out ? "disabled" : ""}>
             <span class="move-name">${CAT_ICON[mv.category] ?? ""} ${mv.name}</span>
-            <span class="move-sub">${mv.type ?? "—"} · PP ${m.pp}/${m.maxPp}</span>
+            <span class="move-sub">${mt ?? "???"} · PP ${m.pp}/${m.maxPp}</span>
           </button>`;
         })
         .join("") || `<p class="placeholder">This Pokémon knows no moves.</p>`;

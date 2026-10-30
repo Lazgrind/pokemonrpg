@@ -1,5 +1,5 @@
 /**
- * DATA: EV yieldy generace 2 (Johto). Zatím jen Johto startéři. Doplňuj sem.
+ * DATA: EV yieldy generace 2 (Johto), druhy #152–251.
  */
 
 export const EV_YIELDS_GEN2 = {

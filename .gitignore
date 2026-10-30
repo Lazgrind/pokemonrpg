@@ -19,3 +19,7 @@ __pycache__/
 # (viz docs/NOTES.md). Zdrojové PNG jsou ballast, do repa nepatří.
 assets/map/Mapa-Kanto.png
 assets/map/Routes-Kanto.png
+
+# Cache stahování z PokeAPI (tools/fetch_classic_learnsets.py)
+tools/.pokeapi_cache/
+tools/_downloads/

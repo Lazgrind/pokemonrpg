@@ -45,11 +45,12 @@ export function currentLevelCap() {
   const region = state.progress?.region ?? "kanto";
   const gen = generationByRegion(region);
   const gyms = gen?.gyms ?? GYMS; // fallback: neznámý region → globální agregát
-  // Strop = ace prvního gymu DANÉHO REGIONU, jehož odznak ještě nemám.
-  for (const gym of gyms) {
-    if (!badges.includes(gym.badge)) {
-      return trainerAceLevel(gym.leaderId) || MAX_LEVEL;
-    }
+  // Strop podle POČTU odznaků regionu (gymy jdou dělat v různém pořadí): s n odznaky
+  // = ace (n+1). nejslabšího leadera regionu (leadeři seřazení podle ace).
+  const owned = gyms.filter((g) => badges.includes(g.badge)).length;
+  if (owned < gyms.length) {
+    const aces = gyms.map((g) => trainerAceLevel(g.leaderId)).sort((a, b) => a - b);
+    return aces[owned] || MAX_LEVEL;
   }
   // Všech 8 odznaků regionu: po zisku titulu regionu bez limitu, jinak liga.
   const league = gen?.league ?? LEAGUE;

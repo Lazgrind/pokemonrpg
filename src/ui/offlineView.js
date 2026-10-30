@@ -30,7 +30,7 @@ export function showOfflineSummary(summary, onClose) {
       .map(([res, amt]) => `<li>+${amt} ${lootLabel(res)}</li>`)
       .join("");
     sections += `
-      <p class="placeholder" style="margin-top:6px">⚔️ Your team was battling on Route 1:</p>
+      <p class="placeholder" style="margin-top:6px">⚔️ Your team was battling on ${b.areaName ?? "the route"}:</p>
       <ul class="offline-gains">
         <li>Enemies defeated: <strong>${b.kills}</strong></li>
         <li>✨ +${b.xp} XP</li>

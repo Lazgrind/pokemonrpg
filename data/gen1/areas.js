@@ -14,7 +14,7 @@ export const AREAS_GEN1 = [
     y: 64.7,
     unlock: { start: true },
     recommendedLevel: 1,
-    description: "Your home town. Shops and services will open here later.",
+    description: "Your home town — Professor Oak's lab, your house and your rival's home next door.",
     species: [],
     water: true,
     drops: [],
@@ -223,7 +223,7 @@ export const AREAS_GEN1 = [
     y: 25.2,
     // Badge-gate (gym gating): cesta na jih k Vermilionu je zavřená, dokud
     // neporazíš Misty (Cascade Badge). Bez toho by šel Cerulean Gym přeskočit.
-    unlock: { visited: "cerulean-city", badge: "cascade-badge" },
+    unlock: { visited: "cerulean-city", badge: "cascade-badge" }, // gymy nejdou přeskočit: dál až po Misty
     recommendedLevel: 13,
     description: "A quiet path south of Cerulean City, filled with tall grass.",
     species: ["oddish", "bellsprout", "pidgey", "meowth", "mankey", { id: "abra", rarity: "rare" }],
@@ -302,7 +302,7 @@ export const AREAS_GEN1 = [
     y: 17.2,
     // Badge-gate (gym gating): východní cesta z Cerulean (k Rock Tunnelu) je také
     // za Cascade Badge – aby Misty nešla obejít ani tudy.
-    unlock: { visited: "cerulean-city", badge: "cascade-badge" },
+    unlock: { visited: "cerulean-city", hm: 1, badge: "cascade-badge" }, // strom: Cut, mimo souboj až s Cascade Badge
     recommendedLevel: 14,
     description: "A scenic mountain path connecting Cerulean City to Rock Tunnel.",
     species: ["rattata", "spearow", "ekans", { id: "sandshrew", rarity: "uncommon" }],
@@ -321,7 +321,7 @@ export const AREAS_GEN1 = [
     // na Route 9). Bez něj se dovnitř nedostaneš (story.hasFlash, viz areas gating).
     // Badge-gate (gym gating): vstup do Lavender oblasti navíc vyžaduje Thunder
     // Badge (Lt. Surge ve Vermilionu) – vynucuje kanonické pořadí gymů.
-    unlock: { visited: "route-09", hm: 5, badge: "thunder-badge" }, // hm 5 = Flash
+    unlock: { visited: "route-09", hm: 5, badge: "thunder-badge" }, // tma: Flash; dál až po Lt. Surgeovi
     recommendedLevel: 16,
     description: "A dark cavern filled with dangerous rock formations and wild Pokémon.",
     species: ["zubat", "geodude", { id: "machop", rarity: "uncommon" }, "onix", { id: "cubone", rarity: "rare" }],
@@ -352,7 +352,7 @@ export const AREAS_GEN1 = [
     order: 21,
     x: 86.6,
     y: 24.5,
-    unlock: { visited: "route-10" },
+    unlock: { visited: "route-10", hm: 3, badge: "soul-badge" }, // po řece: Surf, mimo souboj až se Soul Badge
     recommendedLevel: 22,
     description: "An industrial facility overflowing with Electric-type Pokémon.",
     species: ["voltorb", "magnemite", { id: "pikachu", rarity: "rare" }, { id: "electabuzz", rarity: "rare" }, "grimer", { id: "magneton", rarity: "uncommon" }, { id: "magmar", rarity: "rare" }],
@@ -382,7 +382,7 @@ export const AREAS_GEN1 = [
     order: 23,
     x: 75.4,
     y: 36,
-    unlock: { visited: "lavender-town" },
+    unlock: { visited: ["lavender-town", "saffron-city"] },
     recommendedLevel: 16,
     description: "A path west of Lavender Town toward Saffron City.",
     species: ["pidgey", "ekans", { id: "sandshrew", rarity: "uncommon" }, "meowth", { id: "growlithe", rarity: "rare" }, { id: "vulpix", rarity: "rare" }, { id: "abra", rarity: "rare" }, "drowzee", "gastly", { id: "haunter", rarity: "uncommon" }],
@@ -397,7 +397,7 @@ export const AREAS_GEN1 = [
     order: 24,
     x: 64.6,
     y: 32.2,
-    unlock: { visited: "route-08" },
+    unlock: { visited: ["route-05", "route-06", "route-07", "route-08"], story: "saffronGuardsCleared" }, // stráže v branách chtějí pití
     recommendedLevel: 20,
     description: "The grand metropolis of Kanto. Sabrina's Psychic Gym dominates the skyline.",
     species: [],
@@ -411,7 +411,7 @@ export const AREAS_GEN1 = [
     order: 25,
     x: 56.3,
     y: 37.3,
-    unlock: { visited: "saffron-city" },
+    unlock: { visited: ["route-08", "saffron-city", "celadon-city"] }, // z Route 8 Underground Path pod Saffronem
     recommendedLevel: 16,
     description: "A scenic route connecting Saffron City and Celadon City to the west.",
     species: ["pidgey", "oddish", "bellsprout", "meowth", { id: "growlithe", rarity: "rare" }, { id: "vulpix", rarity: "rare" }, { id: "abra", rarity: "rare" }],
@@ -426,7 +426,7 @@ export const AREAS_GEN1 = [
     order: 26,
     x: 47.7,
     y: 32.4,
-    unlock: { visited: "route-07" },
+    unlock: { visited: ["route-07", "route-16"] },
     recommendedLevel: 20,
     description: "The largest city in Kanto. Erika's Grass Gym is renowned throughout the land.",
     species: [],
@@ -457,7 +457,7 @@ export const AREAS_GEN1 = [
     x: 36,
     y: 51.2,
     // Prostřední článek – přístupný z obou konců (route-16 shora i route-18 zdola).
-    unlock: { visited: ["route-16", "route-18"] },
+    unlock: { anyOf: [{ visited: "route-16", story: "snorlax16Cleared" }, { visited: "route-18" }] }, // od Celadonu blokuje Snorlax, z Fuchsie volno
     recommendedLevel: 22,
     description: "A thrilling downhill cycling road with fast-moving trainers and wild Pokémon.",
     species: ["spearow", "doduo", { id: "ponyta", rarity: "rare" }, "grimer", { id: "raticate", rarity: "uncommon" }, "koffing", { id: "weezing", rarity: "uncommon" }],
@@ -490,12 +490,13 @@ export const AREAS_GEN1 = [
     order: 30,
     x: 50.2,
     y: 70.4,
-    // Věrný Kanto (Krok 8): hlavní cesta do Fuchsia vede z jihu (Route 15). Cycling Road (route-18) zůstává boční slepá větev z Celadonu.
+    // Věrný Kanto: do Fuchsie vedou dvě cesty jako v originále – z východu po Route 15
+    // a ze západu po Cycling Road (Route 18 z Celadonu).
     // Badge-gate (gym gating): vstup do Fuchsia vyžaduje Rainbow Badge (Erika
     // v Celadonu) – vynucuje kanonické pořadí Rainbow → Soul.
-    unlock: { visited: "route-15", badge: "rainbow-badge" },
+    unlock: { visited: ["route-15", "route-18"], badge: "rainbow-badge" }, // dál až po Erice
     recommendedLevel: 25,
-    description: "An isolated city to the south. Janine's Poison Gym is hidden deep within.",
+    description: "An isolated city to the south. Koga's Poison Gym is hidden deep within.",
     species: [],
     water: true,
     drops: [],
@@ -560,7 +561,7 @@ export const AREAS_GEN1 = [
     unlock: { visited: "route-12", story: "snorlaxCleared" },
     recommendedLevel: 23,
     description: "A grassy route where trainers test their skills against wild creatures.",
-    species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", { id: "ditto", rarity: "rare" }, { id: "goldeen", rarity: "uncommon" }, { id: "seaking", rarity: "uncommon" }],
+    species: ["oddish", "bellsprout", "venonat", "doduo", "spearow", { id: "ditto", rarity: "rare" }],
     biome: "grassland",
     water: true,
     drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
@@ -577,7 +578,7 @@ export const AREAS_GEN1 = [
     unlock: { visited: "lavender-town" },
     recommendedLevel: 23,
     description: "A scenic waterfront route with both land and aquatic Pokémon.",
-    species: ["oddish", "bellsprout", "venonat", "pidgey", { id: "ditto", rarity: "rare" }, "gastly", { id: "goldeen", rarity: "uncommon" }],
+    species: ["oddish", "bellsprout", "venonat", "pidgey", { id: "ditto", rarity: "rare" }, "gastly"],
     biome: "grassland",
     water: true,
     drops: [{ resource: "poke", chance: 0.06, amount: 1 }, { resource: "great", chance: 0.03, amount: 1 }],
@@ -593,7 +594,7 @@ export const AREAS_GEN1 = [
     // Věrný Kanto (Krok 8): moře na jih od Fuchsia – potřebuješ HM03 Surf (z Safari Zone).
     // Badge-gate (gym gating): cesta na Cinnabar navíc vyžaduje Soul Badge (Koga
     // ve Fuchsii) – vynucuje kanonické pořadí gymů před Blainem.
-    unlock: { visited: "fuchsia-city", hm: 3, badge: "soul-badge" }, // hm 3 = Surf
+    unlock: { visited: "fuchsia-city", hm: 3, badges: ["soul-badge", "marsh-badge"] }, // Surf (Soul Badge); dál až po Koga i Sabrině
     recommendedLevel: 30,
     description: "A vast ocean expanse. Surfing Pokémon and Water-types patrol the waves.",
     species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }],
@@ -610,7 +611,7 @@ export const AREAS_GEN1 = [
     x: 32.4,
     y: 90,
     // Cesta k Cinnabaru: Route 19 → Seafoam Islands → Route 20 → Cinnabar Island.
-    unlock: { visited: "seafoam-islands" },
+    unlock: { anyOf: [{ visited: "seafoam-islands", hm: 4, badge: "rainbow-badge" }, { visited: "cinnabar-island" }] }, // skrz Seafoam: balvany (Strength, Rainbow Badge)
     recommendedLevel: 30,
     description: "A narrow channel with swirling currents, running west from the Seafoam Islands to Cinnabar Island.",
     species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }],
@@ -627,7 +628,7 @@ export const AREAS_GEN1 = [
     x: 38.5,
     y: 93.3,
     // Kanonické pořadí: leží mezi Route 19 a Route 20 (nikoli až za 20).
-    unlock: { visited: "route-19" },
+    unlock: { visited: ["route-19", "route-20"] },
     recommendedLevel: 30,
     description: "A chain of icy islands shrouded in mist. Ice and Water Pokémon thrive here.",
     species: ["zubat", { id: "golbat", rarity: "uncommon" }, { id: "seel", rarity: "rare" }, { id: "dewgong", rarity: "uncommon" }, "slowpoke", "psyduck", "krabby", { id: "horsea", rarity: "rare" }, { id: "shellder", rarity: "rare" }, { id: "staryu", rarity: "rare" }, "poliwag", { id: "poliwhirl", rarity: "uncommon" }],
@@ -646,10 +647,10 @@ export const AREAS_GEN1 = [
     x: 23.7,
     y: 79.9,
     // Kanonicky až ZA Cinnabarem: mořská cesta na sever zpět k Pallet Town.
-    unlock: { visited: "cinnabar-island" },
+    unlock: { visited: ["pallet-town", "cinnabar-island"], hm: 3, badges: ["soul-badge", "marsh-badge"] }, // z Pallet Townu po moři; dál až po Koga i Sabrině
     recommendedLevel: 30,
     description: "A long seaway north of Cinnabar Island, winding back toward Pallet Town.",
-    species: ["tentacool", { id: "tentacruel", rarity: "uncommon" }, "pidgey", "rattata", "magikarp"],
+    species: ["pidgey", "rattata"],
     biome: "water",
     water: true,
     drops: [{ resource: "great", chance: 0.04, amount: 1 }, { resource: "ultra", chance: 0.02, amount: 1 }],
@@ -662,7 +663,7 @@ export const AREAS_GEN1 = [
     order: 39,
     x: 23.8,
     y: 93.3,
-    unlock: { visited: "route-20" },
+    unlock: { visited: ["route-20", "route-21"] },
     recommendedLevel: 30,
     description: "A volcanic island where Fire-type Pokémon roam. Blaine's Gym awaits here.",
     species: [],
@@ -679,8 +680,11 @@ export const AREAS_GEN1 = [
     y: 36.2,
     // Kanonická „badge check": vstup na Route 23 / k Victory Road vyžaduje poslední
     // odznak (Earth Badge od Giovanniho ve Viridian Gymu). Hráč se sem dostane přes
-    // Cinnabar, ale bez Earth Badge musí zpět do Viridianu porazit Giovanniho.
-    unlock: { visited: "cinnabar-island", badge: "earth-badge" },
+    // Route 22 z Viridianu na západ; strážci na Route 23 kontrolují všech 8 odznaků (jako v originále).
+    unlock: {
+      visited: "route-22",
+      badges: ["boulder-badge", "cascade-badge", "thunder-badge", "rainbow-badge", "soul-badge", "marsh-badge", "volcano-badge", "earth-badge"],
+    },
     recommendedLevel: 32,
     description: "A mountain passage leading north toward the ultimate challenge of Victory Road.",
     species: ["spearow", { id: "fearow", rarity: "uncommon" }, "ekans", { id: "arbok", rarity: "uncommon" }, { id: "sandshrew", rarity: "uncommon" }, { id: "sandslash", rarity: "uncommon" }, "mankey", { id: "primeape", rarity: "uncommon" }, { id: "ponyta", rarity: "rare" }, { id: "ditto", rarity: "rare" }],

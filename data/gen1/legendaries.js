@@ -13,6 +13,7 @@ export const LEGENDARY_GEN1 = {
     tabIcon: "❄️",
     // Kanon: k Articunovi se dostaneš, až umíš odstrkávat balvany (Strength).
     requiresStory: "hasStrength",
+    requiresBadge: "rainbow-badge", // Strength mimo souboj až s Rainbow Badge (Gen 1)
     title: "Articuno — the Freeze Pokémon",
     intro:
       "Deep in the frozen heart of the Seafoam caves, past boulders you can only shift with Strength, a legendary bird roosts on a shelf of blue ice.",
@@ -29,7 +30,6 @@ export const LEGENDARY_GEN1 = {
     tabLabel: "Zapdos",
     tabIcon: "⚡",
     // Kanon: k Power Plantu (a k Zapdosovi hluboko uvnitř) se dostaneš přes vodu – Surf.
-    requiresStory: "hasSurf",
     title: "Zapdos — the Electric Pokémon",
     intro:
       "Deep inside the abandoned Power Plant, where dead machinery still crackles with stray current, a legendary bird of lightning perches amid the sparks.",
@@ -46,7 +46,6 @@ export const LEGENDARY_GEN1 = {
     tabLabel: "Moltres",
     tabIcon: "🔥",
     // Kanon: Moltres hnízdí hluboko ve Victory Road, za balvany – potřebuješ Strength.
-    requiresStory: "hasStrength",
     title: "Moltres — the Flame Pokémon",
     intro:
       "In the deepest chamber of Victory Road, past boulders you shove aside with Strength, the rock walls glow orange — and a legendary bird wreathed in living flame spreads its burning wings.",

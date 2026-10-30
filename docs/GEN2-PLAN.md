@@ -8,6 +8,14 @@ konstanty**.
 > se liší jen **DATA** (mapa, oblasti, trenéři/gate, pokémoni). Gen 2 = stejná hra, jiný
 > obsah. Proto se nový obsah přidává do složky generace a systémů se to nedotkne.
 
+> **VYDÁNO ve verzi 2.0.0 (2026-10-29)** – `GEN2_RELEASED = true`, Johto je živé pro všechny hráče.
+>
+> **Stav (2026-10-20, v1.65.x):** Johto je **datově kompletní** – 100 druhů, mapa, 8 gymů,
+> Liga, legendy, Safari, Contest, Unown, loď S.S. Aqua zpět do Kanta, region-lock, learnsety
+> z Crystalu. Chybí jen grafika (`docs/SPRITES-TODO-GEN2.md`). Na produkci je Johto záměrně
+> skryté (`GEN2_RELEASED = false`) – zapne se s verzí **2.0.0** (viz CLAUDE.md). Sekce 7–8 níž
+> jsou historické záznamy postupu.
+
 ---
 
 ## 1. Struktura složek
@@ -28,16 +36,16 @@ data/
     areas.js           ← AREAS_GEN1 (uzly Kanto mapy)
     legendaries.js     ← LEGENDARY_GEN1
 
-  gen2/                ← veškerý obsah Johto (gen 2) – zatím KOSTRA
-    index.js           ← descriptor GEN2 (prázdná mapa)
-    pokemon.js         ← SPECIES_GEN2 = []   (doplňuj sem)
-    learnsets.js       ← LEARNSETS_GEN2 = {}
-    evYields.js        ← EV_YIELDS_GEN2 = {}
-    areas.js           ← AREAS_GEN2 = []      (prázdná Johto mapa)
-    legendaries.js     ← LEGENDARY_GEN2 = {}
+  gen2/                ← veškerý obsah Johto (gen 2) – kompletní data
+    index.js           ← descriptor GEN2 (mapa johto.webp, startAreaId new-bark-town)
+    pokemon.js         ← SPECIES_GEN2 (100 druhů, #152–251)
+    learnsets.js       ← LEARNSETS_GEN2 (Crystal, všech 251 druhů – i Gen 1 chycení v Johtu)
+    evYields.js        ← EV_YIELDS_GEN2
+    areas.js           ← AREAS_GEN2 (Johto mapa)
+    legendaries.js     ← LEGENDARY_GEN2 (+ trainers, gyms, badges, safari, unown, evolutions)
 
   pokemon.js           ← AGGREGATOR: POKEMON_SPECIES, getSpecies, STARTER_IDS, speciesByGen
-  learnsets.js         ← AGGREGATOR: LEARNSETS + helpery (getLearnset…)
+  learnsets.js         ← AGGREGATOR: LEARNSETS_BY_REGION + helpery (getLearnset(id, region)…)
   evYields.js          ← AGGREGATOR: EV_YIELDS
   areas.js             ← AGGREGATOR: AREAS + helpery (getArea, areaEncounters…) + config
   legendaries.js       ← AGGREGATOR: LEGENDARY_ENCOUNTERS + legendaryForArea
@@ -73,7 +81,7 @@ Registr `generations.js` zařadí gen 2 jen když `GEN2_ENABLED`. Když je vypnu
 ## 3. Testování na localhostu
 
 ```bash
-cd C:/GitLab__Pages_Zalohy/Secret/pokemonrpg
+cd C:/GitLab__Pages_Zalohy/sad/pokemonrpg
 python -m http.server 8000
 # http://localhost:8000  → gen 2 je vidět; na produkci ne
 ```
@@ -112,11 +120,10 @@ Vše jde do složky té generace (např. `data/gen2/`):
 4. **Oblast/mapa** → `gen2/areas.js` (`region: "johto"`), zařadit `id` do `area.species`.
 5. **Typy** už jsou kompletní (18-typová tabulka v `data/types.js`) – neřeší se.
 
-> **⚠️ Generátory v `tools/`** (`gen_pokedex_info.py`, `gen_movepools.py`,
-> `fetch_ev_yields.ps1`) dnes zapisují do KOŘENOVÝCH souborů `data/pokemon.js`,
-> `learnsets.js`, `evYields.js` – ty jsou teď aggregatory! Před dalším během je nutné
-> je nasměrovat na `data/genN/…` soubory (jinak přepíšou aggregator monolitem a rozbijí
-> split). Do té doby přidávej gen 2 data ručně do `gen2/…`.
+> **Generátory v `tools/`:** druhy, Pokédex info a EV yieldy generuje `gen_species.py`
+> přímo do `data/genN/…`; learnsety `fetch_classic_learnsets.py` + `convert_classic_learnsets.py`.
+> Staré `gen_pokedex_info.py`, `gen_movepools.py` a `fetch_ev_yields.ps1` zapisovaly do
+> kořenových aggregatorů – od 2026-10-20 se bez přepínače odmítnou spustit.
 
 ---
 
@@ -163,7 +170,10 @@ Vše jde do složky té generace (např. `data/gen2/`):
 
 ---
 
-## 8. Dokončení Pokédexu per generaci (TODO při naplnění gen 2)
+## 8. Dokončení Pokédexu per generaci  ✅ HOTOVO
+
+> **Stav:** per-region diplomy (Kanto u Oaka, Johto u Elma), regionální Shiny Charm,
+> achievement `dex-251` a regionální počty (`dexCountsByGen`) jsou ve hře. Původní zadání:
 
 Dnes je „dokončení dexu" (diplom u Oaka + Shiny Charm) vázané na **151**. Až přibudou
 gen-2 druhy, přejít na **per-generation diplomy** (zvlášť Kanto, zvlášť Johto). Pomocník

@@ -6,7 +6,7 @@
  * Region-lock (viz [[region-model]] / src/systems/team.canBattleInRegion): tým
  * z Kanta tu bojovat nesmí, takže CELÁ evoluční větev gen1 druhů, které vyvíjejí
  * na gen2 formu, je znovu chytatelná v Johtu na johtských levelech:
- *   - zubat/golbat (→ crobat): Sprout Tower, Union Cave, Mt. Mortar, Ice Path, Dark Cave
+ *   - zubat/golbat (→ crobat): Union Cave, Mt. Mortar, Ice Path, Dark Cave
  *   - onix (→ steelix): Union Cave, Mt. Mortar, Route 45/46
  *   - slowpoke (→ slowking): Slowpoke Well
  *   - poliwag/poliwhirl (→ politoed): vodní cesty (Route 30/31/32, surf)
@@ -47,8 +47,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 1,
-    x: 63,
-    y: 65.5,
+    x: 63.2,
+    y: 62.5,
     unlock: { visited: "new-bark-town" },
     recommendedLevel: 3,
     levelRange: [2, 4],
@@ -96,7 +96,6 @@ export const AREAS_GEN2 = [
     water: true, // rybaření (HGSS, data/fishing.js)
     species: [
       "hoothoot",
-      "poliwag",
       { id: "spinarak", rarity: "uncommon" },
       { id: "ledyba", rarity: "uncommon" },
       { id: "pineco", rarity: "uncommon" },
@@ -110,8 +109,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 4,
-    x: 53,
-    y: 47.5,
+    x: 55.4,
+    y: 48,
     unlock: { visited: "route-30" },
     recommendedLevel: 7,
     levelRange: [4, 8],
@@ -120,7 +119,6 @@ export const AREAS_GEN2 = [
     water: true, // rybaření (HGSS, data/fishing.js)
     species: [
       "hoothoot",
-      "poliwag",
       { id: "spinarak", rarity: "uncommon" },
       { id: "ledyba", rarity: "uncommon" },
       { id: "pineco", rarity: "uncommon" },
@@ -134,31 +132,14 @@ export const AREAS_GEN2 = [
     type: "city",
     region: "Johto",
     order: 5,
-    x: 49.5,
-    y: 46,
+    x: 50.3,
+    y: 41.9,
     unlock: { visited: "route-31" },
     recommendedLevel: 9,
     description:
       "The city of nostalgic scents. Sprout Tower and Falkner's Gym await the challenger.",
     species: [],
     drops: [],
-  },
-  {
-    id: "sprout-tower",
-    name: "Sprout Tower",
-    type: "route",
-    region: "Johto",
-    order: 6,
-    x: 49.5,
-    y: 40.5,
-    unlock: { visited: "violet-city" },
-    recommendedLevel: 8,
-    levelRange: [3, 9],
-    description:
-      "A swaying tower where sages train. Its central pillar bends but never breaks.",
-    biome: "cave",
-    species: [], // v HGSS tu nejsou divocí Gen 2 Pokémoni (ani potřební předchůdci)
-    drops: [{ resource: "pokeballs", chance: 0.12, amount: 1 }],
   },
   {
     id: "route-32",
@@ -264,6 +245,8 @@ export const AREAS_GEN2 = [
       "slowpoke",
       "zubat",
       { id: "golbat", rarity: "veryrare" },
+      { id: "wooper", rarity: "uncommon" },
+      { id: "quagsire", rarity: "rare" },
     ],
     drops: [{ resource: "pokeballs", chance: 0.15, amount: 1 }],
   },
@@ -338,7 +321,7 @@ export const AREAS_GEN2 = [
     order: 15,
     x: 38,
     y: 51,
-    unlock: { visited: "goldenrod-city", badge: "plain-badge" },
+    unlock: { visited: "goldenrod-city", badge: "plain-badge" }, // dál až po Whitney
     recommendedLevel: 20,
     levelRange: [12, 20],
     description: "A meadow route north of Goldenrod, leading to the National Park.",
@@ -383,8 +366,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 17,
-    x: 42,
-    y: 44,
+    x: 44.5,
+    y: 45.8,
     unlock: { visited: "national-park" },
     recommendedLevel: 22,
     levelRange: [14, 22],
@@ -406,8 +389,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 18,
-    x: 41,
-    y: 39,
+    x: 40.6,
+    y: 38.2,
     unlock: { visited: "route-36", story: "sudowoodoCleared" },
     recommendedLevel: 24,
     levelRange: [16, 24],
@@ -428,8 +411,8 @@ export const AREAS_GEN2 = [
     type: "city",
     region: "Johto",
     order: 19,
-    x: 41.5,
-    y: 33,
+    x: 40.5,
+    y: 31.3,
     unlock: { visited: "route-37" },
     recommendedLevel: 25,
     description:
@@ -443,8 +426,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 20,
-    x: 39,
-    y: 29.5,
+    x: 40.9,
+    y: 27.4,
     unlock: { visited: "ecruteak-city" },
     recommendedLevel: 25,
     levelRange: [14, 26],
@@ -453,6 +436,10 @@ export const AREAS_GEN2 = [
     biome: "cave",
     species: [
       "zubat",
+      "slugma",
+      { id: "houndour", rarity: "uncommon" },
+      { id: "misdreavus", rarity: "rare" },
+      { id: "magby", rarity: "rare" },
     ],
     drops: [{ resource: "pokeballs", chance: 0.12, amount: 1 }],
   },
@@ -462,10 +449,10 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 21,
-    x: 34,
-    y: 32,
+    x: 31.6,
+    y: 34.5,
     // Kánon: cesta na západ k Olivine se otevře až po souboji se Silverem v Burned Tower.
-    unlock: { visited: "ecruteak-city", badge: "fog-badge", trainer: "silver-burned-tower" },
+    unlock: { visited: "ecruteak-city", badge: "fog-badge" }, // dál až po Mortym
     recommendedLevel: 26,
     levelRange: [17, 26],
     description: "Open pastureland west of Ecruteak, where a dairy farm raises Miltank.",
@@ -486,8 +473,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 22,
-    x: 27.5,
-    y: 37,
+    x: 28,
+    y: 39.6,
     unlock: { visited: "route-38" },
     recommendedLevel: 27,
     levelRange: [18, 27],
@@ -508,8 +495,8 @@ export const AREAS_GEN2 = [
     type: "city",
     region: "Johto",
     order: 23,
-    x: 26,
-    y: 44,
+    x: 28.4,
+    y: 47.8,
     unlock: { visited: "route-39" },
     recommendedLevel: 28,
     description:
@@ -523,15 +510,15 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 24,
-    x: 25.5,
-    y: 51,
+    x: 25.9,
+    y: 52.9,
     unlock: { visited: "olivine-city", hm: 3 }, // HM03 Surf (zdroj: ecruteak-house po Fog Badge)
     recommendedLevel: 29,
     levelRange: [20, 30],
     description: "Open sea south of Olivine, crossed by Surf toward Cianwood.",
     biome: "water",
     water: true,
-    species: [], // v HGSS tu nejsou divocí Gen 2 Pokémoni (ani potřební předchůdci)
+    species: ["chinchou", { id: "remoraid", rarity: "uncommon" }, { id: "qwilfish", rarity: "rare" }, { id: "mantine", rarity: "uncommon" }, "marill"], // v HGSS tu Gen 2 druhy nejsou – doplněno tematicky; co jde vylovit (Corsola), je jen v rybaření
     drops: [{ resource: "pokeballs", chance: 0.12, amount: 1 }],
   },
   {
@@ -540,8 +527,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 25,
-    x: 23.5,
-    y: 56,
+    x: 22.8,
+    y: 64.4,
     unlock: { visited: "route-40", hm: 3 }, // HM03 Surf
     recommendedLevel: 30,
     levelRange: [20, 30],
@@ -551,6 +538,9 @@ export const AREAS_GEN2 = [
     water: true,
     species: [
       "mantine",
+      { id: "remoraid", rarity: "uncommon" },
+      "marill",
+      { id: "azumarill", rarity: "rare" },
     ],
     drops: [{ resource: "pokeballs", chance: 0.12, amount: 1 }],
   },
@@ -560,9 +550,9 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 26,
-    x: 26,
-    y: 60.5,
-    unlock: { visited: "route-41", hm: 6 }, // HM06 Whirlpool
+    x: 25.7,
+    y: 59.7,
+    unlock: { visited: "route-41", hm: 6, badge: "glacier-badge" }, // Whirlpool mimo souboj až s Glacier Badge
     recommendedLevel: 31,
     levelRange: [22, 33],
     description:
@@ -571,9 +561,10 @@ export const AREAS_GEN2 = [
     water: true, // rybaření (HGSS, data/fishing.js)
     species: [
       "zubat",
-      "horsea",
       { id: "golbat", rarity: "uncommon" },
-      { id: "seadra", rarity: "rare" },
+      { id: "chinchou", rarity: "uncommon" },
+      { id: "corsola", rarity: "uncommon" },
+      { id: "lanturn", rarity: "rare" },
     ],
     drops: [{ resource: "pokeballs", chance: 0.12, amount: 1 }],
   },
@@ -583,8 +574,8 @@ export const AREAS_GEN2 = [
     type: "city",
     region: "Johto",
     order: 27,
-    x: 19.5,
-    y: 60,
+    x: 19.6,
+    y: 60.2,
     unlock: { visited: "route-41", hm: 3 }, // HM03 Surf (město za mořem)
     recommendedLevel: 31,
     description:
@@ -600,7 +591,7 @@ export const AREAS_GEN2 = [
     order: 28,
     x: 46.5,
     y: 33,
-    unlock: { visited: "ecruteak-city", badge: "storm-badge" },
+    unlock: { visited: "ecruteak-city", badges: ["storm-badge", "mineral-badge"] }, // dál až po Chuckovi i Jasmine
     recommendedLevel: 30,
     levelRange: [22, 30],
     description: "A rocky pass east of Ecruteak, guarding the mouth of Mt. Mortar.",
@@ -632,6 +623,8 @@ export const AREAS_GEN2 = [
       "zubat",
       "marill",
       { id: "golbat", rarity: "rare" },
+      { id: "dunsparce", rarity: "uncommon" },
+      { id: "tyrogue", rarity: "rare" },
     ],
     drops: [{ resource: "pokeballs", chance: 0.15, amount: 1 }],
   },
@@ -656,8 +649,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 31,
-    x: 55.5,
-    y: 21,
+    x: 54.5,
+    y: 24.5,
     unlock: { visited: "mahogany-town" },
     recommendedLevel: 34,
     levelRange: [24, 34],
@@ -691,6 +684,10 @@ export const AREAS_GEN2 = [
     species: [
       "hoothoot",
       "pineco",
+      "wooper",
+      { id: "marill", rarity: "uncommon" },
+      { id: "quagsire", rarity: "rare" },
+      { id: "yanma", rarity: "rare" },
     ],
     drops: [{ resource: "pokeballs", chance: 0.12, amount: 1 }],
   },
@@ -700,8 +697,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 33,
-    x: 60,
-    y: 33.5,
+    x: 59.1,
+    y: 38.7,
     // Kánon GSC: po Glacier Badge Team Rocket obsadí goldenrodský Radio Tower a hra
     // tě pošle ho osvobodit DŘÍV, než se vydáš k poslednímu gymu (Clair v Blackthornu).
     // Proto cesta na východ k Ice Path / Blackthornu žádá i radioTowerCleared.
@@ -712,7 +709,6 @@ export const AREAS_GEN2 = [
     biome: "grassland",
     water: true, // rybaření (HGSS, data/fishing.js)
     species: [
-      "poliwag",
       "aipom",
       { id: "heracross", rarity: "uncommon" },
       { id: "poliwhirl", rarity: "rare" },
@@ -725,8 +721,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 34,
-    x: 63.5,
-    y: 30.5,
+    x: 62.9,
+    y: 34.5,
     // Kánon: ledová jeskyně s balvanovým hlavolamem – projde se jen s HM04 Strength
     // (zdroj: olivinský námořnický dům bez gate, dřív než sem).
     unlock: { visited: "route-44", hm: 4 }, // HM04 Strength
@@ -735,6 +731,7 @@ export const AREAS_GEN2 = [
     description:
       "A frozen cavern of slick floors and boulder puzzles between Route 44 and Blackthorn.",
     biome: "cave",
+    background: "seafoam-islands.png",
     species: [
       "swinub",
       "golbat",
@@ -757,23 +754,6 @@ export const AREAS_GEN2 = [
       "A secluded city of dragon-tamers ringed by mountains. Clair's Gym and the sacred Dragon's Den lie here.",
     species: [],
     drops: [],
-  },
-  {
-    id: "dragons-den",
-    name: "Dragon's Den",
-    type: "route",
-    region: "Johto",
-    order: 36,
-    x: 69.5,
-    y: 26.5,
-    unlock: { visited: "blackthorn-city", badge: "rising-badge" },
-    recommendedLevel: 40,
-    levelRange: [10, 42],
-    description:
-      "A sacred cave behind Blackthorn where the Dragon Clan tests worthy trainers. Dratini glide through its inner lake.",
-    biome: "cave",
-    species: [], // v HGSS tu nejsou divocí Gen 2 Pokémoni (ani potřební předchůdci)
-    drops: [{ resource: "pokeballs", chance: 0.12, amount: 1 }],
   },
   {
     id: "route-45",
@@ -815,6 +795,9 @@ export const AREAS_GEN2 = [
     species: [
       "aipom",
       "heracross",
+      { id: "phanpy", rarity: "uncommon" },
+      { id: "teddiursa", rarity: "uncommon" },
+      { id: "gligar", rarity: "rare" },
     ],
     drops: [{ resource: "pokeballs", chance: 0.15, amount: 1 }],
   },
@@ -824,9 +807,9 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 39,
-    x: 59,
-    y: 46,
-    unlock: { visited: "route-31", hm: 5 }, // HM05 Flash
+    x: 60.8,
+    y: 46.1,
+    unlock: { visited: "route-31", hm: 5, badge: "zephyr-badge" }, // tma: Flash, mimo souboj až se Zephyr Badge
     recommendedLevel: 20,
     levelRange: [2, 40],
     description:
@@ -848,7 +831,7 @@ export const AREAS_GEN2 = [
     order: 44,
     x: 44.5,
     y: 50,
-    unlock: { visited: "route-36" }, // vchod u Route 36 (viz natu „u Ruins of Alph")
+    unlock: { visited: ["route-32", "route-36"] }, // vchody od Route 32 i od Route 36
     recommendedLevel: 5,
     levelRange: [5, 10],
     description:
@@ -878,7 +861,7 @@ export const AREAS_GEN2 = [
     order: 40,
     x: 82,
     y: 67.5,
-    unlock: { visited: "new-bark-town", badge: "rising-badge" },
+    unlock: { visited: "new-bark-town", hm: [3, 7] }, // na východ po moři (Surf) a přes Tohjo Falls (Waterfall)
     recommendedLevel: 42,
     levelRange: [26, 42],
     description:
@@ -928,12 +911,18 @@ export const AREAS_GEN2 = [
     order: 42,
     x: 92,
     y: 49.5,
-    unlock: { visited: "route-26" },
+    // Badge check jako v HGSS: na Victory Road jen se všemi 8 johtskými odznaky
+    // (jinak šlo přes Route 42 → Mahogany → Blackthorn přeskočit Jasmine).
+    unlock: {
+      visited: "route-26",
+      badges: ["zephyr-badge", "hive-badge", "plain-badge", "fog-badge", "storm-badge", "mineral-badge", "glacier-badge", "rising-badge"],
+    },
     recommendedLevel: 46,
     levelRange: [30, 46],
     description:
       "The final cavern before the Pokémon League, echoing with the cries of powerful wild Pokémon.",
     biome: "cave",
+    background: "victory-road.png",
     species: [
       "golbat",
       "onix",
@@ -955,6 +944,7 @@ export const AREAS_GEN2 = [
     recommendedLevel: 50,
     description:
       "The seat of the Pokémon League. The Elite Four — Will, Koga, Bruno, Karen — and Champion Lance await.",
+    background: "indigo-plateau.png",
     species: [],
     drops: [],
   },
@@ -965,8 +955,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 45,
-    x: 14.5,
-    y: 63,
+    x: 11.5,
+    y: 66.1,
     unlock: { visited: "cianwood-city" },
     recommendedLevel: 34,
     levelRange: [30, 36],
@@ -999,8 +989,8 @@ export const AREAS_GEN2 = [
     type: "route",
     region: "Johto",
     order: 46,
-    x: 11,
-    y: 55.5,
+    x: 8.5,
+    y: 55.1,
     unlock: { visited: "route-47" },
     recommendedLevel: 24,
     levelRange: [20, 25],

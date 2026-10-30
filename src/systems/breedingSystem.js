@@ -18,6 +18,7 @@ import { commit, getState } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { SHINY_CHARM_MULT } from "./pokemonSystem.js";
 import { getSpecies } from "../../data/pokemon.js";
+import { generationByRegion } from "../../data/generations.js";
 import { learnableMovesAtLevel } from "../../data/learnsets.js";
 import { getBreedingSlot, getBreedingParents } from "./buildingSystem.js";
 import { hasShinyCharm } from "./team.js";
@@ -61,7 +62,7 @@ function computeEggMoves(parentA, parentB, babySpeciesId) {
 
   // Tahy, které potomek umí naučit na levelu 100
   const learnableIds = new Set(
-    learnableMovesAtLevel(babySpeciesId, 100).map((e) => e.id)
+    learnableMovesAtLevel(babySpeciesId, 100, getState().progress?.region ?? "kanto").map((e) => e.id)
   );
 
   // Filtruj: jen ty, co potomek umí
@@ -124,7 +125,10 @@ export function accrueBreeding(seconds) {
   // Offline může dozrát i více vajec najednou (strop řeší volající přes čas).
   while (slot.buffer >= BREED_SECONDS) {
     slot.buffer -= BREED_SECONDS;
-    const childId = chooseChildSpeciesId(spA, spB);
+    // Region-lock: potomek nesmí být z pozdější generace, než je region Školky
+    // (kantský Pikachu nedá johtského Pichu).
+    const regionGen = generationByRegion(getState().progress?.region ?? "kanto")?.gen ?? 1;
+    const childId = chooseChildSpeciesId(spA, spB, regionGen);
     const breed = {
       // Kopie IV rodičů (neměnné, ale ať nedržíme referenci na živého jedince).
       parents: [{ ...a.ivs }, { ...b.ivs }],

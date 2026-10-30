@@ -117,6 +117,7 @@ export function trainEv(uid, statKey, id = "training-grounds") {
   if (!def || !def.training) return { ok: false, reason: "No Training Grounds." };
   const pokemon = getState().collection.find((p) => p.uid === uid);
   if (!pokemon) return { ok: false, reason: "Unknown Pokémon." };
+  if (!isFromCurrentRegion(pokemon)) return { ok: false, reason: WRONG_REGION_TRAINING };
   const cost = trainingCost(id);
   const res = getState().resources;
   if (res.gold < cost) return { ok: false, reason: `You need ${cost} gold.` };
@@ -150,6 +151,7 @@ export function resetEvsAll(uid, id = "training-grounds") {
   if (!def || !def.reset) return { ok: false, reason: "No Training Grounds." };
   const pokemon = getState().collection.find((p) => p.uid === uid);
   if (!pokemon) return { ok: false, reason: "Unknown Pokémon." };
+  if (!isFromCurrentRegion(pokemon)) return { ok: false, reason: WRONG_REGION_TRAINING };
   if (evTotal(pokemon) <= 0) return { ok: false, reason: "No EVs to reset." };
   const cost = evResetAllCost(id);
   const res = getState().resources;
@@ -172,6 +174,7 @@ export function resetEvStatGold(uid, statKey, id = "training-grounds") {
   if (!def || !def.reset) return { ok: false, reason: "No Training Grounds." };
   const pokemon = getState().collection.find((p) => p.uid === uid);
   if (!pokemon) return { ok: false, reason: "Unknown Pokémon." };
+  if (!isFromCurrentRegion(pokemon)) return { ok: false, reason: WRONG_REGION_TRAINING };
   if ((pokemon.evs?.[statKey] ?? 0) <= 0) return { ok: false, reason: "That stat has no EVs." };
   const cost = evResetStatCost(id);
   const res = getState().resources;
@@ -322,6 +325,7 @@ export function isFromCurrentRegion(p) {
 }
 
 const WRONG_REGION = "That Pokémon was caught in another region — it can't use this Day Care.";
+const WRONG_REGION_TRAINING = "That Pokémon was caught in another region — it can only train there.";
 
 /** Dá Pokémona do Školky (podle uid). */
 export function setDaycareOccupant(uid) {

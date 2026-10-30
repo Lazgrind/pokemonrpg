@@ -80,8 +80,12 @@ export const LEGENDARY_GEN2 = {
     areaId: "whirl-islands",
     speciesId: "lugia",
     level: 70,
-    // Kánon: hluboko ve Whirl Islands, k nimž se dostaneš jen přes víry — Whirlpool.
-    requiresStory: "hasWhirlpool",
+    tabLabel: "Lugia",
+    tabIcon: "🌊",
+    // Kánon HGSS: Whirlpool v terénu (HM06 + Glacier Badge) a vyčištěná Radio Tower
+    // (v SoulSilver za to ředitel dá Silver Wing). Bez toho by šla Lugia (Lv 70)
+    // chytit už kolem 5. gymu. requiresStory smí být i pole (všechny flagy).
+    requiresStory: "radioTowerCleared", // Whirl Islands samy chtějí Whirlpool + Glacier Badge
     title: "Lugia — the Diving Pokémon",
     intro:
       "Far beneath the Whirl Islands, past whirlpools only the boldest can navigate, a vast silver chamber opens over the sea. From the dark water rises the guardian of the deep, wings spread wide — the legendary Lugia.",
@@ -95,6 +99,8 @@ export const LEGENDARY_GEN2 = {
     areaId: "ecruteak-city",
     speciesId: "ho-oh",
     level: 70,
+    tabLabel: "Ho-Oh",
+    tabIcon: "🌈",
     // Kánon: na vrcholu Bell/Tin Tower v Ecruteaku. Jako Mewtwo v gen1 je to vrchol
     // výzvy — zpřístupní se až JOHTO Championovi (flag isJohtoChampion; NE kantské
     // isChampion, které je true už po příjezdu do Johta přes S.S. Anne).
@@ -112,6 +118,8 @@ export const LEGENDARY_GEN2 = {
     areaId: "ilex-forest",
     speciesId: "celebi",
     level: 50,
+    tabLabel: "Celebi",
+    tabIcon: "🍃",
     // Kánon: u svatyně hluboko v Ilex Forest (GS Ball / cestování časem). Post-game
     // tajemství — zpřístupní se JOHTO Championovi (flag isJohtoChampion; NE kantské
     // isChampion, které je true už po příjezdu do Johta).
@@ -130,6 +138,7 @@ export const LEGENDARY_GEN2 = {
     speciesId: "gyarados",
     level: 30,
     displayName: "Red Gyarados",
+    scene: "red-gyarados", // scéna příchodu (src/ui/legendaryScene.js), jinak podle speciesId
     tabLabel: "Red Gyarados",
     tabIcon: "🐉",
     // VŽDY shiny (rudá varianta) a JEDNORÁZOVÉ. V dexu je to #130 gyarados (shiny);

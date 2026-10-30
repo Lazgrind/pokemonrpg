@@ -142,6 +142,7 @@ Balcheck 0/0/0. **Tím jsou hotové všechny uživatelem schválené akce z gen1
 - Elite Four +2 levely na přesný kánon RBY (byli ~2 pod): Lorelei 54/53/54/56/56, Bruno 53/55/55/56/58, Agatha 56/56/55/58/60, Lance 58/56/56/60/62. Champion Blue beze změny (už seděl).
 
 **Zbývá k dodělání (schváleno uživatelem):** flavour drobnosti – Old Amber lore v Pewter Museum + Cerulean „vykradený dům" Rocket grunt (příští verze). Balcheck 0/0/0.
+*(2026-10-20: obojí hotovo – Old Amber v `storyBuildingView.js` (Pewter Museum), Rocket grunt `cerulean-rocket` v `gen1/trainers.js`.)*
 
 ---
 
@@ -325,7 +326,7 @@ Změněné soubory: `src/systems/battleSystem.js`, `src/core/state.js`, `src/ui/
 - **Save migrace v42:** Doplní `settings.shinyCharmActive = true` (výchozí zapnuto).
 
 **Klíčová rozhodnutí:**
-- Sprite Shiny Charmu (`assets/items/shiny-charm.png`) zatím neexistuje → fallback ✨ glyf.
+- Sprite Shiny Charmu (`assets/items/shiny-charm.png`) zatím neexistuje → fallback ✨ glyf. *(2026-10-20: sprite už existuje.)*
 - Přepínač umožňuje hráčům dočasně deaktivovat Charm bez ztráty.
 
 ---

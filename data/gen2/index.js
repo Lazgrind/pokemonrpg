@@ -1,15 +1,14 @@
 /**
  * Generace 2 – Johto. Samostatný modul (descriptor), který čte registr
- * ../generations.js. Zatím KOSTRA: prázdná mapa, žádné druhy – sem se postupně
- * „vyšívá" celý Johto obsah, aniž by se sáhlo na gen 1.
+ * ../generations.js. Obsah Johta je ve složce data/gen2/ (gen 1 se ho nedotýká).
  *
- * Přechod do Johto: hráč připluje ze S.S. Anne (Kanto) až po zisku titulu
- * Champion. Vstupní uzel `startAreaId` se doplní, až vznikne první Johto oblast
- * (viz areas.js zde). Art mapy je `mapImage` (assets/gen2/map/johto.webp).
+ * Přechod do Johta: S.S. Anne z Vermilionu po zisku titulu Champion; zpět do Kanta
+ * S.S. Aqua z přístavu v Olivine City. Art mapy je `mapImage`.
  */
 
 import { SPECIES_GEN2 } from "./pokemon.js";
 import { LEARNSETS_GEN2 } from "./learnsets.js";
+import { TYPES_GEN2 } from "./types.js";
 import { EV_YIELDS_GEN2 } from "./evYields.js";
 import { AREAS_GEN2 } from "./areas.js";
 import { LEGENDARY_GEN2 } from "./legendaries.js";
@@ -30,9 +29,10 @@ export const GEN2 = {
   region: "johto",
   regionName: "Johto",
   mapImage: "assets/gen2/map/johto.webp",
-  startAreaId: "new-bark-town", // vstupní uzel Johta (placeholder město)
+  startAreaId: "new-bark-town", // vstupní uzel Johta (první příjezd)
   species: SPECIES_GEN2,
   learnsets: LEARNSETS_GEN2,
+  types: TYPES_GEN2, // typy a tabulka účinnosti této generace (viz ../types.js)
   evYields: EV_YIELDS_GEN2,
   areas: AREAS_GEN2,
   legendaries: LEGENDARY_GEN2,

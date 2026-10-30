@@ -28,6 +28,7 @@ import { recordGameCorner } from "../systems/achievementSystem.js";
 import { grantTm } from "../systems/tmSystem.js";
 import { grantHmToPlayer } from "../systems/hmSystem.js";
 import { showPopup } from "./popup.js";
+import { playLegendaryScene } from "./legendaryScene.js";
 import { openMarket, openTrainingPicker } from "./buildingView.js";
 import { getBuilding } from "../../data/buildings.js";
 import {
@@ -142,7 +143,6 @@ const VIEWS = {
   // Gen 2 (Johto)
   "olivine-lighthouse": olivineLighthouseView,
   "cianwood-pharmacy": cianwoodPharmacyView,
-  "cianwood-house": cianwoodHouseView,
   "bills-house": billsHouseView,
   "radio-tower": radioTowerView,
   "goldenrod-game-corner": () => gameCornerView(true),
@@ -151,9 +151,9 @@ const VIEWS = {
   "dragons-den": dragonsDenView,
   // Gen 2 (Johto) – johtské zdroje HM (HM jsou regionální, nepřenášejí se z Kanta).
   "azalea-kiln": azaleaKilnView,
-  "chucks-house": chucksHouseView,
   "ecruteak-house": ecruteakHouseView,
   "olivine-house": olivineHouseView,
+  "ss-aqua": ssAquaView,
   "blackthorn-house": blackthornHouseView,
   "dance-theater": danceTheaterView,
   "kurts-house": kurtsHouseView,
@@ -188,7 +188,7 @@ const KIMONO_GIFT_LUXURY_BALLS = 5;
 const KURT_APRICORN_BALLS = ["fast", "heavy", "lure", "level", "love", "moon"];
 const KURT_BALL_COUNT = 5;
 
-/** Cena Fresh Water v Celadon Dept Store (drink pro strážce Silph Co). */
+/** Cena Fresh Water v Celadon Dept Store (pití pro stráže v branách Saffronu). */
 const DRINK_COST = 200;
 
 /** Level oživené fosílie (Omanyte/Kabuto/Aerodactyl) v Cinnabar Pokémon Labu. */
@@ -452,7 +452,7 @@ function oakLabView() {
   const parcelPending = storyFlag("oakParcelGiven") && !storyFlag("oakParcelDelivered");
   if (parcelPending) {
     return {
-      title: "🔬 Oak's Lab",
+      title: "Oak's Lab",
       body: `
         <p class="story-text">Professor Oak: "Ah, that's my Parcel from the Poké Mart! You brought it all the way from Viridian? Thank you!"</p>
         <p class="story-text">"As promised, here is your very own <strong>Pokédex</strong> — record every Pokémon you meet! And take this <strong>EXP Share</strong> too: it lets your whole team grow, even the ones resting on the bench. Some Poké Balls, as well."</p>
@@ -475,7 +475,7 @@ function oakLabView() {
   if (hasDexDiploma("kanto")) {
     diploma = `<hr class="story-sep">
       <p class="story-text">"You completed the entire Kanto Pokédex — you are a true Pokémon Master! That Shiny Charm is yours to keep here in Kanto."</p>
-      <p class="placeholder">🎓 Kanto Pokédex Diploma earned · ✨ Kanto Shiny Charm active</p>`;
+      <p class="placeholder">Kanto Pokédex Diploma earned · Kanto Shiny Charm active</p>`;
   } else if (hasStarter && total > 0 && caught >= total) {
     diploma = `<hr class="story-sep">
       <p class="story-text">"Wait... your Kanto Pokédex — is it truly complete?! Show me!"</p>
@@ -486,7 +486,7 @@ function oakLabView() {
   }
 
   return {
-    title: "🔬 Oak's Lab",
+    title: "Oak's Lab",
     body: `
       <p class="story-text">Professor Oak looks up from his research.</p>
       ${action}
@@ -510,14 +510,14 @@ function playerHomeView() {
     : `<p class="placeholder">✓ Your team is fully rested.</p>`;
 
   return {
-    title: "🏠 Your Home",
+    title: "Your Home",
     body: `${gift}<hr class="story-sep">${rest}`,
   };
 }
 
 function rivalHomeView() {
   return {
-    title: "🏡 Rival's Home",
+    title: "Rival's Home",
     body: `<p class="story-text">The house where <strong>${rivalName()}</strong> lives. Nobody's home right now — they've probably already set off on their own journey.</p>`,
   };
 }
@@ -531,7 +531,7 @@ function pewterMuseumView() {
        <button class="btn" data-museum-reward>🎁 Accept welcome gift (${MUSEUM_POTIONS}× Potion)</button>`;
 
   return {
-    title: "🏛️ Museum of Science",
+    title: "Museum of Science",
     body: `<p class="story-text">Inside, glass cases display ancient <strong>fossils</strong>, a glittering <strong>Moon Stone</strong>, and — up on the second floor — a real piece of a <strong>space rocket</strong>.</p>
       <p class="story-text">One case holds a chunk of <strong>Old Amber</strong> with a tiny ancient creature trapped inside. A plaque reads: "Amber like this — same as the sample recovered near Mt. Moon — may hold the DNA of a long-extinct Pokémon."</p>
       <hr class="story-sep">
@@ -579,9 +579,9 @@ function showJohtoCustomsTutorial() {
       body: `<p class="story-text">The officer stamps a form with theatrical flair. "Regulations, regulations! Let me read you the fine print…"</p>
         <p class="story-text"><strong>Held at the border (Kanto only):</strong></p>
         <ul class="story-list">
-          <li><strong>Your Kanto Pokémon</strong> — "League rules! Only Johto-born Pokémon may battle here. Yours will nap safely in the <strong>PC</strong> until you sail home."</li>
+          <li><strong>Your Kanto Pokémon</strong> — "League rules! Only Johto-born Pokémon may battle, train, evolve or take items here. Yours will nap safely in the <strong>PC</strong> until you sail home — the <strong>S.S. Aqua</strong> leaves for Kanto from the port in <strong>Olivine City</strong>."</li>
           <li><strong>Your Shiny Charm</strong> — "That sparkly thing? Kanto paperwork, no good here. Complete the <strong>Johto Pokédex</strong> and Prof. Elm will issue you a shiny new one."</li>
-          <li><strong>Your building upgrades & Boost Center</strong> — "Those were paid to <em>Kanto</em> contractors! Every town service and your XP / Yield / Fortune boosts start fresh in Johto — re-invest here. (Your Kanto levels wait for you back home.)"</li>
+          <li><strong>Your building upgrades & Boost Center</strong> — "Those were paid to <em>Kanto</em> contractors! Every town service and your XP / Yield / Fortune boosts start fresh in Johto — re-invest here. (Your Kanto levels wait for you back home.) And the Poké Mart only trusts <em>Johto</em> badges with its better Poké Balls."</li>
           <li><strong>Your Day Care and your Eggs</strong> — "Kanto eggs hatch in Kanto, young one! Your Day Care, the Pokémon in it and every egg wait for you back home. Johto has its own Day Care — but only Johto-born Pokémon may train or breed there."</li>
           <li><strong>Using HMs out in the field</strong> — "Your HM discs may come along, but the badges and permits that let you Surf or Cut were issued in Kanto. Earn them again here."</li>
         </ul>
@@ -626,7 +626,7 @@ function ssAnneView() {
         <button class="btn" data-mew-truck>🚚 Surf out and heave the truck aside</button>`;
     }
     return {
-      title: "🚢 S.S. Anne",
+      title: "S.S. Anne",
       body: `<p class="story-text">The great liner's horn has long since faded — the S.S. Anne has sailed on.</p>
         <p class="placeholder">✓ You've already explored the S.S. Anne and earned HM01 Cut.</p>
         ${secret}
@@ -637,13 +637,13 @@ function ssAnneView() {
   const hasTicket = (items["ss-anne-ticket"] ?? 0) > 0;
   if (!hasTicket) {
     return {
-      title: "🚢 S.S. Anne",
+      title: "S.S. Anne",
       body: `<p class="story-text">A sailor blocks the gangway. "No ticket, no boarding! This is a luxury cruise, you know."</p>
         <p class="placeholder">Find <strong>Bill</strong> at the end of <strong>Route 25</strong> (north of Cerulean) — he'll give you a S.S. Anne Ticket.</p>`,
     };
   }
   return {
-    title: "🚢 S.S. Anne",
+    title: "S.S. Anne",
     body: `<p class="story-text">You show your ticket and step aboard the luxurious S.S. Anne. Wandering the decks, you run straight into <strong>${rivalName()}</strong>!</p>
       <p class="story-text">"Hey! You're too weak to be here. Let's battle!"</p>
       <button class="btn" data-ss-anne-battle>⚔️ Battle ${rivalName()}</button>`,
@@ -680,7 +680,7 @@ function elmLabView() {
     if (hasDexDiploma("johto")) {
       diploma = `<hr class="story-sep">
         <p class="story-text">"You completed the entire Johto Pokédex — magnificent research! That Shiny Charm is yours to keep here in Johto."</p>
-        <p class="placeholder">🎓 Johto Pokédex Diploma earned · ✨ Johto Shiny Charm active</p>`;
+        <p class="placeholder">Johto Pokédex Diploma earned · Johto Shiny Charm active</p>`;
     } else if (total > 0 && caught >= total) {
       diploma = `<hr class="story-sep">
         <p class="story-text">"Wait... your Johto Pokédex — is it truly complete?! Let me see!"</p>
@@ -691,7 +691,7 @@ function elmLabView() {
     }
 
     return {
-      title: "🔬 Prof. Elm's Lab",
+      title: "Prof. Elm's Lab",
       body: `<p class="story-text">Prof. Elm looks up from his microscope. "How's your <strong>${name}</strong> settling in? Johto's a big place — take good care of it!"</p>
         <p class="placeholder">✓ You've already chosen your Johto starter here.</p>
         ${gotTogepi
@@ -712,7 +712,7 @@ function elmLabView() {
       </button>`;
   }).join("\n      ");
   return {
-    title: "🔬 Prof. Elm's Lab",
+    title: "Prof. Elm's Lab",
     body: `<p class="story-text">"Ah — a Champion all the way from Kanto! Welcome to Johto." Prof. Elm gestures to three Poké Balls on the table.</p>
       <p class="story-text">"Out here only Pokémon from the Johto region can battle — your Kanto team will rest safely in the PC. So pick a partner and let your new journey begin!"</p>
       <div class="starter-choices">
@@ -735,7 +735,7 @@ function pokemonTowerView() {
 
   if (!towerRivalBeaten) {
     return {
-      title: "🗼 Pokémon Tower",
+      title: "Pokémon Tower",
       body: `<p class="story-text">You start up the tower's steps, past mourners and rows of graves — when a familiar voice calls out. Your <strong>rival</strong> blocks the second floor, smirking.</p>
         <p class="story-text">"Yo! What are you doing in a creepy place like this? ...Heh. Let's see how tough you've gotten!"</p>
         <button class="btn" data-fight-tower-rival>⚔️ Battle your rival</button>`,
@@ -743,7 +743,7 @@ function pokemonTowerView() {
   }
   if (!hasScope) {
     return {
-      title: "🗼 Pokémon Tower",
+      title: "Pokémon Tower",
       body: `<p class="story-text">You climb the tower's steps, past mourners and rows of graves for Pokémon that have passed on.</p>
         <p class="story-text">On the stairs, a furious <strong>ghost</strong> lunges at you — but you can't make out what it is!</p>
         <p class="placeholder">You'll need the <strong>Silph Scope</strong> to see the ghost clearly. Team Rocket is said to keep one at their hideout in <strong>Celadon City</strong> — come back once you have it.</p>`,
@@ -751,7 +751,7 @@ function pokemonTowerView() {
   }
   if (!marowakCalmed) {
     return {
-      title: "🗼 Pokémon Tower",
+      title: "Pokémon Tower",
       body: `<p class="story-text">You raise the <strong>Silph Scope</strong> to your eye and the ghost snaps into focus: the raging spirit of a <strong>Marowak</strong>, cut down by Team Rocket while defending her child.</p>
         <p class="story-text">She won't rest until she's tested your strength. There's no way past but through.</p>
         <button class="btn" data-fight-marowak>👻 Face the Marowak's spirit</button>`,
@@ -759,14 +759,14 @@ function pokemonTowerView() {
   }
   if (!mrFujiSaved) {
     return {
-      title: "🗼 Pokémon Tower",
+      title: "Pokémon Tower",
       body: `<p class="story-text">With the spirit at peace, you climb to the top floor — where Team Rocket grunts are holding old <strong>Mr. Fuji</strong> captive.</p>
         <p class="story-text">You drive the Rockets off and free him. Grateful, Mr. Fuji presses a gift into your hands…</p>
         <button class="btn" data-rescue-fuji>🎵 Free Mr. Fuji (receive the Poké Flute)</button>`,
     };
   }
   return {
-    title: "🗼 Pokémon Tower",
+    title: "Pokémon Tower",
     body: `<p class="story-text">The tower is quiet now. The spirits rest peacefully, and Mr. Fuji has returned safely home.</p>
       <p class="placeholder">✓ You calmed the Marowak, rescued Mr. Fuji, and received the <strong>Poké Flute</strong>.</p>`,
   };
@@ -776,14 +776,14 @@ function mrFujiHouseView() {
   // Po záchraně (mrFujiSaved) je Mr. Fuji doma a navede tě na spícího Snorlaxe.
   if (storyFlag("mrFujiSaved")) {
     return {
-      title: "🏡 Mr. Fuji's House",
+      title: "Mr. Fuji's House",
       body: `<p class="story-text"><strong>Mr. Fuji</strong> is home safe, tending to a room full of orphaned Pokémon. "Thank you for saving me from those Rockets, young trainer."</p>
         <p class="story-text">"That <strong>Poké Flute</strong> I gave you can wake any sleeping Pokémon — even that huge <strong>Snorlax</strong> snoring across <strong>Route 12</strong>, just south of here."</p>
         <p class="placeholder">✓ Head to Route 12 and play the Poké Flute to clear the road south.</p>`,
     };
   }
   return {
-    title: "🏡 Mr. Fuji's House",
+    title: "Mr. Fuji's House",
     body: `<p class="story-text">Inside, a volunteer tends to a room full of orphaned Pokémon.</p>
       <p class="story-text">"You're looking for <strong>Mr. Fuji</strong>? I'm afraid he went into the <strong>Pokémon Tower</strong> to calm the restless spirits — and he hasn't come back. I'm so worried…"</p>
       <p class="placeholder">Something isn't right at the top of the tower.</p>`,
@@ -795,14 +795,14 @@ function deptStoreView() {
   // patra (tlačítko „Shop the floors" → tabovaný obchod, viz buildingView.openMarket)
   // prodávají VŠECHNO kupitelné: míčky, léčení, TM, evoluční kameny, held itemy a
   // prémiové boosty (Rare Candy / PP Up / PP Max) = kanonický gold sink. Rooftop
-  // drink stand navíc prodává Fresh Water pro vyčerpaného strážce u Silph Co.
+  // drink stand navíc prodává Fresh Water pro žíznivé stráže v branách Saffronu.
   const gold = getState().resources?.gold ?? 0;
   const owned = getState().resources?.items?.["fresh-water"] ?? 0;
   return {
-    title: "🏬 Celadon Dept. Store",
+    title: "Celadon Dept. Store",
     body: `<p class="story-text">The biggest store in Kanto rises floor after floor — Poké Balls, healing items, TMs, evolution stones, held items and rare boosts, plus a rooftop drink stand. The works.</p>
       <button class="btn" data-shop-floors>🛒 Shop the floors</button>
-      <p class="story-text">At the rooftop vending machine you can buy a <strong>Fresh Water</strong> for <strong>${DRINK_COST}₽</strong>. A thirsty guard over in Saffron City would surely appreciate one.</p>
+      <p class="story-text">At the rooftop vending machine you can buy a <strong>Fresh Water</strong> for <strong>${DRINK_COST}₽</strong>. The thirsty guards at the gates to Saffron City would surely appreciate one.</p>
       ${owned > 0 ? `<p class="placeholder">In your Bag: <strong>${owned}× Fresh Water</strong>.</p>` : ""}
       <button class="btn" data-buy-drink ${gold < DRINK_COST ? "disabled" : ""}>🥤 Buy Fresh Water — ${DRINK_COST}₽</button>`,
   };
@@ -814,7 +814,7 @@ function goldenrodDeptStoreView() {
   // plný katalog vč. evolučních kamenů a Linking Cordu). Bez rooftop stánku (to je
   // Kanto-specifické kvůli Fresh Water pro strážce u Silph Co.).
   return {
-    title: "🏬 Goldenrod Dept. Store",
+    title: "Goldenrod Dept. Store",
     body: `<p class="story-text">The biggest store in Johto towers over Goldenrod City — floor after floor of Poké Balls, healing items, TMs, evolution stones, held items and rare boosts. If it's for sale anywhere, it's for sale here.</p>
       <button class="btn" data-shop-goldenrod>🛒 Shop the floors</button>`,
   };
@@ -859,7 +859,7 @@ function boostCenterView() {
   const def = getBuilding(BOOST_CENTER_ID);
   const t = def?.tracks ?? {};
   return {
-    title: "💪 Trainer Boost Center",
+    title: "Trainer Boost Center",
     body: `<p class="story-text">A members-only facility in Celadon. Pour your winnings into three lifelong perks. Each level is a little pricier than the last, so max ranks are a long-haul goal — not a quick shortcut.</p>
       ${boostLineHtml("xp", t.xp, "XP gain")}
       ${boostLineHtml("yield", t.yield, "Battle gold")}
@@ -870,13 +870,13 @@ function boostCenterView() {
 
 function silphCoView() {
   // Věrný Kanto (Krok 11): Team Rocket zabral Silph Co. Stavový automat:
-  //  1) strážce žízní → přines Fresh Water (koupíš v Celadon Dept Store);
-  //  2) po napojení (saffronGuardsCleared) → gauntlet v tabu „Silph Co.";
-  //  3) po vyčištění (silphCleared) → flavour (Master Ball + Sabrina otevřena).
+  //  1) do Saffronu se dostaneš až po napojení stráže v bráně (saffronGuardsCleared,
+  //     Fresh Water z Celadon Dept Store) → gauntlet v tabu „Silph Co.";
+  //  2) po vyčištění (silphCleared) → flavour (Master Ball + Sabrina otevřena).
   if (storyFlag("silphCleared")) {
     const gotLapras = storyFlag("laprasGift");
     return {
-      title: "🏢 Silph Co.",
+      title: "Silph Co.",
       body: `<p class="story-text">The tower hums with ordinary business again. Employees nod at you as you pass — the trainer who threw Team Rocket out on their ear.</p>
         <p class="placeholder">✓ You freed Silph Co., received the <strong>Master Ball</strong>, and reopened Sabrina's Gym.</p>
         ${gotLapras
@@ -885,26 +885,10 @@ function silphCoView() {
              <button class="btn" data-take-lapras>🌊 Accept the Lapras</button>`}`,
     };
   }
-  if (storyFlag("saffronGuardsCleared")) {
-    return {
-      title: "🏢 Silph Co.",
-      body: `<p class="story-text">The revived guard waves you through. "Thanks, kid — now go get 'em. The Rockets have every floor above locked down, all the way up to their boss. Watch yourself."</p>
-        <button class="btn" data-enter-silph>🏢 Storm Silph Co. (Silph Co. tab)</button>`,
-    };
-  }
-  const items = getState().resources?.items ?? {};
-  const hasDrink = (items["fresh-water"] ?? 0) > 0;
-  if (hasDrink) {
-    return {
-      title: "🏢 Silph Co.",
-      body: `<p class="story-text">A parched Silph Co. guard slumps against the locked doors, blocking the way. "Can't... let you... in... so thirsty in this heat..." You hold up the <strong>Fresh Water</strong> you bought in Celadon.</p>
-        <button class="btn" data-give-drink>🥤 Give the guard a drink</button>`,
-    };
-  }
   return {
-    title: "🏢 Silph Co.",
-    body: `<p class="story-text">Team Rocket has seized <strong>Silph Co.</strong>, Saffron's proud technology company. A parched guard slumps against the locked doors: "So... thirsty... can't guard like this... if only someone had something to drink..."</p>
-      <p class="placeholder">Buy a <strong>Fresh Water</strong> from the <strong>Celadon Dept. Store</strong> rooftop stand, then bring it back here to get inside.</p>`,
+    title: "Silph Co.",
+    body: `<p class="story-text">Team Rocket has seized <strong>Silph Co.</strong>, Saffron's proud technology company. Grunts guard every floor, all the way up to their boss. Watch yourself.</p>
+      <button class="btn" data-enter-silph>🏢 Storm Silph Co. (Silph Co. tab)</button>`,
   };
 }
 
@@ -912,13 +896,13 @@ function celadonMansionView() {
   // Věrný Kanto (Krok 12): v Celadon Mansion dá herní nadšenec hráči Eevee.
   if (storyFlag("eeveeGift")) {
     return {
-      title: "🏨 Celadon Mansion",
+      title: "Celadon Mansion",
       body: `<p class="story-text">The game-loving kid on the top floor grins as you pass. "How's that Eevee doing? Evolve it into something awesome!"</p>
         <p class="placeholder">✓ You received an <strong>Eevee</strong> here.</p>`,
     };
   }
   return {
-    title: "🏨 Celadon Mansion",
+    title: "Celadon Mansion",
     body: `<p class="story-text">On the top floor of the Celadon Mansion, a game-obsessed kid looks up from his console. "Oh — a real trainer! I found this little guy but I never battle. You should have it."</p>
       <p class="placeholder">He offers you an <strong>Eevee</strong> — the Evolution Pokémon, able to become Vaporeon, Jolteon or Flareon.</p>
       <button class="btn" data-take-eevee>🦊 Accept the Eevee</button>`,
@@ -935,14 +919,14 @@ function billsHouseView() {
   // (happiness-day) / umbreon (happiness-night) v Johtu. Viz pokemonSystem.js:372.
   if (storyFlag("johtoEeveeGift")) {
     return {
-      title: "🏠 Bill's House",
+      title: "Bill's House",
       body: `<p class="story-text">Bill tinkers with a Storage System prototype. "That Eevee settling in okay? In Johto, raise it close and it'll become Espeon by day or Umbreon by night. Neat, huh?"</p>
         <p class="story-text">He glances up. "Want <em>both</em>? Leave your Eevee with a <strong>Ditto</strong> at the <strong>Day-Care on Route 34</strong> (just south of Goldenrod) and you'll get an Egg — hatch a second Eevee, then raise one by day for <strong>Espeon</strong> and one by night for <strong>Umbreon</strong>."</p>
         <p class="placeholder">✓ You received an <strong>Eevee</strong> here.</p>`,
     };
   }
   return {
-    title: "🏠 Bill's House",
+    title: "Bill's House",
     body: `<p class="story-text">Bill, the inventor of the Pokémon Storage System, waves you in. "You're a serious trainer — perfect. I've got this Eevee and no time to raise it. Take good care of it, would you?"</p>
       <p class="placeholder">He offers you an <strong>Eevee</strong> — in Johto it can evolve into <strong>Espeon</strong> (high friendship by day) or <strong>Umbreon</strong> (by night). Breed it with a Ditto at the Day-Care on Route 34 for a second one.</p>
       <button class="btn" data-take-johto-eevee>🦊 Accept the Eevee</button>`,
@@ -960,13 +944,13 @@ function fightingDojoView() {
     <button class="btn" data-open-ev-training>🏋️ EV Training</button>`;
   if (storyFlag("hitmonsGift")) {
     return {
-      title: "🥋 Fighting Dojo",
+      title: "Fighting Dojo",
       body: `<p class="story-text">The Dojo master bows respectfully as you enter. "Your fists — and your Pokémon — are strong. Train them well."</p>
         <p class="placeholder">✓ You received both <strong>Hitmonlee</strong> and <strong>Hitmonchan</strong> here.</p>${evSection}`,
     };
   }
   return {
-    title: "🥋 Fighting Dojo",
+    title: "Fighting Dojo",
     body: `<p class="story-text">Saffron's <strong>Fighting Dojo</strong> echoes with shouts and the crack of splitting boards. The Dojo master sizes you up, then nods at two Poké Balls resting on a rack. "A true champion deserves them both. Take my prized <strong>Hitmonlee</strong> and <strong>Hitmonchan</strong>!"</p>
       <button class="btn" data-take-hitmons>🥋 Accept both Pokémon</button>${evSection}`,
   };
@@ -976,13 +960,13 @@ function vermilionFishingHutView() {
   // Věrný Kanto (Krok ?): Vermilion Fishing Hut – starý rybář dá Old Rod (jednorázově).
   if (storyFlag("oldRodGift")) {
     return {
-      title: "🎣 Fishing Hut",
+      title: "Fishing Hut",
       body: `<p class="story-text">The old fisherman nods knowingly. "You caught something good with that rod, eh?"</p>
         <p class="placeholder">✓ You received the <strong>Old Rod</strong> here.</p>`,
     };
   }
   return {
-    title: "🎣 Fishing Hut",
+    title: "Fishing Hut",
     body: `<p class="story-text">Inside the rustic fishing hut, an old fisherman mends his nets. He looks up at you with a weathered smile.</p>
       <p class="story-text">"You look like a young trainer with the spirit to explore. Here — take my <strong>Old Rod</strong>. With a little patience, you'll reel in some fine Pokémon from the water."</p>
       <button class="btn" data-take-old-rod>🎣 Accept the Old Rod</button>`,
@@ -1006,7 +990,7 @@ function fuchsiaFishingHouseView() {
        <button class="btn" data-take-super-rod>🎣 Accept the Super Rod</button>`;
 
   return {
-    title: "🎣 Fishing House",
+    title: "Fishing House",
     body: `<p class="story-text">The master fisherman's house stands near the Safari Zone, filled with fishing memorabilia and the smell of salt water. The old master himself greets you warmly.</p>
       <p class="story-text">"A trainer! Welcome, welcome. Few know the art of fishing like we do here near the Safari Zone. Let me share my knowledge with you."</p>
       <hr class="story-sep">
@@ -1024,20 +1008,21 @@ function fuchsiaFishingHouseView() {
 function olivineLighthouseView() {
   if (storyFlag("amphyHealed")) {
     return {
-      title: "🗼 Glitter Lighthouse",
+      title: "Glitter Lighthouse",
       body: `<p class="story-text"><strong>Amphy</strong> glows brilliantly once more, its light sweeping far out to sea to guide the ships home.</p>
         <p class="placeholder">✓ You healed Amphy with the SecretPotion. <strong>Jasmine</strong> has returned to the Olivine Gym — challenge her for the Mineral Badge!</p>`,
     };
   }
   if (storyFlag("secretpotionObtained")) {
     return {
-      title: "🗼 Glitter Lighthouse",
+      title: "Glitter Lighthouse",
       body: `<p class="story-text">At the top of the lighthouse, <strong>Jasmine</strong> kneels beside the ailing <strong>Amphy</strong>, the Ampharos whose glow guides Olivine's ships. You hold up the <strong>SecretPotion</strong> from the Cianwood pharmacy — her eyes light up with hope.</p>
         <button class="btn" data-heal-amphy>💊 Give Amphy the SecretPotion</button>`,
     };
   }
+  if (!storyFlag("amphySeen")) { setStoryFlag("amphySeen"); commit(); }
   return {
-    title: "🗼 Glitter Lighthouse",
+    title: "Glitter Lighthouse",
     body: `<p class="story-text">You climb to the top of the lighthouse. <strong>Jasmine</strong>, the Gym Leader, is nursing a sick <strong>Amphy</strong> — the Ampharos that powers the beacon. "I can't leave it like this," she says. "Please… there's a <strong>pharmacy in Cianwood City</strong>, across the sea. Their <strong>SecretPotion</strong> could save Amphy."</p>
       <p class="placeholder">Sail to <strong>Cianwood City</strong> and visit the pharmacy to get the SecretPotion, then bring it back here.</p>`,
   };
@@ -1050,20 +1035,27 @@ function olivineLighthouseView() {
 function cianwoodPharmacyView() {
   if (storyFlag("amphyHealed")) {
     return {
-      title: "💊 Cianwood Pharmacy",
+      title: "Cianwood Pharmacy",
       body: `<p class="story-text">The pharmacist smiles warmly. "I heard Amphy pulled through! My SecretPotion did the trick, eh? Olivine's light shines bright again thanks to you."</p>
         <p class="placeholder">✓ Amphy has been healed.</p>`,
     };
   }
   if (storyFlag("secretpotionObtained")) {
     return {
-      title: "💊 Cianwood Pharmacy",
+      title: "Cianwood Pharmacy",
       body: `<p class="story-text">"You've got the <strong>SecretPotion</strong> — now hurry!" the pharmacist urges. "That Ampharos on the Olivine lighthouse won't hold on forever."</p>
         <p class="placeholder">Take the SecretPotion back to the <strong>Glitter Lighthouse</strong> in Olivine City.</p>`,
     };
   }
+  if (!storyFlag("amphySeen")) {
+    return {
+      title: "Cianwood Pharmacy",
+      body: `<p class="story-text">The <strong>pharmacist</strong> looks up from his mortar. "My <strong>SecretPotion</strong>? That's only for a Pokémon in serious trouble. Who's it for?"</p>
+        <p class="placeholder">Nothing to do here for now.</p>`,
+    };
+  }
   return {
-    title: "💊 Cianwood Pharmacy",
+    title: "Cianwood Pharmacy",
     body: `<p class="story-text">The <strong>pharmacist</strong> looks up as you enter. "You came from the Olivine lighthouse? For Amphy?" He reaches beneath the counter. "Here — my <strong>SecretPotion</strong>. It'll cure any Pokémon. Take it, and hurry back!"</p>
       <button class="btn" data-take-secretpotion>💊 Take the SecretPotion</button>`,
   };
@@ -1078,38 +1070,25 @@ function cianwoodPharmacyView() {
 function goldenrodFlowerShopView() {
   if (storyFlag("hasSquirtbottle")) {
     return {
-      title: "🌸 Goldenrod Flower Shop",
+      title: "Goldenrod Flower Shop",
       body: `<p class="story-text">The florist beams. "With that <strong>Squirtbottle</strong> you can water anything along the routes. Oh — and if a 'tree' ever blocks your way north, give it a good squirt!"</p>
         <p class="placeholder">✓ You received the Squirtbottle here.</p>`,
     };
   }
+  if (!hasBadge("plain-badge")) {
+    return {
+      title: "Goldenrod Flower Shop",
+      body: `<p class="story-text">The <strong>florist</strong> arranges a bouquet. "My sister has a <strong>Squirtbottle</strong> for watering the plants on the routes — but she only gives it to trainers strong enough to beat <strong>Whitney</strong>!"</p>
+        <p class="placeholder">Earn the <strong>Plain Badge</strong> at the Goldenrod Gym, then come back.</p>`,
+    };
+  }
   return {
-    title: "🌸 Goldenrod Flower Shop",
+    title: "Goldenrod Flower Shop",
     body: `<p class="story-text">The <strong>florist</strong> arranges a bouquet and smiles. "You look like someone who loves nature! Here — take this <strong>Squirtbottle</strong>. It's perfect for watering the plants out on the routes."</p>
       <button class="btn" data-take-squirtbottle>💦 Take the Squirtbottle</button>`,
   };
 }
 
-/**
- * Gen 2 (Johto): dům u moře v Cianwood City. Starý námořník dá hráči HM06 Whirlpool
- * (grantHmToPlayer(6) → flag hasWhirlpool + item hm06-whirlpool). JEDINÝ produkční
- * zdroj HM06 – bez něj nešlo vplout do Whirl Islands (unlock {visited route-41, hm:6})
- * → Lugia #249 by byla nedosažitelná. Zdroj pravdy: flag `hasWhirlpool`.
- */
-function cianwoodHouseView() {
-  if (storyFlag("hasWhirlpool")) {
-    return {
-      title: "🌀 Cianwood House",
-      body: `<p class="story-text">The old sailor grins at you over his pipe. "Whirlpool, eh? Now the sea's no obstacle. Mind the currents around those Whirl Islands — folk say something ancient sleeps in the deep."</p>
-        <p class="placeholder">✓ You received <strong>HM06 Whirlpool</strong> here.</p>`,
-    };
-  }
-  return {
-    title: "🌀 Cianwood House",
-    body: `<p class="story-text">Inside the weathered seaside home, an old sailor studies a chart of the churning waters offshore. "You've got the look of someone headed out past the breakers," he says. "The <strong>Whirl Islands</strong> are ringed by whirlpools — no boat gets through. But a Pokémon that knows <strong>Whirlpool</strong> can part them. Here, take this — I've no use for it anymore."</p>
-      <button class="btn" data-take-whirlpool>🌀 Accept HM06 Whirlpool</button>`,
-  };
-}
 
 /** Vlastní hráč tento odznak? (progress.badges je globální seznam id odznaků.) */
 function hasBadge(id) {
@@ -1124,41 +1103,15 @@ function hasBadge(id) {
 function azaleaKilnView() {
   if (storyFlag("hasCut")) {
     return {
-      title: "🪓 Charcoal Kiln",
+      title: "Charcoal Kiln",
       body: `<p class="story-text">The apprentice wipes soot from her brow. "Ilex Forest keeps the whole town in charcoal. With <strong>Cut</strong>, you'll clear those thickets easy — just mind the forest's guardian."</p>
         <p class="placeholder">✓ You received <strong>HM01 Cut</strong> here.</p>`,
     };
   }
   return {
-    title: "🪓 Charcoal Kiln",
+    title: "Charcoal Kiln",
     body: `<p class="story-text">Heat rolls out of the kiln as a young apprentice tends the fire. "You're headed into <strong>Ilex Forest</strong>? The trees grow back thick as a wall. Here — take this <strong>HM01 Cut</strong>. We've a spare, and you'll need it more than we do."</p>
       <button class="btn" data-take-cut>🪓 Accept HM01 Cut</button>`,
-  };
-}
-
-/**
- * Gen 2 (Johto): Chuckův dům v Cianwood City – johtský zdroj HM02 Fly. Chuckova žena
- * dá HM02 Fly PO poražení Chucka (gate storm-badge). HM regionální (v1.33.0). Flag `hasFly`.
- */
-function chucksHouseView() {
-  if (storyFlag("hasFly")) {
-    return {
-      title: "🕊️ Chuck's Home",
-      body: `<p class="story-text">Chuck's wife smiles. "Fly will carry you home to anywhere you've been. That stubborn husband of mine could learn a thing or two about taking the easy road!"</p>
-        <p class="placeholder">✓ You received <strong>HM02 Fly</strong> here.</p>`,
-    };
-  }
-  if (!hasBadge("storm-badge")) {
-    return {
-      title: "🕊️ Chuck's Home",
-      body: `<p class="story-text">Chuck's wife greets you kindly. "So you've come to challenge my husband at the gym? Beat him for the <strong>Storm Badge</strong> first — then come back, and I'll have something to help you on your way."</p>
-        <p class="placeholder">🔒 Defeat <strong>Chuck</strong> (Storm Badge) to receive this HM.</p>`,
-    };
-  }
-  return {
-    title: "🕊️ Chuck's Home",
-    body: `<p class="story-text">Chuck's wife beams at the sight of the Storm Badge. "You beat my husband! He's been grinning about it all day. Here — take this <strong>HM02 Fly</strong>. A strong trainer shouldn't have to walk everywhere."</p>
-      <button class="btn" data-take-fly>🕊️ Accept HM02 Fly</button>`,
   };
 }
 
@@ -1169,20 +1122,20 @@ function chucksHouseView() {
 function ecruteakHouseView() {
   if (storyFlag("hasSurf")) {
     return {
-      title: "🌊 Ecruteak House",
+      title: "Ecruteak House",
       body: `<p class="story-text">The old man nods toward the sea. "With <strong>Surf</strong>, no stretch of water can stop you now. Go on — the ocean's yours."</p>
         <p class="placeholder">✓ You received <strong>HM03 Surf</strong> here.</p>`,
     };
   }
   if (!hasBadge("fog-badge")) {
     return {
-      title: "🌊 Ecruteak House",
+      title: "Ecruteak House",
       body: `<p class="story-text">A weathered man rocks by the window. "Surf? Aye, I've a spare HM for it. But the sea's no place for a greenhorn. Earn Ecruteak's <strong>Fog Badge</strong> from Morty first — then we'll talk."</p>
-        <p class="placeholder">🔒 Defeat <strong>Morty</strong> (Fog Badge) to receive this HM.</p>`,
+        <p class="placeholder">Defeat <strong>Morty</strong> (Fog Badge) to receive this HM.</p>`,
     };
   }
   return {
-    title: "🌊 Ecruteak House",
+    title: "Ecruteak House",
     body: `<p class="story-text">The old man eyes your Fog Badge and grins. "Morty's beaten, eh? Then you're ready for open water. Take my <strong>HM03 Surf</strong> — ride the waves and see where they carry you."</p>
       <button class="btn" data-take-surf>🌊 Accept HM03 Surf</button>`,
   };
@@ -1195,15 +1148,35 @@ function ecruteakHouseView() {
 function olivineHouseView() {
   if (storyFlag("hasStrength")) {
     return {
-      title: "💪 Sailor's House",
+      title: "Sailor's House",
       body: `<p class="story-text">The old sailor flexes a weathered arm. "With <strong>Strength</strong>, no boulder'll stand in your way. Haul 'em aside like I hauled cargo all those years!"</p>
         <p class="placeholder">✓ You received <strong>HM04 Strength</strong> here.</p>`,
     };
   }
   return {
-    title: "💪 Sailor's House",
+    title: "Sailor's House",
     body: `<p class="story-text">A broad-shouldered retired sailor sits amid coils of rope. "Spent forty years shifting crates on the Olivine docks," he says. "Don't need this anymore — you take it. <strong>HM04 Strength</strong>, for a Pokémon with some muscle."</p>
       <button class="btn" data-take-strength>💪 Accept HM04 Strength</button>`,
+  };
+}
+
+/**
+ * Gen 2 (Johto): přístav v Olivine City – loď S.S. Aqua zpět do Kanta (Vermilion).
+ * Jezdí bez podmínek, jakmile je hráč v Olivine (rozhodnutí autora 2026-10-20).
+ * Klik obslouží wire() → travelToRegion("kanto"). Cesta tam = S.S. Anne (Kanto).
+ */
+function ssAquaView() {
+  if ((getState().progress?.region ?? "kanto") !== "johto") {
+    return {
+      title: "S.S. Aqua",
+      body: `<p class="story-text">The harbour is quiet. The S.S. Aqua is moored at the pier.</p>`,
+    };
+  }
+  return {
+    title: "S.S. Aqua",
+    body: `<p class="story-text">Gulls wheel over the busy pier. A sailor checks the moorings of the gleaming <strong>S.S. Aqua</strong>. "Fastest ship on the sea! Straight across to <strong>Vermilion City</strong> in Kanto. Want to come aboard?"</p>
+      <p class="story-text">"Your Johto team, Day Care and eggs stay here and wait for you. Over in Kanto your old team is ready to go again."</p>
+      <button class="btn" data-sail-kanto>⛴️ Set sail for Kanto</button>`,
   };
 }
 
@@ -1215,20 +1188,20 @@ function olivineHouseView() {
 function blackthornHouseView() {
   if (storyFlag("hasWaterfall")) {
     return {
-      title: "⛰️ Climber's Lodge",
+      title: "Climber's Lodge",
       body: `<p class="story-text">The climber claps you on the shoulder. "<strong>Waterfall</strong>! Now even a wall of water's just another path up. The mountains are open to you, friend."</p>
         <p class="placeholder">✓ You received <strong>HM07 Waterfall</strong> here.</p>`,
     };
   }
   if (!hasBadge("rising-badge")) {
     return {
-      title: "⛰️ Climber's Lodge",
+      title: "Climber's Lodge",
       body: `<p class="story-text">A rugged climber sharpens a pick by the fire. "Waterfall's not for beginners — you'll want a Pokémon that can handle Clair first. Come back with the <strong>Rising Badge</strong> and the HM's yours."</p>
-        <p class="placeholder">🔒 Defeat <strong>Clair</strong> (Rising Badge) to receive this HM.</p>`,
+        <p class="placeholder">Defeat <strong>Clair</strong> (Rising Badge) to receive this HM.</p>`,
     };
   }
   return {
-    title: "⛰️ Climber's Lodge",
+    title: "Climber's Lodge",
     body: `<p class="story-text">The climber spots the Rising Badge and nods with respect. "Beat Clair, did you? Then you've earned this. <strong>HM07 Waterfall</strong> — climb the rushing water and reach the places others can't."</p>
       <button class="btn" data-take-waterfall>⛰️ Accept HM07 Waterfall</button>`,
   };
@@ -1244,7 +1217,7 @@ function danceTheaterView() {
   // Stav 4: dárek už vzat – jen flavour.
   if (storyFlag("danceTheaterGift")) {
     return {
-      title: "💃 Dance Theater",
+      title: "Dance Theater",
       body: `<p class="story-text">The Kimono Girls sweep into a graceful bow as you enter. "Your bond with your Pokémon shines as brightly as any dance. You are always welcome here, trainer."</p>
         <p class="placeholder">✓ You bested the five Kimono Girls and received their gift here.</p>`,
     };
@@ -1252,7 +1225,7 @@ function danceTheaterView() {
   // Stav 3: gauntlet vyčištěn – lead girl nabídne dárek.
   if (storyFlag("danceTheaterCleared")) {
     return {
-      title: "💃 Dance Theater",
+      title: "Dance Theater",
       body: `<p class="story-text">Zuki, the eldest Kimono Girl, folds her fan and smiles. "Five dances, five victories — and never once did your Pokémon falter in their trust of you. Please, accept these from us. They cradle a Pokémon in comfort and deepen the bond you share."</p>
         <button class="btn" data-take-kimono-gift>🎀 Accept ${KIMONO_GIFT_LUXURY_BALLS} Luxury Balls</button>`,
     };
@@ -1260,7 +1233,7 @@ function danceTheaterView() {
   // Stav 2: výzva přijata, gauntlet ještě nevyčištěn – pošli hráče do soubojů.
   if (storyFlag("danceTheaterChallenge")) {
     return {
-      title: "💃 Dance Theater",
+      title: "Dance Theater",
       body: `<p class="story-text">The stage lights glow warm over the polished floor. The five <strong>Kimono Girls</strong> wait in a graceful line, their Eevee evolutions at their sides.</p>
         <p class="placeholder">Defeat all five Kimono Girls to prove the bond you share with your Pokémon.</p>
         <button class="btn" data-enter-dance-theater>💃 Take the stage (battle the Kimono Girls)</button>`,
@@ -1268,7 +1241,7 @@ function danceTheaterView() {
   }
   // Stav 1: výzva ještě nepřijata – zahaj ji.
   return {
-    title: "💃 Dance Theater",
+    title: "Dance Theater",
     body: `<p class="story-text">Inside the Dance Theater, five elegant <strong>Kimono Girls</strong> turn to greet you. "We dance with the many faces of Eevee — Vaporeon, Jolteon, Flareon, Espeon and Umbreon," says the eldest. "A trainer's true strength is the bond they share with their Pokémon. Would you test yours against ours?"</p>
       <button class="btn" data-enter-dance-theater>💃 Accept the Kimono Girls' challenge</button>`,
   };
@@ -1286,7 +1259,7 @@ function radioTowerView() {
   // Stav 3: gauntlet vyčištěn – Rocket pryč, věž zase vysílá normálně.
   if (storyFlag("radioTowerCleared")) {
     return {
-      title: "📻 Radio Tower",
+      title: "Radio Tower",
       body: `<p class="story-text">The Radio Tower hums with music again. Directors bustle between studios and the DJ waves you through. "Thanks to you, we're back on the air — Johto owes you one, kid."</p>
         <p class="placeholder">✓ You drove Team Rocket out of the Radio Tower.</p>`,
     };
@@ -1294,7 +1267,7 @@ function radioTowerView() {
   // Stav 2: Rocket obsadil věž (po mahoganské základně) – pošli hráče do gauntletu.
   if (storyFlag("mahoganyHideoutCleared")) {
     return {
-      title: "📻 Radio Tower",
+      title: "Radio Tower",
       body: `<p class="story-text">Team Rocket grunts have seized the <strong>Radio Tower</strong>, broadcasting a coded call to their scattered forces. The director is held hostage on an upper floor, and executives guard every landing up to their new boss, <strong>Archer</strong>.</p>
         <p class="placeholder">Fight your way up through the tower and take it back.</p>
         <button class="btn" data-enter-radio-tower>📻 Storm the Radio Tower (Radio Tower tab)</button>`,
@@ -1302,7 +1275,7 @@ function radioTowerView() {
   }
   // Stav 1: klid – obyčejná rozhlasová věž (Rocket ji zatím neobsadil).
   return {
-    title: "📻 Radio Tower",
+    title: "Radio Tower",
     body: `<p class="story-text">Goldenrod's <strong>Radio Tower</strong> buzzes with music, quizzes and the chatter of on-air hosts. From the top floor you can see all across the city.</p>
       <p class="placeholder">All quiet for now. Keep an ear out — rumor says Team Rocket has been stirring up north near <strong>Mahogany Town</strong>.</p>`,
   };
@@ -1317,20 +1290,20 @@ function radioTowerView() {
 function kurtsHouseView() {
   if (storyFlag("kurtApricornGift")) {
     return {
-      title: "🪵 Kurt's House",
+      title: "Kurt's House",
       body: `<p class="story-text">Kurt looks up from his workbench, a half-carved Apricorn in his weathered hands. "Those balls treating you well? Carved every one myself. Come back anytime — and keep those Rockets out of my town!"</p>
         <p class="placeholder">✓ Kurt gave you a set of handmade Apricorn Poké Balls here.</p>`,
     };
   }
   if (!storyFlag("slowpokeWellCleared")) {
     return {
-      title: "🪵 Kurt's House",
+      title: "Kurt's House",
       body: `<p class="story-text">Kurt, Azalea's old ball-maker, grabs his cane the moment you mention the <strong>Slowpoke Well</strong>. "Team Rocket, cutting off Slowpoke tails to sell? Not in my town!" He hurries toward the well. "Drive them out — then come back, and I'll carve you something special."</p>
-        <p class="placeholder">🔒 Clear the <strong>Slowpoke Well</strong> of Team Rocket, then return.</p>`,
+        <p class="placeholder">Clear the <strong>Slowpoke Well</strong> of Team Rocket, then return.</p>`,
     };
   }
   return {
-    title: "🪵 Kurt's House",
+    title: "Kurt's House",
     body: `<p class="story-text">Kurt is back at his workbench, carving by lamplight. "You ran those Rockets out of the Slowpoke Well — Azalea owes you. Here, take these. I carve them from <strong>Apricorns</strong> the old way, each with its own knack for catching Pokémon."</p>
       <button class="btn" data-take-kurt-balls>🪵 Accept Kurt's Apricorn Balls</button>`,
   };
@@ -1351,7 +1324,7 @@ function goldenrodUndergroundView() {
     const canAfford = gold >= b.cost;
     let status, button;
     if (team.length === 0) {
-      status = `<p class="placeholder">🔒 Bring a Pokémon in your team first.</p>`;
+      status = `<p class="placeholder">Bring a Pokémon in your team first.</p>`;
       button = "";
     } else if (usedToday) {
       status = `<p class="placeholder">✓ The ${b.label.toLowerCase()} already cut your Pokémon's hair today. Come back tomorrow.</p>`;
@@ -1359,7 +1332,7 @@ function goldenrodUndergroundView() {
     } else {
       status = canAfford
         ? ""
-        : `<p class="placeholder">🔒 You need <strong>${b.cost}₽</strong> for this cut.</p>`;
+        : `<p class="placeholder">You need <strong>${b.cost}₽</strong> for this cut.</p>`;
       button = `<button class="btn" data-haircut="${key}" ${canAfford ? "" : "disabled"}>✂️ ${b.label} — ${b.cost}₽ (+${b.gain} friendship)</button>`;
     }
     return `
@@ -1374,14 +1347,14 @@ function goldenrodUndergroundView() {
         .map((p) => {
           const f = friendshipOf(p);
           const name = getSpecies(p.speciesId)?.name ?? p.speciesId;
-          const tag = f >= FRIENDSHIP_EVOLVE ? " 💞" : "";
+          const tag = f >= FRIENDSHIP_EVOLVE ? " (ready to evolve)" : "";
           return `${name}: ${f}${tag}`;
         })
         .join(" · ")}</p>`
     : "";
 
   return {
-    title: "✂️ Underground Barbers",
+    title: "Underground Barbers",
     body: `<p class="story-text">Down in Goldenrod's bustling Underground, two barber brothers run their chairs side by side. "A good haircut does wonders for a Pokémon's mood!" one calls out. The happier a Pokémon is, the closer it grows to you — and some only evolve once that bond is strong enough.</p>
       ${teamSummary}
       ${brotherSection("younger")}
@@ -1397,20 +1370,20 @@ function goldenrodUndergroundView() {
 function bellTowerView() {
   if (!storyFlag("isJohtoChampion")) {
     return {
-      title: "🔔 Bell Tower",
+      title: "Bell Tower",
       body: `<p class="story-text">The Bell Tower rises above Ecruteak, its stairway sealed by the sages. "This tower answers only to one who has proven themselves to all of Johto," an elder tells you. "Become the Champion, and the summit — and what waits there — will open to you."</p>
-        <p class="placeholder">🔒 Become the <strong>Johto Champion</strong> to climb the Bell Tower.</p>`,
+        <p class="placeholder">Become the <strong>Johto Champion</strong> to climb the Bell Tower.</p>`,
     };
   }
   if (ownsSpeciesInRegion("ho-oh", "johto")) {
     return {
-      title: "🔔 Bell Tower",
+      title: "Bell Tower",
       body: `<p class="story-text">Sunlight pours through the summit where <strong>Ho-Oh</strong> once waited. The sages bow — the rainbow Pokémon chose you.</p>
         <p class="placeholder">✓ You have met Ho-Oh atop the Bell Tower.</p>`,
     };
   }
   return {
-    title: "🔔 Bell Tower",
+    title: "Bell Tower",
     body: `<p class="story-text">The sages step aside. "Champion — the way is open." You climb the swaying stairway toward the summit, where a rainbow shimmers and the legendary <strong>Ho-Oh</strong> waits.</p>
       <button class="btn" data-open-legendary>🔔 Climb to the summit</button>`,
   };
@@ -1427,7 +1400,7 @@ function burnedTowerView() {
     : `<p class="story-text">Eusine, the restless researcher who has chased <strong>Suicune</strong> for years, sizes you up. "You mean to catch the beasts? Then take these — you'd waste a hundred ordinary balls otherwise." He presses a bundle of Ultra Balls into your hands.</p>
        <button class="btn" data-take-eusine-balls>🔥 Accept Eusine's Ultra Balls</button>`;
   return {
-    title: "🔥 Burned Tower",
+    title: "Burned Tower",
     body: `<p class="story-text">Inside the blackened tower, Ecruteak's sages keep the old legend: three Pokémon perished here long ago and were brought back by Ho-Oh as <strong>Raikou</strong>, <strong>Entei</strong> and <strong>Suicune</strong>. Disturb the basement, they warn, and the beasts will wake and scatter across Johto.</p>
       <hr class="story-sep" />
       ${giftSection}`,
@@ -1445,7 +1418,7 @@ function sproutTowerView() {
   // Stav 3: Flash už máš – Elder jen poděkuje.
   if (storyFlag("hasFlash")) {
     return {
-      title: "🗼 Sprout Tower",
+      title: "Sprout Tower",
       body: `<p class="story-text">The great central pillar sways gently, as it has for a thousand years. The <strong>Elder</strong> nods from his cushion at the top. "With Flash to light your way, even the Dark Cave holds no fear. May your Pokémon grow as tall and supple as this tower."</p>
         <p class="placeholder">✓ You received <strong>HM05 Flash</strong> here.</p>`,
     };
@@ -1453,14 +1426,14 @@ function sproutTowerView() {
   // Stav 2: gauntlet vyčištěn (Elder poražen) – nabídne HM05 Flash.
   if (storyFlag("sproutTowerCleared")) {
     return {
-      title: "🗼 Sprout Tower",
+      title: "Sprout Tower",
       body: `<p class="story-text">The <strong>Elder</strong> bows his head as you reach the top floor. "You battled your way up with grace and strength, just as this tower bends but never breaks. Take this — <strong>HM05 Flash</strong>. It will light the darkest cave, so you need never lose your way."</p>
         <button class="btn" data-take-flash>🔦 Accept HM05 Flash</button>`,
     };
   }
   // Stav 1: gauntlet nevyčištěn – pošli hráče do soubojů se sages.
   return {
-    title: "🗼 Sprout Tower",
+    title: "Sprout Tower",
     body: `<p class="story-text">You step inside Sprout Tower, where rows of chanting monks train with their <strong>Bellsprout</strong> around the single giant pillar that sways overhead. "To reach the Elder at the top," one sage intones, "you must first prove yourself against the sages of the tower."</p>
       <p class="placeholder">Battle your way up through the sages. Clear them all and the Elder will reward you with <strong>HM05 Flash</strong>.</p>
       <button class="btn" data-enter-sprout-tower>🗼 Climb the tower (battle the sages)</button>`,
@@ -1470,15 +1443,15 @@ function sproutTowerView() {
 /**
  * Gen 2 (Johto): Dragon's Den shrine za Blackthorn City. Po získání Rising Badge
  * (poražení Clair) tě Dragon Elder podrobí zkoušce a dá dárkového Dratiniho se
- * sacred move ExtremeSpeed (kánon GSC – odlišný od divokého v oblasti `dragons-den`).
+ * sacred move ExtremeSpeed (kánon GSC – odlišný od divokého v Dragon's Den).
  * Gate: progress.badges obsahuje "rising-badge". Zdroj pravdy: flag `dragonsDenDratini`.
  */
 function dragonsDenView() {
-  const hasRisingBadge = (getState().progress?.badges ?? []).includes("rising-badge");
+  const clairBeaten = (getState().progress?.defeatedTrainers ?? []).includes("clair");
   // Stav 5: dárkový Dratini už vzat – Elder jen poděkuje.
   if (storyFlag("dragonsDenDratini")) {
     return {
-      title: "🐉 Dragon's Den",
+      title: "Dragon's Den",
       body: `<p class="story-text">The still waters of the shrine mirror the cavern's ancient carvings. The <strong>Dragon Elder</strong> bows his head. "The Dratini you earned carries the blood of champions — and a move no wild one knows. Raise it well, Dragon Master."</p>
         <p class="placeholder">✓ You passed the Elder's test and received a <strong>Dratini</strong> here.</p>`,
     };
@@ -1486,32 +1459,32 @@ function dragonsDenView() {
   // Stav 4: gauntlet vyčištěn (Elder poražen) – nabídne dárkového Dratiniho.
   if (storyFlag("dragonsDenCleared")) {
     return {
-      title: "🐉 Dragon's Den",
+      title: "Dragon's Den",
       body: `<p class="story-text">The defeated <strong>Dragon Elder</strong> rises slowly, and this time his stern face softens into a smile. "You battled with power, yet never cruelty. Your heart is sound." He beckons to a young <strong>Dratini</strong> coiled by the shrine. "Take this one — raised in the Clan's care, it already knows the sacred move <strong>Extreme Speed</strong>."</p>
         <button class="btn" data-take-dragons-dratini>🐉 Accept the Elder's Dratini</button>`,
     };
   }
-  // Stav 1: bez Rising Badge – nelze vstoupit.
-  if (!hasRisingBadge) {
+  // Stav 1: Clair ještě neporažena – nelze vstoupit.
+  if (!clairBeaten) {
     return {
-      title: "🐉 Dragon's Den",
-      body: `<p class="story-text">Mist drifts over the sacred lake behind Blackthorn. A Clan guardian blocks the path and shakes his head. "Only a trainer who has earned the <strong>Rising Badge</strong> from Clair may be tested at the shrine. Prove yourself at the Blackthorn Gym first."</p>
-        <p class="placeholder">Defeat <strong>Clair</strong> for the Rising Badge, then return to be tested.</p>`,
+      title: "Dragon's Den",
+      body: `<p class="story-text">Mist drifts over the sacred lake behind Blackthorn. A Clan guardian blocks the path and shakes his head. "Only a trainer who has defeated <strong>Clair</strong> may be tested at the shrine. Prove yourself at the Blackthorn Gym first."</p>
+        <p class="placeholder">Defeat <strong>Clair</strong> at the Blackthorn Gym, then return to be tested.</p>`,
     };
   }
   // Stav 3: test spuštěn, gauntlet ještě nevyčištěn – pošli hráče do soubojů.
   if (storyFlag("dragonsDenTestStarted")) {
     return {
-      title: "🐉 Dragon's Den",
+      title: "Dragon's Den",
       body: `<p class="story-text">The sacred shrine stretches before you across the still water. The <strong>Dragon Clan</strong> awaits, the Dragon Elder at their heart.</p>
         <p class="placeholder">Battle through the Clan and defeat the Dragon Elder to prove yourself and earn his gift.</p>
         <button class="btn" data-enter-dragons-den>🐉 Enter the shrine (face the Clan)</button>`,
     };
   }
-  // Stav 2: máš Rising Badge, ale test ještě nezačal – zahaj ho.
+  // Stav 2: Clair poražena, test ještě nezačal – zahaj ho.
   return {
-    title: "🐉 Dragon's Den",
-    body: `<p class="story-text">The <strong>Dragon Elder</strong> rises as you approach the shrine. "You carry the Rising Badge — but a true Dragon Master is judged by the heart, not the badge. If you would be tested, enter the shrine and face the Clan in battle."</p>
+    title: "Dragon's Den",
+    body: `<p class="story-text">The <strong>Dragon Elder</strong> rises as you approach the shrine. "Clair sent you? A true Dragon Master is judged by the heart, not by strength alone. If you would be tested, enter the shrine and face the Clan in battle. Pass, and Clair will grant you the Rising Badge."</p>
       <button class="btn" data-enter-dragons-den>🐉 Accept the Elder's test</button>`,
   };
 }
@@ -1523,14 +1496,14 @@ function tradeHouseView(storyKey) {
   if (!t) return unknownView();
   if (storyFlag(t.flag)) {
     return {
-      title: "🏠 Trade House",
+      title: "Trade House",
       body: `<p class="story-text">The trader beams. "That <strong>${t.giveName}</strong> treating you right? Best trade I ever made!"</p>
         <p class="placeholder">✓ You traded your ${t.wantName} for ${t.giveName} here.</p>`,
     };
   }
-  const owns = ownsSpecies(t.want);
+  const owns = ownsSpeciesInRegion(t.want); // region-lock: odevzdá se jen jedinec z tohoto regionu
   return {
-    title: "🏠 Trade House",
+    title: "Trade House",
     body: `<p class="story-text">${t.intro}</p>
       ${owns
         ? `<p class="placeholder">You have a <strong>${t.wantName}</strong> to trade. It'll come back to you as a <strong>${t.giveName}</strong> at the same level.</p>
@@ -1639,7 +1612,7 @@ function gameCornerView(johtoArcade = false) {
     };
   }
   return {
-    title: "🎰 Game Corner",
+    title: "Game Corner",
     body: `<p class="story-text">Slot machines chime and flash across the smoky hall. But one poster on the back wall looks oddly out of place…</p>
       <p class="story-text">You press it — and a hidden staircase slides open, leading down into a <strong>Team Rocket hideout</strong>!</p>
       <button class="btn" data-goto-rockets>💣 Descend into the Rocket Hideout</button>`,
@@ -1652,7 +1625,7 @@ function wardenHouseView() {
   // HM04 Strength. Zdroj pravdy o zubech = item gold-teeth v batohu.
   if (storyFlag("wardenThanked")) {
     return {
-      title: "🏡 Warden's House",
+      title: "Warden's House",
       body: `<p class="story-text">The old <strong>Warden</strong> beams a full, golden smile at you. "Thanksh — er, thanks again for my teeth, sonny!"</p>
         <p class="placeholder">✓ You returned the Gold Teeth and received <strong>HM04 Strength</strong>. Now you can shove boulders out of the way.</p>`,
     };
@@ -1661,13 +1634,13 @@ function wardenHouseView() {
   const hasTeeth = (items["gold-teeth"] ?? 0) > 0;
   if (hasTeeth) {
     return {
-      title: "🏡 Warden's House",
+      title: "Warden's House",
       body: `<p class="story-text">The <strong>Warden</strong> mumbles toothlessly and points helplessly at his mouth. You hold up the <strong>Gold Teeth</strong> you found in the Safari Zone — his eyes go wide!</p>
         <button class="btn" data-return-teeth>🦷 Return the Gold Teeth</button>`,
     };
   }
   return {
-    title: "🏡 Warden's House",
+    title: "Warden's House",
     body: `<p class="story-text">The <strong>Warden</strong> of the Safari Zone gums his words hopelessly — you can't make out a single thing he's trying to say.</p>
       <p class="placeholder">He's clearly lost something in the <strong>Safari Zone</strong>. Explore it thoroughly and you might turn up what he needs.</p>`,
   };
@@ -1680,21 +1653,21 @@ function pokemonMansionView() {
   // + flag hasSecretKey. Zdroj pravdy o hotovu = flag hasSecretKey.
   if (storyFlag("hasSecretKey")) {
     return {
-      title: "🏚️ Pokémon Mansion",
+      title: "Pokémon Mansion",
       body: `<p class="story-text">The scorched halls stand silent at last. You cracked the shifting-wall maze, drove off the Burglars, and cleared the vault.</p>
         <p class="placeholder">✓ You solved the mansion and took the <strong>Secret Key</strong>. The Cinnabar Gym door is unlocked.</p>`,
     };
   }
   if (storyFlag("mansionPuzzleSolved")) {
     return {
-      title: "🏚️ Pokémon Mansion",
+      title: "Pokémon Mansion",
       body: `<p class="story-text">You've realigned the shifting walls — the way into the inner labs stands open. But <strong>Burglars</strong> and their boss still prowl the corridors, guarding the vault that holds the <strong>Secret Key</strong>.</p>
         <p class="placeholder">Face them in the <strong>Mansion</strong> tab.</p>
         <button class="btn" data-open-mansion>🏚️ Enter the inner labs (Mansion tab)</button>`,
     };
   }
   return {
-    title: "🏚️ Pokémon Mansion",
+    title: "Pokémon Mansion",
     body: `<p class="story-text">You step into the fire-gutted mansion. Charred <strong>research journals</strong> lie scattered across the floor — and the walls themselves seem to <em>shift</em>, sliding open and shut around hidden statue switches.</p>
       <p class="story-text">"…discovered <strong>Mew</strong> deep in the jungle of Guyana… gene splicing… the specimen, <strong>Mewtwo</strong>, grew far too powerful… it went on a rampage and burned this place down…"</p>
       <p class="story-text">To reach the inner labs you'll have to throw the statue switches in the right order. The journals hold the clues.</p>
@@ -1803,7 +1776,7 @@ function pokemonLabView() {
   }
 
   return {
-    title: "🧪 Pokémon Lab",
+    title: "Pokémon Lab",
     body: `<p class="story-text">Cinnabar's research lab hums with equipment. A scientist looks up from a microscope.</p>
       <p class="story-text">"We study ancient Pokémon revived from fossils here. There are… darker rumors too, about experiments in the old mansion up the road. Best not to dwell on those."</p>
       ${fossilSection}`,
@@ -1988,8 +1961,14 @@ function wire(storyKey, overlay, onStatus, render, close) {
     // Po prvním chycení = opakovatelný shiny-hunt bez odměn (viz battleSystem).
     const already = ownsSpecies("mew");
     close();
-    startStaticEncounter("mew", Math.max(50, giftLevel()), { noRewards: already });
-    openMainTab("battle");
+    // Scéna: náklaďák se odsune a vyletí Mew; souboj až po potvrzení (legendaryScene.js).
+    playLegendaryScene({
+      speciesId: "mew", name: "Mew", button: already ? "Shiny hunt" : "Face Mew",
+      onStart: () => {
+        startStaticEncounter("mew", Math.max(50, giftLevel()), { noRewards: already });
+        openMainTab("battle");
+      },
+    });
   });
 
   // S.S. Anne – plavba do Johto (gen 2). Přepne region → mapView se překreslí na
@@ -2015,6 +1994,21 @@ function wire(storyKey, overlay, onStatus, render, close) {
     setStoryFlag("johtoCustomsSeen");
     commit();
     showJohtoCustomsTutorial();
+  });
+
+  // S.S. Aqua (Olivine) – zpět do Kanta (opačný směr než S.S. Anne výše).
+  overlay.querySelector("[data-sail-kanto]")?.addEventListener("click", () => {
+    const res = travelToRegion("kanto", "vermilion-city");
+    close();
+    if (!res.ok) {
+      onStatus(res.reason ?? "Can't sail there right now.");
+      return;
+    }
+    showPopup({
+      title: "Welcome back to Kanto",
+      body: `<p class="story-text">The S.S. Aqua glides into <strong>Vermilion</strong> harbour. Your Kanto team, Day Care, eggs and building upgrades are right where you left them. Your Johto team rests in the PC until you sail back.</p>`,
+      okLabel: "Step ashore",
+    });
   });
 
   // Prof. Elm's Lab – jednorázový výběr Johto startéra. Kanto starter (player
@@ -2303,7 +2297,7 @@ function wire(storyKey, overlay, onStatus, render, close) {
   // Cianwood Pharmacy (Johto) – lékárník dá SecretPotion pro Amphyho (flag
   // secretpotionObtained). Jednorázové; pojistka proti dvojímu vzetí přes flag ve view.
   overlay.querySelector("[data-take-secretpotion]")?.addEventListener("click", () => {
-    if (storyFlag("secretpotionObtained") || storyFlag("amphyHealed")) return; // pojistka
+    if (storyFlag("secretpotionObtained") || storyFlag("amphyHealed") || !storyFlag("amphySeen")) return; // pojistka
     setStoryFlag("secretpotionObtained");
     commit();
     onStatus("You received the SecretPotion! Take it to the Glitter Lighthouse in Olivine City.");
@@ -2314,7 +2308,7 @@ function wire(storyKey, overlay, onStatus, render, close) {
   // flag hasSquirtbottle). Squirtbottle probudí Sudowoodo na Route 36. Jednorázové;
   // pojistka proti dvojímu vzetí přes flag ve view i tady.
   overlay.querySelector("[data-take-squirtbottle]")?.addEventListener("click", () => {
-    if (storyFlag("hasSquirtbottle")) return; // pojistka
+    if (storyFlag("hasSquirtbottle") || !hasBadge("plain-badge")) return; // pojistka
     const s = getState();
     if (!s.resources.items) s.resources.items = {};
     s.resources.items["squirtbottle"] = (s.resources.items["squirtbottle"] ?? 0) + 1;
@@ -2324,16 +2318,6 @@ function wire(storyKey, overlay, onStatus, render, close) {
     render();
   });
 
-  // Cianwood House (Johto) – námořník dá HM06 Whirlpool (grantHmToPlayer(6) =
-  // flag hasWhirlpool + item hm06-whirlpool centralizovaně). Odemkne Whirl Islands
-  // (→ Lugia #249). Jediný produkční zdroj HM06; pojistka přes flag ve view i tady.
-  overlay.querySelector("[data-take-whirlpool]")?.addEventListener("click", () => {
-    if (storyFlag("hasWhirlpool")) return; // pojistka
-    grantHmToPlayer(6);
-    commit();
-    onStatus("You received HM06 Whirlpool! You can now reach the Whirl Islands.");
-    render();
-  });
 
   // Johtské zdroje HM (HM jsou regionální od v1.33.0 – nepřenášejí se z Kanta, viz
   // hmSystem.hmAvailable). grantHmToPlayer nastaví flat flag + regionální zrcadlo +
@@ -2343,15 +2327,6 @@ function wire(storyKey, overlay, onStatus, render, close) {
     grantHmToPlayer(1);
     commit();
     onStatus("You received HM01 Cut!");
-    render();
-  });
-
-  // Chuck's Home → HM02 Fly (po Storm Badge).
-  overlay.querySelector("[data-take-fly]")?.addEventListener("click", () => {
-    if (storyFlag("hasFly") || !hasBadge("storm-badge")) return; // pojistka
-    grantHmToPlayer(2);
-    commit();
-    onStatus("You received HM02 Fly!");
     render();
   });
 
@@ -2448,9 +2423,9 @@ function wire(storyKey, overlay, onStatus, render, close) {
   });
 
   // Dragon's Den (Johto) – zahájení testu: nastaví dragonsDenTestStarted (odemkne tab
-  // gauntletu, keyed blackthorn-city) a otevře ho. Gate rising-badge řeší view.
+  // gauntletu, keyed blackthorn-city) a otevře ho. Gate (Clair poražena) řeší view.
   overlay.querySelector("[data-enter-dragons-den]")?.addEventListener("click", () => {
-    if (!(getState().progress?.badges ?? []).includes("rising-badge")) return; // pojistka
+    if (!(getState().progress?.defeatedTrainers ?? []).includes("clair")) return; // pojistka
     setStoryFlag("dragonsDenTestStarted");
     commit();
     close();
@@ -2458,7 +2433,7 @@ function wire(storyKey, overlay, onStatus, render, close) {
   });
 
   // Dragon's Den (Johto) – Dragon Elder dá po vyčištění gauntletu dárkového Dratiniho
-  // se sacred move ExtremeSpeed (kánon GSC, odlišný od divokého v oblasti `dragons-den`).
+  // se sacred move ExtremeSpeed (kánon GSC, odlišný od divokého v Dragon's Den).
   // Pojistka přes flagy i badge. acquirePokemon stampne caughtRegion johto.
   overlay.querySelector("[data-take-dragons-dratini]")?.addEventListener("click", () => {
     if (storyFlag("dragonsDenDratini") || !storyFlag("dragonsDenCleared")) return; // pojistka
@@ -2545,19 +2520,6 @@ function wire(storyKey, overlay, onStatus, render, close) {
     })
   );
 
-  // Silph Co (Saffron) – napojení strážce: spotřebuje Fresh Water, otevře gauntlet.
-  overlay.querySelector("[data-give-drink]")?.addEventListener("click", () => {
-    const s = getState();
-    if (!s.resources.items) s.resources.items = {};
-    const items = s.resources.items;
-    if ((items["fresh-water"] ?? 0) <= 0) return; // pojistka
-    items["fresh-water"] -= 1;
-    if (items["fresh-water"] <= 0) delete items["fresh-water"];
-    setStoryFlag("saffronGuardsCleared");
-    commit();
-    onStatus("The revived guard lets you into Silph Co. — Team Rocket holds the upper floors!");
-    render();
-  });
 
   // Silph Co – vstup do gauntletu (přepne na Silph Co tab).
   overlay.querySelector("[data-enter-silph]")?.addEventListener("click", () => {

@@ -7,6 +7,8 @@
  * ⚠️ Tento soubor NESMÍ importovat ../generations.js ani ../trainers.js (cyklus).
  */
 
+import { GEN2_ENABLED } from "../gameConfig.js";
+
 /** @type {import("../trainers.js").Trainer[]} FIXNÍ trenéři Kanta. */
 export const FIXED_TRAINERS_GEN1 = [
   // ═══════════════════════════════════════════════════════════════════════════
@@ -144,6 +146,7 @@ export const FIXED_TRAINERS_GEN1 = [
     name: "Jr. Trainer Diana",
     team: [{ speciesId: "goldeen", level: 19 }],
     reward: 456,
+    quote: "You're after Misty's badge? Then you'll have to get past me and my Goldeen first!",
   },
   {
     id: "misty",
@@ -158,6 +161,10 @@ export const FIXED_TRAINERS_GEN1 = [
     badge: "cascade-badge",
     quote:
       "I'm Misty, Cerulean's Gym Leader! My policy is an all-out offensive with Water-type Pokémon!",
+    defeatText: [
+      "Misty: \"Wow! You're too much! All right! You can have the <strong>Cascade Badge</strong> to show you beat me!\"",
+      "Head north over Nugget Bridge to meet <strong>Bill</strong>, or south along Route 5 toward <strong>Vermilion City</strong>.",
+    ],
   },
 
   // ── Vermilion Gym (Lt. Surge, Electric) ───────────────────────────────────
@@ -171,6 +178,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "pikachu", level: 21 },
     ],
     reward: 462,
+    quote: "This Gym is full of electric traps! Even sailors like me get a shock now and then!",
   },
   {
     id: "vermilion-gym-gentleman-gregory",
@@ -182,6 +190,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "voltorb", level: 21 },
     ],
     reward: 2100,
+    quote: "When I was in the army, Lt. Surge was my strict commanding officer. Shall we?",
   },
   {
     id: "lt-surge",
@@ -210,6 +219,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "weepinbell", level: 24 },
     ],
     reward: 1560,
+    quote: "Look, look! My Pokémon bloom as beautifully as the flowers in this Gym!",
   },
   {
     id: "celadon-gym-lass-michelle",
@@ -221,6 +231,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "gloom", level: 24 },
     ],
     reward: 384,
+    quote: "Hey! No boys allowed! ...Oh, you're a challenger? Fine, I'll battle you!",
   },
   {
     id: "erika",
@@ -249,6 +260,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "sandslash", level: 33 },
     ],
     reward: 1584,
+    quote: "Koga's Gym is full of invisible walls. Don't bump your nose on the way to me!",
   },
   {
     id: "fuchsia-gym-juggler-nelson",
@@ -260,6 +272,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "kadabra", level: 34 },
     ],
     reward: 1088,
+    quote: "Strength isn't the key for Pokémon. It's strategy! I'll show you how it's done!",
   },
   {
     id: "koga",
@@ -289,6 +302,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "kadabra", level: 34 },
     ],
     reward: 680,
+    quote: "I can see the future... and in it, you lose. Let's make it come true!",
   },
   {
     id: "saffron-gym-channeler-preston",
@@ -300,6 +314,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "haunter", level: 34 },
     ],
     reward: 748,
+    quote: "Sabrina sees everything... and the spirits whisper to me. Prepare yourself!",
   },
   {
     id: "sabrina",
@@ -329,6 +344,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "ponyta", level: 40 },
     ],
     reward: 3520,
+    quote: "I used to be a burglar, but now I only steal wins! Fire away!",
   },
   {
     id: "cinnabar-gym-supernerd-erik",
@@ -340,6 +356,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "growlithe", level: 40 },
     ],
     reward: 1440,
+    quote: "Do you know how hot fire Pokémon burn? I've calculated it. You won't like the answer!",
   },
   {
     id: "blaine",
@@ -411,6 +428,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "persian", level: 44 },
     ],
     reward: 1760,
+    quote: "The Leader of this Gym is the strongest of them all. You won't even reach him!",
   },
   {
     id: "viridian-gym-toughguy-nick",
@@ -422,6 +440,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "golem", level: 43 },
     ],
     reward: 1720,
+    quote: "Hwaah! Only the toughest trainers stand in Viridian Gym. Show me your strength!",
   },
   {
     id: "giovanni",
@@ -647,6 +666,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "zubat", level: 33 },
     ],
     reward: 700,
+    quote: "Silph Co. belongs to Team Rocket now! Get lost, kid!",
   },
   {
     id: "silph-rocket-2",
@@ -658,6 +678,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "golbat", level: 34 },
     ],
     reward: 720,
+    quote: "Hey! Who let a kid in here? Intruders get crushed!",
   },
   {
     id: "silph-rocket-3",
@@ -670,6 +691,7 @@ export const FIXED_TRAINERS_GEN1 = [
       { speciesId: "weezing", level: 35 },
     ],
     reward: 760,
+    quote: "The boss is about to take over Silph Co.! You won't stop us!",
   },
   {
     id: "rival-silph",
@@ -723,6 +745,10 @@ export const FIXED_TRAINERS_GEN1 = [
     reward: 6000,
     quote:
       "Welcome to the Pokémon League. I am Lorelei of the Elite Four. My icy Pokémon will freeze you solid — no waffling here!",
+    defeatText: [
+      "Lorelei: \"You're better than I thought! Go on ahead! You only got a taste of Pokémon League power!\"",
+      "The next door opens. <strong>Bruno</strong> of the Elite Four awaits.",
+    ],
   },
   {
     id: "elite-four-bruno",
@@ -738,6 +764,10 @@ export const FIXED_TRAINERS_GEN1 = [
     ],
     reward: 6500,
     quote: "I am Bruno of the Elite Four! We will grind you down with our superior power! HOOAH!",
+    defeatText: [
+      "Bruno: \"Why? How could I lose? My job is done! Go face your next challenge!\"",
+      "The next door opens. <strong>Agatha</strong> of the Elite Four awaits.",
+    ],
   },
   {
     id: "elite-four-agatha",
@@ -754,6 +784,10 @@ export const FIXED_TRAINERS_GEN1 = [
     reward: 7000,
     quote:
       "I am Agatha of the Elite Four. Oak's taken a real shine to you, kid. My ghosts will teach you what real horror is!",
+    defeatText: [
+      "Agatha: \"Oh ho! You're something special, child! All right, I'll let you go. You'll face Lance next!\"",
+      "The next door opens. <strong>Lance</strong>, the dragon master, awaits.",
+    ],
   },
   {
     id: "elite-four-lance",
@@ -770,6 +804,10 @@ export const FIXED_TRAINERS_GEN1 = [
     reward: 7500,
     quote:
       "Welcome. I am Lance, the Dragon master and the last of the Elite Four. My dragons are all but invincible. Prepare yourself!",
+    defeatText: [
+      "Lance: \"That's it! I hate to admit it, but you are a Pokémon master! ...Still, there's one more trainer you must face.\"",
+      "The final door opens. The <strong>Champion</strong> is waiting.",
+    ],
   },
   {
     id: "champion-blue",
@@ -840,6 +878,15 @@ export const LEAGUE_GEN1 = {
   clearFlag: "leagueCleared",
   clearStoryFlag: "isChampion",
   clearReward: { gold: 20000 },
+  // Okno po PRVNÍM pokoření Ligy (battleSystem → STORY_POPUP).
+  clearPopup: {
+    title: "Pokémon League Champion!",
+    body: `<p class="story-text">The final Pokémon falls. Blue sinks to his knees. "...No! Why?! I never lost to you before... What went wrong?"</p>
+      <p class="story-text">Professor Oak steps into the Hall of Fame. "Blue! I'm disappointed in you. And you —" he turns to you, beaming, "— you understand that the bond of trust between you and your Pokémon is what makes them strong. You are the new <strong>Pokémon League Champion</strong>!"</p>
+      <p class="story-text">Your team is recorded in the <strong>Hall of Fame</strong>. And with the League conquered, the sealed <strong>Cerulean Cave</strong> is said to open at last — home to the strongest Pokémon of all, <strong>Mewtwo</strong>. Your legend has only begun.</p>${GEN2_ENABLED ? `
+      <p class="story-text">Word of a new Champion spreads fast: the captain of the <strong>S.S. Anne</strong> in <strong>Vermilion City</strong> is ready to take you across the sea to the <strong>Johto</strong> region.</p>` : ""}`,
+    okLabel: "Hall of Fame ✦",
+  },
 };
 
 /** Rival gate Kanta (areaId → id rivala, nebo {id, requiresStory}). */

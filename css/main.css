@@ -36,8 +36,9 @@ body {
 /* ---- Horní lišta ---- */
 #topbar {
   display: flex;
+  flex-wrap: wrap; /* úzké okno: lišta se zalomí, nikdy nepřeteče do strany */
   align-items: center;
-  gap: 20px;
+  gap: 8px 20px;
   padding: 10px 18px;
   background: var(--bg-panel);
   border-bottom: 2px solid var(--border);
@@ -53,7 +54,8 @@ body {
 
 .resource-bar {
   display: flex;
-  gap: 16px;
+  flex-wrap: wrap;
+  gap: 8px 16px;
   margin-left: auto;
 }
 .resource {
@@ -111,6 +113,7 @@ body {
 
 .save-controls {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -415,64 +418,61 @@ body {
 }
 #map-panel { grid-area: map; overflow: hidden; min-height: 0; }
 
-/* ---- Responzivní / skládané rozvržení (v0.63.0) ---- */
-/* Layout řídí atribut body[data-layout]:
-   - "auto"    – výchozí, přizpůsobí se šířce (pod 1000px se skládá pod sebe),
-   - "wide"    – vždy 2 sloupce,
-   - "stacked" – vždy 1 sloupec (panely pod sebe dle stackOrder: souboj → mapa → taby),
-   - "mobile"  – jako stacked, ale NAVÍC rozdělí battle area svisle (scéna
-                 nahoře, log + ovládání pod ní) pro telefon.
-   Ve skládaných režimech smí celá stránka svisle scrollovat (body dostane
-   overflow-y:auto místo hidden). */
-body[data-layout="stacked"],
-body[data-layout="mobile"] { overflow-y: auto; overflow-x: hidden; }
-body[data-layout="stacked"] #layout,
-body[data-layout="mobile"] #layout {
+/* ---- Rozvržení podle velikosti okna (v1.71.2) ---- */
+/* O rozvržení rozhoduje src/ui/layoutFit.js (měří, co se do okna vejde) a výsledek
+   dává do atributů body:
+   - data-flow="grid"   – 2 sloupce přes celé okno, stránka NEscrolluje,
+   - data-flow="stack"  – panely pod sebou (pořadí dle stackOrder), scrolluje jen
+                          celá stránka (auto na úzkém/nízkém okně, stacked, mobile),
+   - data-density="compact" – zhuštěné 2 sloupce (menší mezery, tým v jedné řadě),
+   - data-split="v"     – scéna souboje NAD logem (telefon, preset mobile).
+   Volba v nastavení zůstává v body[data-layout] (auto | wide | stacked | mobile). */
+body[data-flow="stack"] { overflow-y: auto; overflow-x: hidden; }
+body[data-flow="stack"] #layout {
   display: flex;
   flex-direction: column;
   flex: 0 0 auto;
 }
-body[data-layout="stacked"] #main-panel,
-body[data-layout="stacked"] #map-panel,
-body[data-layout="stacked"] #team-panel,
-body[data-layout="mobile"] #main-panel,
-body[data-layout="mobile"] #map-panel,
-body[data-layout="mobile"] #team-panel { overflow: visible; }
-/* Ve skládaných režimech scrolluje celá stránka → podpanely se nesmí uzavřít do
+body[data-flow="stack"] #main-panel,
+body[data-flow="stack"] #map-panel,
+body[data-flow="stack"] #team-panel { overflow: visible; }
+/* Ve skládaném režimu scrolluje celá stránka → podpanely se nesmí uzavřít do
    vlastního scrollu (jinak by se seznam sevřel do pár řádků). */
-body[data-layout="stacked"] #tab-rest,
-body[data-layout="mobile"] #tab-rest { overflow: visible; }
-body[data-layout="stacked"] #main-panel { min-height: 60vh; }
-/* Log dostane strop výšky + vlastní scroll (jako mobile), ať se nenaplní a
-   neroztahuje celou Battle area. .battle-field ZÁMĚRNĚ nesaháme (pevná výška na něm
-   rozbila auto layout – okno scény mizelo). */
-body[data-layout="stacked"] .battle-side .battle-info { max-height: 24vh; overflow: auto; }
+body[data-flow="stack"] #tab-rest { overflow: visible; }
+body[data-flow="stack"] #main-panel { min-height: 60vh; }
+/* Scéna souboje má i pod sebou slušnou výšku (na nízkém okně by jinak 60vh nestačilo). */
+body[data-flow="stack"] .battle-field { min-height: clamp(280px, 50vh, 520px); }
+/* Log dostane strop výšky + vlastní scroll, ať se nenaplní a neroztahuje celou
+   Battle area. */
+body[data-flow="stack"] .battle-side .battle-info { max-height: 24vh; overflow: auto; }
 
-/* Mobilní režim (preset "mobile"): battle area se rozdělí SVISLE – scéna souboje
-   nahoře (pevná výška), log + ovládání pod ní (ne vedle). Jinak by se scéna na
-   úzké obrazovce zúžila tak, že v manuálu není vidět nic než tlačítko. */
-body[data-layout="mobile"] #main-panel { min-height: auto; }
-body[data-layout="mobile"] .battle-body { flex-direction: column; }
-body[data-layout="mobile"] .battle-field { flex: 0 0 auto; min-height: clamp(280px, 50vh, 520px); }
-body[data-layout="mobile"] .battle-side { flex: 0 0 auto; width: 100%; }
-body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-height: 28vh; min-height: 110px; }
+/* Svislé rozdělení (telefon / preset "mobile"): scéna souboje nahoře, log +
+   ovládání pod ní (ne vedle). Jinak by se scéna na úzké obrazovce zúžila tak,
+   že v manuálu není vidět nic než tlačítko. */
+body[data-split="v"] #main-panel { min-height: auto; }
+body[data-split="v"] .battle-body { flex-direction: column; }
+body[data-split="v"] .battle-field { flex: 0 0 auto; min-height: clamp(260px, 50vh, 520px); }
+body[data-split="v"] .battle-side { flex: 0 0 auto; width: 100%; }
+body[data-split="v"] .battle-side .battle-info { flex: 0 0 auto; max-height: 28vh; min-height: 110px; }
 
-/* Automatické skládání: v režimu "auto" pod hranicí šířky (pokryje i půl
-   obrazovky na 1920px = 960px). Nad hranicí zůstávají 2 sloupce. */
-@media (max-width: 1000px) {
-  body[data-layout="auto"] { overflow-y: auto; overflow-x: hidden; }
-  body[data-layout="auto"] #layout {
-    display: flex;
-    flex-direction: column;
-    flex: 0 0 auto;
-  }
-  body[data-layout="auto"] #main-panel,
-  body[data-layout="auto"] #map-panel,
-  body[data-layout="auto"] #team-panel { overflow: visible; }
-  body[data-layout="auto"] #tab-rest { overflow: visible; }
-  body[data-layout="auto"] #main-panel { min-height: 60vh; }
-  /* Strop výšky logu i v úzkém auto-režimu (< 1000px) – stejný důvod jako stacked/mobile. */
-  body[data-layout="auto"] .battle-side .battle-info { max-height: 24vh; overflow: auto; }
+/* Zhuštěné 2 sloupce (nízké okno, např. notebook se zvětšením 150 %): menší mezery,
+   horní lišta se smí zalomit a tým má jen tolik místa, kolik jeho karty potřebují
+   (zbytek výšky dostane souboj a mapa). Na širokém okně je tým v jedné řadě. */
+body[data-density="compact"] { --gap: 6px; }
+body[data-density="compact"] #topbar { flex-wrap: wrap; gap: 6px 12px; padding: 4px 10px; }
+body[data-density="compact"] .logo { font-size: 16px; }
+body[data-density="compact"] .resource-bar { gap: 8px; }
+body[data-density="compact"] .resource { padding: 2px 8px; font-size: 13px; }
+body[data-density="compact"] .panel { padding: 8px 10px; }
+body[data-density="compact"] .panel-title { margin-bottom: 6px; padding-bottom: 4px; font-size: 14px; }
+body[data-density="compact"] .tabs { margin-bottom: 6px; }
+body[data-density="compact"] .battle-head { margin-bottom: 6px; padding-bottom: 4px; }
+body[data-density="compact"] #footer { padding: 2px 10px; font-size: 11px; }
+body[data-density="compact"][data-flow="grid"] #layout { grid-template-rows: minmax(0, 1fr) auto; }
+body[data-density="compact"] #team-panel .team-grid { grid-template-rows: none; grid-auto-rows: auto; }
+body[data-density="compact"] .team-grid .team-slot { margin-bottom: 0; }
+@media (min-width: 1200px) {
+  body[data-density="compact"] #team-panel .team-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 
 /* Úzké displeje (telefon): stáhnout mezery, zalomit horní lištu, menší logo. */
@@ -855,6 +855,7 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  justify-content: safe center;
   gap: 8px;
   text-align: center;
   background: rgba(6, 9, 18, 0.72);
@@ -898,6 +899,7 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  justify-content: safe center;
   gap: 8px;
   text-align: center;
   padding: 10px;
@@ -969,6 +971,7 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   70% { transform: translate(-50%, 30px) scale(0.42); opacity: 0.9; }
   100% { transform: translate(-50%, 30px) scale(0.42); opacity: 0.82; }
 }
+
 @keyframes ballWiggle {
   0%, 100% { transform: rotate(0); }
   25% { transform: rotate(-15deg); }
@@ -1279,7 +1282,7 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   right: 8px;
   bottom: 8px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -2290,6 +2293,7 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   justify-content: center;
   /* Nad title screenem (200), aby šlo SETTINGS otevřít i z úvodní obrazovky. */
   z-index: 300;
+  padding: 12px;
 }
 .modal {
   background: var(--bg-panel);
@@ -2298,6 +2302,11 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   padding: 20px 24px;
   width: min(420px, 90vw);
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  /* Okno se vždy vejde na obrazovku (nízké okno, telefon na šířku); delší obsah
+     (Settings…) se posouvá uvnitř okna, ne mimo obrazovku. */
+  max-height: calc(100vh - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
 }
 
 /* ---- Story / intro okna (příběhové interakce budov + úvod) ---- */
@@ -2481,6 +2490,224 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
   .beast { animation: none; transform: translate(-50%, -50%) scale(1); opacity: 1; }
   .beast-raikou { left: 22%; }
   .beast-entei { left: 78%; }
+}
+/* ---- Scény legendárních (src/ui/legendaryScene.js) ---- */
+/* Okno před soubojem: pozadí (.lp-bg-*), efekty (.lp = částice, .lpx-* = jednorázové)
+   a sprite s animací příchodu (.lp-enter-*). Legenda se objeví v --lp-delay
+   (= REVEAL_MS v JS). Vrstvy: pozadí < záře/duha < Pokémon < částice/vlny < záblesky. */
+.leg-scene {
+  --lp-delay: 1.1s;
+  position: relative;
+  height: 150px;
+  margin: 2px 0 10px;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 0 0 24px rgba(0, 0, 0, 0.5);
+}
+.lp-bg-ice { background: linear-gradient(#e2f4ff, #8fc2e8 55%, #4a7fae); }
+.lp-bg-plant { background: linear-gradient(#22242f, #3b4052 70%, #2a2d38 70%); }
+.lp-bg-lava { background: radial-gradient(ellipse at 50% 115%, #ff7a2f 0%, #7a2214 45%, #1e0a08 85%); }
+.lp-bg-void { background: radial-gradient(ellipse at 50% 60%, #2c1544 0%, #0a0612 75%); }
+.lp-bg-mist { background: linear-gradient(#a9c9da, #5d7f91 70%, #4a3a36 70%); }
+.lp-bg-storm { background: linear-gradient(#454d5a, #262b33 72%, #3d4a32 72%); }
+.lp-bg-volcano { background: radial-gradient(ellipse at 50% 125%, #ffa040 0%, #8a2a12 40%, #2a0d08 80%); }
+.lp-bg-sea { background: linear-gradient(#5d8fbf, #1d4f7c 55%, #0c2a48); }
+.lp-bg-sky { background: linear-gradient(#7a5cc4, #ff8a7a 55%, #ffc27a); }
+.lp-bg-forest { background: linear-gradient(#173d20, #2f6b3a 60%, #24502b); }
+.lp-bg-lake { background: linear-gradient(#40305a, #8a4a6a 50%, #1e4f7a 50%); }
+.lp-bg-dock { background: linear-gradient(#9fd3ff, #cfeaff 58%, #8a6438 58%, #8a6438 64%, #3b82c4 64%); }
+
+.lp-mon {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 2;
+  transform: translateX(-50%);
+  opacity: 0;
+  animation: 1s ease-out var(--lp-delay) 1 both;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.45));
+}
+.lp-mon img {
+  display: block;
+  width: 84px;
+  height: 84px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  animation: lp-float 2.6s ease-in-out 2.6s infinite;
+}
+.lp-enter-swoop-left { animation-name: lp-swoop-left; animation-duration: 1.2s; }
+.lp-enter-drop-top { animation-name: lp-drop-top; animation-duration: 0.7s; animation-timing-function: cubic-bezier(0.5, 0, 1, 0.6); }
+.lp-enter-fly-right { animation-name: lp-fly-right; animation-duration: 1.2s; }
+.lp-enter-rise { animation-name: lp-rise; animation-duration: 1.6s; }
+.lp-enter-leap-left { animation-name: lp-leap-left; animation-duration: 1s; }
+.lp-enter-dash-right { animation-name: lp-dash-right; animation-duration: 0.6s; }
+.lp-enter-burst-up { animation-name: lp-burst-up; animation-duration: 0.9s; }
+.lp-enter-emerge { animation-name: lp-emerge; animation-duration: 2s; }
+.lp-enter-descend { animation-name: lp-descend; animation-duration: 2.2s; }
+.lp-enter-fade-spin { animation-name: lp-fade-spin; animation-duration: 1.6s; }
+.lp-enter-burst-water { animation-name: lp-burst-water; animation-duration: 0.9s; }
+.lp-enter-pop-out { animation-name: lp-pop-out; animation-duration: 1.2s; }
+@keyframes lp-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+@keyframes lp-swoop-left {
+  0% { transform: translate(-320%, -100px) rotate(-14deg) scale(0.5); opacity: 0; }
+  20% { opacity: 1; }
+  65% { transform: translate(-40%, 8px) rotate(5deg) scale(1.05); opacity: 1; }
+  100% { transform: translate(-50%, 0) rotate(0) scale(1); opacity: 1; }
+}
+@keyframes lp-drop-top {
+  0% { transform: translate(-50%, -190px); opacity: 1; }
+  80% { transform: translate(-50%, 6px) scaleY(0.9); opacity: 1; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+@keyframes lp-fly-right {
+  0% { transform: translate(240%, -80px) rotate(14deg) scale(0.5); opacity: 0; }
+  20% { opacity: 1; }
+  65% { transform: translate(-60%, 8px) rotate(-5deg) scale(1.05); opacity: 1; }
+  100% { transform: translate(-50%, 0) rotate(0) scale(1); opacity: 1; }
+}
+@keyframes lp-rise {
+  0% { transform: translate(-50%, 40px) scale(0.6); opacity: 0; filter: blur(4px) drop-shadow(0 0 0 #b07aff); }
+  100% { transform: translate(-50%, 0) scale(1); opacity: 1; filter: blur(0) drop-shadow(0 0 10px #b07aff); }
+}
+@keyframes lp-leap-left {
+  0% { transform: translate(-330%, 0); opacity: 0; }
+  15% { opacity: 1; }
+  50% { transform: translate(-150%, -70px); opacity: 1; }
+  90% { transform: translate(-50%, 4px); opacity: 1; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+@keyframes lp-dash-right {
+  0% { transform: translate(320%, 0) skewX(-24deg); opacity: 0; }
+  20% { opacity: 1; }
+  80% { transform: translate(-62%, 0) skewX(10deg); opacity: 1; }
+  100% { transform: translate(-50%, 0) skewX(0); opacity: 1; }
+}
+@keyframes lp-burst-up {
+  0% { transform: translate(-50%, 70px) scale(0.3); opacity: 0; }
+  60% { transform: translate(-50%, -14px) scale(1.15); opacity: 1; }
+  100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+}
+@keyframes lp-emerge {
+  0% { transform: translate(-50%, 120px); opacity: 1; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+@keyframes lp-descend {
+  0% { transform: translate(-50%, -180px) scale(0.7); opacity: 0; }
+  20% { opacity: 1; }
+  60% { transform: translate(-46%, -20px) scale(0.95); opacity: 1; }
+  100% { transform: translate(-50%, 0) scale(1); opacity: 1; }
+}
+@keyframes lp-fade-spin {
+  0% { transform: translate(-50%, -20px) rotate(-360deg) scale(0.2); opacity: 0; }
+  100% { transform: translate(-50%, 0) rotate(0) scale(1); opacity: 1; }
+}
+@keyframes lp-burst-water {
+  0% { transform: translate(-50%, 110px); opacity: 1; }
+  55% { transform: translate(-50%, -26px); opacity: 1; }
+  100% { transform: translate(-50%, 0); opacity: 1; }
+}
+@keyframes lp-pop-out {
+  0% { transform: translate(-50%, 30px) scale(0.3); opacity: 0; }
+  50% { transform: translate(-50%, -44px) rotate(180deg) scale(1); opacity: 1; }
+  100% { transform: translate(-50%, 0) rotate(360deg) scale(1); opacity: 1; }
+}
+
+/* Částice: --x/--y pozice, --dl zpoždění, --du délka, --sz velikost (z JS). */
+.lp {
+  position: absolute;
+  left: var(--x);
+  top: -10px;
+  z-index: 3;
+  pointer-events: none;
+  animation: var(--du) linear var(--dl) infinite both;
+}
+.lp-snow { width: calc(4px * var(--sz)); height: calc(4px * var(--sz)); border-radius: 50%; background: #fff; animation-name: lp-fall-sway; }
+.lp-rain { width: 1px; height: 12px; background: rgba(200, 225, 255, 0.7); transform: rotate(12deg); animation-name: lp-fall; animation-duration: calc(var(--du) * 0.3); }
+.lp-feathers { width: calc(9px * var(--sz)); height: 3px; border-radius: 50%; background: linear-gradient(90deg, #ffd65a, #ff6a3d); animation-name: lp-fall-sway; animation-duration: calc(var(--du) * 1.6); animation-delay: calc(var(--dl) + 0.6s); }
+.lp-sparks { top: var(--y); width: 2px; height: 2px; background: #fff27a; box-shadow: 0 0 4px #ffe14a; animation-name: lp-twinkle; animation-duration: calc(var(--du) * 0.4); animation-delay: calc(var(--dl) * 0.3 + 1s); }
+.lp-sparkle { top: var(--y); width: 3px; height: 3px; background: #fff; box-shadow: 0 0 6px #fff; transform: rotate(45deg); animation-name: lp-twinkle; }
+.lp-embers { top: auto; bottom: -6px; width: calc(3px * var(--sz)); height: calc(3px * var(--sz)); background: #ffb03a; box-shadow: 0 0 5px #ff6a1a; animation-name: lp-rise-fade; }
+.lp-bubbles { top: auto; bottom: -8px; width: calc(6px * var(--sz)); height: calc(6px * var(--sz)); border-radius: 50%; border: 1px solid rgba(220, 240, 255, 0.8); animation-name: lp-rise-fade; }
+.lp-leaves { top: auto; bottom: -8px; width: calc(7px * var(--sz)); height: calc(4px * var(--sz)); border-radius: 0 70% 0 70%; background: #7ccf5a; animation-name: lp-spiral-up; }
+@keyframes lp-fall { from { transform: translateY(0) rotate(12deg); } to { transform: translateY(175px) rotate(12deg); } }
+@keyframes lp-fall-sway {
+  0% { transform: translate(0, 0) rotate(0); opacity: 0; }
+  10% { opacity: 1; }
+  50% { transform: translate(14px, 85px) rotate(120deg); }
+  100% { transform: translate(-6px, 170px) rotate(260deg); opacity: 0.8; }
+}
+@keyframes lp-rise-fade {
+  0% { transform: translate(0, 0); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translate(10px, -150px); opacity: 0; }
+}
+@keyframes lp-spiral-up {
+  0% { transform: translate(0, 0) rotate(0); opacity: 0; }
+  15% { opacity: 1; }
+  50% { transform: translate(-18px, -80px) rotate(200deg); }
+  100% { transform: translate(14px, -165px) rotate(420deg); opacity: 0; }
+}
+@keyframes lp-twinkle { 0%, 100% { opacity: 0; transform: scale(0.4) rotate(45deg); } 50% { opacity: 1; transform: scale(1.2) rotate(45deg); } }
+
+/* Jednorázové efekty */
+.lpx { position: absolute; pointer-events: none; }
+.lpx-flash, .lpx-flicker { inset: 0; z-index: 4; }
+.lpx-flash { background: #fff; opacity: 0; animation: lp-flash 1.2s ease-out calc(var(--lp-delay) - 0.1s) 1 both; }
+.lpx-flicker { background: #000; animation: lp-flicker 1.4s steps(1) 0s 1 both; }
+.lpx-lightning {
+  left: 44%; top: 0; width: 34px; height: 100%; z-index: 4; opacity: 0;
+  background: #fffbe0;
+  clip-path: polygon(55% 0, 20% 48%, 48% 48%, 25% 100%, 82% 40%, 54% 40%, 78% 0);
+  filter: drop-shadow(0 0 8px #fff27a);
+  animation: lp-bolt 0.6s steps(1) calc(var(--lp-delay) - 0.15s) 1 both;
+}
+.lpx-glow { left: 0; right: 0; bottom: 0; height: 70%; z-index: 1; background: radial-gradient(ellipse at 50% 100%, rgba(255, 140, 40, 0.55), transparent 70%); animation: lp-pulse 1.4s ease-in-out infinite; }
+.lpx-aura { left: 50%; bottom: 0; width: 150px; height: 130px; margin-left: -75px; z-index: 1; border-radius: 50%; background: radial-gradient(circle, rgba(176, 122, 255, 0.6), transparent 65%); opacity: 0; animation: lp-aura 1.8s ease-in-out var(--lp-delay) infinite both; }
+.lpx-eyes { left: 50%; top: 52px; width: 30px; margin-left: -15px; display: flex; justify-content: space-between; z-index: 3; opacity: 0; animation: lp-eyes 1.3s ease-in-out 0.1s 1 both; }
+.lpx-eyes i { width: 6px; height: 3px; border-radius: 50%; background: #e2b5ff; box-shadow: 0 0 8px 2px #b07aff; }
+.lpx-mist { left: -40%; right: -40%; bottom: 10px; height: 60px; z-index: 3; border-radius: 50%; background: radial-gradient(ellipse, rgba(255, 255, 255, 0.55), transparent 70%); animation: lp-drift 5s ease-in-out infinite alternate; }
+.lpx-ripple { left: 50%; bottom: 8px; width: 40px; height: 10px; margin-left: -20px; z-index: 1; border: 2px solid rgba(190, 235, 255, 0.8); border-radius: 50%; opacity: 0; animation: lp-ripple 1.6s ease-out calc(var(--lp-delay) + 0.9s) infinite; }
+.lpx-waves {
+  left: -20px; right: -20px; bottom: 0; height: 34px; z-index: 3;
+  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.35) 0 6px, transparent 6px 22px), linear-gradient(rgba(60, 140, 210, 0.9), #164a78);
+  border-top: 2px solid rgba(220, 240, 255, 0.8);
+  animation: lp-waves 2s linear infinite;
+}
+.lpx-splash { left: 50%; bottom: 20px; width: 120px; height: 90px; margin-left: -60px; z-index: 3; border-radius: 50% 50% 10% 10%; background: radial-gradient(ellipse at 50% 100%, rgba(255, 255, 255, 0.85), rgba(190, 230, 255, 0.4) 45%, transparent 70%); opacity: 0; transform-origin: 50% 100%; animation: lp-splash 1.1s ease-out calc(var(--lp-delay) + 0.2s) 1 both; }
+.lpx-rainbow {
+  left: 50%; top: 18px; width: 300px; height: 300px; margin-left: -150px; z-index: 1; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle, transparent 56%, #ff5a5a 56% 58%, #ffa53a 58% 60%, #ffe14a 60% 62%, #6ad86a 62% 64%, #4aa8ff 64% 66%, #8a6aff 66% 68%, transparent 68%);
+  animation: lp-fade-in 1.4s ease-out 0.2s 1 both;
+}
+.lpx-timewarp { left: 50%; bottom: -40px; width: 220px; height: 220px; margin-left: -110px; z-index: 1; border-radius: 50%; opacity: 0; background: repeating-radial-gradient(circle, rgba(170, 255, 170, 0.35) 0 3px, transparent 3px 16px); animation: lp-warp 2.4s ease-in-out 0.3s 1 both; }
+.lpx-truck { left: 50%; bottom: 8px; width: 96px; height: 50px; margin-left: -48px; z-index: 3; animation: lp-truck 0.9s ease-in 0.5s 1 both; }
+.lpx-truck i { position: absolute; display: block; }
+.lpx-truck .box { left: 0; bottom: 8px; width: 66px; height: 40px; background: #eef1f4; border: 2px solid #3a3a46; }
+.lpx-truck .cab { right: 0; bottom: 8px; width: 30px; height: 28px; background: #3a6fd8; border: 2px solid #23315a; border-radius: 0 8px 0 0; }
+.lpx-truck .w1, .lpx-truck .w2 { bottom: 0; width: 14px; height: 14px; border-radius: 50%; background: #2a2a30; border: 3px solid #777; }
+.lpx-truck .w1 { left: 10px; }
+.lpx-truck .w2 { right: 8px; }
+.lp-shake { animation: lp-shake 0.5s linear calc(var(--lp-delay) + 0.3s) 1 both; }
+@keyframes lp-flash { 0% { opacity: 0; } 10% { opacity: 0.9; } 100% { opacity: 0; } }
+@keyframes lp-flicker { 0% { opacity: 0; } 20% { opacity: 0.7; } 30% { opacity: 0.1; } 45% { opacity: 0.8; } 55% { opacity: 0.2; } 70% { opacity: 0.85; } 100% { opacity: 0.35; } }
+@keyframes lp-bolt { 0% { opacity: 1; } 15% { opacity: 0; } 30% { opacity: 1; } 60% { opacity: 0; } 100% { opacity: 0; } }
+@keyframes lp-pulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+@keyframes lp-aura { 0%, 100% { opacity: 0.5; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
+@keyframes lp-eyes { 0% { opacity: 0; } 30%, 75% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes lp-drift { from { transform: translateX(-30px); } to { transform: translateX(30px); } }
+@keyframes lp-ripple { from { transform: scale(0.6); opacity: 0.9; } to { transform: scale(3); opacity: 0; } }
+@keyframes lp-waves { from { background-position: 0 0, 0 0; } to { background-position: 44px 0, 0 0; } }
+@keyframes lp-splash { 0% { opacity: 0; transform: scale(0.3, 0.2); } 30% { opacity: 1; transform: scale(1, 1); } 100% { opacity: 0; transform: scale(1.3, 1.2); } }
+@keyframes lp-fade-in { from { opacity: 0; transform: scale(0.85); } to { opacity: 0.9; transform: scale(1); } }
+@keyframes lp-warp { 0% { opacity: 0; transform: scale(0.3) rotate(0); } 40% { opacity: 1; } 100% { opacity: 0.4; transform: scale(1.2) rotate(90deg); } }
+@keyframes lp-truck { 0% { transform: translateX(0); } 15% { transform: translateX(-3px); } 100% { transform: translateX(210px); } }
+@keyframes lp-shake { 0%, 100% { transform: translate(0, 0); } 20% { transform: translate(-4px, 2px); } 40% { transform: translate(4px, -2px); } 60% { transform: translate(-3px, -1px); } 80% { transform: translate(3px, 1px); } }
+/* Nízké okno: scéna se zmenší, ať se okno vejde. */
+@media (max-height: 520px) { .leg-scene { height: 110px; } .lp-mon img { width: 64px; height: 64px; } }
+@media (prefers-reduced-motion: reduce) {
+  .leg-scene, .leg-scene *, .lp-mon img { animation: none !important; }
+  .lp-mon { opacity: 1; }
+  .lp, .lpx-flash, .lpx-flicker, .lpx-lightning, .lpx-eyes, .lpx-splash, .lpx-truck { display: none; }
 }
 /* ---- Karta Pokémona (modal) ---- */
 .mon-card { width: min(460px, 94vw); }
@@ -2968,6 +3195,21 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 
 /* ------------------------------- Klikací mapa ------------------------------ */
 .kanto-map { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+/* Ve 2 sloupcích mapa vyplní zbytek výšky panelu a obrázek se do něj vejde celý
+   (box je kontejner → max-height 100cqh níž). Pod sebou má mapa vlastní strop výšky. */
+#map-panel { display: flex; flex-direction: column; }
+#map-panel .kanto-map { flex: 1 1 auto; min-height: 0; }
+.map-stage-box {
+  flex: 1 1 0;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  container-type: size;
+}
+body[data-flow="stack"] .map-stage-box { flex: 0 0 auto; container-type: normal; }
+body[data-flow="stack"] .map-img { max-height: 70vh; }
 
 /* Scéna = obrázek mapy + absolutně pozicované markery (v %).
    display:inline-block → scéna se smrští PŘESNĚ na velikost obrázku (i po
@@ -2984,7 +3226,7 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 .map-img {
   display: block;
   max-width: 100%;
-  max-height: 48vh; /* strop výšky → mapa se vejde celá do horní řady, žádný scroll */
+  max-height: 100cqh; /* celá do boxu (výška panelu minus lišta a popisek) – žádný scroll ani ořez */
   width: auto;
   height: auto;
   user-select: none;
@@ -3135,6 +3377,8 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 .map-node:hover .map-node-label,
 .map-node:focus-visible .map-node-label,
 .map-node.is-target .map-node-label { display: inline; }
+/* Nastavení „Map labels" (Name + level / Name / Level): popisky všech uzlů napořád. */
+.map-stage.labels-always .map-node-label { display: inline; }
 
 .map-info {
   font-size: 12px;
@@ -4581,4 +4825,57 @@ body[data-layout="mobile"] .battle-side .battle-info { flex: 0 0 auto; max-heigh
 .fishing-caption em {
   opacity: 0.85;
   font-style: italic;
+}
+
+/* ---- Malá scéna souboje (v1.71.2) ----
+   Container queries nad .battle-field (container-type: size). Na konci souboru,
+   ať přebijí základní pravidla menu a výherního okna se stejnou specificitou. */
+/* Úzká scéna: menší dlaždice povelů (Battle / Run / Items / Switch), ať se vejdou vedle sebe. */
+@container (max-width: 480px) {
+  .battle-cmd.cmd-root { gap: 5px; left: 5px; right: 5px; bottom: 5px; }
+  .cmd-root .menu-btn { font-size: 15px; padding: 10px 2px; letter-spacing: 0; }
+}
+@container (max-width: 340px) {
+  .cmd-root .menu-btn { font-size: 13px; padding: 8px 1px; }
+  .cmd-bstats { grid-template-columns: repeat(2, auto); gap: 2px 10px; }
+}
+/* Nízká scéna: podmenu útoků bez obrázku a base statů soupeře (vejde se bez posouvání). */
+@container (max-height: 300px) {
+  .battle-cmd.cmd-panel { padding: 6px; }
+  .cmd-enemy { margin-bottom: 4px; }
+  .cmd-enemy .cmd-enemy-sprite, .cmd-bstats, .cmd-enemy-note { display: none; }
+  .cmd-root .menu-btn { padding-top: 8px; padding-bottom: 8px; }
+  .battle-field.has-cmd .combatant.player { bottom: 48px; }
+}
+
+/* Malá scéna (nízké okno, telefon): výherní / chytací / prohrávací okno se zmenší,
+   aby se vešlo celé i s tlačítkem. .battle-field je kontejner (container-type: size). */
+@container (max-height: 300px) {
+  .battle-field .battle-result,
+  .battle-field .battle-over { gap: 4px; padding: 6px; }
+  .battle-result .result-title,
+  .battle-over .over-title { font-size: 20px; letter-spacing: 1px; }
+  .battle-result .result-enemy .mon-sprite,
+  .battle-result.is-trainer-win .result-trainer-sprite { width: 40px; height: 40px; }
+  .battle-result .result-rewards {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 2px 12px;
+    padding: 4px 10px;
+    margin: 0;
+    font-size: 12px;
+  }
+  .battle-result .catch-visual { transform: scale(0.64); margin: -20px 0; }
+  .battle-result .over-btn,
+  .battle-over .over-btn { margin-top: 2px; }
+}
+@container (max-height: 210px) {
+  .battle-result .result-sub,
+  .battle-over .over-hint { display: none; }
+  .battle-result .result-title,
+  .battle-over .over-title { font-size: 16px; }
+  .battle-result .result-enemy .mon-sprite,
+  .battle-result.is-trainer-win .result-trainer-sprite { width: 28px; height: 28px; }
+  .battle-result .catch-visual { transform: scale(0.43); margin: -32px 0; }
 }

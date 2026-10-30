@@ -64,6 +64,7 @@ import {
   isIncubating,
 } from "../systems/eggSystem.js";
 import { getState, commit } from "../core/state.js";
+import { speciesTypes, moveType } from "../../data/types.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { hatchMinutesFor } from "../../data/eggs.js";
 import { eggSpriteHtml } from "./eggSprite.js";
@@ -357,7 +358,7 @@ export function openBuilding(id, onStatus = () => {}) {
  * @param {(msg: string) => void} onStatus
  */
 export function openTrainingPicker(id, onStatus) {
-  const avail = getState().collection;
+  const avail = getState().collection.filter(isFromCurrentRegion); // region-lock
   openPokemonPicker({
     title: "Choose a Pokémon to train",
     avail,
@@ -487,7 +488,7 @@ function openTrainingStats(id, uid, onStatus) {
  * @param {(msg: string) => void} onStatus
  */
 export function openMoveTutorPicker(id, onStatus) {
-  const avail = getState().collection;
+  const avail = getState().collection.filter(isFromCurrentRegion); // region-lock
   openPokemonPicker({
     title: "Choose a Pokémon to reteach",
     avail,
@@ -545,7 +546,7 @@ function openMoveTutorEditor(id, uid, onStatus) {
     const p = getState().collection.find((x) => x.uid === uid);
     if (!p) return close();
 
-    const learnable = learnableMovesAtLevel(p.speciesId, p.level);
+    const learnable = learnableMovesAtLevel(p.speciesId, p.level, p.caughtRegion ?? "kanto"); // learnset regionu chycení
 
     // Řádek s aktivními sloty (podle aktuálního výběru).
     const slots = [];
@@ -572,7 +573,7 @@ function openMoveTutorEditor(id, uid, onStatus) {
         return `<button class="tutor-move${on ? " on" : ""}" data-move="${mid}" ${full ? "disabled" : ""}>
           ${badge}
           <span class="tm-name">${MOVE_CAT_ICON[mv.category] ?? "•"} ${mv.name}</span>
-          <span class="tm-meta placeholder">${mv.type} · ${power} · ${mv.pp} PP · Lv ${level}</span>
+          <span class="tm-meta placeholder">${moveType(mv, p.caughtRegion ?? "kanto") ?? "???"} · ${power} · ${mv.pp} PP · Lv ${level}</span>
         </button>`;
       })
       .join("");
@@ -1227,7 +1228,8 @@ function openPokemonPicker({ title, avail, onPick, okMsg, onStatus }) {
   const rarities = RARITY_ORDER.filter((r) =>
     avail.some((p) => getSpecies(p.speciesId)?.rarity === r)
   );
-  const types = [...new Set(avail.flatMap((p) => getSpecies(p.speciesId)?.types ?? []))].sort();
+  const typesOf = (p) => speciesTypes(getSpecies(p.speciesId), p.caughtRegion ?? "kanto"); // typy podle generace
+  const types = [...new Set(avail.flatMap(typesOf))].sort();
 
   const filters = { q: "", rarities: new Set(), types: new Set(), shinyOnly: false, sort: "level" };
 
@@ -1275,7 +1277,7 @@ function openPokemonPicker({ title, avail, onPick, okMsg, onStatus }) {
       const sp = getSpecies(p.speciesId);
       if (filters.q && !(sp?.name ?? "").toLowerCase().includes(filters.q)) return false;
       if (filters.rarities.size && !filters.rarities.has(sp?.rarity)) return false;
-      if (filters.types.size && !(sp?.types ?? []).some((t) => filters.types.has(t))) return false;
+      if (filters.types.size && !typesOf(p).some((t) => filters.types.has(t))) return false;
       if (filters.shinyOnly && !p.shiny) return false;
       return true;
     });
@@ -1291,7 +1293,7 @@ function openPokemonPicker({ title, avail, onPick, okMsg, onStatus }) {
     grid.innerHTML = rows
       .map((p) => {
         const sp = getSpecies(p.speciesId);
-        const meta = `${cap(sp?.rarity ?? "")} · ${(sp?.types ?? []).join("/")}`;
+        const meta = `${cap(sp?.rarity ?? "")} · ${typesOf(p).join("/")}`;
         return `
         <button class="daycare-tile" data-pick-uid="${p.uid}" title="${speciesName(p)} · Lv ${p.level}">
           <span class="dt-name">${speciesName(p)}${p.shiny ? " ✨" : ""}</span>

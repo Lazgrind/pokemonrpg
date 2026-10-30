@@ -55,7 +55,7 @@ export function restoreScroll(root, saved) {
 
 /**
  * Spustí `fn` (typicky přepis innerHTML panelu) a ZACHOVÁ scroll pozici OKNA.
- * PROČ: ve skládaném/flex layoutu (body[data-layout="stacked"] i „auto" na úzkém
+ * PROČ: ve skládaném layoutu (body[data-flow="stack"] – stacked, mobile i „auto" na malém
  * okně) scrolluje celé OKNO, ne vnitřní kontejner. Přepis innerHTML panelu ho na
  * okamžik vyprázdní → dokument se zkrátí → prohlížeč scrollTop ořízne → po opětném
  * naplnění zůstane stránka „uskočená" nahoru. Uložíme window.scrollY před přepisem

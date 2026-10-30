@@ -118,6 +118,12 @@ def strip_old_keys(block):
 
 def main():
     args = sys.argv[1:]
+    # Zapisuje do kořenového data/pokemon.js, který je od rozdělení po generacích jen
+    # aggregator – přepsal by ho. Pokédex info (výška, váha, druh, popis) dnes generuje
+    # tools/gen_species.py přímo do data/gen<N>/pokemon.js.
+    if "--i-know" not in args:
+        sys.exit("gen_pokedex_info.py se už nepoužívá (přepsal by aggregator data/pokemon.js). "
+                 "Použij tools/gen_species.py --gen N --range A-B. Vynutit: --i-know.")
     write = "--write" in args
     only = None
     if "--only" in args:

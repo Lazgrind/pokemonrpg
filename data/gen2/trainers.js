@@ -187,6 +187,10 @@ export const FIXED_TRAINERS_GEN2 = [
     badge: "zephyr-badge",
     quote:
       "I'm Falkner, the Violet Pokémon Gym Leader! People say you can clip flying Pokémon's wings with a jolt of electricity... but I'll show you the real power of flying Pokémon!",
+    defeatText: [
+      "Falkner: \"...Darn! My dad's cherished bird Pokémon... All right. Take this. It's the official Pokémon League <strong>Zephyr Badge</strong>.\"",
+      "The guard on <strong>Route 32</strong> will now let you head south toward Union Cave and Azalea Town.",
+    ],
   },
 
   // ── Azalea Gym (Bugsy, Bug) ───────────────────────────────────────────────
@@ -200,6 +204,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "paras", level: 13 },
     ],
     reward: 260,
+    quote: "Bugsy taught me everything about bug Pokémon. Now I'll teach you!",
   },
   {
     id: "azalea-gym-bug-catcher-al",
@@ -211,6 +216,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "weedle", level: 14 },
     ],
     reward: 280,
+    quote: "Bug Pokémon grow up fast. Mine are ready to take you on!",
   },
   {
     id: "bugsy",
@@ -226,6 +232,10 @@ export const FIXED_TRAINERS_GEN2 = [
     badge: "hive-badge",
     quote:
       "I'm Bugsy! I never lose when it comes to bug Pokémon. My research is going to make me the authority on bugs!",
+    defeatText: [
+      "Bugsy: \"Whoa, amazing! You're an expert on Pokémon! My research isn't complete yet. OK, you win. Take this badge.\" You received the <strong>Hive Badge</strong>!",
+      "With <strong>HM01 Cut</strong> from the Charcoal Kiln, the way west through <strong>Ilex Forest</strong> toward Goldenrod City lies open.",
+    ],
   },
 
   // ── Goldenrod Gym (Whitney, Normal) ───────────────────────────────────────
@@ -239,6 +249,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "sentret", level: 16 },
     ],
     reward: 320,
+    quote: "Don't let my cute Pokémon fool you. They can really scratch!",
   },
   {
     id: "goldenrod-gym-beauty-victoria",
@@ -250,15 +261,19 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "jigglypuff", level: 17 },
     ],
     reward: 1200,
+    quote: "Whitney's Gym is all about cute Pokémon. Aren't mine adorable? Let's battle!",
   },
   {
     id: "whitney",
     kind: "gym-leader",
     class: "whitney",
     name: "Leader Whitney",
+    // Kánon GSC: Miltank s Rollout + Attract + Stomp + Milk Drink – nejobávanější
+    // leader celé série. Rollout se stupňuje (viz battleSystem "rollout"), Attract
+    // ochromí samce, Milk Drink ji vyléčí, když dojde na tělo.
     team: [
-      { speciesId: "clefairy", level: 18 },
-      { speciesId: "miltank", level: 20 },
+      { speciesId: "clefairy", level: 18, moves: ["double-slap", "mimic", "encore", "metronome"] },
+      { speciesId: "miltank", level: 20, moves: ["rollout", "attract", "stomp", "milk-drink"] },
     ],
     reward: 2000,
     badge: "plain-badge",
@@ -277,6 +292,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "haunter", level: 20 },
     ],
     reward: 640,
+    quote: "The spirits of the Burned Tower are restless tonight... and so are mine!",
   },
   {
     id: "ecruteak-gym-sage-jeffrey",
@@ -288,6 +304,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "gastly", level: 20 },
     ],
     reward: 700,
+    quote: "Morty can see what others cannot. Can you see where my Pokémon will strike?",
   },
   {
     id: "morty",
@@ -304,6 +321,10 @@ export const FIXED_TRAINERS_GEN2 = [
     badge: "fog-badge",
     quote:
       "I'm Morty. In this Gym, people have long researched the mysterious ghost Pokémon. Legend says a rainbow Pokémon will appear before a truly powerful trainer. I believe in that legend — and I train to see it!",
+    defeatText: [
+      "Morty: \"I'm not good enough yet... All right. This badge is yours.\" You received the <strong>Fog Badge</strong>!",
+      "The old man in the <strong>Ecruteak House</strong> will now teach you <strong>Surf</strong>. Olivine City lies west along Route 38.",
+    ],
   },
 
   // ── Cianwood Gym (Chuck, Fighting) ────────────────────────────────────────
@@ -317,6 +338,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "machop", level: 27 },
     ],
     reward: 864,
+    quote: "Hwaah! We train under the waterfall every day. You won't break us!",
   },
   {
     id: "cianwood-gym-black-belt-lao",
@@ -325,6 +347,7 @@ export const FIXED_TRAINERS_GEN2 = [
     name: "Black Belt Lao",
     team: [{ speciesId: "machoke", level: 29 }],
     reward: 928,
+    quote: "Chuck's training is brutal. A battle with you will be a nice rest!",
   },
   {
     id: "chuck",
@@ -339,6 +362,11 @@ export const FIXED_TRAINERS_GEN2 = [
     badge: "storm-badge",
     quote:
       "Bwahahaha! So you've come all the way to Cianwood! I am Chuck, the Cianwood Gym Leader! I'll show you the power of the human spirit!",
+    defeatText: [
+      "Chuck: \"Wha? Huh? I lost? How about that! You're worthy of the <strong>Storm Badge</strong>!\"",
+      "Chuck's wife is waiting by the Gym door. \"My husband lost to you, so he needs to train harder! Here, take this. You'll be able to fly to anywhere you've visited.\" You received <strong>HM02 Fly</strong>!",
+      "Now hurry back to Olivine — Amphy still needs the SecretPotion.",
+    ],
   },
 
   // ── Olivine Gym (Jasmine, Steel) – otevře se po vyléčení Amphyho (viz gyms.js) ─
@@ -356,6 +384,10 @@ export const FIXED_TRAINERS_GEN2 = [
     badge: "mineral-badge",
     quote:
       "...Thank you for helping Amphy. ...Um... I'm Jasmine. Now, please — battle me with all your strength.",
+    defeatText: [
+      "Jasmine: \"...Um... I don't know how to say this, but good battle. In accordance with League rules, I'll give you this badge.\" You received the <strong>Mineral Badge</strong>!",
+      "<strong>Route 42</strong> east of Ecruteak leads through Mt. Mortar to <strong>Mahogany Town</strong>.",
+    ],
   },
 
   // ── Mahogany Gym (Pryce, Ice) ─────────────────────────────────────────────
@@ -369,6 +401,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "seel", level: 31 },
     ],
     reward: 992,
+    quote: "The ice is slippery here. Try not to fall over before you reach me!",
   },
   {
     id: "mahogany-gym-boarder-ronald",
@@ -377,6 +410,7 @@ export const FIXED_TRAINERS_GEN2 = [
     name: "Boarder Ronald",
     team: [{ speciesId: "dewgong", level: 33 }],
     reward: 1056,
+    quote: "Pryce has trained on this ice for decades. Let's see if you can keep your footing!",
   },
   {
     id: "pryce",
@@ -392,6 +426,10 @@ export const FIXED_TRAINERS_GEN2 = [
     badge: "glacier-badge",
     quote:
       "I am Pryce. I've seen more winters than you've seen days. Pokémon and people both grow strong through hardship. Show me the strength you've earned!",
+    defeatText: [
+      "Pryce: \"Ah, I am impressed by your prowess. With your strong will, I know you will overcome all of life's obstacles. You are worthy of this badge!\" You received the <strong>Glacier Badge</strong>!",
+      "With the Glacier Badge, <strong>Whirlpool</strong> can part the currents around the Whirl Islands. Team Rocket still holds Goldenrod's <strong>Radio Tower</strong> — go and free it.",
+    ],
   },
 
   // ── Blackthorn Gym (Clair, Dragon) ────────────────────────────────────────
@@ -405,6 +443,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "seadra", level: 34 },
     ],
     reward: 1360,
+    quote: "Your first battle against dragons? You'll never forget it!",
   },
   {
     id: "blackthorn-gym-cooltrainer-lola",
@@ -416,6 +455,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "dragonair", level: 36 },
     ],
     reward: 1440,
+    quote: "Clair only respects trainers who can tame dragons. Prove yourself!",
   },
   {
     id: "clair",
@@ -429,9 +469,14 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "kingdra", level: 40 },
     ],
     reward: 4000,
-    badge: "rising-badge",
     quote:
       "I'm Clair. The world's best dragon master. I hate to admit it, but you have real skill. Still — I won't hand over the Rising Badge easily!",
+    defeatTitle: "Clair refuses!",
+    defeatText: [
+      "Clair: \"I lost? I don't believe it. There must be some mistake...\"",
+      "Clair: \"I won't give you the <strong>Rising Badge</strong>! You'll have to take the Dragon Elder's test in the <strong>Dragon's Den</strong> behind this Gym. If he approves of you, I'll accept it.\"",
+      "Visit the <strong>Dragon's Den</strong> (City tab) and face the Dragon Clan.",
+    ],
   },
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -461,11 +506,13 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "ekans", level: 11 },
     ],
     reward: 350,
+    quote: "Slowpoke Tails sell for a fortune! Don't get in the way of our business!",
   },
   {
     id: "slowpoke-well-proton",
     kind: "boss",
     class: "rocket-executive",
+    spriteVariant: 1, // assets/gen2/trainers/rocket-executive/1.png
     name: "Rocket Executive Proton",
     team: [
       { speciesId: "zubat", level: 12 },
@@ -486,6 +533,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "koffing", level: 22 },
     ],
     reward: 720,
+    quote: "This souvenir shop is only a front. Nobody gets downstairs!",
   },
   {
     id: "mahogany-rocket-2",
@@ -497,6 +545,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "grimer", level: 23 },
     ],
     reward: 740,
+    quote: "The radio signal is making the Gyarados in the lake go wild. Brilliant, isn't it?",
   },
   {
     id: "mahogany-rocket-3",
@@ -508,11 +557,13 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "koffing", level: 24 },
     ],
     reward: 760,
+    quote: "You found our hideout? You won't be leaving it!",
   },
   {
     id: "mahogany-petrel",
     kind: "boss",
     class: "rocket-executive",
+    spriteVariant: 2, // assets/gen2/trainers/rocket-executive/2.png
     name: "Rocket Executive Petrel",
     team: [
       { speciesId: "zubat", level: 24 },
@@ -534,6 +585,7 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "arbok", level: 24 },
     ],
     reward: 780,
+    quote: "The Radio Tower belongs to Team Rocket now! Soon all of Johto will hear us!",
   },
   {
     id: "radio-tower-rocket-2",
@@ -545,11 +597,13 @@ export const FIXED_TRAINERS_GEN2 = [
       { speciesId: "golbat", level: 25 },
     ],
     reward: 820,
+    quote: "We're calling Giovanni back with this broadcast. You won't ruin it!",
   },
   {
     id: "radio-tower-ariana",
     kind: "rocket",
     class: "rocket-executive",
+    spriteVariant: 3, // assets/gen2/trainers/rocket-executive/3.png
     name: "Rocket Executive Ariana",
     team: [
       { speciesId: "arbok", level: 27 },
@@ -562,6 +616,7 @@ export const FIXED_TRAINERS_GEN2 = [
     id: "radio-tower-archer",
     kind: "boss",
     class: "rocket-executive",
+    spriteVariant: 4, // assets/gen2/trainers/rocket-executive/4.png
     name: "Rocket Boss Archer",
     team: [
       { speciesId: "houndour", level: 27 },
@@ -584,6 +639,7 @@ export const FIXED_TRAINERS_GEN2 = [
     name: "Kimono Girl Naoko",
     team: [{ speciesId: "flareon", level: 26 }],
     reward: 1040,
+    quote: "I am Naoko. My Flareon and I dance with the warmth of fire. Will you dance with us?",
   },
   {
     id: "kimono-girl-2",
@@ -592,6 +648,7 @@ export const FIXED_TRAINERS_GEN2 = [
     name: "Kimono Girl Sayo",
     team: [{ speciesId: "jolteon", level: 27 }],
     reward: 1080,
+    quote: "I am Sayo. My Jolteon moves as fast as lightning. Try to keep up!",
   },
   {
     id: "kimono-girl-3",
@@ -600,6 +657,7 @@ export const FIXED_TRAINERS_GEN2 = [
     name: "Kimono Girl Kuni",
     team: [{ speciesId: "vaporeon", level: 27 }],
     reward: 1080,
+    quote: "I am Kuni. My Vaporeon flows like water. Let our battle be graceful.",
   },
   {
     id: "kimono-girl-4",
@@ -608,6 +666,7 @@ export const FIXED_TRAINERS_GEN2 = [
     name: "Kimono Girl Miki",
     team: [{ speciesId: "espeon", level: 28 }],
     reward: 1120,
+    quote: "I am Miki. My Espeon sees your every move before you make it.",
   },
   {
     id: "kimono-girl-zuki",
@@ -639,6 +698,10 @@ export const FIXED_TRAINERS_GEN2 = [
     reward: 6000,
     quote:
       "I am Will. I have trained all around the world, making my psychic Pokémon powerful. And now — I am one of the Elite Four. Nothing can stop me now!",
+    defeatText: [
+      "Will: \"I can't believe... my Psychic Pokémon lost... Even though I was defeated, I won't change my course. Go on to the next room.\"",
+      "The next door opens. <strong>Koga</strong> of the Elite Four awaits.",
+    ],
   },
   {
     id: "johto-elite-four-koga",
@@ -655,6 +718,10 @@ export const FIXED_TRAINERS_GEN2 = [
     reward: 6500,
     quote:
       "Bwahahaha! Welcome. I am Koga of the Elite Four! Poison and traps are my specialty. Let us see if you can survive!",
+    defeatText: [
+      "Koga: \"Ah! You have proven your worth! I subjected you to everything I could muster. Go on — the next room holds an even greater trial.\"",
+      "The next door opens. <strong>Bruno</strong> of the Elite Four awaits.",
+    ],
   },
   {
     id: "johto-elite-four-bruno",
@@ -670,6 +737,10 @@ export const FIXED_TRAINERS_GEN2 = [
     ],
     reward: 7000,
     quote: "I am Bruno of the Elite Four. Through rigorous training, people and Pokémon can become stronger. We will grind you down!",
+    defeatText: [
+      "Bruno: \"Having lost, I have no right to say anything... Go face your next challenge!\"",
+      "The next door opens. <strong>Karen</strong> of the Elite Four awaits.",
+    ],
   },
   {
     id: "johto-elite-four-karen",
@@ -686,6 +757,10 @@ export const FIXED_TRAINERS_GEN2 = [
     reward: 7500,
     quote:
       "I'm Karen of the Elite Four. Strong Pokémon. Weak Pokémon. That is only the selfish perception of people. A true trainer battles with the Pokémon it loves best. I like your style — now show me your strength!",
+    defeatText: [
+      "Karen: \"Strong Pokémon. Weak Pokémon. That is only the selfish perception of people. Truly skilled trainers should try to win with their favorites. Go on — the Champion is waiting.\"",
+      "The final door opens. <strong>Lance</strong>, the Champion, awaits.",
+    ],
   },
   {
     id: "johto-champion-lance",
@@ -736,6 +811,7 @@ export const FIXED_TRAINERS_GEN2 = [
     id: "sprout-tower-elder",
     kind: "boss",
     class: "elder",
+    spriteVariant: 1, // assets/gen2/trainers/elder/1.png (Dragon Elder = 2)
     name: "Elder Li",
     team: [
       { speciesId: "bellsprout", level: 7 },
@@ -752,7 +828,7 @@ export const FIXED_TRAINERS_GEN2 = [
   {
     id: "dragons-den-clan-1",
     kind: "dragon-tamer",
-    class: "cooltrainer",
+    class: "cooltrainer-m",
     name: "Dragon Tamer Darin",
     team: [
       { speciesId: "dratini", level: 38 },
@@ -764,7 +840,7 @@ export const FIXED_TRAINERS_GEN2 = [
   {
     id: "dragons-den-clan-2",
     kind: "dragon-tamer",
-    class: "cooltrainer",
+    class: "cooltrainer-f",
     name: "Dragon Tamer Mina",
     team: [
       { speciesId: "horsea", level: 38 },
@@ -778,6 +854,7 @@ export const FIXED_TRAINERS_GEN2 = [
     id: "dragons-den-elder",
     kind: "boss",
     class: "elder",
+    spriteVariant: 2, // assets/gen2/trainers/elder/2.png
     name: "Dragon Elder",
     team: [
       { speciesId: "dratini", level: 40 },
@@ -798,7 +875,6 @@ export const ROUTE_TRAINER_PLAN_GEN2 = {
   "route-29": { level: [3, 6], count: 3, size: [1, 2] },
   "route-30": { level: [5, 8], count: 4, size: [2, 2] },
   "route-31": { level: [6, 9], count: 3, size: [2, 2] },
-  "sprout-tower": { level: [6, 9], count: 3, size: [2, 3] },
   "route-32": { level: [8, 12], count: 5, size: [2, 3] },
   "union-cave": { level: [9, 13], count: 4, size: [2, 3] },
   "route-33": { level: [10, 13], count: 3, size: [2, 3] },
@@ -845,6 +921,15 @@ export const LEAGUE_GEN2 = {
   clearFlag: "johtoLeagueCleared",
   clearStoryFlag: "isJohtoChampion",
   clearReward: { gold: 30000 },
+  // Okno po PRVNÍM pokoření johtské Ligy (battleSystem → STORY_POPUP). Kánon HGSS:
+  // Lance uzná porážku, do Hall of Fame přijde Prof. Oak.
+  clearPopup: {
+    title: "Johto League Champion!",
+    body: `<p class="story-text">Lance's last Pokémon crashes to the floor. The Dragon Master closes his eyes, then smiles. "...It's over. But it's an odd feeling. I'm not angry that I lost. In fact, I feel happy — happy that I witnessed the rise of a great new Champion!"</p>
+      <p class="story-text">Professor Oak hurries into the chamber. "So you've done it! I had a feeling about you from the very start. Your Pokémon trust you completely — that is what makes a true Champion of <strong>Johto</strong>."</p>
+      <p class="story-text">Your team is recorded in the <strong>Hall of Fame</strong>. Rumours spread across Johto: a rainbow-winged Pokémon, <strong>Ho-Oh</strong>, circles the Bell Tower above Ecruteak, a time-travelling spirit stirs in Ilex Forest, and rare Pokémon have been seen in the <strong>Safari Zone</strong>.</p>`,
+    okLabel: "Hall of Fame ✦",
+  },
 };
 
 /**
@@ -878,6 +963,9 @@ export const ROCKET_GAUNTLETS_GEN2 = {
   "mahogany-town": {
     id: "mahogany-hideout",
     areaId: "mahogany-town",
+    // Kánon: nejdřív Red Gyarados a Lance u Lake of Rage (arrival event lanceAtLake),
+    // teprve pak Lance vezme hráče do základny pod obchodem se suvenýry.
+    requiresStory: "lanceAtLake",
     title: "Rocket Hideout",
     tabLabel: "Team Rocket",
     tabIcon: "💣",

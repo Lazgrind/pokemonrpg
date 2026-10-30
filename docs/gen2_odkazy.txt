@@ -1,0 +1,2 @@
+Odkazy na obrázky Gen 2 – vygenerováno z docs/SPRITES-TODO-GEN2.md (tools/gen_odkazy.py).
+Pod každé `# id` vlož odkaz(y) na obrázek. Stáhnout: python tools/dl_web.py docs/gen2_odkazy.txt

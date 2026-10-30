@@ -33,7 +33,7 @@ const MIN_OFFLINE_SECONDS = 15;
  * když se nic nezapočítalo.
  * @param {*} savedBattle  snímek souboje ze save (getState().battle před restore)
  * @param {number} elapsedMs  doba od posledního uložení
- * @returns {null | { elapsedSec: number, capped: boolean, kills: number, xp: number, gold: number, loot: Record<string, number> }}
+ * @returns {null | { elapsedSec: number, capped: boolean, areaName: string, kills: number, xp: number, gold: number, loot: Record<string, number> }}
  */
 export function applyOfflineProgress(savedBattle, elapsedMs) {
   // Idlujeme jen z běžícího souboje.
@@ -108,6 +108,7 @@ export function applyOfflineProgress(savedBattle, elapsedMs) {
   return {
     elapsedSec,
     capped: elapsedSec > capSec,
+    areaName: area.name, // kde tým offline bojoval (offline souhrn)
     kills: Math.round(effectiveKills),
     xp: totalXp,
     gold: totalGold,

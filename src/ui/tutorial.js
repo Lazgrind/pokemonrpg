@@ -63,17 +63,17 @@ const BAG_DEMO = {
  */
 const STEPS = [
   {
-    title: "💠 Resources",
+    title: "Resources",
     text: "This is your resource bar. The game keeps running even while you're away — you collect gold and progress over time.",
     target: "#resource-bar",
   },
   {
-    title: "🗺️ The map",
+    title: "The map",
     text: "Travel by clicking areas on the map. Routes have wild Pokémon to catch and trainers to battle; badges open the way forward.",
     target: "#map-panel",
   },
   {
-    title: "🪟 Windows",
+    title: "Windows",
     text: "This tab bar switches the main window — Battle, City, Gym, PC, Pokédex and more. Battle is just one of them. Click the Battle tab to open it.",
     target: ".main-tabs",
     onEnter: () => openMainTab("pokedex"), // ať Battle NENÍ předvybraný → hráč musí kliknout
@@ -82,7 +82,7 @@ const STEPS = [
     hint: "Click the “Battle” tab.",
   },
   {
-    title: "⚔️ Battle — manual",
+    title: "Battle — manual",
     text: "A real battle! In manual mode you pick each turn: Battle (attack), Items, Switch or Run. Weaken the Pidgey with Battle, then open Items and throw a Poké Ball to catch it!",
     target: ".battle-cmd",
     tipEdge: "top", // menu je dole ve scéně → bublinu nahoru
@@ -93,7 +93,7 @@ const STEPS = [
     hint: "Attack with Battle, then throw a Poké Ball via Items to catch the Pidgey.",
   },
   {
-    title: "⚙️ Auto-battle",
+    title: "Auto-battle",
     text: "Now switch on Auto-battle — fights will play out on their own, perfect for idle play. Your Pokémon still take damage and use PP, so you'll need to heal between fights, but you earn full rewards. Tick the checkbox and watch the battle run, then continue.",
     target: "#tg-autobattle",
     tipEdge: "bottom", // přepínače jsou nahoře → bublinu dolů
@@ -103,7 +103,7 @@ const STEPS = [
     hint: "Tick the “Auto battle” checkbox.",
   },
   {
-    title: "♾️ Full Auto — hands-off idling",
+    title: "Full Auto — hands-off idling",
     text: "Full Auto is the second idle mode. It fights on its own like Auto-battle, but your Pokémon lose NO HP and NO PP — so you can leave it running forever with no healing. The trade-off: rewards (gold & XP) are cut to about 1/7. Rule of thumb: Auto-battle for faster gains while you watch, Full Auto for safe, walk-away idling. Tick it to try, then continue.",
     target: "#tg-fullauto",
     tipEdge: "bottom",
@@ -113,7 +113,7 @@ const STEPS = [
     hint: "Tick the “Full Auto” checkbox.",
   },
   {
-    title: "🎯 Auto-catch",
+    title: "Auto-catch",
     text: "Auto-catch throws balls at wild Pokémon for you. Turn it on, then open the “Catch: …” dropdown to pick what to catch (All / New / Shiny) and choose a Ball. Continue when ready.",
     target: ".battle-toggles, .ac-dd-panel", // toggle + rozbalený dropdown (union)
     tipEdge: "bottom",
@@ -123,13 +123,13 @@ const STEPS = [
     hint: "Tick the “Auto catch” checkbox.",
   },
   {
-    title: "🧢 Your team",
+    title: "Your team",
     text: "Your team lives here — check HP, stats, moves and evolutions. Keep it healthy at Poké Centers between fights.",
     target: "#team-panel",
     onEnter: endDemo, // ukliď demo-souboj dřív, než ukážeme reálný tým
   },
   {
-    title: "🎒 The Bag",
+    title: "The Bag",
     text: "Your Bag holds items, balls, TMs and more, split into sections (Heal, Balls, TMs, Evolution…) — only sections you own items for show up. Click the Bag button to open it, then continue.",
     // Před otevřením naveď na tlačítko Bag; po otevření se spotlight přesune na
     // sekce (tlačítko Bag už je schované za modálem → jinak by to vypadalo, že po
@@ -142,7 +142,7 @@ const STEPS = [
     hint: "Click the 🎒 Bag button.",
   },
   {
-    title: "🪨 Evolution stones",
+    title: "Evolution stones",
     text: "Some Pokémon evolve with a stone. Open the Evolution section, then click the Thunder Stone and pick Pikachu — it evolves into Raichu!",
     // Naveď na tab Evolution; po otevření sekce na samotný Thunder Stone.
     target: () =>
@@ -157,7 +157,7 @@ const STEPS = [
     hint: "Open Evolution, click the Thunder Stone, and pick Pikachu.",
   },
   {
-    title: "💿 TMs",
+    title: "TMs",
     text: "TMs teach moves. Open the TMs section, then click TM24 and choose your Raichu to learn Thunderbolt. That's the basics — now go meet Professor Oak!",
     // Naveď na tab TMs; po otevření sekce na samotné TM24.
     target: () =>

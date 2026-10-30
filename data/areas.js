@@ -34,10 +34,12 @@
  * @property {number} order      pořadí v příběhovém řetězu (jen pro přehled)
  * @property {number} x          pozice markeru na mapě, vodorovně v % (0–100)
  * @property {number} y          pozice markeru na mapě, svisle v % (0–100)
- * @property {{ start?: boolean, visited?: string, badge?: string }} unlock  podmínka odemčení:
- *   `start` = odemčeno od začátku; `visited` = odemkne se po návštěvě daného uzlu;
- *   `badge` = navíc vyžaduje daný odznak (id) z gymu (state.progress.badges).
- *   `visited` + `badge` platí zároveň (AND) – např. route za Pewter až po Brockovi.
+ * @property {object} unlock  podmínka odemčení (všechna pole platí zároveň – AND):
+ *   `start` = odemčeno od začátku; `visited` = po návštěvě uzlu (pole = stačí jeden);
+ *   `badge` = odznak (id) z gymu; `badges` = VŠECHNY uvedené odznaky (kontrola před Ligou);
+ *   `trainer` = poražený trenér/rival; `story` = příběhový flag; `hm` = číslo HM (pole = všechny);
+ *   `anyOf` = pole podmínek stejného tvaru, stačí splnit jednu (cesta z různých stran,
+ *   např. Route 17: od Route 16 přes Snorlaxe NEBO z Route 18).
  * @property {number} recommendedLevel
  * @property {string} description
  * @property {(string|{id:string, rarity:"uncommon"|"rare"|"veryrare"})[]} species
@@ -222,6 +224,8 @@ export function isAreaUnlocked(area, visited = [], badges = [], defeatedTrainers
   const u = area.unlock ?? {};
   // Odznak (gym gating) musí sedět vždy, když je požadovaný.
   if (u.badge && !(badges ?? []).includes(u.badge)) return false;
+  // Badge check před Ligou: všech 8 odznaků regionu (žádný gym nejde přeskočit).
+  if (Array.isArray(u.badges) && !u.badges.every((b) => (badges ?? []).includes(b))) return false;
   // Gate mini-boss (rival/trenér) musí být poražen, když je požadovaný.
   if (u.trainer && !(defeatedTrainers ?? []).includes(u.trainer)) return false;
   // Příběhová podmínka (jednorázový event, např. doručení Oak's Parcel).
@@ -233,11 +237,12 @@ export function isAreaUnlocked(area, visited = [], badges = [], defeatedTrainers
   // swapuje přes story.hmFlagsByRegion). Proto se tu kontroluje POUZE flag – NIKOLI
   // vlastnictví HM itemu (item je globální a dřívější fallback propouštěl kantské HM
   // do Johta). Migrace v54 nasype flag z dřívějších flat flagů i z vlastněných itemů.
-  if (u.hm != null) {
-    const hm = getHm(u.hm);
-    const flag = hm?.flag;
+  for (const n of u.hm == null ? [] : [].concat(u.hm)) {
+    const flag = getHm(n)?.flag;
     if (flag && !(story ?? {})[flag]) return false;
   }
+  // Více cest do oblasti: stačí splnit jednu z podmínek (každá se vyhodnotí celá).
+  if (Array.isArray(u.anyOf) && !u.anyOf.some((c) => isAreaUnlocked({ unlock: c }, visited, badges, defeatedTrainers, story))) return false;
   if (u.start) return true;
   // `visited` může být string (1 podmínka) NEBO pole (OR – stačí jedna navštívená).
   // Pole se hodí na obousměrné cesty: uzel jde odemknout z kteréhokoli konce

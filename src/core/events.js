@@ -51,4 +51,5 @@ export const EVENTS = {
   LEVEL_UP: "pokemon:levelup",
   // Systémová vrstva požádá UI o příběhové vyskakovací okno (payload: {title, body, okLabel?}).
   STORY_POPUP: "story:popup",
+  BEASTS_AWAKENED: "story:beasts", // po rivalovi v Burned Tower – mapView ukáže scénu legendárních psů
 };

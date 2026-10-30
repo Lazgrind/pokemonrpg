@@ -13,7 +13,9 @@
 import { POKEMON_SPECIES, getSpecies, STARTER_IDS } from "../../data/pokemon.js";
 import { getState } from "../core/state.js";
 import { dexStatus, dexCounts } from "../systems/pokedex.js";
-import { addToTeam, isInTeam, chooseStarter } from "../systems/team.js";
+import { addToTeam, isInTeam, chooseStarter, canBattleInRegion } from "../systems/team.js";
+import { GENERATIONS } from "../../data/generations.js";
+import { speciesTypes } from "../../data/types.js";
 import { pokemonEngagement } from "../systems/buildingSystem.js";
 import { spriteImg, silhouetteHtml } from "./sprites.js";
 import { setHtmlReuseSprites } from "./domReuse.js";
@@ -40,9 +42,10 @@ function dexNoLabel(n) {
   return `#${String(n).padStart(3, "0")}`;
 }
 
-/** Vlastněný jedinec daného druhu (nebo null). */
+/** Vlastněný jedinec daného druhu pro jeho regionální dex (nebo null). */
 function ownedOf(speciesId) {
-  return getState().collection.find((p) => p.speciesId === speciesId) ?? null;
+  const region = GENERATIONS.find((g) => g.gen === (getSpecies(speciesId)?.gen ?? 1))?.region ?? "kanto";
+  return getState().collection.find((p) => p.speciesId === speciesId && (p.caughtRegion ?? "kanto") === region) ?? null;
 }
 
 /** Akce v patičce karty chyceného druhu (přidat do týmu / stav). */
@@ -50,6 +53,8 @@ function caughtAction(speciesId) {
   const owned = ownedOf(speciesId);
   if (!owned) return "";
   if (isInTeam(owned.uid)) return `<span class="dex-tag team">✓ Team</span>`;
+  // Region-lock: do týmu jen v regionu, kde byl chycen (jinak odpočívá v PC).
+  if (!canBattleInRegion(owned)) return `<span class="dex-tag">In PC</span>`;
   const eng = pokemonEngagement(owned.uid);
   if (eng === "day-care") return `<span class="dex-tag">Day Care</span>`;
   if (eng === "breeding") return `<span class="dex-tag">Breeding</span>`;
@@ -66,7 +71,7 @@ function cardHtml(sp) {
   if (statusFilter === "missing" && st !== "unseen") return "";
 
   // Filtr typu.
-  if (typeSet.size && !sp.types.some((t) => typeSet.has(t))) return "";
+  if (typeSet.size && !speciesTypes(sp).some((t) => typeSet.has(t))) return "";
 
   // Hledání: podle jména (jen u objevených, ať se neprozrazují neznámí) nebo dex čísla.
   const q = query.trim().toLowerCase();
@@ -116,7 +121,7 @@ function renderStarterPicker(root, onStatus) {
       const sp = getSpecies(id);
       return `<button class="btn starter" data-starter="${id}">
                 <strong>${sp.name}</strong>
-                <span class="placeholder">(${sp.types.join("/")})</span>
+                <span class="placeholder">(${speciesTypes(sp).join("/")})</span>
               </button>`;
     }).join("")}
   `;
@@ -150,7 +155,7 @@ export function renderPokedexTab(root, onStatus = () => {}) {
   const scrollTop = prevGrid ? prevGrid.scrollTop : 0;
 
   const { caught, total } = dexCounts();
-  const allTypes = [...new Set(POKEMON_SPECIES.flatMap((sp) => sp.types))].sort();
+  const allTypes = [...new Set(POKEMON_SPECIES.flatMap((sp) => speciesTypes(sp)))].sort();
   const species = [...POKEMON_SPECIES].sort((a, b) => a.dexNo - b.dexNo);
   const cards = species.map(cardHtml).filter(Boolean);
 

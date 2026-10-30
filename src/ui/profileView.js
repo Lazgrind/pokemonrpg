@@ -19,7 +19,10 @@ import { showDiplomaModal } from "./diploma.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { badgeUrl } from "../core/assets.js";
 import { hasShinyCharm, hasDexDiploma } from "../systems/team.js";
-import { generationByRegion } from "../../data/generations.js";
+import { generationByRegion, GENERATIONS } from "../../data/generations.js";
+
+/** Filtr regionu v Badge Case (přežívá překreslení): "all" | "kanto" | "johto"… */
+let badgeFilter = "all";
 
 /** ms → „Xd Yh" / „Yh Zm" / „Zm" (odehraný čas). */
 function formatPlaytime(ms) {
@@ -101,6 +104,11 @@ export function renderProfileTab(root, onStatus = () => {}) {
   const diplomaOwned = hasDexDiploma(region);
   const regionDexComplete = regionDex.total > 0 && regionDex.caught >= regionDex.total;
 
+  // Badge Case: všechny odznaky, volitelně jen jednoho regionu (podle generace odznaku).
+  const filterGen = badgeFilter === "all" ? null : generationByRegion(badgeFilter)?.gen;
+  const shownBadges = filterGen ? BADGES.filter((b) => (b.gen ?? 1) === filterGen) : BADGES;
+  const shownEarned = shownBadges.filter((b) => badges.includes(b.id)).length;
+
   const _savedScroll = saveScroll(root);
   root.innerHTML = `
     <h2 class="panel-title">Profile</h2>
@@ -142,9 +150,16 @@ export function renderProfileTab(root, onStatus = () => {}) {
       }
     </div>
 
-    <h3 class="profile-subtitle">Badge Case <span class="dex-count">${badges.length} / ${BADGES.length}</span></h3>
+    <h3 class="profile-subtitle">Badge Case <span class="dex-count">${shownEarned} / ${shownBadges.length}</span></h3>
+    ${GENERATIONS.length > 1
+      ? `<div class="pc-region-filter">
+          <span class="filter-label">Region</span>
+          <button class="btn btn-sm${badgeFilter === "all" ? " active" : ""}" data-badge-region="all">All</button>
+          ${GENERATIONS.map((g) => `<button class="btn btn-sm${badgeFilter === g.region ? " active" : ""}" data-badge-region="${g.region}">${g.regionName}</button>`).join("")}
+        </div>`
+      : ""}
     <div class="badge-case">
-      ${BADGES.map((b) => badgeSlotHtml(b, badges.includes(b.id))).join("")}
+      ${shownBadges.map((b) => badgeSlotHtml(b, badges.includes(b.id))).join("")}
     </div>
 
     ${renderHallOfFame(s)}
@@ -167,6 +182,14 @@ export function renderProfileTab(root, onStatus = () => {}) {
       onStatus("Trainer name updated");
     });
   }
+
+  // Badge Case: přepnutí filtru regionu.
+  root.querySelectorAll("[data-badge-region]").forEach((b) =>
+    b.addEventListener("click", () => {
+      badgeFilter = b.dataset.badgeRegion;
+      renderProfileTab(root, onStatus);
+    })
+  );
 
   // Diplom: znovu ukázat vizuálně + nabídnout stažení PNG (dostupné kdykoli po zisku).
   const diplomaBtn = root.querySelector("[data-view-diploma]");

@@ -43,6 +43,8 @@
  * @property {string} id        unikátní id (klíč do state.progress.defeatedTrainers)
  * @property {"route"|"gym"|"gym-leader"|"rival"|"rocket"|"boss"|"hiker"|"elite-four"|"champion"} kind  druh trenéra
  * @property {string} class     trenérská třída (složka spritu, viz trainerSpriteUrl)
+ * @property {number} [spriteVariant] pevná varianta spritu třídy (`<n>.png`) pro jmenovanou postavu
+ *                    ve sdílené třídě; bez ní se varianta losuje každý souboj
  * @property {string} name      zobrazované jméno (vč. třídy, např. "Bug Catcher Rick")
  * @property {TrainerMon[]} [team]  fronta Pokémonů (fixní trenéři); u route trenérů chybí
  * @property {RouteGen} [gen]   procedurální spec (route trenéři); u fixních chybí
@@ -55,7 +57,7 @@ import { GENERATIONS } from "./generations.js";
 import { getArea, areaSpeciesIds } from "./areas.js";
 import { getSpecies } from "./pokemon.js";
 import { TRAINER_SPRITE_COUNTS } from "./spriteVariants.js";
-import { gymLeaderSpriteUrl, trainerClassSpriteUrl } from "../src/core/assets.js";
+import { gymLeaderSpriteUrl, trainerClassSpriteUrl, currentGen } from "../src/core/assets.js";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 //  SLOUČENÍ DAT PŘES GENERACE
@@ -450,9 +452,9 @@ export function routeTrainersFor(areaId) {
 //  SPRITY TRENÉRŮ
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/** Počet spritů dané trenérské třídy (0 = žádný nahraný). */
-export function trainerSpriteCount(cls) {
-  return TRAINER_SPRITE_COUNTS[cls] ?? 0;
+/** Počet spritů dané trenérské třídy v generaci (default = aktuální region; 0 = žádný). */
+export function trainerSpriteCount(cls, gen = currentGen()) {
+  return TRAINER_SPRITE_COUNTS[gen]?.[cls] ?? 0;
 }
 
 /**

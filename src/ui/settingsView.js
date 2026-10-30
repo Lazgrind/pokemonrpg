@@ -15,6 +15,7 @@ import { applyAudioSettings, AUDIO_DEFAULTS } from "../systems/audioSystem.js";
 import { isDevEnv } from "../dev/devEnv.js";
 import { devSectionHtml, wireDevSection } from "../dev/devPanel.js";
 import { scrollAware, saveScroll, restoreScroll } from "./scrollPreserve.js";
+import { MAP_LABEL_MODES } from "./mapView.js";
 
 /**
  * Vykreslí tlačítko ⚙ do horní lišty. Klik otevře sdílené modální nastavení.
@@ -78,10 +79,22 @@ function layoutHtml() {
     <div class="settings-row">
       <span class="settings-label">🖥️ Layout</span>
       <span class="layout-group">
-        ${opt("auto", "Auto", "Adapts to window size — panels stack on narrow displays")}
-        ${opt("wide", "Wide", "Always two columns (classic, for large screens)")}
+        ${opt("auto", "Auto", "Adapts to window size — tightens the layout or stacks the panels when the window is too small or narrow")}
+        ${opt("wide", "Wide", "Two columns whenever they fit (tightened on small windows, stacked only when they cannot fit at all)")}
         ${opt("stacked", "Stacked", "Always one column (phone / half screen)")}
         ${opt("mobile", "Mobile", "Single-column layout with a vertical battle split")}
+      </span>
+    </div>`;
+}
+
+/** HTML volby popisků na mapě (stejné režimy jako tlačítko nad mapou). */
+function mapLabelsHtml() {
+  const cur = getState().settings?.mapLabels ?? "hover";
+  return `
+    <div class="settings-row">
+      <span class="settings-label">🏷 Map labels</span>
+      <span class="layout-group">
+        ${MAP_LABEL_MODES.map((m) => `<button class="btn spd layout-opt ${cur === m.key ? "active" : ""}" data-map-labels-set="${m.key}" title="${m.desc}">${m.label}</button>`).join("")}
       </span>
     </div>`;
 }
@@ -136,6 +149,7 @@ function settingsBodyHtml() {
   return `
     ${audioHtml()}
     ${layoutHtml()}
+    ${mapLabelsHtml()}
     ${stackOrderHtml()}
     ${rulesHtml()}
     ${isDevEnv() ? devSectionHtml() : ""}`;
@@ -207,6 +221,14 @@ export function openSettingsModal() {
     bodyEl.querySelectorAll("[data-layout-set]").forEach((b) =>
       b.addEventListener("click", () => {
         getState().settings.layout = b.dataset.layoutSet;
+        commit();
+      })
+    );
+
+    // Popisky na mapě (stejné režimy jako tlačítko nad mapou).
+    bodyEl.querySelectorAll("[data-map-labels-set]").forEach((b) =>
+      b.addEventListener("click", () => {
+        getState().settings.mapLabels = b.dataset.mapLabelsSet;
         commit();
       })
     );

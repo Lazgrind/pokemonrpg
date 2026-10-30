@@ -57,7 +57,7 @@
  *                                     Uspořádání drží hráč (drag & drop); pcSystem.reconcile()
  *                                     zaručí, že každý vlastněný jedinec mimo tým je právě v 1 slotu.
  * @property {Array<{ id: string, speciesId: string }>} eggs  nalezená vejce (líhnou se ve Školce)
- * @property {{ tier: number, region: string, activeAreaId: string, visited: string[], badges: string[], defeatedTrainers: string[], leagueActive?: boolean, leagueStep?: number }} progress  postup světem:
+ * @property {{ tier: number, region: string, activeAreaId: string, visited: string[], badges: string[], defeatedTrainers: string[], leagueActive?: boolean, leagueStep?: number, leagueId?: string|null }} progress  postup světem:
  *   tier (odemyká typy ballů), region (aktivní generační region "kanto"|"johto" –
  *   řídí zobrazenou mapu a uzly, přepíná ho travelToRegion přes S.S. Anne),
  *   activeAreaId (aktuální oblast na mapě – kde se bojuje),
@@ -67,7 +67,9 @@
  *   gymem; viz data/trainers.js a battleSystem),
  *   leagueActive/leagueStep (běh Pokémon League – Elite Four + Champion na Indigo
  *   Plateau: active = jsi uprostřed nepřerušeného řetězce, step = kolik členů jsi
- *   v tomto běhu porazil; viz data/trainers.js LEAGUE a battleSystem)
+ *   v tomto běhu porazil; leagueId = areaId Ligy, ke které běh patří – Kanto a Johto
+ *   mají každá svou Ligu, běh jedné se nesmí započítat druhé; viz data/trainers.js
+ *   LEAGUE a battleSystem)
  * @property {Array<{ uid: string, moveId: string }>} moveLearnQueue  čekající nabídky naučení tahu
  *                                     (jedinec chce nový tah, ale má plné 4 sloty → hráč volí nahrazení)
  * @property {{ seen: string[] }} pokedex  druhy potkané v souboji (chycené se odvozují z kolekce)
@@ -91,7 +93,7 @@ import { bus, EVENTS } from "./events.js";
  * v MIGRATIONS (systems/save.js) – při přejmenování / přesunu / změně významu
  * pole. Nové pole stačí přidat do createNewGame(), doplní se samo.
  */
-export const CURRENT_SAVE_VERSION = 1;
+export const CURRENT_SAVE_VERSION = 2;
 
 /**
  * Epocha savu – „generace" hry. Save s jinou (nebo žádnou) epochou je ze hry
@@ -134,7 +136,7 @@ export function createNewGame() {
     // region = aktivní generační region ("kanto" | "johto"…). Řídí, kterou mapu
     // a které uzly hráč vidí. Přepíná se přechodem přes S.S. Anne (viz
     // battleSystem.travelToRegion) až po zisku titulu Champion.
-    progress: { tier: 1, region: "kanto", activeAreaId: "pallet-town", visited: ["pallet-town"], badges: [], defeatedTrainers: [], leagueActive: false, leagueStep: 0 },
+    progress: { tier: 1, region: "kanto", activeAreaId: "pallet-town", visited: ["pallet-town"], badges: [], defeatedTrainers: [], leagueActive: false, leagueStep: 0, leagueId: null },
     // Override pozic uzlů na mapě (areaId → {x,y} v %). Prázdné = použijí se
     // výchozí pozice z data/areas.js. Plní je "režim umístění" v mapView.
     mapPositions: {},
@@ -159,6 +161,7 @@ export function createNewGame() {
       //    přelevelování v idle režimu
       rules: { noItems: false, noPotions: false, nuzlocke: false, levelCap: false },
       shinyCharmActive: true, // Shiny Charm zapnutý (přepínatelný v horní liště, jen když ho vlastníš)
+      mapLabels: "hover", // popisky na mapě: hover (jen tečky, popisek při najetí) | all | name | level (viz mapView.MAP_LABEL_MODES)
     },
     // Nuzlocke: mapa oblast -> true, když už na ní hráč (ne)úspěšně čerpal první
     // úlovek. Prázdné = ještě nikde nechytal (viz battleSystem).
@@ -172,6 +175,10 @@ export function createNewGame() {
     // Johtská Safari Zone (HGSS bloky, viz systems/johtoSafariSystem.js) – samostatná od kantské.
     // layouts: { [oblast]: { grass, tree, rock, water, since } }.
     johtoSafari: { active: false, areaId: "plains", balls: 0, encounter: null, visits: 0, layouts: {} },
+    // Bug-Catching Contest v National Parku (viz systems/contestSystem.js); lastDay = den poslední účasti.
+    contest: { active: false, balls: 0, encountersLeft: 0, encounter: null, best: null, lastDay: null },
+    // Chycené formy Unowna (písmena A–Z) z Ruins of Alph (viz systems/unownSystem.js).
+    unownForms: [],
     // Achievements: odemčené (id → timestamp) + sledované statistiky.
     achievements: {
       unlocked: {},

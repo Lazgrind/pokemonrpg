@@ -25,6 +25,20 @@ import { GENERATIONS } from "./generations.js";
 /** @type {Badge[]} Odznaky všech aktivních generací (v pořadí generací). */
 export const BADGES = GENERATIONS.flatMap((g) => g.badges ?? []);
 
+/**
+ * Kolik odznaků REGIONU hráč má (odznaky se ukládají společně v progress.badges,
+ * počítají se ale per region – kantské se v Johtu nepočítají a naopak).
+ * @param {string[]} earned  id získaných odznaků (progress.badges)
+ * @param {string} region  slug regionu ("kanto" | "johto")
+ * @returns {{ earned: number, total: number }}
+ */
+export function regionBadgeCount(earned, region) {
+  const gen = GENERATIONS.find((g) => g.region === region)?.gen ?? 1;
+  const own = BADGES.filter((b) => (b.gen ?? 1) === gen);
+  const ids = new Set(Array.isArray(earned) ? earned : []);
+  return { earned: own.filter((b) => ids.has(b.id)).length, total: own.length };
+}
+
 /** Badge podle id, nebo null. */
 export function getBadge(id) {
   return BADGES.find((b) => b.id === id) ?? null;

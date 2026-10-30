@@ -6,6 +6,329 @@ and the project uses [semantic versioning](https://semver.org/).
 Change types: **Added**, **Changed**, **Fixed**, **Removed**.
 For details on discussions and decisions see [docs/NOTES.md](docs/NOTES.md).
 
+## [2.0.0] – 2026-10-29 · Johto is open!
+### Added
+- **A whole new region: Johto.** Become the Kanto Champion, then board the **S.S. Anne** in Vermilion City and sail across the sea. The **S.S. Aqua** in Olivine City brings you back to Kanto any time – each region keeps its own team, Day Care, eggs, HMs and town upgrades.
+- **100 new Pokémon (#152–251)** with their own sprites, shiny forms, cries and all 26 Unown forms. Professor Elm in New Bark Town gives you Chikorita, Cyndaquil or Totodile.
+- **The Johto map** with 46 places – towns, routes, caves and forests – and every town drawn from above like in the original games.
+- **The full Johto story:** eight Gyms from Falkner to Clair, your rival Silver, Team Rocket's return (Slowpoke Well, the Mahogany hideout, the Radio Tower), Sprout Tower, the Burned Tower and the awakening of the legendary beasts, the Kimono Girls, the sick Ampharos in the lighthouse, the Dragon's Den and the Johto Pokémon League with Lance.
+- **Legendary Pokémon:** Raikou, Entei, Suicune, Lugia, Ho-Oh, Celebi and the Red Gyarados – each with its own entrance scene.
+- **Johto's Safari Zone, the Bug-Catching Contest, the Ruins of Alph** and services in every town.
+- **Battles by the rules of each generation:** in Johto, Pokémon learn moves as in Pokémon Crystal and the type chart of Gen 2 applies.
+- **A Johto Pokédex** with its own diploma from Professor Elm, a regional Shiny Charm and new achievements.
+### Notes
+- Your Kanto progress is untouched. If you're already the Kanto Champion, you'll get a message the next time you play – the S.S. Anne is waiting for you in Vermilion City.
+
+## [1.74.0] – 2026-10-29 · Towns laid out like the originals
+### Changed
+- **Every town in Kanto and Johto now follows the layout of the original games** (FireRed/LeafGreen and Crystal): the buildings stand where they are in the originals, the sea, rivers and ponds are on the right side and the roads lead out where the routes really are. For example: Cherrygrove is a beach town with the sea along its west side, Vermilion's pier leads south to the S.S. Anne, Cinnabar is an island surrounded by the sea, Olivine's S.S. Aqua lies at the pier in the south, and Blackthorn's Gym stands in a pond with the Dragon's Den entrance across the water to the north.
+
+## [1.73.1] – 2026-10-29 · Johto map points and the Johto announcement
+### Changed
+- Twenty places on the **Johto map** sit more precisely where they belong (Violet, Ecruteak, Olivine, Cianwood, the routes between them and more).
+### Added
+- Behind the scenes: Champions who haven't sailed yet will get a one-time announcement that the **S.S. Anne** in Vermilion City can take them to **Johto**, and the Kanto League victory scene now mentions the voyage too (both appear once Johto is released).
+
+## [1.73.0] – 2026-10-29 · Map labels
+### Added
+- **Choose what the map shows.** A new **Labels** button above the map (also in Settings → Map labels) switches between: **Hover** (dots only, the name shows when you point at a place – as before), **Name + level** (every place's name and level range always visible), **Name** (names only) and **Level** (level ranges only).
+
+## [1.72.15] – 2026-10-29 · Dragon Clan and Sudowoodo
+### Added
+- The two **Dragon Clan** trainers in the Dragon's Den and the **Sudowoodo** blocking Route 36 have their own pictures – every trainer in Johto now has one.
+
+## [1.72.14] – 2026-10-29 · Team Rocket's executives
+### Added
+- **Proton**, **Petrel**, **Ariana** and **Archer** each have their own picture, and always the right one.
+
+## [1.72.13] – 2026-10-29 · Boarder Ronald
+### Added
+- **Boarder Ronald** in Mahogany Gym has his own trainer picture.
+
+## [1.72.12] – 2026-10-29 · Skier Diana
+### Added
+- **Skier Diana** in Mahogany Gym has her own trainer picture.
+
+## [1.72.11] – 2026-10-29 · Medium Martha
+### Added
+- **Medium Martha** in Ecruteak Gym has her own trainer picture.
+
+## [1.72.10] – 2026-10-29 · The Dragon Elder
+### Added
+- The **Dragon Elder** in the Dragon's Den has his own trainer picture.
+
+## [1.72.9] – 2026-10-29 · Elder Li
+### Added
+- **Elder Li** at the top of Sprout Tower has his own trainer picture.
+### Changed
+- Behind the scenes only: a named character who shares a trainer class with others can now keep one fixed picture instead of a random one each battle.
+
+## [1.72.8] – 2026-10-29 · Kimono Girls and Sages
+### Added
+- The **Kimono Girls** in Ecruteak's Dance Theater and the **Sages** of Sprout Tower and Ecruteak Gym have their own trainer pictures.
+
+## [1.72.7] – 2026-10-29 · Professor Elm's portrait
+### Added
+- **Professor Elm** appears on the Johto Pokédex diploma, like Professor Oak does on the Kanto one.
+
+## [1.72.6] – 2026-10-29 · Every Johto building has its picture
+### Added
+- The **Cianwood Pharmacy**, the **Climber's Lodge** in Blackthorn City and the **Dragon's Den** shrine have their own pixel-art pictures – every building in every Johto town now has one, no stand-ins left.
+
+## [1.72.5] – 2026-10-29 · Chuck's wife by the Gym
+### Changed
+- **Chuck's wife now waits by the Cianwood Gym door** and hands you **HM02 Fly** right after you beat Chuck, as in the originals. The separate "Chuck's Home" is gone from Cianwood City (it doesn't exist in the original games), and the Pharmacy now stands at the end of the town's main street.
+
+## [1.72.4] – 2026-10-29 · Cianwood City as in the originals
+### Fixed
+- **Cianwood City is laid out like in Pokémon Crystal:** the sea is on the east side (towards Route 41) instead of the west, the Gym stands in the west, the Pokémon Center in the east by the shore, the Pharmacy at the southern end of town and Chuck's home just south of his Gym.
+
+## [1.72.3] – 2026-10-29 · Developer jumps between regions
+### Fixed
+- Behind the scenes only (developer menu on localhost): jumping to a Kanto story point from Johto now really takes you back to Kanto – map, team, buildings, Day Care, eggs and HMs switch like on the ship. Jumps to Johto story points swap the Day Care and eggs too, and repeated Johto jumps keep the Johto starter in the team.
+
+## [1.72.2] – 2026-10-29 · Ecruteak and Olivine buildings
+### Added
+- The house in **Ecruteak City**, the house and the **Glitter Lighthouse** in **Olivine City** and the **S.S. Aqua** have their own pixel-art pictures – Ecruteak and Olivine no longer have any stand-in buildings.
+
+## [1.72.1] – 2026-10-29 · The S.S. Aqua
+### Changed
+- In Olivine City you now board the **S.S. Aqua** itself instead of entering "Olivine Port"; the ship lies moored at a pier in the harbour, reached by a path from the main street.
+
+## [1.72.0] – 2026-10-29 · Legendary entrances
+### Added
+- **Every legendary Pokémon now makes an entrance.** When you challenge one, a short scene plays before the battle: Articuno glides out of a blizzard, Zapdos crashes down with lightning as the Power Plant's lights die, Moltres streaks in on a trail of fire, Mewtwo's eyes open in the dark, Suicune leaps through the mist, Raikou appears in a lightning strike, Entei bursts from the flames, Lugia rises from the sea, Ho-Oh descends beneath a rainbow, Celebi drifts out of a ripple in time, the Red Gyarados bursts from the Lake of Rage – and Mew floats up when you heave the truck aside. You hear its cry as it appears.
+- The scene plays every time, shiny hunts included. Press the button to skip it and start the battle at any moment; closing the window leaves the battle for later.
+
+## [1.71.10] – 2026-10-29 · Legendary tab names in Johto
+### Fixed
+- The legendary tabs for **Ho-Oh** (Ecruteak City), **Lugia** (Whirl Islands) and **Celebi** (Ilex Forest) showed "undefined undefined" instead of the Pokémon's name.
+
+## [1.71.9] – 2026-10-29 · Ecruteak's towers
+### Added
+- The **Bell Tower**, the **Burned Tower** and the **Dance Theater** in Ecruteak City have their own pixel-art pictures on the town map instead of stand-in buildings.
+
+## [1.71.8] – 2026-10-29 · Goldenrod City complete
+### Added
+- The **Radio Tower**, **Bill's house**, the **Flower Shop** and the entrance to the **Goldenrod Underground** have their own pixel-art pictures – every building in Goldenrod City now has one.
+
+## [1.71.7] – 2026-10-29 · Sprout Tower, Kurt's house and the Charcoal Kiln
+### Added
+- **Sprout Tower** in Violet City, **Kurt's house** and the **Charcoal Kiln** in Azalea Town have their own pixel-art pictures on the town maps instead of stand-in buildings.
+
+## [1.71.6] – 2026-10-29 · Tidier Johto buildings
+### Removed
+- Behind the scenes only: two unused Johto copies of the Celadon Dept. Store and Game Corner pictures were removed (Goldenrod has its own).
+
+## [1.71.5] – 2026-10-29 · Goldenrod Dept. Store and Game Corner
+### Added
+- The **Goldenrod Dept. Store** and **Goldenrod Game Corner** use the same pictures as in Kanto instead of stand-in buildings on the town map.
+
+## [1.71.4] – 2026-10-29 · New Bark Town like in HeartGold/SoulSilver
+### Fixed
+- **New Bark Town is laid out like in HeartGold/SoulSilver:** Professor Elm's Lab stands in the top left, the Pokémon Center in the top right, the Poké Mart in the middle below the road and the sea in the south-east.
+
+## [1.71.3] – 2026-10-29 · Professor Elm's Lab
+### Added
+- **Professor Elm's Lab** in New Bark Town has its own pixel-art picture on the town map instead of the stand-in building.
+
+## [1.71.2] – 2026-10-27 · The game fits any window
+### Fixed
+- **The game is playable at any window size.** On low windows (e.g. a laptop with 150 % display scaling) the battle area used to shrink to a thin strip and the victory screen was cut off. The layout now checks what really fits: two columns, a tighter two-column layout (smaller gaps, team in one row), or the panels stacked one below another – only then does the page scroll.
+- On phones the battle scene sits above the battle log, also in the Stacked layout.
+- The **Wide** layout keeps two columns whenever they fit and stacks the panels only when they can't fit at all, instead of breaking the screen.
+- The victory, catch and defeat screens and the battle menu shrink in a small battle scene instead of being cut off.
+- The region map always fits its panel; the top bar wraps on narrow windows instead of running off the screen.
+- Pop-up windows (Settings and others) always fit on the screen; longer ones scroll inside the window.
+
+## [1.71.1] – 2026-10-26 · No skipping Gyms
+### Changed
+- **Gyms can't be skipped any more.** The way onward opens only after you beat the Gym before it: Route 5 after Misty, Rock Tunnel after Lt. Surge, Fuchsia City after Erika, the sea to Cinnabar Island after Koga and Sabrina; in Johto Route 35 after Whitney, Route 38 after Morty and Route 42 after Chuck and Jasmine.
+- Lance now also tells you the old sailors' legend of the Whirl Islands that the removed Cianwood sailor used to share.
+- **Your rival waits in the Burned Tower** and you have to beat him – only then does the floor give way and the three legendary beasts awaken, and Morty returns to his Gym.
+
+## [1.71.0] – 2026-10-26 · The story unlocks exactly like in the originals
+### Changed
+- **Kanto follows Red/Blue/Yellow:**
+  - The guards at all four gates to **Saffron City** won't let you in until you bring them a **Fresh Water** from the Celadon Dept. Store; you reach Celadon through the Underground Path from Route 8.
+  - **Two sleeping Snorlax** block the ways to Fuchsia City (Route 12 and Route 16) – you need the **Poké Flute**, and one of them is enough. Snorlax also moves out of the way if you defeat it.
+  - **HM05 Flash** comes from Professor Oak's aide in the house on **Route 2** (reached with Cut) once you've caught 10 kinds of Pokémon.
+  - **Route 9** needs Cut (and the Cascade Badge), the **Power Plant** needs Surf, the road through **Seafoam Islands** needs Strength, and **Cinnabar Island** can also be reached by sea from Pallet Town via Route 21.
+  - **Route 23** to Victory Road now starts at Route 22 west of Viridian City, as the game's texts always said.
+- **Johto follows Gold/Silver/Crystal and HeartGold/SoulSilver:**
+  - **Morty** waits in the Burned Tower until you've seen the legendary beasts, then returns to his Gym.
+  - The **Squirtbottle** is given only after you beat Whitney; the **SecretPotion** only after you've met Jasmine at the lighthouse.
+  - At the **Lake of Rage** you meet **Lance**, who leads you to the Team Rocket hideout in Mahogany – and gives you **HM06 Whirlpool** once it's shut down.
+  - **Clair** refuses to give you the Rising Badge until you pass the Dragon Elder's test in the **Dragon's Den**.
+  - **Route 27** east of New Bark Town needs Surf and Waterfall; the Whirl Islands need the Glacier Badge and the Dark Cave the Zephyr Badge (to use the HM outside battle); the Ruins of Alph can be entered from Route 32 too.
+- With the optional **level cap**, the cap now depends on how many badges you have, so taking Gyms in a different order no longer leaves you stuck.
+### Added
+- **Every Gym Leader, Elite Four member and Champion** now has a victory scene with their own words – Misty, all eight Johto Leaders and both Elite Fours got theirs.
+### Removed
+- The sailor's house in Cianwood City (Whirlpool now comes from Lance, as in the originals).
+### Fixed
+- The Gold Teeth could be found again on later Safari expeditions.
+
+## [1.70.3] – 2026-10-26 · Fishing has its own Pokémon
+### Changed
+- **Pokémon you can fish up on a route no longer appear in its normal battles**, so fishing is worth it: Corsola (Route 40), Chinchou and Lanturn (Route 41), Horsea and Seadra (Whirl Islands), Poliwag (Routes 30, 31, 44) and in Kanto Goldeen and Seaking (Routes 12, 13) and Tentacool, Tentacruel and Magikarp (Route 21) are now fishing-only there. Routes 40 and 41 get Mantine, Marill and Azumarill in battles instead. Only Kanto's Routes 19 and 20 keep Tentacool in battles, as in Pokémon Yellow.
+
+## [1.70.2] – 2026-10-26 · Johto Pokémon on every route
+### Added
+- **Every Johto route and cave now has wild Johto Pokémon.** Route 40 was empty and Route 41, Burned Tower, Slowpoke Well, Whirl Islands, Lake of Rage, Route 46 and Mt. Mortar had few or only Kanto Pokémon. New: Corsola, Chinchou, Lanturn, Remoraid and Qwilfish at sea; Slugma, Houndour, Misdreavus and Magby in Burned Tower; Wooper and Quagsire in Slowpoke Well; Wooper, Marill, Quagsire and Yanma at Lake of Rage; Phanpy, Teddiursa and Gligar on Route 46; Dunsparce and Tyrogue in Mt. Mortar.
+
+## [1.70.1] – 2026-10-26 · Johto battle backgrounds
+### Added
+- Battles on Johto's **Victory Road** and at the **Indigo Plateau** use the same backgrounds as in Kanto (it's the same place), and the **Ice Path** has the icy cave background.
+
+## [1.70.0] – 2026-10-26 · Johto towns as maps
+### Added
+- **Every Johto town is a pixel-art map seen from above**, like the towns in Kanto: New Bark Town, Cherrygrove, Violet, Azalea, Goldenrod, Ecruteak, Olivine, Cianwood, Mahogany, Blackthorn and the Indigo Plateau. The layouts follow HeartGold/SoulSilver – Sprout Tower stands in its pond north of Violet, Bell Tower and Burned Tower tower over Ecruteak, the lighthouse and the ship wait by Olivine's harbour, and Dragon's Den lies behind Blackthorn. Click a building to open it.
+- Buildings that don't have their own picture yet are drawn as simple stand-in buildings in their colours (towers, a lighthouse, a ship, a cave…).
+### Changed
+- **Sprout Tower and Dragon's Den are no longer separate places on the Johto map** – you enter them from Violet City and Blackthorn City. If you were standing in one of them, you'll find yourself in that town.
+
+## [1.69.8] – 2026-10-26 · Shared buildings in Johto
+### Added
+- The **Trainer Boost Center** in Goldenrod and the **Training Grounds** in Cianwood use the same pictures as in Kanto.
+### Changed
+- Behind the scenes only: the Gen 2 sprite to-do list is tidied up – finished items removed, and it now says which pictures the game really needs.
+
+## [1.69.7] – 2026-10-26 · Johto badges
+### Added
+- All eight **Johto badges** (Zephyr, Hive, Plain, Fog, Storm, Mineral, Glacier, Rising) have their own pictures in the Badge Case.
+
+## [1.69.6] – 2026-10-26 · Will and Karen sprites
+### Added
+- Elite Four members **Will** and **Karen** have their own pictures — every Johto Gym Leader, Elite Four member and the Champion now has one.
+
+## [1.69.5] – 2026-10-26 · Jasmine and Pryce sprites
+### Added
+- Gym Leaders **Jasmine** and **Pryce** have their own pictures — all eight Johto Gym Leaders now have one.
+
+## [1.69.4] – 2026-10-26 · Morty sprite
+### Added
+- Gym Leader **Morty** has his own picture.
+
+## [1.69.3] – 2026-10-26 · Whitney, Chuck and Clair sprites
+### Added
+- Gym Leaders **Whitney**, **Chuck** and **Clair** have their own pictures.
+
+## [1.69.2] – 2026-10-26 · Falkner and Bugsy sprites
+### Added
+- Gym Leaders **Falkner** and **Bugsy** have their own pictures.
+- Behind the scenes only: the sprite tool can now remove coloured backgrounds too (`prep_sprite.py --key`).
+
+## [1.69.1] – 2026-10-26 · Metronome like in the originals
+### Fixed
+- **Metronome works like in Red/Blue/Yellow and Gold/Silver/Crystal.** It can call any move of the region's generation, except Metronome and Struggle in Kanto; in Johto it also never calls Counter, Destiny Bond, Detect, Endure, Mimic, Mirror Coat, Protect, Sketch, Sleep Talk or Thief.
+- The called move now works exactly as if the Pokémon used it itself: Solar Beam or Fly charge first, Hyper Beam needs a recharge, Outrage locks in, Fury Attack hits several times, Dragon Rage and Sonic Boom deal their fixed damage, and Self-Destruct makes the user faint. Sleep Talk calls moves the same way.
+
+## [1.69.0] – 2026-10-26 · Battles by the rules of each generation
+### Changed
+- **Battles in Kanto follow Gen 1 and battles in Johto follow Gen 2**, as in the original games:
+  - **Critical hits** deal double damage. In Kanto the chance depends on the Pokémon's base Speed (fast Pokémon like Persian or Jolteon crit often); in Johto it works by stages like in Gold/Silver.
+  - **Sleep** lasts 1–7 turns in Kanto, and the Pokémon still can't move on the turn it wakes up. In Johto it lasts 1–6 turns.
+  - **Poison and burn** deal 1/16 of max HP per turn in Kanto and 1/8 in Johto.
+  - **Wrap, Bind, Clamp and Fire Spin** in Kanto hold the target for 2–5 turns, and it can't move at all. In Johto the target can fight back and loses 1/16 of its HP each turn.
+  - **Counter** in Kanto only returns Normal and Fighting moves.
+  - **Spikes** can be laid only once.
+- **Metronome** only calls moves that existed in the region's generation.
+
+## [1.68.1] – 2026-10-26 · Moves that work like the originals
+### Fixed
+- **Hyper Beam** (and Giga Impact) hits right away and the user has to recharge on the next turn. In Kanto it doesn't need to recharge if it knocks the target out.
+- **Moves that hit several times** finally do: Fury Attack, Double Slap, Pin Missile, Comet Punch, Spike Cannon, Barrage, Fury Swipes and Bone Rush hit 2–5 times, Double Kick, Bonemerang and Twineedle twice, and Triple Kick up to three times with growing power.
+- **Self-Destruct and Explosion** make the user faint and hit harder (they halve the target's Defense).
+- **Toxic** badly poisons: the damage grows every turn (1/16, 2/16, 3/16…) until the Pokémon switches out.
+
+## [1.68.0] – 2026-10-26 · Whitney's Miltank
+### Added
+- **Whitney is as terrifying as in Gold/Silver.** Her Miltank knows **Rollout, Attract, Stomp and Milk Drink**, and her Clefairy knows Double Slap, Mimic, Encore and Metronome.
+- **Attract**: a Pokémon of the opposite gender falls in love and has a 50 % chance each turn of being too smitten to attack. It wears off when the attacker leaves the battle.
+- When you beat Whitney, she bursts into tears, and you only get the Plain Badge once she's done crying.
+### Changed
+- **Rollout works like in the original games**: the user keeps rolling for up to 5 turns, and the power doubles with every hit (30 → 60 → 120 → 240 → 480). It doubles again if the user used Defense Curl before. A miss, or a turn where the user can't move, ends the roll.
+- Trainers now heal with moves like Milk Drink or Recover once their Pokémon drop below half HP, and they use Attract and Rollout sensibly.
+
+## [1.67.1] – 2026-10-20 · Gym puzzle titles
+### Changed
+- The Gym puzzle windows (Lt. Surge, Koga, Sabrina) no longer have emoji in their titles; the icons explaining Koga's maze stay.
+
+## [1.67.0] – 2026-10-20 · Types as they were in each generation
+### Changed
+- **Types work exactly like in the original games of each region.** Battles in **Kanto** follow Gen 1 (Red/Blue/Yellow): there are no Dark, Steel or Fairy types, Ghost moves don't affect Psychic Pokémon, Bug and Poison are super effective against each other, and Bite, Gust, Karate Chop and Sand-Attack are Normal moves. Battles in **Johto** follow Gen 2 (Gold/Silver/Crystal): Dark and Steel are there, Fairy isn't.
+- **Pokémon have their old types**: Clefairy, Jigglypuff, Togepi, Snubbull and their families are Normal, Mr. Mime is Psychic, Marill and Azumarill are Water, and Magnemite and Magneton caught in Kanto are pure Electric (in Johto they're Electric/Steel). Charm, Sweet Kiss and Moonlight are Normal moves.
+- The Pokédex, Pokémon cards, your team, the battle move buttons and the Move Tutor show these types.
+
+## [1.66.0] – 2026-10-20 · Sound effects
+### Added
+- **The game has sound effects**: hits, fainting, catching (and a Pokémon breaking free), level ups, evolution, hatching, achievements and UI clicks — short retro sounds in the style of the Game Boy games. They follow the SFX volume in the settings.
+
+## [1.65.2] – 2026-10-20 · Cycling Road to Fuchsia, badges by region
+### Added
+- **The Badge Case in your Profile can show one region at a time** (All / Kanto / Johto).
+### Fixed
+- **Cycling Road (Route 18) now leads to Fuchsia City**, as in the original games — Fuchsia can be reached from both the east (Route 15) and the west.
+- Fuchsia City's description named Janine as the Gym Leader; in Kanto it's Koga.
+
+## [1.65.1] – 2026-10-20 · Tools and docs tidy-up
+### Changed
+- Behind the scenes only: the image download tool can now fetch Gen 2 pictures straight into the Johto folders, trainer sprite counts are kept per generation, old data generators can no longer overwrite the per-generation data by accident, and the project notes are up to date.
+
+## [1.65.0] – 2026-10-20 · Moves from the original games
+### Changed
+- **Pokémon learn the moves they had in the original games.** Pokémon caught in **Kanto** learn their moves from **Pokémon Yellow** — only Gen 1 moves (no more Bug Bite, Air Slash or Hurricane). Pokémon caught in **Johto** learn from **Pokémon Crystal** — Gen 1 and Gen 2 moves, also for Kanto species caught there (a Johto Zubat learns differently from a Kanto one).
+- Moves your Pokémon already know stay; they just won't learn newer ones any more, and the Move Tutor only offers moves from their region's game.
+### Added
+- Barrage, Dizzy Punch, Jump Kick, Meditate and Mind Reader (Gen 1/2 moves missing until now). Magnitude now hits with a random strength like in the originals.
+### Fixed
+- **Pokémon learn new moves when they level up in manual battles and when they evolve.** Until now only auto battle taught new moves.
+
+## [1.64.1] – 2026-10-20 · No emoji in building windows
+### Changed
+- **Windows of story buildings (Oak's Lab, Silph Co., Radio Tower, Olivine Port and the rest) no longer have emoji** in their titles or text. The Game Corner's slot machine and blackjack keep their symbols.
+
+## [1.64.0] – 2026-10-20 · Every move does something
+### Added
+- **About 75 moves that used to do nothing now work** — from Gen 2 and from the newer moves Kanto and Johto Pokémon learn:
+  - **Damage that depends on the battle:** Flail and Reversal hit harder the lower your HP, plus Gyro Ball, Electro Ball, Heavy Slam, Present, Beat Up, Fling, Endeavor, Final Gambit, Mirror Coat and Sheer Cold.
+  - **Protection:** Protect, Detect, Endure and Quick Guard.
+  - **Battle effects:** Curse, Belly Drum, Sandstorm, Snowscape, Safeguard, Baton Pass, Destiny Bond, Perish Song, Encore, Taunt, Pain Split, Heal Bell, Aromatherapy, Spite, Lock-On, Foresight, Sleep Talk, Stockpile with Spit Up, Memento, Ingrain, Recycle, Spikes, Toxic Spikes, Stealth Rock, Grassy and Electric Terrain and more.
+- **Smeargle's Sketch works**: it permanently copies the last move its opponent used, so Smeargle finally learns moves to fight with. Wobbuffet's Mirror Coat, Destiny Bond and Safeguard work too.
+- Moves meant for double battles (Helping Hand, Follow Me, After You…) fail with "But it failed!", just like in single battles in the original games, and are never picked for automatic movesets.
+### Fixed
+- **Type immunities really deal no damage.** A Normal move against a Ghost (or Ground against Flying) used to do 1 damage and say "not very effective"; now it says "it doesn't affect…".
+- Sunny Day and Hail now really change the weather (Sunny Day boosts Fire moves; Hail and Sandstorm hurt Pokémon every turn).
+
+## [1.63.2] – 2026-10-20 · League badge checks, Lugia and smaller fixes
+### Fixed
+- **Victory Road in Johto (and Route 23 in Kanto) checks all eight badges of the region**, as in the original games — no Gym can be skipped any more (in Johto you could go around Jasmine).
+- **Lugia appears only after you've freed the Radio Tower and earned the Glacier Badge**, as in HeartGold/SoulSilver — not right after getting HM06 Whirlpool. The sailor in Cianwood now hints at this.
+- **Pokémon start with the right moves at low levels**: a move learned on evolving (Butterfree's Gust, Kadabra's Confusion…) is no longer pushed out by level 1 moves.
+- **The offline summary shows where your team was actually battling** instead of always "Route 1".
+- Pallet Town's description no longer says shops "will open later".
+- 38 Gym, Team Rocket and Kimono Girl trainers in Kanto and Johto got their own lines before battle.
+- Emoji removed from popup titles on the map, from the tutorial and from the Bug-Catching Contest, and money in the Contest is shown as ₽.
+
+## [1.63.1] – 2026-10-20 · Pokémon from the other region really rest in the PC
+### Fixed
+- **Pokémon only evolve, train and take items in the region where they were caught.** A Kanto Golbat, Onix or Eevee can no longer become Crobat, Steelix or Espeon in Johto, and Rare Candy, Potions, PP Ups, the Training Grounds and the Move Tutor only work on Pokémon from the region you're in.
+- **Breeding in Kanto no longer hatches Johto baby Pokémon** — a Kanto Pikachu gives Pikachu, not Pichu. In Johto, babies hatch as before.
+- **The Pokédex tab, the map and the area roster count each region separately.** A Zubat caught in Johto no longer marks Zubat as caught in your Kanto Pokédex, and "+ Team" only offers Pokémon you can actually use where you are.
+- **The diploma counts only that region's badges** (8 / 8, not 8 / 16), and the Poké Mart unlocks better Poké Balls with the badges of the region you're in.
+- **In-game trades only take a Pokémon caught in the same region.**
+- The Johto customs officer now mentions these rules.
+
+## [1.63.0] – 2026-10-20 · The S.S. Aqua sails back to Kanto
+### Added
+- **The S.S. Aqua sails from Olivine Port back to Kanto.** As soon as you reach Olivine City you can board the ship at the port and cross to Vermilion City — your Kanto team, Day Care, eggs and building upgrades are waiting there. The S.S. Anne still takes you back to Johto, so you can travel between both regions whenever you like.
+
+## [1.62.3] – 2026-10-20 · Kanto and Johto each have their own League run
+### Fixed
+- **A League challenge no longer follows you out of the Indigo Plateau.** Leaving the Plateau or sailing to another region in the middle of the Elite Four now ends the run (it starts again from the first challenger), so healing at Poké Centers is never blocked elsewhere and the Johto League can't start halfway through. If your game was already stuck like this, healing works again.
+- **Becoming Johto Champion shows its own scene** with Lance and Professor Oak, instead of Blue's defeat from Kanto.
+
 ## [1.62.2] – 2026-10-19 · The Johto customs officer explains the border rules
 ### Changed
 - **The customs officer in Johto now explains all the border rules**: your Day Care and Eggs stay in Kanto, HM field use must be earned again, and only Johto Pokémon live in Johto's wild.

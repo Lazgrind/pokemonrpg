@@ -15,7 +15,7 @@ import { acquirePokemon, getStarterSpeciesId } from "../systems/team.js";
 import { ensureStartersSeen } from "../systems/pokedex.js";
 import { addEgg, devHatchAllIncubating } from "../systems/eggSystem.js";
 import { MAX_LEVEL } from "../systems/progression.js";
-import { HMS } from "../../data/hms.js";
+import { travelToRegion } from "../systems/battleSystem.js";
 
 /** Náhodný druh z celého Dexu (pro „přidej něco na zkoušku"). */
 function randomSpeciesId() {
@@ -557,6 +557,9 @@ function resetStoryProgress(s) {
 export function devApplyCheckpoint(key) {
   const idx = DEV_CHECKPOINTS.findIndex((c) => c.key === key);
   if (idx < 0) return { ok: false, label: key };
+  // Z Johta nejdřív normální návrat do Kanta (jako lodí): přehodí region, mapu, tým,
+  // budovy, Školku, vejce i HM. Jinak by skok zůstal v Johtu s kantským postupem.
+  if ((getState().progress?.region ?? "kanto") !== "kanto") travelToRegion("kanto");
   const s = getState();
   ensureContainers(s);
   resetStoryProgress(s); // čistý základ → skok je deterministický
@@ -604,54 +607,29 @@ function giftJohtoStarter(s) {
   const mon = createPokemon(id, DEV_JOHTO_STARTER_LEVEL, { caughtBall: "poke" });
   acquirePokemon(mon); // kolekce + Pokédex (commit uvnitř)
   // Region-lock: jen gen 2 smí v Johtu bojovat → startér rovnou do (prázdného) týmu.
-  if (s.collection.some((p) => p.uid === mon.uid) && !s.team.includes(mon.uid)) {
-    s.team.push(mon.uid);
-  }
+  // Po opakovaném skoku už startér v PC je a nový se do něj jen sloučil (jeden jedinec
+  // druhu na region) → do týmu dej toho, který v kolekci opravdu je.
+  const owned = s.collection.find((p) => p.uid === mon.uid)
+    ?? s.collection.find((p) => p.speciesId === id && p.caughtRegion === mon.caughtRegion);
+  if (owned && !s.team.includes(owned.uid)) s.team.push(owned.uid);
   s.story.johtoStarter = true;
   s.story.johtoStarterId = id;
 }
 
 /**
  * Postaví kantský základ a přepne do Johta. Aplikuje VŠECHNY kantské checkpointy
- * (0..champion → isChampion, HM, kantské odznaky, kantský tým), uklidí kantský
- * tým do PC (teamByRegion.kanto), nastaví region "johto", vstup do New Bark Townu
- * a dá johtského startéra. Volá se jednou před johtskou smyčkou.
+ * (0..champion → isChampion, HM, kantské odznaky, kantský tým), pak přejde do Johta
+ * přes travelToRegion (tým, budovy, Školka, vejce, HM per region), vstup do New Bark
+ * Townu a dá johtského startéra. Volá se jednou před johtskou smyčkou.
  */
 function ensureJohtoBaseline(s) {
-  // Kantský základ budujeme v kantském kontextu (i při opakovaném johtském skoku).
-  s.progress.region = "kanto";
+  // Region je tu už "kanto" (z Johta se před skokem vrací devApplyCheckpointGen2).
   // Plný kantský postup (kumulativně přes všechny kantské milníky).
   for (const c of DEV_CHECKPOINTS) applyOne(s, c.key);
-  // Kontejnery pro per-region tým/poslední oblast (viz battleSystem.travelToRegion).
-  if (!s.progress.teamByRegion || typeof s.progress.teamByRegion !== "object") s.progress.teamByRegion = {};
-  if (!s.progress.lastAreaByRegion || typeof s.progress.lastAreaByRegion !== "object") s.progress.lastAreaByRegion = {};
-  // Kanto skončilo na Indigo Plateau; tým ulož a vyprázdni (co není v týmu = v PC).
-  s.progress.lastAreaByRegion.kanto = s.progress.activeAreaId || "indigo-plateau";
-  s.progress.teamByRegion.kanto = [...(s.team ?? [])];
-  s.team = [];
-  // Nakoupené bonusy jsou per-region (viz battleSystem.travelToRegion): ulož kantské
-  // budovy + Boost Center linky a nasaď (prázdnou) johtskou sadu, ať dev Johto
-  // nezdědí kantské úrovně. Gold je globální.
-  if (!s.progress.cityBuildingsByRegion || typeof s.progress.cityBuildingsByRegion !== "object") s.progress.cityBuildingsByRegion = {};
-  if (!s.city || typeof s.city !== "object") s.city = { buildings: {} };
-  s.progress.cityBuildingsByRegion.kanto = s.city.buildings ?? {};
-  s.city.buildings = s.progress.cityBuildingsByRegion.johto ?? {};
-  // HM jsou REGIONÁLNÍ (viz battleSystem.travelToRegion): kantské checkpointy výše
-  // nastavily flat flagy (hasFlash/hasSurf/hasStrength). Ulož je do kantské mapy
-  // a VYČISTI flat flagy, ať dev Johto nezdědí kantské HM – v Johtu se získávají znovu.
-  if (!s.story || typeof s.story !== "object") s.story = {};
-  if (!s.story.hmFlagsByRegion || typeof s.story.hmFlagsByRegion !== "object") s.story.hmFlagsByRegion = {};
-  const kantoHm = {};
-  for (const hm of HMS) {
-    if (s.story[hm.flag]) kantoHm[hm.flag] = true;
-    delete s.story[hm.flag];
-  }
-  s.story.hmFlagsByRegion.kanto = kantoHm;
-  // Johto začíná bez HM (prázdná mapa) → flat flagy zůstávají smazané.
-  const johtoHm = s.story.hmFlagsByRegion.johto ?? {};
-  for (const hm of HMS) if (johtoHm[hm.flag]) s.story[hm.flag] = true;
-  // Přepni region + vstupní uzel Johta.
-  s.progress.region = "johto";
+  // Přechod do Johta stejně jako lodí (battleSystem.travelToRegion): uloží kantský tým,
+  // budovy, Školku, vejce a HM a nasadí johtské (HM prázdné – příběh se před skokem maže).
+  travelToRegion("johto");
+  s.team = []; // deterministicky: čerstvý johtský tým, dřívější johtští Pokémoni zůstanou v PC
   s.progress.activeAreaId = "new-bark-town";
   addUnique(s.progress.visited, "new-bark-town");
   // Johto startér od Prof. Elma (prázdný tým → rovnou použitelný v Johtu).
@@ -678,7 +656,6 @@ function applyOneGen2(s, key) {
       addUnique(s.progress.visited, "route-30");
       addUnique(s.progress.visited, "route-31");
       addUnique(s.progress.visited, "violet-city");
-      addUnique(s.progress.visited, "sprout-tower");
       addUnique(s.progress.defeatedTrainers, "violet-gym-bird-keeper-rod");
       addUnique(s.progress.defeatedTrainers, "falkner");
       addUnique(s.progress.badges, "zephyr-badge");
@@ -771,6 +748,8 @@ function applyOneGen2(s, key) {
       addUnique(s.progress.defeatedTrainers, "cianwood-gym-black-belt-lao");
       addUnique(s.progress.defeatedTrainers, "chuck");
       addUnique(s.progress.badges, "storm-badge");
+      s.story.hasFly = true; // HM02 Fly od Chuckovy ženy hned po výhře (battleSystem)
+      s.resources.items["hm02-fly"] = (s.resources.items["hm02-fly"] ?? 0) + 1;
       s.progress.activeAreaId = "cianwood-city";
       break;
     case "j-mineral":
@@ -827,7 +806,6 @@ function applyOneGen2(s, key) {
     case "j-league-open":
       // Dragon's Den (dex: Dratini) + cesta k Lize: New Bark → Route 27 → Route 26
       // → Victory Road (Silver finální rival gate) → Indigo Plateau. Liga neběží.
-      addUnique(s.progress.visited, "dragons-den");
       addUnique(s.progress.visited, "route-27");
       addUnique(s.progress.visited, "route-26");
       addUnique(s.progress.visited, "victory-road-johto");
@@ -866,6 +844,9 @@ function applyOneGen2(s, key) {
 export function devApplyCheckpointGen2(key) {
   const idx = DEV_CHECKPOINTS_GEN2.findIndex((c) => c.key === key);
   if (idx < 0) return { ok: false, label: key };
+  // Z Johta nejdřív zpět do Kanta (jako lodí), ať se kantský základ staví nad kantským
+  // týmem a budovami, ne nad johtskými.
+  if ((getState().progress?.region ?? "kanto") !== "kanto") travelToRegion("kanto");
   const s = getState();
   ensureContainers(s);
   resetStoryProgress(s); // čistý základ → skok je deterministický
@@ -889,7 +870,7 @@ export function devSetLevel(uid, level) {
   const lvl = Math.max(1, Math.min(MAX_LEVEL, Math.floor(Number(level) || 1)));
   owned.level = lvl;
   owned.xp = 0;
-  owned.moves = defaultMovesFor(owned.speciesId, lvl); // čistá sada tahů pro daný level
+  owned.moves = defaultMovesFor(owned.speciesId, lvl, owned.caughtRegion); // čistá sada tahů pro daný level
   owned.hp = computeStats(owned).maxHp;
   commit();
   return { ok: true, level: lvl };

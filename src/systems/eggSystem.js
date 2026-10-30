@@ -51,7 +51,7 @@ function applyEggMoves(pokemon, eggMoveIds) {
 
   // Filtruj egg moves: jen ty, co potomek umí naučit
   const learnableIds = new Set(
-    learnableMovesAtLevel(pokemon.speciesId, 100).map((e) => e.id)
+    learnableMovesAtLevel(pokemon.speciesId, 100, pokemon.caughtRegion ?? "kanto").map((e) => e.id)
   );
   const validEggMoves = eggMoveIds.filter((id) => learnableIds.has(id));
 

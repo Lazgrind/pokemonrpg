@@ -6,6 +6,13 @@ ještě nejsou hotové. Ať na ně nezapomeneme. Detaily rozhodnutí viz
 
 Legenda stavu: 🟡 připraveno (seam/data hotová) · ⚪ jen rozhodnuto (nic v kódu) · 🔵 částečně · ✅ hotovo (ponecháno kvůli navazující práci)
 
+> **Audit 2026-10-20 (Gen 1 + Gen 2, v1.65.x):** řada starších ⚪ položek je mezitím ve hře
+> (logika Love/Fast/Heavy/Moon Ballu, route trenéři, záložka Gym, mapy po generacích, náhodné
+> varianty spritů trenérů…). **Skutečně otevřené** zůstávají jen nápady: šance na vejce podle
+> oblasti, Beast Ball, rozšíření Game Corneru, drag-and-drop rozložení panelů, −5 % zlata při
+> prohře s rivalem. Rozhodnuto nechat jak je: Gen 2 bez vlastních TM, bez Mt. Silver / Reda,
+> výměnné evoluce jen přes Linking Cord. Chybějící grafika a SFX: `SPRITES-TODO*.md`.
+
 ---
 ## ⭐ PUNCH-LIST PRO VYDÁNÍ 1.0.0 (ověřeno proti kódu 2026-09-14)
 

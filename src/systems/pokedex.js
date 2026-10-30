@@ -58,9 +58,39 @@ export function ensureStartersSeen() {
   return changed;
 }
 
-/** Máš daný druh chycený? (odvozeno z kolekce – living dex) */
+/** Region (slug) generace daného čísla, např. 1 → "kanto". */
+function regionOfGen(gen) {
+  return GENERATIONS.find((g) => g.gen === gen)?.region ?? "kanto";
+}
+
+/** Region (slug), do jehož mapy oblast patří (fallback = aktuální region). */
+function regionOfArea(area) {
+  const g = GENERATIONS.find((gen) => (gen.areas ?? []).some((a) => a.id === area?.id));
+  return g?.region ?? (getState().progress?.region ?? "kanto");
+}
+
+/**
+ * Máš druh chycený V DANÉM REGIONU? (living dex, region-lock). Jedinec chycený
+ * jinde je v PC navíc, do dexu ani na mapu toho regionu se nepočítá.
+ * Staré save bez `caughtRegion` = „kanto".
+ * @param {string} speciesId
+ * @param {string} region  slug regionu ("kanto" | "johto")
+ * @param {boolean} [shinyOnly=false]  jen shiny jedinci
+ */
+export function isCaughtIn(speciesId, region, shinyOnly = false) {
+  return getState().collection.some(
+    (p) => p.speciesId === speciesId && (p.caughtRegion ?? "kanto") === region && (!shinyOnly || p.shiny)
+  );
+}
+
+/**
+ * Máš daný druh chycený pro jeho regionální Pokédex? (odvozeno z kolekce – living
+ * dex). Počítá se jen jedinec chycený v regionu generace druhu (Zubat z Johta
+ * kantský dex nevyplní) – stejně jako dexCountsByGen.
+ */
 export function isCaught(speciesId) {
-  return getState().collection.some((p) => p.speciesId === speciesId);
+  const gen = getSpecies(speciesId)?.gen ?? 1;
+  return isCaughtIn(speciesId, regionOfGen(gen));
 }
 
 /**
@@ -79,7 +109,8 @@ export function dexStatus(speciesId) {
  * @returns {{ caught: number, total: number }}
  */
 export function dexCounts() {
-  const caught = new Set(getState().collection.map((p) => p.speciesId)).size;
+  // Součet regionálních dexů (viz dexCountsByGen) – bonusoví jedinci se nepočítají.
+  const caught = Object.values(dexCountsByGen()).reduce((n, c) => n + c.caught, 0);
   return { caught, total: POKEMON_SPECIES.length };
 }
 
@@ -130,9 +161,10 @@ export function areaCatchProgress(area) {
   const a = typeof area === "string" ? getArea(area) : area;
   const ids = areaSpeciesIds(a);
   if (!ids.length) return { caught: 0, total: 0 };
+  const region = regionOfArea(a); // počítá se jen to, co jsi chytil v regionu oblasti
   let caught = 0;
   for (const id of ids) {
-    if (isCaught(id)) caught++;
+    if (isCaughtIn(id, region)) caught++;
   }
   return { caught, total: ids.length };
 }
@@ -154,11 +186,12 @@ export function areaCompletion(area) {
   const ids = areaSpeciesIds(a);
   const total = ids.length;
   if (!total) return { caught: 0, total: 0, shiny: 0, allCaught: false, allShiny: false };
+  const region = regionOfArea(a); // počítá se jen to, co jsi chytil v regionu oblasti
   let caught = 0;
   let shiny = 0;
   for (const id of ids) {
-    if (isCaught(id)) caught++;
-    if (isCaughtShiny(id)) shiny++;
+    if (isCaughtIn(id, region)) caught++;
+    if (isCaughtIn(id, region, true)) shiny++;
   }
   return {
     caught,

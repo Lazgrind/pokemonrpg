@@ -10,7 +10,7 @@
 
 import { getState } from "../core/state.js";
 import { dexCountsByGen } from "../systems/pokedex.js";
-import { BADGES } from "../../data/badges.js";
+import { regionBadgeCount } from "../../data/badges.js";
 import { grantDexDiploma } from "../systems/team.js";
 import { generationByRegion } from "../../data/generations.js";
 import { showPopup } from "./popup.js";
@@ -74,7 +74,7 @@ export function renderDiplomaCanvas(state = getState(), region = state.progress?
   const cfg = diplomaConfig(region);
   const name = state.player?.name?.trim() || "Trainer";
   const total = regionDexTotal(region);
-  const badges = state.progress?.badges?.length ?? 0;
+  const badges = regionBadgeCount(state.progress?.badges, region); // jen odznaky regionu diplomu
   const playtime = playtimeStr(Date.now() - (state.meta?.createdAt ?? Date.now()));
   const date = new Date().toLocaleDateString();
 
@@ -116,7 +116,7 @@ export function renderDiplomaCanvas(state = getState(), region = state.progress?
   centerText(ctx, "✨  Awarded the Shiny Charm  ✨", 545, "600 24px Georgia, serif", "#b8860b");
 
   // Statistiky.
-  centerText(ctx, `Gym Badges: ${badges} / ${BADGES.length}      Play time: ${playtime}      Date: ${date}`, 600, "18px Georgia, serif", "#555");
+  centerText(ctx, `Gym Badges: ${badges.earned} / ${badges.total}      Play time: ${playtime}      Date: ${date}`, 600, "18px Georgia, serif", "#555");
 
   // Podpis.
   ctx.textAlign = "center";

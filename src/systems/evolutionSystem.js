@@ -22,7 +22,7 @@ import { getState, commit } from "../core/state.js";
 import { bus, EVENTS } from "../core/events.js";
 import { getSpecies } from "../../data/pokemon.js";
 import { generationByRegion } from "../../data/generations.js";
-import { computeStats, learnLevelUpMoves } from "./pokemonSystem.js";
+import { computeStats, learnLevelUpMoves, caughtRegionOf, isInCaughtRegion, regionLockReason } from "./pokemonSystem.js";
 import { markSeen } from "./pokedex.js";
 
 /** Id drženého itemu, který blokuje evoluci (a v breedingu předává povahu). */
@@ -56,25 +56,27 @@ export function isNightNow() {
 }
 
 /**
- * Generace aktuálního regionu hráče (1 = Kanto, 2 = Johto…). Řídí region-lock
- * evolucí: nelze se vyvinout na druh z POZDĚJŠÍ generace, než je aktuální region
- * (Golbat→Crobat jde jen v Johtu, ne v Kantu). Generické pro gen 3–9.
+ * Generace regionu, kde jedinec vznikl (1 = Kanto, 2 = Johto…). Řídí region-lock
+ * evolucí: nelze se vyvinout na druh z POZDĚJŠÍ generace, než je region chycení
+ * (kantský Golbat se na Crobata nevyvine nikdy, johtský ano). Bez jedince =
+ * aktuální region. Generické pro gen 3–9.
  */
-function currentRegionGen() {
-  const region = getState()?.progress?.region ?? "kanto";
+function regionGenOf(pokemon) {
+  const region = pokemon ? caughtRegionOf(pokemon) : (getState()?.progress?.region ?? "kanto");
   return generationByRegion(region)?.gen ?? 1;
 }
 
 /**
- * Je cíl evoluce v tomto běhu dostupný a povolený v aktuálním regionu?
+ * Je cíl evoluce v tomto běhu dostupný a povolený pro jedince?
  * false když: druh není načtený (jeho generace je vypnutá) NEBO patří pozdější
- * generaci než aktuální region.
+ * generaci než region, kde jedinec vznikl.
  * @param {string} toId
+ * @param {import("../core/state.js").OwnedPokemon} [pokemon]
  */
-function targetAllowed(toId) {
+function targetAllowed(toId, pokemon) {
   const to = getSpecies(toId);
   if (!to) return false;
-  return (to.gen ?? 1) <= currentRegionGen();
+  return (to.gen ?? 1) <= regionGenOf(pokemon);
 }
 
 /** Drží jedinec Everstone (a tím blokuje evoluci)? */
@@ -125,6 +127,16 @@ function happinessRequirementLabel(method) {
  *   requirementLabel: string, ready: boolean, blocked: boolean } | null}
  */
 export function evolutionInfo(pokemon) {
+  const info = evolutionInfoRaw(pokemon);
+  if (!info) return null;
+  // Region-lock: mimo region chycení se jedinec nevyvíjí (jen odpočívá v PC).
+  // Info ukážeme (karta), ale „ready" je false → žádné tlačítko Evolve.
+  if (!isInCaughtRegion(pokemon)) return { ...info, ready: false, regionLocked: true };
+  return info;
+}
+
+/** evolutionInfo bez kontroly regionu, kde se hráč právě nachází. */
+function evolutionInfoRaw(pokemon) {
   const sp = getSpecies(pokemon?.speciesId);
   if (!sp) return null;
   const blocked = holdsEverstone(pokemon);
@@ -135,7 +147,7 @@ export function evolutionInfo(pokemon) {
     typeof sp.evolutionLevel === "number" &&
     sp.method !== "stone" &&
     sp.method !== "trade" &&
-    targetAllowed(sp.evolvesTo)
+    targetAllowed(sp.evolvesTo, pokemon)
   ) {
     const to = getSpecies(sp.evolvesTo);
     return {
@@ -152,7 +164,7 @@ export function evolutionInfo(pokemon) {
   // 2) Happiness model (evolutions[] – „happiness" / „happiness-day" / „happiness-night").
   if (Array.isArray(sp.evolutions)) {
     const happyEvos = sp.evolutions.filter(
-      (e) => typeof e.method === "string" && e.method.startsWith("happiness") && targetAllowed(e.toId),
+      (e) => typeof e.method === "string" && e.method.startsWith("happiness") && targetAllowed(e.toId, pokemon),
     );
     if (happyEvos.length) {
       // Víc happiness větví (Eevee → Espeon ve DNE / Umbreon v NOCI): nabídni tu, jejíž
@@ -182,7 +194,7 @@ export function evolutionInfo(pokemon) {
   //    Nabídneme VŽDY tu větev, která odpovídá AKTUÁLNÍM statům – hráč tak vidí,
   //    čím se jeho jedinec právě teď stane (a poměr může před evolucí doladit EV/IV).
   if (Array.isArray(sp.evolutions)) {
-    const statEvos = sp.evolutions.filter((e) => e.method === "stats" && targetAllowed(e.toId));
+    const statEvos = sp.evolutions.filter((e) => e.method === "stats" && targetAllowed(e.toId, pokemon));
     if (statEvos.length) {
       const st = computeStats(pokemon);
       const evo = statEvos.find((e) => statBranchMatch(e.when, st)) ?? statEvos[0];
@@ -249,29 +261,33 @@ function applyEvolution(owned, toId) {
 }
 
 /**
- * Na které druhy se může evolučním kamenem vyvinou (pro UI: zjištění vhodných cílů).
- * @param {string} speciesId
+ * Na které druhy se může jedinec evolučním kamenem vyvinout (pro UI: vhodné cíle).
+ * Region-lock: mimo region chycení nic (jedinec se tam nevyvíjí).
+ * @param {import("../core/state.js").OwnedPokemon} pokemon
  * @param {string} itemId
  * @returns {string[]} pole toId
  */
-export function itemEvolutionTargets(speciesId, itemId) {
-  const sp = getSpecies(speciesId);
+export function itemEvolutionTargets(pokemon, itemId) {
+  const sp = getSpecies(pokemon?.speciesId);
   if (!sp?.evolutions || !Array.isArray(sp.evolutions)) return [];
+  if (!isInCaughtRegion(pokemon)) return [];
   return sp.evolutions
     .filter((evo) => evo.method === "item" && evo.item === itemId)
     .map((evo) => evo.toId)
-    .filter((toId) => toId && targetAllowed(toId)); // region-lock: gen cíle ≤ gen regionu
+    .filter((toId) => toId && targetAllowed(toId, pokemon)); // gen cíle ≤ gen regionu chycení
 }
 
 /**
- * Na který druh se může vyvinout trade metodou (Linking Cord).
- * @param {string} speciesId
+ * Na který druh se může jedinec vyvinout trade metodou (Linking Cord).
+ * Region-lock: mimo region chycení null.
+ * @param {import("../core/state.js").OwnedPokemon} pokemon
  * @returns {string|null}
  */
-export function tradeEvolutionTarget(speciesId) {
-  const sp = getSpecies(speciesId);
+export function tradeEvolutionTarget(pokemon) {
+  const sp = getSpecies(pokemon?.speciesId);
   if (!sp?.evolutions || !Array.isArray(sp.evolutions)) return null;
-  const evo = sp.evolutions.find((e) => e.method === "trade" && targetAllowed(e.toId));
+  if (!isInCaughtRegion(pokemon)) return null;
+  const evo = sp.evolutions.find((e) => e.method === "trade" && targetAllowed(e.toId, pokemon));
   return evo?.toId ?? null;
 }
 
@@ -292,6 +308,7 @@ export function evolvePokemon(uid) {
   // Sjednoceně přes evolutionInfo: pokrývá level-up i happiness a hlídá region-lock.
   const info = evolutionInfo(owned);
   if (!info) return { ok: false, reason: "This Pokémon can't evolve." };
+  if (info.regionLocked) return { ok: false, reason: regionLockReason(owned) };
   if (!info.ready) {
     return {
       ok: false,
@@ -316,8 +333,9 @@ export function evolveWithItem(uid, itemId) {
   if (!owned) return { ok: false, reason: "Unknown Pokémon." };
 
   if (holdsEverstone(owned)) return { ok: false, reason: "It's holding an Everstone." };
+  if (!isInCaughtRegion(owned)) return { ok: false, reason: regionLockReason(owned) };
 
-  const targets = itemEvolutionTargets(owned.speciesId, itemId);
+  const targets = itemEvolutionTargets(owned, itemId);
   if (targets.length === 0) {
     return { ok: false, reason: "This Pokémon can't evolve with that item." };
   }
@@ -349,8 +367,9 @@ export function evolveByTrade(uid, itemId = "linking-cord") {
   if (!owned) return { ok: false, reason: "Unknown Pokémon." };
 
   if (holdsEverstone(owned)) return { ok: false, reason: "It's holding an Everstone." };
+  if (!isInCaughtRegion(owned)) return { ok: false, reason: regionLockReason(owned) };
 
-  const toId = tradeEvolutionTarget(owned.speciesId);
+  const toId = tradeEvolutionTarget(owned);
   if (!toId) {
     return { ok: false, reason: "This Pokémon can't evolve by trade." };
   }

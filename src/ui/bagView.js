@@ -237,8 +237,8 @@ export function openBag(onStatus = () => {}) {
       .map(
         (it) => {
           const canEvolve = getState().collection.some((p) => {
-            if (it.id === "linking-cord") return tradeEvolutionTarget(p.speciesId) != null;
-            return itemEvolutionTargets(p.speciesId, it.id).length > 0;
+            if (it.id === "linking-cord") return tradeEvolutionTarget(p) != null;
+            return itemEvolutionTargets(p, it.id).length > 0;
           });
           const disabled = !canEvolve ? 'disabled' : '';
           return `<button class="bag-item-row bag-evolution-row" data-evolve-item="${it.id}" ${disabled} title="${it.desc}">
@@ -403,9 +403,9 @@ export function openBag(onStatus = () => {}) {
       desc = `Choose which Pokémon will hold ${def?.name ?? "this item"}.`;
     } else if (selectedAction === "evolve") {
       if (selectedItemId === "linking-cord") {
-        targets = collection.filter((p) => tradeEvolutionTarget(p.speciesId) != null);
+        targets = collection.filter((p) => tradeEvolutionTarget(p) != null);
       } else {
-        targets = collection.filter((p) => itemEvolutionTargets(p.speciesId, selectedItemId).length > 0);
+        targets = collection.filter((p) => itemEvolutionTargets(p, selectedItemId).length > 0);
       }
       title = `Evolve with ${def?.name ?? "item"}`;
       desc = `Choose which Pokémon to evolve.`;

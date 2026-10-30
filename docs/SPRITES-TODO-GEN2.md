@@ -1,8 +1,9 @@
 # Sprity Gen 2 (Johto) – TODO (kompletní forward-seznam)
 
 > **Co to je:** úplný seznam VŠECH grafických/zvukových assetů, které bude Johto
-> (gen 2) potřebovat – zrcadlí pokrytí gen 1. Gen 2 je zatím kostra (jen New Bark
-> Town + 3 startéři v datech), takže tady je prakticky celý region dopředu.
+> (gen 2) potřebovat. Data Johta jsou kompletní (2026-10-20); chybí jen grafika níž.
+> Odkazy na obrázky se vyplňují v `docs/gen2_odkazy.txt` (vygeneruje `tools/gen_odkazy.py`,
+> stáhne `tools/dl_web.py docs/gen2_odkazy.txt`).
 >
 > **Split:** hlavní `SPRITES-TODO.md` drží „co reálně chybí v odeslaném (gen 1)
 > obsahu"; tenhle soubor je forward-inventář gen 2 (dev, na produkci skryté za
@@ -48,78 +49,38 @@ Red Gyarados (Lake of Rage) nepotřebuje nový soubor: gyarados je gen 1 druh, h
 
 ---
 
-## 4. Gym Leadeři (8 Johto arén)
+## 4. Gym Leadeři, Elite Four, Champion – HOTOVO (2026-10-26)
 
-> `assets/gen2/gym-leaders/<id>/front.png` (folder-per-leader, jako gen 1).
-
-- [ ] `falkner` — Violet City (Zephyr Badge, Flying)
-- [ ] `bugsy` — Azalea Town (Hive Badge, Bug)
-- [ ] `whitney` — Goldenrod City (Plain Badge, Normal)
-- [ ] `morty` — Ecruteak City (Fog Badge, Ghost)
-- [ ] `chuck` — Cianwood City (Storm Badge, Fighting)
-- [ ] `jasmine` — Olivine City (Mineral Badge, Steel)
-- [ ] `pryce` — Mahogany Town (Glacier Badge, Ice)
-- [ ] `clair` — Blackthorn City (Rising Badge, Dragon)
+Všech 8 leaderů, Elite Four (Will, Koga, Bruno, Karen) i Champion Lance mají
+`assets/gen2/gym-leaders/<id>/front.png` (Koga a Bruno jsou kopie z gen 1).
 
 ---
 
-## 5. Elite Four + Champion (Indigo Plateau, Johto challenge)
+## 6. Odznaky – HOTOVO (2026-10-26)
 
-> Někteří se vrací z gen 1 – u nich lze REUSNOUT existující sprite (kopie z `assets/gen1/gym-leaders/`
-> do `assets/gen2/gym-leaders/`), jen se v datech namapuje jiné ID/role.
-
-> Složka = **id trenéra z dat** (`data/gen2/trainers.js`), tedy s prefixem `johto-` (hra hledá
-> `assets/gen2/gym-leaders/<id>/front.png`).
-
-- [ ] `johto-elite-four-will` — E4 #1 (Psychic) — NOVÝ
-- [ ] `johto-elite-four-karen` — E4 #4 (Dark) — NOVÝ
-- [x] `johto-champion-lance` — Champion (Dragon) — hotovo
-- [x] `johto-elite-four-koga` — E4 #2 (Poison): reuse gen 1 — hotovo
-- [x] `johto-elite-four-bruno` — E4 #3 (Fighting): reuse gen 1 — hotovo
+Všech 8 johtských odznaků: `assets/gen2/badges/<id>-badge.png`.
 
 ---
 
-## 6. Odznaky (8 Johto badge)
-
-> `assets/gen2/badges/<badge>.png`.
-
-- [ ] `zephyr-badge` (Falkner)
-- [ ] `hive-badge` (Bugsy)
-- [ ] `plain-badge` (Whitney)
-- [ ] `fog-badge` (Morty)
-- [ ] `storm-badge` (Chuck)
-- [ ] `mineral-badge` (Jasmine)
-- [ ] `glacier-badge` (Pryce)
-- [ ] `rising-badge` (Clair)
-
----
-
-## 7. Budovy – přesně to, co hra v Johtu volá (stav 2026-10-19)
+## 7. Budovy – HOTOVO (2026-10-29)
 
 > `assets/gen2/buildings/<soubor>.png`, vždy pixel art přes `tools/pixelize_buildings.py`
 > (šířku přidat do tabulky `WIDTH`). Hotové: `poke-center`, `poke-mart`, `gym`, `league`,
-> `league-plaza`, `day-care`, `move-tutor`, `dept-store`, `game-corner`.
+> `league-plaza`, `day-care`, `move-tutor`, `boost-center`,
+> `training-grounds`, `goldenrod-dept-store`, `goldenrod-game-corner` (sdílené budovy jsou kopie z `assets/gen1/buildings/`), `elm-lab`, `sprout-tower`, `azalea-kiln`, `kurts-house`, `radio-tower`, `bills-house`, `goldenrod-flower-shop`, `goldenrod-underground`, `bell-tower`, `burned-tower`, `dance-theater`, `ecruteak-house`, `olivine-house`, `olivine-lighthouse`, `ss-aqua`, `cianwood-pharmacy`, `blackthorn-house`, `dragons-den`.
 > Název souboru určuje `sprite:` v `data/buildings.js`.
 
-Chybí (podle měst z `CITY_BUILDINGS`):
-- [ ] `elm-lab` — New Bark Town
-- [ ] `sprout-tower` — Violet City
-- [ ] `azalea-kiln`, `kurts-house` — Azalea Town
-- [ ] `goldenrod-dept-store`, `goldenrod-game-corner` — Goldenrod (lze zkopírovat z `dept-store.png` / `game-corner.png`, pokud nechceš johtskou verzi)
-- [ ] `goldenrod-flower-shop`, `goldenrod-underground`, `bills-house`, `radio-tower` — Goldenrod
-- [ ] `boost-center` — Goldenrod (reuse z `assets/gen1/buildings/`)
-- [ ] `ecruteak-house`, `dance-theater`, `bell-tower`, `burned-tower` — Ecruteak
-- [ ] `olivine-lighthouse`, `olivine-house` — Olivine
-- [ ] `cianwood-pharmacy`, `cianwood-house`, `chucks-house` — Cianwood
-- [ ] `training-grounds` — Cianwood (reuse z `assets/gen1/buildings/`)
-- [ ] `dragons-den`, `blackthorn-house` — Blackthorn
+Chybí (podle měst z `CITY_BUILDINGS`): **nic – všechny budovy Johta mají sprite (2026-10-29).**
+Chuckův dům v originále není (Fly dá žena po výhře nad Chuckem).
 
 Mahogany Town a Indigo Plateau mají jen Poké Center + Mart (hotovo).
 Ilex Forest, Ruins of Alph, National Park, Lake of Rage, Whirl Islands, Mahogany Shop,
 Rocket Hideout a Bike Shop **nejsou ve městě umístěné** → sprite zatím nepotřebují.
 Jeskyně a routy sprite budovy nepotřebují.
-Johto města zatím nemají mapu shora (`data/gen2/cityMaps.js` neexistuje), ukazují staré
-izometrické rozložení; po dodání budov se udělají jako Kanto.
+Johto města mají mapu shora (`data/gen2/cityMaps.js`, v1.70.0); chybějící budovy se zatím kreslí
+jako náhradní. Nový sprite stačí uložit pod názvem ze seznamu – mapa ho použije sama. Rozměr spritu
+by měl zhruba odpovídat náhradní budově (`BUILDING_PLACEHOLDERS` v `data/cityMaps.js`), pak
+`python tools/citymapcheck.py` (překryvy).
 
 ---
 
@@ -127,50 +88,27 @@ izometrické rozložení; po dodání budov se udělají jako Kanto.
 
 > `assets/gen2/npc/<name>.png` (gen-specifické; gen 1 má `assets/gen1/npc/oak.png`). Jen esenciální příběhoví NPC.
 
-- [ ] `elm` — Prof. Elm
-- [ ] `mr-pokemon` — Mr. Pokémon (event s vejcem/míčem)
-- [ ] `silver` — rival (jméno zadává hráč, ale portrét třídy)
-- [ ] `kurt` — výrobce Poké Ballů
-- [ ] `eusine` — lovec Suicune
-- [ ] `lance` — jako NPC (Rocket v Mahogany/Radio Tower) — může reuse leader sprite
+Hotovo: `elm` (Prof. Elm, johtský diplom – oficiální artwork v plné kvalitě bez pozadí jako `oak.png`, 2026-10-29).
+
+Zatím je hra nevolá (příběh běží bez portrétů): `mr-pokemon`, `silver`, `kurt`, `eusine`,
+`lance` (jako NPC; může reuse leader sprite).
 
 ---
 
-## 9. Třídy trenérů (routové souboje)
+## 9. Třídy trenérů (routové souboje) – HOTOVO (2026-10-29)
 
-> `assets/gen2/trainers/<class>/<n>.png` (číslované varianty). VELKÁ část tříd se REUSNE
-> z gen 1 (kopie ze `assets/gen1/trainers/<class>/` do gen2; bird-keeper, bug-catcher, black-belt, hiker, fisherman, sailor, lass,
-> youngster, beauty, gentleman, super-nerd, psychic, camper, picnicker, swimmer-f/m,
-> pokemaniac, gambler, juggler, scientist, rocket-grunt, …).
+> `assets/gen2/trainers/<class>/<n>.png` (číslované varianty 1, 2, …; po přidání spusť
+> `python tools/gen_sprite_manifest.py`). Hra hledá složku podle `class` trenéra
+> v `data/gen2/trainers.js`. Sdílené třídy (youngster, lass, hiker, beauty…) jsou hotové.
 
-> **Pozor na názvy složek** – hra hledá `assets/gen2/trainers/<class>/<n>.png` podle `class` v datech:
-> - `rocket-executive` (Proton, Petrel, Ariana, Archer): složky jsou jen `-m` / `-f` → potřeba složka
->   `rocket-executive` (ideálně 4 obrázky; pak do dat doplním `spriteVariant`) nebo mi řekni a přepíšu třídy v datech.
-> - `cooltrainer` (Dragon Clan v Dragon's Den) a `elder`: složky neexistují (`dragon-tamer` je v TODO, v datech ne).
-> - Prázdné složky: `boarder`, `firebreather`, `guitarist`, `kimono-girl`, `medium`, `officer`,
->   `pokefan-f/m`, `sage`, `school-kid`, `skier`, `teacher`, `sudowoodo`.
-> - Route trenéři berou sdílené třídy (youngster, lass, hiker…), ty jsou hotové.
+### Hotovo – všechny třídy, které hra volá, mají sprite (2026-10-29)
+Jmenované postavy ve sdílené třídě mají v datech `spriteVariant` (pevný `<n>.png`):
+`elder` 1 = Elder Li, 2 = Dragon Elder; `rocket-executive` 1 = Proton, 2 = Petrel, 3 = Ariana, 4 = Archer.
+Dragon Clan v Dragon's Den používá `cooltrainer-m` / `cooltrainer-f`; `sudowoodo/1.png` = sprite Pokémona.
 
-### Nové Johto třídy (chybí v gen 1)
-- [ ] `kimono-girl` — Ecruteak (dance theater)
-- [ ] `sage` — Sprout Tower / Ecruteak
-- [ ] `elder` — Elder (boss Sprout Tower „Elder Li" + Dragon Elder v Dragon's Den)
-- [ ] `dragon-tamer` — Dragon's Den (Dragon Clan, Blackthorn)
-- [ ] `medium` — média/ženská obdoba sage
-- [ ] `firebreather` — dýchač ohně
-- [ ] `guitarist` — kytarista (obdoba rockera)
-- [ ] `teacher` — učitelka
-- [ ] `school-kid` — školák/školačka
-- [ ] `officer` — policista (Growlithe)
-- [ ] `pokefan-m` — Poké Fan (muž)
-- [ ] `pokefan-f` — Poké Fan (žena)
-- [ ] `skier` — lyžař (Ice Path / Mahogany)
-- [ ] `boarder` — snowboardista
-- [ ] `rocket-executive-m` — Team Rocket exekutiva (Archer/Petrel/Proton)
-- [ ] `rocket-executive-f` — Team Rocket exekutiva (Ariana)
-
-### Fixní bossové (třída = druh, jako gen 1 `snorlax`/`ghost`)
-- [ ] `sudowoodo` — boss „Sudowoodo" blokující Route 36 (`assets/gen2/trainers/sudowoodo/1.png`) — už zaneseno v datech (v1.40.0). Samotný Pokémon sprite v souboji řeší `assets/gen2/pokemon/sudowoodo/` (sekce 2).
+### V datech zatím nejsou (sprite netřeba, dokud je nikdo nepoužije)
+`dragon-tamer`, `firebreather`, `guitarist`, `teacher`, `school-kid`, `officer`, `pokefan-m`,
+`pokefan-f`, `rocket-executive-m`, `rocket-executive-f` (některé mají prázdnou složku).
 
 ---
 
@@ -186,6 +124,5 @@ izometrické rozložení; po dodání budov se udělají jako Kanto.
 
 ## Pozn. k položkám „reuse"
 
-Zaškrtnuté `[x]` = **není třeba nový soubor**, jen se v datech namapuje existující
-gen 1 asset (Koga, Bruno; sdílené budovy; sdílené třídy trenérů). Uvedeny pro
-úplnost, ať je jasné, že se na ně nezapomnělo.
+Sdílené entity (Koga, Bruno, sdílené budovy a třídy trenérů) se do gen 2 fyzicky
+kopírují z gen 1 – hra hledá soubory jen ve složce generace.

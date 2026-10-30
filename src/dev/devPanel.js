@@ -26,6 +26,7 @@ import {
   DEV_CHECKPOINTS_GEN2,
 } from "./devTools.js";
 import { resetTutorial, runTutorial } from "../ui/tutorial.js";
+import { LEGENDARY_SCENE_KEYS, previewLegendaryScene } from "../ui/legendaryScene.js";
 import { GEN2_ENABLED } from "../../data/gameConfig.js";
 
 /** Poslední hláška dev akce – přežije překreslení těla modalu. */
@@ -96,6 +97,12 @@ export function devSectionHtml() {
       <div class="dev-row">
         <span class="dev-sublabel">Tutorial</span>
         <button class="btn btn-sm" data-dev-tutorial>▶️ Replay tutorial</button>
+      </div>
+
+      <div class="dev-row">
+        <span class="dev-sublabel">Legend scene</span>
+        <select class="dev-select" data-dev-scene>${LEGENDARY_SCENE_KEYS.map((k) => `<option value="${k}">${k}</option>`).join("")}</select>
+        <button class="btn btn-sm" data-dev-scene-play>▶️ Play</button>
       </div>
 
       <div class="dev-row">
@@ -190,6 +197,11 @@ export function wireDevSection(bodyEl, rerender) {
     resetTutorial();
     runTutorial();
     showDevMsg("Tutorial restarted.");
+  });
+
+  // Náhled scény příchodu legendy (bez souboje).
+  bodyEl.querySelector("[data-dev-scene-play]")?.addEventListener("click", () => {
+    previewLegendaryScene(bodyEl.querySelector("[data-dev-scene]")?.value);
   });
 
   // Přepínač viditelnosti uzlů na mapě: vše (dev) ↔ jen odemčené (reálný postup).

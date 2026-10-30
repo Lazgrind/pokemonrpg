@@ -15,11 +15,12 @@
  */
 
 import { getSpecies } from "../../data/pokemon.js";
-import { getLearnset, learnableMovesAtLevel } from "../../data/learnsets.js";
+import { getLearnset, levelUpOrder } from "../../data/learnsets.js";
 import { getMove } from "../../data/moves.js";
 import { NATURES, getNature, NATURE_UP_MULT, NATURE_DOWN_MULT } from "../../data/natures.js";
 import { EV_YIELDS } from "../../data/evYields.js";
 import { getState } from "../core/state.js";
+import { generationByRegion } from "../../data/generations.js";
 
 let counter = 0;
 
@@ -52,10 +53,11 @@ export const MAX_MOVES = 4;
  * Vrací pole slotů `{ id, pp, maxPp }` (0–4). Sdíleno vznikem i migrací save.
  * @param {string} speciesId
  * @param {number} level
+ * @param {string} [region]  region chycení – Kanto učí útoky z Yellow, Johto z Crystalu
  * @returns {Array<{ id: string, pp: number, maxPp: number }>}
  */
-export function defaultMovesFor(speciesId, level) {
-  const ids = balancedMovesetIds(learnableMovesAtLevel(speciesId, level).map((e) => e.id));
+export function defaultMovesFor(speciesId, level, region) {
+  const ids = balancedMovesetIds(levelUpOrder(speciesId, level, region));
   return ids.map((id) => {
     const mv = getMove(id);
     const pp = mv?.pp ?? 0;
@@ -64,8 +66,18 @@ export function defaultMovesFor(speciesId, level) {
 }
 
 /** Je tah útočný (má sílu > 0)? Status tahy mají power 0/undefined. */
+/** Útočné druhy efektů s power 0 (síla / poškození se dopočítá v souboji). */
+const DAMAGE_EFFECT_KINDS = new Set(["variablePower", "fixedDamage", "levelDamage", "fixedDamageHalf"]);
+
 function isAttackingMove(moveId) {
-  return (getMove(moveId)?.power ?? 0) > 0;
+  const mv = getMove(moveId);
+  return (mv?.power ?? 0) > 0 || DAMAGE_EFFECT_KINDS.has(mv?.effect?.kind);
+}
+
+/** Tah, který v soubojích 1 na 1 nic neudělá (Splash, tahy pro dvojité souboje)? */
+function isUselessMove(moveId) {
+  const mv = getMove(moveId);
+  return !mv || mv.effect?.kind === "fails" || (!mv.effect && !mv.ailment && !isAttackingMove(moveId));
 }
 
 /** Ubližuje tah sám svému uživateli (recoil – take-down, double-edge…)? Auto
@@ -86,7 +98,10 @@ function isSelfHarmingMove(moveId) {
  */
 function balancedMovesetIds(candidateIds) {
   const uniq = [...new Set(candidateIds)].filter((id) => getMove(id));
-  const status = uniq.filter((id) => !isAttackingMove(id));
+  // Status tahy: užitečné na konec (berou se odzadu), bezúčelné (Splash, tahy pro
+  // dvojité souboje) dopředu – do sady se dostanou, jen když nic jiného není.
+  const statusAll = uniq.filter((id) => !isAttackingMove(id));
+  const status = [...statusAll.filter(isUselessMove), ...statusAll.filter((id) => !isUselessMove(id))];
   // Útočné tahy: sebe-poškozující (recoil) do auto sady NIKDY nedáváme – jen jako
   // fallback, kdyby jinak nebylo čím útočit (jedinec nesmí uvíznout bez damage).
   const attackingSafe = uniq.filter((id) => isAttackingMove(id) && !isSelfHarmingMove(id));
@@ -115,7 +130,7 @@ export function repairWeakMoveset(pokemon) {
   const attacks = pokemon.moves.filter((m) => isAttackingMove(m.id)).length;
   if (attacks >= 2) return false; // dost útočných tahů → nesahat
   const pool = [
-    ...learnableMovesAtLevel(pokemon.speciesId, pokemon.level).map((e) => e.id),
+    ...levelUpOrder(pokemon.speciesId, pokemon.level, caughtRegionOf(pokemon)),
     ...pokemon.moves.map((m) => m.id),
   ];
   const balanced = balancedMovesetIds(pool);
@@ -154,7 +169,7 @@ export function learnLevelUpMoves(pokemon, prevLevel, { auto = false } = {}) {
     // nezahodí. Připneme je vepředu, zbytek slotů dorovná vyvážená sada.
     const taughtIds = pokemon.moves.filter((m) => m.taught).map((m) => m.id);
     const pool = [
-      ...learnableMovesAtLevel(pokemon.speciesId, pokemon.level).map((e) => e.id),
+      ...levelUpOrder(pokemon.speciesId, pokemon.level, caughtRegionOf(pokemon)),
       ...pokemon.moves.map((m) => m.id),
     ];
     const balanced = balancedMovesetIds(pool);
@@ -163,17 +178,20 @@ export function learnLevelUpMoves(pokemon, prevLevel, { auto = false } = {}) {
     return pokemon.moves.filter((m) => !before.has(m.id)).map((m) => m.id);
   }
   const learned = [];
-  for (const entry of getLearnset(pokemon.speciesId)) {
+  // Položka learnsetu je { level, move } (dřív se tu četlo neexistující entry.id,
+  // takže se v manuálu a po evoluci nic nového nenaučilo).
+  for (const entry of getLearnset(pokemon.speciesId, caughtRegionOf(pokemon))) {
     if (entry.level <= prevLevel || entry.level > pokemon.level) continue; // mimo rozsah
-    if (pokemon.moves.some((m) => m.id === entry.id)) continue; // už umí
-    const mv = getMove(entry.id);
+    if (pokemon.moves.some((m) => m.id === entry.move)) continue; // už umí
+    if (learned.includes(entry.move)) continue; // duplikát v learnsetu (Lv 1 + později)
+    const mv = getMove(entry.move);
     if (!mv) continue;
     if (pokemon.moves.length >= MAX_MOVES) {
-      queueMoveLearn(pokemon.uid, entry.id); // manuál → nabídnout nahrazení později
+      queueMoveLearn(pokemon.uid, entry.move); // manuál → nabídnout nahrazení později
       continue;
     }
-    pokemon.moves.push({ id: entry.id, pp: mv.pp, maxPp: mv.pp });
-    learned.push(entry.id);
+    pokemon.moves.push({ id: entry.move, pp: mv.pp, maxPp: mv.pp });
+    learned.push(entry.move);
   }
   return learned;
 }
@@ -337,6 +355,27 @@ export function rollGender(species) {
   return Math.random() < g.m ? "m" : "f";
 }
 
+/** Region, kde jedinec vznikl (staré save bez `caughtRegion` = „kanto"). */
+export function caughtRegionOf(pokemon) {
+  return pokemon?.caughtRegion ?? "kanto";
+}
+
+/**
+ * Je hráč právě v regionu, kde jedinec vznikl? Region-lock (CLAUDE.md): bojovat,
+ * trénovat (Rare Candy, PP itemy, EV trénink, Move Tutor), vyvíjet a chovat smí
+ * jedinec jen tam. Mimo svůj region jen odpočívá v PC.
+ */
+export function isInCaughtRegion(pokemon) {
+  return !!pokemon && caughtRegionOf(pokemon) === (getState().progress?.region ?? "kanto");
+}
+
+/** Hláška pro UI, když jedinec není ve svém regionu (viz isInCaughtRegion). */
+export function regionLockReason(pokemon) {
+  const r = caughtRegionOf(pokemon);
+  const name = generationByRegion(r)?.regionName ?? r;
+  return `It was caught in ${name} — it can only train and evolve there.`;
+}
+
 /**
  * Vytvoří nového jedince daného druhu.
  * @param {string} speciesId
@@ -350,6 +389,8 @@ export function rollGender(species) {
  * @returns {import("../core/state.js").OwnedPokemon}
  */
 export function createPokemon(speciesId, level = 5, opts = {}) {
+  // Region vzniku (chycení/dar/vylíhnutí): řídí region-lock i learnset (Kanto/Johto).
+  const region = opts.caughtRegion ?? getState().progress?.region ?? "kanto";
   const species = getSpecies(speciesId);
   if (!species) throw new Error(`Neznámý druh Pokémona: ${speciesId}`);
   const p = {
@@ -364,13 +405,13 @@ export function createPokemon(speciesId, level = 5, opts = {}) {
     caughtBall: opts.caughtBall ?? null,
     gender: opts.gender ?? rollGender(species),
     hp: 0, // doplní se níž na plné max HP
-    moves: defaultMovesFor(speciesId, level), // tahy z learnsetu (plné PP)
+    moves: defaultMovesFor(speciesId, level, region), // tahy z learnsetu regionu chycení (plné PP)
     heldItem: null, // žádný drženou item na začátku
     friendship: opts.friendship ?? 70, // přátelství 0–255 (kanon base 70); roste level-upem
     // Region, kde jedinec vznikl (chycení/dar/vylíhnutí). Řídí region-lock v boji:
     // v Johtu smí bojovat jen jedinci chycení v Johtu (i gen-1 druhy jako Onix →
     // Steelix), kdežto starý Kanto tým zůstane odříznutý. Viz team.canBattleInRegion.
-    caughtRegion: opts.caughtRegion ?? getState().progress?.region ?? "kanto",
+    caughtRegion: region,
   };
   p.hp = computeStats(p).maxHp; // nový jedinec začíná s plným HP
   return p;

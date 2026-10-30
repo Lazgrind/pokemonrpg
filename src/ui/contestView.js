@@ -73,7 +73,7 @@ function lobbyHtml() {
         <li>You get <strong>${CONTEST_BALLS} Park Balls</strong> and meet up to <strong>${CONTEST_ENCOUNTERS} bugs</strong>.</li>
         <li>No battling — just throw a <strong>Park Ball</strong>, or <strong>skip</strong> a bug hoping for a rarer one.</li>
         <li>Rarer bugs and higher levels score more. The judges rank your <strong>single best catch</strong>.</li>
-        <li>Prizes: 🥇 1st → <strong>Sun Stone</strong>, 🥈 2nd → <strong>Everstone</strong>, 🥉 3rd → gold.</li>
+        <li>Prizes: 1st → <strong>Sun Stone</strong>, 2nd → <strong>Everstone</strong>, 3rd → gold.</li>
         <li>You keep your <strong>best-caught bug</strong>. One contest per day.</li>
       </ul>
       ${

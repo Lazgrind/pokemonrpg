@@ -8,6 +8,15 @@
 # Spuštění (v kořeni repa):   pwsh tools/fetch_ev_yields.ps1
 # Vzor: tools/fetch_tm_compat.ps1
 
+# NEPOUŽÍVÁ SE: zapisuje do kořenového data/evYields.js, který je od rozdělení po
+# generacích jen aggregator (přepsal by ho). EV yieldy dnes generuje
+# tools/gen_species.py přímo do data/gen<N>/evYields.js. Vynutit: -IKnow.
+param([switch]$IKnow)
+if (-not $IKnow) {
+  Write-Host "fetch_ev_yields.ps1 se uz nepouziva (prepsal by aggregator data/evYields.js). Pouzij tools/gen_species.py. Vynutit: -IKnow."
+  exit 1
+}
+
 $ErrorActionPreference = "Stop"
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
